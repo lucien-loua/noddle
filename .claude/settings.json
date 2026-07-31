@@ -1,0 +1,94 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  
+    "permissions": {
+      "defaultMode": "acceptEdits",
+  
+      "deny": [
+        "Read(~/.ssh/**)",
+        "Read(./.env)",
+        "Read(./.env.*)",
+        "Read(./secrets/**)",
+        "Read(**/*.pem)",
+        "Read(**/*_rsa)",
+        "Read(**/*_ed25519)",
+        "Bash(git push --force*)",
+        "Bash(git push -f*)",
+        "Bash(docker swarm leave*)",
+        "Bash(rm -rf /*)"
+      ],
+  
+      "ask": [
+        "Bash(multipass delete*)",
+        "Bash(multipass purge*)",
+        "Bash(docker service rm*)",
+        "Bash(docker system prune*)",
+        "Bash(docker volume rm*)",
+        "Bash(git push*)",
+        "Bash(bun publish*)",
+        "Bash(bunx drizzle-kit push*)",
+        "Bash(bunx drizzle-kit drop*)"
+      ],
+  
+      "allow": [
+        "Bash(bun install)",
+        "Bash(bun add *)",
+        "Bash(bun run typecheck)",
+        "Bash(bun run test*)",
+        "Bash(bun run build*)",
+        "Bash(bun test*)",
+        "Bash(bunx biome check*)",
+        "Bash(bunx biome format*)",
+        "Bash(bunx biome lint*)",
+        "Bash(bunx biome ci*)",
+        "Bash(bun --filter * *)",
+        "Bash(bunx drizzle-kit generate*)",
+        "Bash(bunx drizzle-kit migrate*)",
+        "Bash(git status*)",
+        "Bash(git diff*)",
+        "Bash(git log*)",
+        "Bash(git add *)",
+        "Bash(git commit *)",
+        "Bash(git branch*)",
+        "Bash(git checkout *)",
+  
+        "Bash(multipass list*)",
+        "Bash(multipass info*)",
+        "Bash(multipass start *)",
+        "Bash(multipass stop *)",
+  
+        "Bash(docker ps*)",
+        "Bash(docker images*)",
+        "Bash(docker service ls*)",
+        "Bash(docker service ps*)",
+        "Bash(docker service logs*)",
+        "Bash(docker service inspect*)",
+        "Bash(docker network ls*)",
+        "Bash(docker node ls*)",
+  
+        "Bash(curl -fsS http://*.sslip.io*)",
+        "Bash(curl -I http://*.sslip.io*)"
+      ]
+    },
+  
+    "hooks": {
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bunx biome check --write --no-errors-on-unmatched $CLAUDE_FILE_PATHS 2>/dev/null || true"
+            }
+          ]
+        }
+      ]
+    },
+  
+    "env": {
+      "NODE_ENV": "development"
+    },
+  
+    "includeGitInstructions": true,
+    "cleanupPeriodDays": 60
+  }
