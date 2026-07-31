@@ -1,56 +1,59 @@
 # CLAUDE.md — Noddle
 
-Read this at the start of every session. It is the source of truth for what Noddle is and what has already been decided.
+Read this at the start of every session. It is the source of truth for what
+Noddle is and what has already been decided.
 
 ---
 
 ## What Noddle is
 
-A self-hosted deployment platform. You point it at a git repo, it builds and runs the app on a VPS you own, with HTTPS and a domain, from a dashboard.
+A self-hosted deployment platform. You point it at a git repo, it builds and
+runs the app on a VPS you own, with HTTPS and a domain, from a dashboard.
 
 Installed on any Linux VPS with one command. Manages one or many target servers.
 
-**The differentiator is restraint, not features.** Comparable tools lose to feature creep and cluttered dashboards. Every screen must answer "is it healthy" and "how do I ship" without drilling into a submenu. When in doubt, cut.
+**The differentiator is restraint, not features.** Comparable tools lose to
+feature creep and cluttered dashboards. Every screen must answer "is it healthy"
+and "how do I ship" without drilling into a submenu. When in doubt, cut.
 
 ---
 
 ## Settled decisions — do not relitigate
 
-These are decided. Do not re-open them, do not silently work around them, do not propose alternatives in passing.
+These are decided. Do not re-open them, do not silently work around them, do not
+propose alternatives in passing.
 
-If you have strong evidence one is wrong, **say so once, explicitly, and stop for an answer.** Do not proceed on your own judgment.
+If you have strong evidence one is wrong, **say so once, explicitly, and stop for
+an answer.** Do not proceed on your own judgment.
 
+| Decision | Choice | Why |
+|---|---|---|
+| Orchestration | **Docker Swarm mode**, single node to start | `docker service update` is a transactional deploy primitive — rolling update, health gate and rollback are already correct, including edge cases |
+| Build location | **On the target server** | "one command on any VPS" is a core requirement; building elsewhere needs an always-on machine or a registry hop |
+| Build isolation | **Every build resource-capped**, via a capped buildx builder | a Next.js build on a 2 GB VPS will OOM and take down running production apps |
+| Server access | **Agentless, SSH only** | adding a server = paste a host and a key, nothing else |
+| Deploy targets | **Docker only** | no bare-metal or systemd paths |
+| Reverse proxy | **Traefik**, Swarm provider | dynamic label-based routing, native Let's Encrypt |
+| RPC layer | **TanStack Start `createServerFn`**, no tRPC | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
 
-| Decision        | Choice                                                 | Why                                                                                                                                                   |
-| --------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Orchestration   | **Docker Swarm mode**, single node to start            | `docker service update` is a transactional deploy primitive — rolling update, health gate and rollback are already correct, including edge cases      |
-| Build location  | **On the target server**                               | "one command on any VPS" is a core requirement; building elsewhere needs an always-on machine or a registry hop                                       |
-| Build isolation | **Every build resource-capped** (`--memory`, `--cpus`) | a Next.js build on a 2 GB VPS will OOM and take down running production apps                                                                          |
-| Server access   | **Agentless, SSH only**                                | adding a server = paste a host and a key, nothing else                                                                                                |
-| Deploy targets  | **Docker only**                                        | no bare-metal or systemd paths                                                                                                                        |
-| Reverse proxy   | **Traefik**, Swarm provider                            | dynamic label-based routing, native Let's Encrypt                                                                                                     |
-| RPC layer       | **TanStack Start** `createServerFn`, no tRPC           | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
-
-
-Still open, decide before contributors arrive: **license** (this category has consolidated around open-core — permissive core, RBAC/SSO/audit logs as paid tier).
+Still open, decide before contributors arrive: **license** (this category has
+consolidated around open-core — permissive core, RBAC/SSO/audit logs as paid tier).
 
 ---
 
 ## Stack
 
-
-| Layer           | Choice                                                                      |
-| --------------- | --------------------------------------------------------------------------- |
-| Framework       | TanStack Start (Router, Query, Table, Form)                                 |
-| Validation      | Zod, schemas shared client/server                                           |
-| ORM             | Drizzle + Postgres                                                          |
-| Auth            | better-auth                                                                 |
-| Job queue       | BullMQ + Redis                                                              |
-| Remote exec     | `ssh2` over SSH, `dockerode` for the Docker Engine API tunneled through SSH |
-| Builds          | Nixpacks (shelled out to), or Dockerfile if present                         |
-| Realtime        | SSE via a Start server function stream                                      |
-| Package manager | pnpm workspaces                                                             |
-
+| Layer | Choice |
+|---|---|
+| Framework | TanStack Start (Router, Query, Table, Form) |
+| Validation | Zod, schemas shared client/server |
+| ORM | Drizzle + Postgres |
+| Auth | better-auth |
+| Job queue | BullMQ + Redis |
+| Remote exec | `ssh2` over SSH, `dockerode` for the Docker Engine API tunneled through SSH |
+| Builds | Nixpacks (shelled out to), or Dockerfile if present |
+| Realtime | SSE via a Start server function stream |
+| Runtime + package manager | Bun (workspaces via `package.json`) |
 
 ---
 
@@ -69,25 +72,34 @@ Still open, decide before contributors arrive: **license** (this category has co
 /installer
   install.sh
   docker-compose.yml
-
 ```
 
-`web` and `worker` are separate processes from day one. Deploys take minutes — never run a build inside a server function.
+`web` and `worker` are separate processes from day one. Deploys take minutes —
+never run a build inside a server function.
 
 ---
 
 ## Local development topology
 
-Development runs against **local Multipass VMs**, not a rented VPS. A VM is the closest free equivalent of a real server: real systemd, real network stack, real SSH, real Docker install path.
+Development runs against **local Multipass VMs**, not a rented VPS. A VM is the
+closest free equivalent of a real server: real systemd, real network stack, real
+SSH, real Docker install path.
 
-Do **not** substitute Docker-in-Docker for a VM. Swarm overlay networks create VXLAN interfaces even on a single node; DinD mostly works and fails in ways that do not exist in production.
+Do **not** substitute Docker-in-Docker for a VM. Swarm overlay networks create
+VXLAN interfaces even on a single node; DinD mostly works and fails in ways that
+do not exist in production.
 
 - Target VMs are provisioned at **2 GB RAM on purpose** — the size of a cheap VPS, and the only way to actually reproduce the OOM scenario the build-capping decision exists to prevent. Do not raise it to make a build pass; that is the bug.
 - Access is over **real SSH with a key**, never `multipass exec`. SSH is the production access path, so it is the one that must be exercised.
 - Hostnames use `sslip.io` (`app.10-0-0-5.sslip.io` resolves to `10.0.0.5`), so Host-based routing is tested without editing `/etc/hosts`.
 - Multi-server work in Phase 2 means launching a second and third VM, not mocking one.
 
-**TLS cannot be fully tested locally.** ACME requires a publicly reachable domain. In dev, Traefik serves plain HTTP. To exercise the ACME code path without real certificates, point `--certificatesresolvers.le.acme.caserver` at **Pebble** (Let's Encrypt's test server). Real certificate issuance needs exactly one run against a real VPS with real DNS before shipping — budget for it, do not skip it.
+**TLS cannot be fully tested locally.** ACME requires a publicly reachable
+domain. In dev, Traefik serves plain HTTP. To exercise the ACME code path
+without real certificates, point
+`--certificatesresolvers.le.acme.caserver` at **Pebble** (Let's Encrypt's test
+server). Real certificate issuance needs exactly one run against a real VPS with
+real DNS before shipping — budget for it, do not skip it.
 
 ---
 
@@ -95,9 +107,22 @@ Do **not** substitute Docker-in-Docker for a VM. Swarm overlay networks create V
 
 **Phase 0 — validate the deploy chain end to end.**
 
-`spike-local.sh` must produce a working URL on a local VM before any application code gets written. Nothing else matters until it does.
+`scripts/spike-local.sh` must pass on a local VM before any application code gets
+written. Nothing else matters until it does.
 
-Run it twice: the second pass takes the `docker service update` path, which is where zero-downtime behaviour is actually observable.
+**A working URL is not the exit criterion.** Both of Noddle's differentiators are
+failure-path behaviours, so the happy path proves almost nothing. All four of
+these must pass:
+
+| Run | Proves |
+|---|---|
+| `./spike-local.sh` | the chain works: SSH → Swarm → clone → Nixpacks → service create → Traefik → HTTP |
+| `./spike-local.sh` (again) | the `docker service update` path — where zero-downtime is observable |
+| `./spike-local.sh break` | a broken image does not take down the running version; Swarm health-gates and rolls back |
+| `./spike-local.sh cap` | a memory-hungry build gets killed by the cap and the running service is untouched |
+
+`break crash` covers the harder case: the container passes its healthcheck, then
+dies. That is the one hand-rolled swap logic always gets wrong.
 
 Then, in order:
 
@@ -106,27 +131,63 @@ Then, in order:
 3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, teams/RBAC, rollback.
 4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
 
-**Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's correctness is what the entire product's trust rests on.
+**Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's
+correctness is what the entire product's trust rests on.
 
 ---
 
 ## Hard rules
 
-**Infrastructure code is not done when it typechecks.** Anything touching SSH, Swarm, Nixpacks or Traefik must be run against a real VPS before it is considered working. If you cannot test it, say so plainly instead of implying it works.
+**Bun is the package manager everywhere. Bun as the *runtime* for `apps/worker`
+is unverified.** The worker depends on `ssh2` and `dockerode`; `ssh2` carries
+optional native addons. Prove the SSH and Docker paths actually run on Bun before
+building on top of them. If they don't, `apps/worker` runs on Node and everything
+else stays Bun — that is a normal outcome, not a failure.
 
-**Never hand-roll the deploy swap.** Use `docker service update --update-order start-first --update-failure-action rollback` with a `HEALTHCHECK` on the service. The whole point of running Swarm is that this behaviour is already correct.
+**Infrastructure code is not done when it typechecks.** Anything touching SSH,
+Swarm, Nixpacks or Traefik must be run against a real VPS before it is considered
+working. If you cannot test it, say so plainly instead of implying it works.
+
+**Never hand-roll the deploy swap.** Use `docker service update --update-order
+start-first --update-failure-action rollback` with a `HEALTHCHECK` on the service.
+The whole point of running Swarm is that this behaviour is already correct.
+
+**Capping a build: cap the builder, not the build command.**
+
+`docker build --memory` / `--cpus` **does not work.** BuildKit accepts the flags and
+ignores them ([moby/buildkit#1362](https://github.com/moby/buildkit/issues/1362);
+[docker/buildx#644](https://github.com/docker/buildx/issues/644) proposes deleting
+them outright). A cap written that way is a silent no-op — the worst failure shape,
+because the build succeeds and the protection looks like it works. `nixpacks build`
+also has **no `--docker-opts` flag** — only `--docker-host`, `--docker-tls-verify`,
+`--docker-cert-path`.
+
+The working shape, implemented in `scripts/spike-local.sh`:
+
+1. `nixpacks build . --out DIR --apt wget` — generate the Dockerfile, don't build
+2. `docker buildx create --driver docker-container --driver-opt memory=… --driver-opt cpu-quota=…`
+3. `docker buildx build --builder … --load --progress=plain -f DIR/…/Dockerfile CONTEXT`
+
+The cgroup lands on the buildkitd container, so it covers all build work.
+`--progress=plain` is required: buildx's default TTY renderer rewrites the screen
+and is unusable as an SSE stream.
 
 **Swarm gotchas that will silently break things:**
-
+- `HEALTHCHECK` needs a binary **inside** the image. Nixpacks images ship neither `wget` nor `curl`, so a healthcheck referencing them fails forever, the task never converges, and it presents as a Traefik routing bug. Noddle injects one (`nixpacks --apt wget`) rather than assuming user apps have it.
+- `docker service create/update --no-resolve-image` for locally-built images. Without it Swarm tries to resolve the digest against a registry, fails, warns, then falls back to the tag — slow and noisy on one node.
+- **Local builds pin a service to the node that built it.** The image exists nowhere else, so Swarm's scheduler cannot move it. Phase 2 multi-server means "each service is built and stays on its assigned node", not "Swarm places services freely". Free placement needs the registry work currently parked in Phase 4.
 - Traefik reads labels on the **service**, not the container
 - `traefik.http.services.<name>.loadbalancer.server.port` is **required** — Traefik cannot infer the port in Swarm mode
 - Traefik v3 uses `--providers.swarm`; v2 used `--providers.docker.swarmMode`. Check against the pinned version.
 - `docker stack deploy` **ignores** `build:` and conditional `depends_on`. Build first, deploy the resulting image.
 - Swarm does **not** solve distributed storage. Stateful services (Postgres, Redis) are pinned with placement constraints and local volumes. A database lives on exactly one node, explicitly.
 
-**Secrets** — SSH keys, env var values, webhook URLs are encrypted at rest with AES-256-GCM from an app-level `APP_KEY`. Never log decrypted values. Prefer `docker secret` over env vars so nothing leaks into `docker inspect`.
+**Secrets** — SSH keys, env var values, webhook URLs are encrypted at rest with
+AES-256-GCM from an app-level `APP_KEY`. Never log decrypted values. Prefer
+`docker secret` over env vars so nothing leaks into `docker inspect`.
 
-**Deployment logs** — stream to SSE and persist to disk or object storage. Do not write one Postgres row per log line.
+**Deployment logs** — stream to SSE and persist to disk or object storage. Do not
+write one Postgres row per log line.
 
 ---
 
@@ -151,4 +212,3 @@ The design system is deliberately constrained. Treat these as limits, not defaul
 - Do not scaffold files "for later." Build what the current phase needs.
 - When something is genuinely ambiguous, ask one specific question rather than picking and moving on.
 - When you are uncertain whether something works, say so directly. Confident wrong infra code is the main risk on this project.
-
