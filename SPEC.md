@@ -141,19 +141,28 @@ Health-gated swap is the single highest-value behaviour in the whole engine — 
 
 Keep this idempotent — running it again should upgrade, not duplicate.
 
-### The single-box case is the common case
+### The single-box case is the common case — Noddle adopts its own host
 
-"Install on any VPS with one command" means most users will run the control plane
-**and** their apps on the same machine. The spec above assumes control plane + N
-separate target servers, and those two models collide:
+"Install on any VPS with one command" means most users run the control plane
+**and** their apps on the same machine. That is the default, not the exception.
 
-- The installer ships a Traefik (step 4). §5 deploys a Traefik per target server.
-  On one box that's two Traefiks fighting over `:80`.
-- A capped build still competes with Noddle's own Postgres/Redis for the same 2 GB.
-- "Add server" pointed at `localhost` has no SSH story.
+**The installer registers its own host as target server #1.** Consequences:
 
-Unresolved. It changes the installer, the add-server flow and the proxy model, so
-it needs an answer before Phase 1 hardens — not a Phase 3 detail.
+- **One Traefik per host, always.** The installer's Traefik *is* the app Traefik.
+  §5's "one Traefik per target server, deployed automatically when a server is
+  added" still holds — the local host is just a server that was added first, and
+  it already has one. No second instance, no `:80` conflict.
+- **Swarm is initialised by the installer**, not on first server-add.
+- **The local target still goes through the SSH executor.** No `localhost` special
+  case, no second code path — the loopback connection is the same code that talks
+  to remote servers, which means it is exercised by every single-box user instead
+  of only by people who added a remote machine.
+- **The build cap must account for the control plane.** Noddle's own Postgres,
+  Redis, web and worker sit on the same 2 GB. Derive the cap from *free* memory,
+  not total.
+
+Adding a remote server later is the same flow, unchanged. This keeps the
+one-command promise for solo users without a separate topology to maintain.
 
 ---
 
@@ -172,7 +181,8 @@ it needs an answer before Phase 1 hardens — not a Phase 3 detail.
 
 **Phase 1 — Single server, git deploy, no frills**
 
-- Auth, add one server via SSH, connect a git repo, Nixpacks build, deploy, Traefik routing, live log stream, start/stop/restart.
+- Auth, installer adopts its own host as server #1, connect a git repo, Nixpacks build, deploy, Traefik routing, live log stream, start/stop/restart.
+- **One-click rollback.** `docker service rollback` is one command and the Swarm decision already paid for it. It is also the single most convincing thing to show someone in the first minute, so it ships with the deploy loop rather than waiting for Phase 3.
 
 **Phase 2 — Make it a real product**
 
@@ -180,7 +190,7 @@ it needs an answer before Phase 1 hardens — not a Phase 3 detail.
 
 **Phase 3 — Operational maturity**
 
-- Backups to S3-compatible storage, notifications (Discord/Slack/email), resource usage graphs, teams/RBAC, deployment rollback (redeploy previous image).
+- Backups to S3-compatible storage, notifications (Discord/Slack/email), resource usage graphs, teams/RBAC.
 
 **Phase 4 — Polish/scale**
 

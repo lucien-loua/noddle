@@ -32,6 +32,7 @@ an answer.** Do not proceed on your own judgment.
 | Build location | **On the target server** | "one command on any VPS" is a core requirement; building elsewhere needs an always-on machine or a registry hop |
 | Build isolation | **Every build resource-capped**, via a capped buildx builder | a Next.js build on a 2 GB VPS will OOM and take down running production apps |
 | Server access | **Agentless, SSH only** | adding a server = paste a host and a key, nothing else |
+| Own host | **The installer registers its own host as target server #1** | single-box is the common case, not the exception. One Traefik per host — the installer's *is* the app Traefik. The local target goes through the SSH executor like any other, so there is no `localhost` special case and the loopback path is exercised by every user |
 | Deploy targets | **Docker only** | no bare-metal or systemd paths |
 | Reverse proxy | **Traefik**, Swarm provider | dynamic label-based routing, native Let's Encrypt |
 | RPC layer | **TanStack Start `createServerFn`**, no tRPC | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
@@ -126,9 +127,9 @@ dies. That is the one hand-rolled swap logic always gets wrong.
 
 Then, in order:
 
-1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, add one server, connect a repo, deploy, live log stream, start/stop/restart.
+1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, one-click rollback (`docker service rollback` — free from the Swarm decision, so it ships with the deploy loop).
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
-3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, teams/RBAC, rollback.
+3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, teams/RBAC.
 4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
 
 **Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's
@@ -164,7 +165,7 @@ also has **no `--docker-opts` flag** — only `--docker-host`, `--docker-tls-ver
 
 The working shape, implemented in `scripts/spike-local.sh`:
 
-1. `nixpacks build . --out DIR --apt wget` — generate the Dockerfile, don't build
+1. `nixpacks build . --out . --apt wget` — generate the Dockerfile, don't build. `--out .` (into the source dir), never a separate directory: nixpacks writes only `.nixpacks/` and does **not** copy your source, while the Dockerfile it generates does `COPY .nixpacks/…`. So `.nixpacks` has to sit inside the build context or the build dies on a missing COPY.
 2. `docker buildx create --driver docker-container --driver-opt memory=… --driver-opt cpu-quota=…`
 3. `docker buildx build --builder … --load --progress=plain -f DIR/…/Dockerfile CONTEXT`
 

@@ -291,27 +291,28 @@ cd "$WORK/src-$NAME"
 # / --docker-cert-path). On sépare donc les deux étapes : Nixpacks génère le
 # Dockerfile, buildx le construit avec le builder capé.
 #
+# `--out .` et pas `--out ailleurs/` : nixpacks n'écrit QUE le répertoire
+# .nixpacks/ (Dockerfile, build.sh, le .nix), il NE COPIE PAS les sources. Or le
+# Dockerfile généré fait `COPY .nixpacks/nixpkgs-<hash>.nix ...`, donc .nixpacks
+# doit se trouver À L'INTÉRIEUR du contexte de build. En sortant ailleurs, le
+# contexte ne contient pas les sources et le COPY échoue sur un fichier
+# introuvable.
+#
 # --apt wget : les images Nixpacks n'embarquent pas wget, et HEALTHCHECK a besoin
 # d'un binaire DANS l'image. Sans ça le healthcheck échoue toujours et le service
 # ne converge jamais — en donnant l'impression d'un problème Traefik.
-rm -rf "$WORK/out-$NAME"
-nixpacks build . --out "$WORK/out-$NAME" --apt wget
+rm -rf .nixpacks
+nixpacks build . --out . --apt wget
 
-DOCKERFILE="$(find "$WORK/out-$NAME" -name Dockerfile -print -quit)"
-[[ -n "$DOCKERFILE" ]] || { echo "Dockerfile introuvable dans $WORK/out-$NAME"; exit 1; }
-CONTEXT="$(dirname "$(dirname "$DOCKERFILE")")"
-[[ -f "$CONTEXT/package.json" ]] || CONTEXT="$(dirname "$DOCKERFILE")"
-
-echo "Dockerfile : $DOCKERFILE"
-echo "Contexte   : $CONTEXT"
+[[ -f .nixpacks/Dockerfile ]] || { echo "nixpacks n'a pas généré .nixpacks/Dockerfile"; exit 1; }
 
 sudo docker buildx build \
   --builder "$BUILDER" \
   --progress=plain \
   --load \
-  -f "$DOCKERFILE" \
+  -f .nixpacks/Dockerfile \
   -t "$APP_NAME:$TAG" \
-  "$CONTEXT"
+  .
 REMOTE
 }
 
