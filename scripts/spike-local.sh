@@ -50,6 +50,14 @@ APP_PORT="${APP_PORT:-3000}"
 
 APP_NAME="spike-app"
 TRAEFIK_NET="noddle-public"
+
+# Épinglé au patch près, volontairement. Traefik < 3.6 embarque un SDK Docker
+# figé sur l'API 1.24, que Docker Engine 29 refuse (min 1.40) : le provider
+# swarm ne se connecte jamais et tout répond 404 sans le moindre symptôme
+# ailleurs. Corrigé en 3.6 (traefik/traefik#12253).
+# Vérifier la tag sur Docker Hub, pas dans les releases GitHub : v3.7.10 est
+# publiée côté GitHub sans image correspondante sur le Hub.
+TRAEFIK_IMAGE="${TRAEFIK_IMAGE:-traefik:v3.7.9}"
 WORK="/opt/noddle-spike"
 BUILDER="noddle-builder"
 
@@ -138,6 +146,7 @@ BASE_ENV=(
   "APP_PORT=$APP_PORT"
   "APP_DOMAIN=$APP_DOMAIN"
   "TRAEFIK_NET=$TRAEFIK_NET"
+  "TRAEFIK_IMAGE=$TRAEFIK_IMAGE"
   "WORK=$WORK"
   "BUILDER=$BUILDER"
   "BUILD_MEM=$BUILD_MEM"
@@ -220,10 +229,32 @@ sudo docker network create --driver=overlay --attachable "$TRAEFIK_NET" 2>/dev/n
 # l'internet public, ce qui est impossible ici. On route en HTTP simple.
 # Pour exercer le chemin de code ACME sans vrais certificats : Pebble, en
 # Phase 1. Le spike valide la chaîne, pas les certificats.
+# Si Traefik tourne déjà sur une autre image, on le recrée. Un simple
+# `service update --image` laisserait traîner l'ancienne config (env parasites
+# d'un contournement abandonné, par ex.) ; pour un proxy on veut un état propre.
+if sudo docker service inspect noddle-traefik >/dev/null 2>&1; then
+  CURRENT_IMG="$(sudo docker service inspect noddle-traefik \
+    --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}')"
+  case "$CURRENT_IMG" in
+    "$TRAEFIK_IMAGE"|"$TRAEFIK_IMAGE"@*) ;;
+    *)
+      echo "Traefik passe de $CURRENT_IMG à $TRAEFIK_IMAGE — recréation"
+      sudo docker service rm noddle-traefik
+      sleep 3
+      ;;
+  esac
+fi
+
+# NB : le contournement qui circule partout — poser DOCKER_API_VERSION sur le
+# conteneur Traefik — NE MARCHE PAS. Vérifié ici : la variable est bien présente
+# dans l'environnement du conteneur, celui-ci redémarre, et Traefik continue
+# d'annoncer 1.24. La seule vraie correction est la version de Traefik (>= 3.6).
 if ! sudo docker service inspect noddle-traefik >/dev/null 2>&1; then
   # Traefik v3 : le provider Swarm est séparé du provider Docker.
   # En v2 c'était --providers.docker.swarmMode=true.
-  sudo docker service create \
+  # timeout : avec --detach=false et une image introuvable, Swarm retente
+  # indéfiniment sans jamais rendre la main.
+  timeout 240 sudo docker service create \
     --name noddle-traefik \
     --constraint 'node.role==manager' \
     --publish published=80,target=80,mode=host \
@@ -231,7 +262,7 @@ if ! sudo docker service inspect noddle-traefik >/dev/null 2>&1; then
     --network "$TRAEFIK_NET" \
     --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock,ro \
     --detach=false \
-    traefik:v3.3 \
+    "$TRAEFIK_IMAGE" \
       --providers.swarm=true \
       --providers.swarm.exposedByDefault=false \
       --providers.swarm.network="$TRAEFIK_NET" \
@@ -298,11 +329,18 @@ cd "$WORK/src-$NAME"
 # contexte ne contient pas les sources et le COPY échoue sur un fichier
 # introuvable.
 #
-# --apt wget : les images Nixpacks n'embarquent pas wget, et HEALTHCHECK a besoin
-# d'un binaire DANS l'image. Sans ça le healthcheck échoue toujours et le service
-# ne converge jamais — en donnant l'impression d'un problème Traefik.
+# NE JAMAIS passer --apt ni --pkgs ici. Sur nixpacks 1.41.0 ces deux flags
+# écrasent la liste d'overlays nix générée. Or le provider Node y déclare
+# railwayapp/nix-npm-overlay, qui est ce qui DÉFINIT npm-9_x. Sans l'overlay :
+#
+#   error: undefined variable 'npm-9_x'
+#
+# et tout build Node échoue. Injecter l'overlay à la main via nixpacks.toml ne
+# rattrape rien : --apt l'écrase quand même. Il n'existe donc aucun moyen
+# d'injecter un paquet par la CLI nixpacks — le healthcheck ne doit dépendre
+# d'aucune injection (voir deploy_image : on utilise curl, déjà dans l'image).
 rm -rf .nixpacks
-nixpacks build . --out . --apt wget
+nixpacks build . --out .
 
 [[ -f .nixpacks/Dockerfile ]] || { echo "nixpacks n'a pas généré .nixpacks/Dockerfile"; exit 1; }
 
@@ -355,7 +393,7 @@ else
     --restart-condition on-failure \
     --restart-max-attempts 3 \
     --restart-window 120s \
-    --health-cmd "wget -q -O /dev/null http://127.0.0.1:$APP_PORT/ || exit 1" \
+    --health-cmd "curl -fsS -o /dev/null http://127.0.0.1:$APP_PORT/ || exit 1" \
     --health-interval 3s \
     --health-timeout 2s \
     --health-retries 3 \
@@ -392,8 +430,10 @@ diagnose() {
    1. Nom du provider Traefik (v3 = providers.swarm, v2 = providers.docker.swarmMode)
    2. loadbalancer.server.port manquant ou faux
    3. Service pas sur le même réseau overlay que Traefik
-   4. wget absent de l'image → le healthcheck échoue toujours, la task ne
-      converge jamais, et ça ressemble à un problème de routage
+   4. Binaire du healthcheck absent de l'image → la task ne converge jamais et
+      ça ressemble à un problème de routage. Vérifié dans l'image de base
+      nixpacks:ubuntu : curl OUI (/bin/curl), wget NON, node PAS dans le PATH
+      d'un shell non-login — or HEALTHCHECK tourne en sh -c non-login.
 HINTS
 }
 

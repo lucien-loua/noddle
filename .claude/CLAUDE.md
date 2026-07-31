@@ -165,7 +165,7 @@ also has **no `--docker-opts` flag** — only `--docker-host`, `--docker-tls-ver
 
 The working shape, implemented in `scripts/spike-local.sh`:
 
-1. `nixpacks build . --out . --apt wget` — generate the Dockerfile, don't build. `--out .` (into the source dir), never a separate directory: nixpacks writes only `.nixpacks/` and does **not** copy your source, while the Dockerfile it generates does `COPY .nixpacks/…`. So `.nixpacks` has to sit inside the build context or the build dies on a missing COPY.
+1. `nixpacks build . --out .` — generate the Dockerfile, don't build. `--out .` (into the source dir), never a separate directory: nixpacks writes only `.nixpacks/` and does **not** copy your source, while the Dockerfile it generates does `COPY .nixpacks/…`. So `.nixpacks` has to sit inside the build context or the build dies on a missing COPY.
 2. `docker buildx create --driver docker-container --driver-opt memory=… --driver-opt cpu-quota=…`
 3. `docker buildx build --builder … --load --progress=plain -f DIR/…/Dockerfile CONTEXT`
 
@@ -173,13 +173,33 @@ The cgroup lands on the buildkitd container, so it covers all build work.
 `--progress=plain` is required: buildx's default TTY renderer rewrites the screen
 and is unusable as an SSE stream.
 
+**Never pass `--apt` or `--pkgs` to nixpacks.** On 1.41.0 both flags wipe the
+generated nix `overlays` list. The Node provider declares
+`railwayapp/nix-npm-overlay` there, and that overlay is what *defines* `npm-9_x`.
+Drop it and every Node build dies with `error: undefined variable 'npm-9_x'`.
+Re-injecting the overlay through `nixpacks.toml` does not help — `--apt` clobbers
+it regardless. Measured:
+
+| invocation | `overlays` | Node build |
+|---|---|---|
+| `nixpacks build . --out .` | overlay present | works |
+| `… --apt wget` | `[ ]` | fails |
+| `… --pkgs wget` | `[ ]` | fails |
+
+Consequence for the product: **there is no way to inject a package through the
+nixpacks CLI.** Anything Noddle needs inside a user's image has to come from the
+base image, or from a build stage Noddle controls — never from a nixpacks flag.
+
 **Swarm gotchas that will silently break things:**
-- `HEALTHCHECK` needs a binary **inside** the image. Nixpacks images ship neither `wget` nor `curl`, so a healthcheck referencing them fails forever, the task never converges, and it presents as a Traefik routing bug. Noddle injects one (`nixpacks --apt wget`) rather than assuming user apps have it.
+- `HEALTHCHECK` needs a binary **inside** the image, and it runs under a **non-login `sh -c`**. Measured in `nixpacks:ubuntu-1745885067`: `curl` is present at `/bin/curl` and on `PATH`; `wget` is absent; `node` is **not** on `PATH` because it lives in the nix profile that only a *login* shell sources. So the healthcheck uses `curl`, and a `node -e` healthcheck would fail just as silently as `wget`. Either way it presents as a Traefik routing bug.
 - `docker service create/update --no-resolve-image` for locally-built images. Without it Swarm tries to resolve the digest against a registry, fails, warns, then falls back to the tag — slow and noisy on one node.
 - **Local builds pin a service to the node that built it.** The image exists nowhere else, so Swarm's scheduler cannot move it. Phase 2 multi-server means "each service is built and stays on its assigned node", not "Swarm places services freely". Free placement needs the registry work currently parked in Phase 4.
 - Traefik reads labels on the **service**, not the container
 - `traefik.http.services.<name>.loadbalancer.server.port` is **required** — Traefik cannot infer the port in Swarm mode
 - Traefik v3 uses `--providers.swarm`; v2 used `--providers.docker.swarmMode`. Check against the pinned version.
+- **Traefik must be pinned to >= 3.6.** Below that its embedded Docker SDK is fixed at API 1.24, which Docker Engine 29 rejects (minimum 1.40). The Swarm provider then never connects, discovers nothing, and every request 404s — while the service, its labels and the overlay network are all correct, and Traefik itself answers on :80. The most misleading failure in the chain: nothing looks broken, and the only evidence is one retrying line in Traefik's own log. Fixed upstream in milestone 3.6 ([traefik#12253](https://github.com/traefik/traefik/issues/12253)); the spike pins an exact patch.
+  **The widely-repeated `DOCKER_API_VERSION` workaround does not work.** Measured on v3.3: the variable is present in the container's environment, the container restarts, and Traefik still announces 1.24. Do not reach for it — upgrade the version.
+  Noddle installs Docker *itself*, so it owns both halves of this compatibility pair. Let either float independently and fresh installs break.
 - `docker stack deploy` **ignores** `build:` and conditional `depends_on`. Build first, deploy the resulting image.
 - Swarm does **not** solve distributed storage. Stateful services (Postgres, Redis) are pinned with placement constraints and local volumes. A database lives on exactly one node, explicitly.
 
