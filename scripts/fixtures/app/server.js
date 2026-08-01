@@ -10,39 +10,43 @@
 // Le mode `crash` est le cas limite cité dans CLAUDE.md : le conteneur passe son
 // healthcheck PUIS meurt. C'est précisément ce que la logique stop-then-start
 // écrite à la main rate systématiquement.
-const http = require('node:http');
-const fs = require('node:fs');
-const path = require('node:path');
+const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const port = Number(process.env.PORT) || 3000;
 
-let mode = 'healthy';
+let mode = "healthy";
 try {
-  mode = fs.readFileSync(path.join(__dirname, 'mode.txt'), 'utf8').trim() || 'healthy';
+	mode =
+		fs.readFileSync(path.join(__dirname, "mode.txt"), "utf8").trim() ||
+		"healthy";
 } catch {
-  // pas de mode.txt → healthy
+	// pas de mode.txt → healthy
 }
 
 // Injecté au build pour qu'on puisse distinguer deux images en regardant la
 // réponse HTTP. C'est comme ça que le test de rollback prouve que c'est bien
 // l'ANCIENNE version qui sert encore.
-const version = process.env.APP_VERSION || 'dev';
+const version = process.env.APP_VERSION || "dev";
 
-if (mode === 'crash') {
-  setTimeout(() => {
-    console.error('[spike] crash simulé après healthcheck réussi');
-    process.exit(1);
-  }, 25000);
+if (mode === "crash") {
+	setTimeout(() => {
+		console.error("[spike] crash simulé après healthcheck réussi");
+		process.exit(1);
+	}, 25000);
 }
 
 http
-  .createServer((_req, res) => {
-    if (mode === 'unhealthy') {
-      res.writeHead(500, { 'content-type': 'text/plain' });
-      res.end('unhealthy\n');
-      return;
-    }
-    res.writeHead(200, { 'content-type': 'text/plain' });
-    res.end(`noddle-spike mode=${mode} version=${version}\n`);
-  })
-  .listen(port, () => console.log(`[spike] listening on ${port} mode=${mode} version=${version}`));
+	.createServer((_req, res) => {
+		if (mode === "unhealthy") {
+			res.writeHead(500, { "content-type": "text/plain" });
+			res.end("unhealthy\n");
+			return;
+		}
+		res.writeHead(200, { "content-type": "text/plain" });
+		res.end(`noddle-spike mode=${mode} version=${version}\n`);
+	})
+	.listen(port, () =>
+		console.log(`[spike] listening on ${port} mode=${mode} version=${version}`),
+	);

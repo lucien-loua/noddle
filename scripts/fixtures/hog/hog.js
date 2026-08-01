@@ -12,7 +12,7 @@ const chunks = [];
 let mb = 0;
 
 for (;;) {
-  chunks.push(Buffer.alloc(64 * 1024 * 1024, 1));
-  mb += 64;
-  console.log(`[hog] ${mb} MB alloués`);
+	chunks.push(Buffer.alloc(64 * 1024 * 1024, 1));
+	mb += 64;
+	console.log(`[hog] ${mb} MB alloués`);
 }

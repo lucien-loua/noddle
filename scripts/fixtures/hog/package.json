@@ -1,9 +1,9 @@
 {
-  "name": "noddle-spike-hog",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "build": "node hog.js",
-    "start": "node server.js"
-  }
+	"name": "noddle-spike-hog",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"build": "node hog.js",
+		"start": "node server.js"
+	}
 }
