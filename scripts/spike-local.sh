@@ -192,7 +192,14 @@ if ! command -v docker >/dev/null 2>&1; then
   sudo usermod -aG docker "$USER"
 fi
 
-if ! sudo docker info 2>/dev/null | grep -q 'Swarm: active'; then
+# Surtout PAS `docker info | grep -q 'Swarm: active'`. grep -q sort dès qu'il
+# trouve, docker info se prend un SIGPIPE (141), et `set -o pipefail` transforme
+# ça en échec de pipeline : la négation part, et on relance swarm init sur un
+# nœud déjà en swarm. Pire, c'est une COURSE — selon que docker info a fini
+# d'écrire ou non, le même code passe ou casse d'une exécution à l'autre.
+# On interroge directement l'état, sans pipe.
+SWARM_STATE="$(sudo docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo unknown)"
+if [ "$SWARM_STATE" != "active" ]; then
   sudo docker swarm init --advertise-addr "$(hostname -I | awk '{print $1}')"
 fi
 
@@ -537,7 +544,10 @@ if [[ "$MODE" == "break" ]]; then
 
   echo
   rexec "${BASE_ENV[@]}" <<'REMOTE'
-sudo docker service ps "$APP_NAME" --no-trunc | head -8
+# `| head` referme le tuyau -> SIGPIPE -> pipefail -> échec. Même piège que le
+# grep -q plus haut. On limite côté docker.
+sudo docker service ps "$APP_NAME" --no-trunc --filter desired-state=running
+sudo docker service inspect "$APP_NAME" --format 'update: {{.UpdateStatus.State}} — {{.UpdateStatus.Message}}'
 REMOTE
   exit 0
 fi

@@ -106,7 +106,22 @@ real DNS before shipping — budget for it, do not skip it.
 
 ## Current phase
 
-**Phase 0 — validate the deploy chain end to end.**
+**Phase 0 is DONE.** All four criteria below passed on a real 2 GB Multipass VM
+(Docker 29.7.0, Traefik v3.7.9, nixpacks 1.41.0, arm64) on 2026-07-31. A broken
+image rolled back with the previous version serving uninterrupted; a build that
+climbed to 896 MB was killed by the cap while the running service answered
+identically throughout.
+
+**Now on Phase 1.** Do not re-run Phase 0 by hand — wire `scripts/spike-local.sh`
+into CI so it re-runs on a schedule and on every dependency bump. Six of the seven
+Phase 0 failures were third-party version or flag interactions, none in our own
+logic. That is this project's real risk profile, and the spike is the only thing
+that detects it. Dokploy is currently shipping the Traefik/Docker break to users
+for exactly this reason.
+
+---
+
+### Phase 0 — validate the deploy chain end to end (reference)
 
 `scripts/spike-local.sh` must pass on a local VM before any application code gets
 written. Nothing else matters until it does.
@@ -152,6 +167,23 @@ working. If you cannot test it, say so plainly instead of implying it works.
 **Never hand-roll the deploy swap.** Use `docker service update --update-order
 start-first --update-failure-action rollback` with a `HEALTHCHECK` on the service.
 The whole point of running Swarm is that this behaviour is already correct.
+Verified on a real VM: a broken image fails its healthcheck, Swarm rolls back on
+its own, and the previous version keeps serving without interruption.
+
+**A failed deploy exits 0.** `docker service update --update-failure-action
+rollback` returns 0 after a *successful rollback* — the deploy failed, the command
+succeeded. Measured. So the worker must never infer deploy success from the exit
+code; read `docker service inspect --format '{{.UpdateStatus.State}}'` and treat
+`rollback_completed` / `rollback_paused` as failure. Getting this wrong means the
+dashboard reports a green deploy while the old version is what's actually serving.
+
+**Never `cmd | grep -q` in remote scripts.** They run under `set -o pipefail`.
+`grep -q` exits at the first match, the producer takes SIGPIPE (141), and pipefail
+turns that into a failed pipeline. It is a *race* — whether the producer finished
+writing first — so the same code passes and fails on alternate runs. This cost a
+Phase 0 run: `docker info | grep -q 'Swarm: active'` intermittently re-ran
+`swarm init` on an already-swarmed node. Query state directly instead:
+`docker info --format '{{.Swarm.LocalNodeState}}'`. Same trap with `| head`.
 
 **Capping a build: cap the builder, not the build command.**
 
