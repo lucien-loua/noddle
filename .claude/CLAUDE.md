@@ -37,8 +37,16 @@ an answer.** Do not proceed on your own judgment.
 | Reverse proxy | **Traefik**, Swarm provider | dynamic label-based routing, native Let's Encrypt |
 | RPC layer | **TanStack Start `createServerFn`**, no tRPC | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
 
-Still open, decide before contributors arrive: **license** (this category has
-consolidated around open-core — permissive core, RBAC/SSO/audit logs as paid tier).
+**License: AGPL-3.0** (`LICENSE` at the repo root), open-core. The core is free;
+anyone who runs it as a hosted service must publish their modifications, which is
+what keeps a managed offering viable. RBAC, SSO, audit logs and white-labeling are
+the intended paid tier — build them so they can be separated, but do not
+prematurely split the repo.
+
+Practical consequence: **every new file is AGPL from now on.** Do not paste in
+code under an incompatible license, and do not add a dependency whose license
+conflicts (permissive is fine; other copyleft needs checking). Relicensing after
+contributors arrive is painful, which is why this was settled before publishing.
 
 ---
 

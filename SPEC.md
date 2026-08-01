@@ -252,6 +252,6 @@ No bare-metal or systemd deploy paths in v1. Every deployable artifact is a cont
 
 ## 10. Still Open
 
-- **License.** This category has consolidated around open-core: a permissive or copyleft core, with RBAC, SSO, audit logs and white-labeling as a paid tier. Worth deciding early — relicensing after contributors arrive is painful.
+- ~~**License.**~~ **Settled: AGPL-3.0, open-core.** The core is free; running it as a hosted service obliges you to publish modifications. RBAC, SSO, audit logs and white-labeling are the intended paid tier. Same choice as Coolify and Dokploy, and the one that keeps a managed offering possible.
 - **Managed offering.** Whether Noddle ever has a hosted counterpart shapes how cleanly you separate control plane from target servers, so it's worth having an opinion before the deploy engine hardens.
 
