@@ -102,6 +102,7 @@ do not exist in production.
 - Access is over **real SSH with a key**, never `multipass exec`. SSH is the production access path, so it is the one that must be exercised.
 - Hostnames use `sslip.io` (`app.10-0-0-5.sslip.io` resolves to `10.0.0.5`), so Host-based routing is tested without editing `/etc/hosts`.
 - Multi-server work in Phase 2 means launching a second and third VM, not mocking one.
+- **OrbStack was evaluated and dropped.** It does work — measured 7/7: Docker, Swarm, a real VXLAN overlay and Traefik routing, on a 2 GB-capped machine over real SSH. It was dropped anyway, to keep one target and one code path. Do not propose it again.
 
 **TLS cannot be fully tested locally.** ACME requires a publicly reachable
 domain. In dev, Traefik serves plain HTTP. To exercise the ACME code path
