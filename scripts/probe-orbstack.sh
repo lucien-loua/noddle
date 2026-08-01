@@ -185,13 +185,28 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 log "9. Interfaces VXLAN réellement créées ?"
 # ─────────────────────────────────────────────────────────────────────────────
-VX="$(remote 'sudo ip -d link show 2>/dev/null | grep -c vxlan' 2>/dev/null || echo 0)"
+# Les interfaces VXLAN de Swarm ne vivent PAS dans le namespace réseau de
+# l'hôte : elles sont dans ceux de Docker, sous /var/run/docker/netns/. Un
+# `ip link show` depuis la machine ne montre donc rien, et conclure « pas de
+# VXLAN » à partir de là est faux.
+#
+# Le comptage se fait côté local : `grep -c` sort en 1 quand il ne trouve rien,
+# ce qui, combiné à `|| echo 0` à distance, renvoyait « 0\n0 » et cassait le
+# test numérique. Même famille de piège que le grep -q du spike.
+VX="$(remote 'for ns in $(sudo ls /var/run/docker/netns/ 2>/dev/null); do
+        sudo nsenter --net=/var/run/docker/netns/"$ns" ip -d link show 2>/dev/null
+      done' 2>/dev/null | grep -c "vxlan id" || true)"
+VX="${VX//[!0-9]/}"
+
 if [[ "${VX:-0}" -gt 0 ]]; then
-  ok "$VX interface(s) VXLAN présentes — l'overlay est bien monté"
+  ok "$VX interface(s) VXLAN montées dans les netns Docker — overlay réel"
+  remote 'for ns in $(sudo ls /var/run/docker/netns/ 2>/dev/null); do
+            sudo nsenter --net=/var/run/docker/netns/"$ns" ip -d link show 2>/dev/null
+          done' 2>/dev/null | grep "vxlan id" | sed 's/^/    /' || true
 else
-  info "aucune interface VXLAN visible depuis la machine"
-  info "(sur un seul nœud ce n'est pas forcément anormal : Swarm peut router"
-  info " localement sans monter le VXLAN tant qu'il n'y a pas de second nœud)"
+  ko "aucune interface VXLAN — l'overlay n'est pas réellement monté"
+  info "le trafic passe peut-être en routage local, ce qui masquerait le"
+  info "problème sur un nœud unique et casserait dès le multi-nœuds"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
