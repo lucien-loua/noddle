@@ -140,7 +140,52 @@ CI does **not** reproduce the 2 GB constraint — a runner has 16 GB, so "the
 service survives the build" is trivially true there. It validates the cap
 *mechanism* and dependency drift. The local Multipass run stays the pre-ship gate.
 
-**Now on Phase 1.**
+### Phase 1 — état au 2026-08-02
+
+Chaque paquet a un `src/verify.ts` lancé contre de VRAIES ressources. Les
+relancer après toute montée de version : c'est le seul filet contre la dérive
+des dépendances, qui est le risque principal de ce projet.
+
+| Paquet | Vérifié contre | |
+|---|---|---|
+| `packages/ssh-executor` | VM Multipass | 9/9 |
+| `packages/db` | PostgreSQL 17 | migration appliquée + client |
+| `packages/shared` | — (pur) | 17/17, deux runtimes |
+| `packages/build-engine` | VM Multipass | 14/14, cgroup lu sur le conteneur |
+| `packages/proxy-config` | — (pur) | intégré |
+| `apps/worker` — Swarm | VM Multipass | 8/8, rollback détecté |
+| `apps/worker` — bout en bout | Postgres + VM | 12/12, base → URL vivante |
+| `apps/worker` — surveillance | Postgres + VM | 8/8, boucle de crash rattrapée |
+| `apps/worker` — file | Postgres + Redis | 5/5, processus + BullMQ |
+
+**Fait :** exécuteur SSH, schéma + migration, chiffrement AES-256-GCM lié par
+AAD, validation Zod, moteur de build capé, labels Traefik, job de déploiement,
+rollback depuis l'historique, surveillance post-déploiement, câblage BullMQ.
+
+**Reste pour clore la Phase 1 :**
+
+1. `apps/web` — TanStack Start : better-auth, le dashboard unique, le flux SSE
+   des logs, le bouton déployer toujours visible, le rollback, la table de
+   variables d'environnement avec diff avant enregistrement.
+2. `installer/` — `install.sh` + compose, qui enregistre sa propre machine
+   comme serveur cible n°1. Ne peut pas précéder le web, puisqu'il le démarre.
+
+**Pièges déjà payés, à ne pas repayer :**
+
+- Une file BullMQ ne peut pas contenir `:` — la v6 s'en sert comme séparateur de
+  clés Redis, et le processus ne démarre pas du tout.
+- À la CRÉATION d'un service Swarm il n'y a pas d'`UpdateStatus` : sans attendre
+  qu'une task atteigne `running`, un premier déploiement cassé est enregistré
+  comme réussi.
+- Le provider Swarm de Traefik ne scrute que toutes les 15 s : une task
+  convergée n'est PAS immédiatement joignable.
+- `fetch` ignore silencieusement un en-tête `Host`, il est interdit par la spec.
+  Utiliser le domaine, ou `curl -H`.
+- Un `biome-ignore` doit être la DERNIÈRE ligne de commentaire avant le code ;
+  toute ligne d'explication ajoutée après le détache en silence.
+- Les versions des dépendances tierces vivent dans `workspaces.catalog` à la
+  racine, et chaque paquet écrit `catalog:`. Deux versions de `drizzle-orm` ont
+  cohabité en silence et produit des types incompatibles.
 
 ---
 

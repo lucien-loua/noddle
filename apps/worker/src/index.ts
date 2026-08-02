@@ -13,8 +13,10 @@ import IORedis from "ioredis";
 import { type DeployContext, type DeployJobData, runDeploy } from "./deploy.ts";
 import { sweepWatch } from "./sweep.ts";
 
-const DEPLOY_QUEUE = "noddle:deploy";
-const WATCH_QUEUE = "noddle:watch";
+// Pas de « : » dans un nom de file : BullMQ 6 le refuse, il s'en sert comme
+// séparateur de clés Redis. Le processus ne démarre même pas.
+const DEPLOY_QUEUE = "noddle-deploy";
+const WATCH_QUEUE = "noddle-watch";
 
 function required(name: string): string {
   const v = process.env[name];
