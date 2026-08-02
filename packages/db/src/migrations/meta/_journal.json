@@ -15,6 +15,13 @@
       "when": 1785670576449,
       "tag": "0001_lovely_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785685979124,
+      "tag": "0002_numerous_chimera",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,22 @@
 //
 // Rien ici ne devine : chaque étape rapporte ce qui s'est réellement passé, et
 // l'état final vient de l'API Docker, jamais d'un code de sortie.
+//
+// Phase 2 — multi-serveur : deux connexions distinctes entrent en jeu dès que
+// le service n'est pas hébergé sur le manager Swarm.
+//
+//   BUILD    toujours sur le serveur du service : c'est SON disque qui a
+//            besoin du dépôt, SON buildx capé qui produit l'image.
+//   SWARM    toujours sur le manager : `docker service create/update` est
+//            refusé par un nœud worker, qui ne détient pas l'état répliqué
+//            du cluster. Une contrainte de placement épingle ensuite la task
+//            au nœud qui a réellement l'image — sans registre, elle n'existe
+//            NULLE PART ailleurs, et le planificateur Swarm la placerait
+//            aveuglément faute de cette contrainte.
+//
+// Les deux connexions sont la MÊME sur un cluster à un seul nœud (le cas
+// Phase 1, inchangé) : `manager.id === server.id` alors, et `connectTo` ne se
+// connecte qu'une fois.
 import {
   buildImage,
   computeBuildCap,
@@ -22,7 +38,12 @@ import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
-import { deployService, ensureOverlayNetwork, isDeployAccepted } from "#swarm";
+import {
+  deployService,
+  ensureOverlayNetwork,
+  getSwarmNodeId,
+  isDeployAccepted,
+} from "#swarm";
 import { watchUntilFor } from "#watch";
 
 export interface DeployContext {
@@ -44,6 +65,7 @@ export interface DeployContext {
  */
 export type DeployJobData =
   | { kind: "deploy"; deploymentId: string }
+  | { kind: "provision-server"; serverId: string }
   | { kind: "rollback"; imageTag: string; serviceId: string };
 
 /** Aiguillage de la file. Le web n'exécute jamais rien de tout ceci : il tourne
@@ -60,7 +82,70 @@ export async function runJob(
     });
     return;
   }
+  if (data.kind === "provision-server") {
+    const { provisionServer } = await import("#provision");
+    await provisionServer(ctx, data.serverId);
+    return;
+  }
   await runDeploy(ctx, data);
+}
+
+type ServerRow = typeof servers.$inferSelect;
+
+/** Ouvre une connexion SSH vers un serveur, déjà déchiffré. */
+async function connectTo(
+  ctx: DeployContext,
+  server: ServerRow
+): ReturnType<typeof connect> {
+  const privateKey = decryptSecret(
+    server.sshPrivateKeyEncrypted,
+    ctx.appKey,
+    secretContext.serverSshKey(server.id)
+  );
+  return await connect({
+    host: server.host,
+    port: server.sshPort,
+    privateKey,
+    user: server.sshUser,
+  });
+}
+
+/**
+ * Deux connexions distinctes : build sur le serveur du service, commandes
+ * Swarm sur le manager — trouvé par `role`, pas par `isSelf`. La machine qui
+ * héberge Noddle est display-only par décision actée, jamais une branche de
+ * code ; `role` est le champ qui porte le fait d'orchestration, même si en
+ * Phase 2 les deux colonnes désignent toujours la même ligne — parce qu'une
+ * seule machine a lancé `docker swarm init`, jamais parce que l'une serait
+ * déduite de l'autre.
+ *
+ * Réutilise la MÊME connexion quand les deux coïncident (le cas
+ * mono-serveur), pour ne pas ouvrir une session SSH inutile vers la machine
+ * qu'on vient déjà de joindre.
+ */
+async function connectForDeploy(
+  ctx: DeployContext,
+  server: ServerRow
+): Promise<{
+  buildClient: Awaited<ReturnType<typeof connect>>;
+  managerClient: Awaited<ReturnType<typeof connect>>;
+  sameConnection: boolean;
+}> {
+  const manager = await ctx.db.query.servers.findFirst({
+    where: eq(servers.role, "manager"),
+  });
+  if (!manager) {
+    throw new Error(
+      "aucun manager Swarm enregistré — l'installateur devrait en avoir créé un"
+    );
+  }
+
+  const buildClient = await connectTo(ctx, server);
+  if (manager.id === server.id) {
+    return { buildClient, managerClient: buildClient, sameConnection: true };
+  }
+  const managerClient = await connectTo(ctx, manager);
+  return { buildClient, managerClient, sameConnection: false };
 }
 
 export async function runDeploy(
@@ -93,26 +178,19 @@ export async function runDeploy(
   });
   const stream = { onStderr: sink.write, onStdout: sink.write };
 
-  let sshClient: Awaited<ReturnType<typeof connect>> | undefined;
+  let buildClient: Awaited<ReturnType<typeof connect>> | undefined;
+  let managerClient: Awaited<ReturnType<typeof connect>> | undefined;
 
   try {
     if (!service.gitRepoUrl) {
       throw new Error("service sans dépôt git : source_type non supporté ici");
     }
 
-    // Déchiffré au plus près de l'usage, jamais journalisé.
-    const privateKey = decryptSecret(
-      server.sshPrivateKeyEncrypted,
-      ctx.appKey,
-      secretContext.serverSshKey(server.id)
-    );
-
-    sshClient = await connect({
-      host: server.host,
-      port: server.sshPort,
-      privateKey,
-      user: server.sshUser,
-    });
+    let sameConnection: boolean;
+    ({ buildClient, managerClient, sameConnection } = await connectForDeploy(
+      ctx,
+      server
+    ));
 
     // Le plafond se dérive de la mémoire du serveur MOINS ce que le plan de
     // contrôle occupe déjà : sous la topologie retenue, il partage la machine.
@@ -120,10 +198,10 @@ export async function runDeploy(
       totalMemoryMb: server.totalMemoryMb ?? 2048,
     });
     sink.write(`▸ build plafonné à ${cap.memory}\n`);
-    await ensureCappedBuilder(sshClient, "noddle-builder", cap, stream);
+    await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
     const workDir = `/opt/noddle/${service.id}`;
-    const sha = await fetchSource(sshClient, {
+    const sha = await fetchSource(buildClient, {
       branch: service.gitBranch ?? "main",
       commitSha: deployment.commitSha ?? undefined,
       dir: workDir,
@@ -137,7 +215,7 @@ export async function runDeploy(
       .set({ commitSha: sha, imageTag, status: "deploying" })
       .where(eq(deployments.id, deployment.id));
 
-    await buildImage(sshClient, {
+    await buildImage(buildClient, {
       builderName: "noddle-builder",
       dir: workDir,
       imageTag,
@@ -153,11 +231,22 @@ export async function runDeploy(
       );
     }
 
-    const docker = dockerClient(sshClient);
-    await ensureOverlayNetwork(docker, ctx.networkName);
+    const buildDocker = dockerClient(buildClient);
+    // L'ID du nœud qui vient de construire l'image — lu sur la connexion de
+    // BUILD, jamais sur celle du manager quand elles diffèrent : c'est un
+    // fait local à ce nœud, que `docker info` rapporte correctement même
+    // depuis un worker.
+    const placementNodeId = sameConnection
+      ? undefined
+      : await getSwarmNodeId(buildDocker);
+
+    const managerDocker = sameConnection
+      ? buildDocker
+      : dockerClient(managerClient);
+    await ensureOverlayNetwork(managerDocker, ctx.networkName);
 
     sink.write("▸ bascule Swarm\n");
-    const outcome = await deployService(docker, {
+    const outcome = await deployService(managerDocker, {
       env,
       image: imageTag,
       labels: routeLabels({
@@ -166,6 +255,7 @@ export async function runDeploy(
         serviceName: service.name,
       }),
       networkName: ctx.networkName,
+      placementNodeId,
       port: service.port,
       serviceName: service.name,
     });
@@ -225,8 +315,15 @@ export async function runDeploy(
       .where(eq(deployments.id, deployment.id));
     throw err;
   } finally {
-    if (sshClient) {
-      disconnect(sshClient);
+    // Identité d'objet, pas `sameConnection` : cette variable est scopée au
+    // bloc `try` pour éviter un faux positif Biome sur une réaffectation par
+    // déstructuration d'un `let` extérieur. L'identité est de toute façon
+    // l'invariant réel : ne jamais fermer deux fois la MÊME connexion.
+    if (managerClient && managerClient !== buildClient) {
+      disconnect(managerClient);
+    }
+    if (buildClient) {
+      disconnect(buildClient);
     }
     // Un POINTEUR vers le fichier, jamais le texte des logs en base.
     const { byteSize, storageUrl } = await sink.close();
@@ -278,17 +375,13 @@ export async function redeployImage(
     })
     .returning();
 
-  const privateKey = decryptSecret(
-    service.server.sshPrivateKeyEncrypted,
-    ctx.appKey,
-    secretContext.serverSshKey(service.server.id)
+  // Pas de build ici : l'image existe déjà sur SON serveur. La commande Swarm,
+  // elle, doit quand même passer par le manager — et la contrainte de
+  // placement vise le serveur du service, pas celui qui reçoit la commande.
+  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
+    ctx,
+    service.server
   );
-  const client = await connect({
-    host: service.server.host,
-    port: service.server.sshPort,
-    privateKey,
-    user: service.server.sshUser,
-  });
 
   try {
     const env: Record<string, string> = {};
@@ -300,10 +393,18 @@ export async function redeployImage(
       );
     }
 
+    const buildDocker = dockerClient(buildClient);
+    const placementNodeId = sameConnection
+      ? undefined
+      : await getSwarmNodeId(buildDocker);
+    const managerDocker = sameConnection
+      ? buildDocker
+      : dockerClient(managerClient);
+
     // Pas de build : l'image existe déjà. C'est précisément ce qui rend le
     // retour arrière instantané, et possible vers N'IMPORTE QUELLE version de
     // l'historique — Swarm, lui, ne garde qu'une spec antérieure.
-    const outcome = await deployService(dockerClient(client), {
+    const outcome = await deployService(managerDocker, {
       env,
       image: opts.imageTag,
       labels: routeLabels({
@@ -312,6 +413,7 @@ export async function redeployImage(
         serviceName: service.name,
       }),
       networkName: ctx.networkName,
+      placementNodeId,
       port: service.port,
       serviceName: service.name,
     });
@@ -335,7 +437,10 @@ export async function redeployImage(
 
     return created?.id ?? "";
   } finally {
-    disconnect(client);
+    if (!sameConnection) {
+      disconnect(managerClient);
+    }
+    disconnect(buildClient);
   }
 }
 
@@ -350,17 +455,7 @@ export async function refreshServerFacts(
   if (!server) {
     return;
   }
-  const privateKey = decryptSecret(
-    server.sshPrivateKeyEncrypted,
-    ctx.appKey,
-    secretContext.serverSshKey(server.id)
-  );
-  const client = await connect({
-    host: server.host,
-    port: server.sshPort,
-    privateKey,
-    user: server.sshUser,
-  });
+  const client = await connectTo(ctx, server);
   try {
     const docker = dockerClient(client);
     const info = (await docker.info()) as { MemTotal?: number };
