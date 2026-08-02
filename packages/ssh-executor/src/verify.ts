@@ -29,9 +29,9 @@ const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
 const runtime =
-  typeof (globalThis as { Bun?: unknown }).Bun === "undefined"
+  typeof globalThis.Bun === "undefined"
     ? `Node ${process.version}`
-    : `Bun ${(globalThis as unknown as { Bun: { version: string } }).Bun.version}`;
+    : `Bun ${globalThis.Bun.version}`;
 
 let pass = 0;
 let fail = 0;
