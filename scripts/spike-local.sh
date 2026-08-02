@@ -82,20 +82,45 @@ MODE="${1:-deploy}"
 # ─────────────────────────────────────────────────────────────────────────────
 # reset
 # ─────────────────────────────────────────────────────────────────────────────
+# TARGET_SSH — viser un hôte DÉJÀ provisionné au lieu d'en créer un.
+#
+# Ce n'est pas un second backend : c'est la séparation entre « fabriquer une
+# machine » et « jouer la chaîne dessus ». En CI, le runner EST la machine —
+# une vraie VM, noyau propre, Docker installé — et la virtualisation imbriquée
+# n'est pas supportée par GitHub, donc provisionner y est de toute façon exclu.
+#
+# Viser localhost en SSH n'est pas un pis-aller : c'est exactement la topologie
+# actée (l'hôte local est le serveur cible n°1 et passe par l'exécuteur SSH
+# comme n'importe quel autre). La CI exerce donc le chemin de production.
+#
+#   TARGET_SSH=ubuntu@10.0.0.5 TARGET_IP=10.0.0.5 ./spike-local.sh
+TARGET_SSH="${TARGET_SSH:-}"
+
 if [[ "$MODE" == "reset" ]]; then
+  if [[ -n "$TARGET_SSH" ]]; then
+    fail "reset refusé : TARGET_SSH vise un hôte que ce script n'a pas créé."
+  fi
   log "Destruction de $VM_NAME"
   multipass delete "$VM_NAME" --purge 2>/dev/null || true
   echo "Fait. Relance sans argument pour repartir de zéro."
   exit 0
 fi
 
-command -v multipass >/dev/null 2>&1 || fail "multipass absent — brew install --cask multipass"
-[[ -f "$SSH_KEY.pub" ]] || fail "Pas de clé publique à $SSH_KEY.pub (ssh-keygen -t ed25519)"
 [[ -d "$FIXTURES/app" ]] || fail "Fixtures manquantes à $FIXTURES"
+[[ -f "$SSH_KEY.pub" ]] || fail "Pas de clé publique à $SSH_KEY.pub (ssh-keygen -t ed25519)"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VM
+# Machine cible
 # ─────────────────────────────────────────────────────────────────────────────
+if [[ -n "$TARGET_SSH" ]]; then
+  VM_IP="${TARGET_IP:?TARGET_IP est requis avec TARGET_SSH (l'IP joignable de l'hôte)}"
+  log "Hôte préexistant : $TARGET_SSH"
+  warn "Pas de plafond 2 Go ici. La CI valide les MÉCANISMES et la dérive des"
+  warn "dépendances, pas le réalisme de l'OOM. Le run Multipass local reste la référence."
+else
+
+command -v multipass >/dev/null 2>&1 || fail "multipass absent — brew install --cask multipass"
+
 log "VM locale ($VM_MEM RAM, $VM_CPUS vCPU)"
 
 if multipass info "$VM_NAME" >/dev/null 2>&1; then
@@ -120,14 +145,18 @@ EOF
 fi
 
 VM_IP="$(multipass info "$VM_NAME" --format csv | tail -1 | cut -d, -f3)"
-[[ -n "$VM_IP" ]] || fail "Impossible de récupérer l'IP de la VM"
+fi
+
+[[ -n "${VM_IP:-}" ]] || fail "Impossible de récupérer l'IP de la machine cible"
 
 # sslip.io résout n'importe quel sous-domaine vers l'IP encodée dedans.
 # Pas de /etc/hosts à éditer, et le routage par Host de Traefik est testé
 # pour de vrai.
 APP_DOMAIN="$APP_NAME.${VM_IP//./-}.sslip.io"
-VPS="ubuntu@$VM_IP"
+VPS="${TARGET_SSH:-ubuntu@$VM_IP}"
+SSH_HINT="ssh -i $SSH_KEY $VPS"
 
+echo "Cible  : $VPS"
 echo "IP     : $VM_IP"
 echo "Domain : $APP_DOMAIN"
 
