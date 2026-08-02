@@ -36,10 +36,10 @@ export interface ExecResult {
   stdout: string;
 }
 
-// Pas de parameter properties (`constructor(readonly x: T)`) dans ce paquet.
-// Le mode strip-only de Node les refuse — il retire les types sans les
-// transformer, or ce sucre génère du code. Tant que le runtime du worker n'est
-// pas tranché, tout doit pouvoir s'exécuter sous Node comme sous Bun.
+// Pas de parameter properties (`constructor(readonly x: T)`) ici. Le mode
+// strip-only de Node les refuse — il retire les types sans les transformer, or
+// ce sucre génère du code. Ce paquet est chargé par `apps/worker`, qui tourne
+// sur Node. `erasableSyntaxOnly` dans @noddle/tsconfig l'impose mécaniquement.
 export class SshError extends Error {
   readonly host: string;
   override readonly cause?: unknown;
