@@ -1,0 +1,146 @@
+# Le plan de contrôle de Noddle.
+#
+# Compose ici, Swarm pour les applications déployées. Ce n'est pas une
+# incohérence : Swarm est choisi pour `docker service update`, qui est une
+# primitive de déploiement transactionnelle. Le plan de contrôle, lui, ne se
+# déploie pas — il s'installe une fois et redémarre avec la machine.
+#
+# UN SEUL Traefik par hôte, et c'est celui-ci : il sert le dashboard ET les
+# applications. D'où les deux providers ci-dessous.
+
+name: noddle
+
+services:
+  # ── proxy ────────────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.7.9
+    # Épinglé, et pas au hasard : sous 3.6 le SDK Docker embarqué est figé sur
+    # l'API 1.24, que Docker Engine 29 refuse. Le provider Swarm ne se connecte
+    # alors JAMAIS, ne découvre rien, et tout répond 404 — pendant que le
+    # service, ses labels et le réseau overlay sont parfaitement corrects.
+    # C'est la panne la plus trompeuse de toute la chaîne. Noddle installant
+    # Docker lui-même, il possède les deux moitiés de ce couple : les laisser
+    # flotter séparément casse les installations neuves.
+    restart: unless-stopped
+    command:
+      # Deux providers sur le même socket. `docker` voit les conteneurs de ce
+      # fichier, `swarm` voit les services déployés par le worker.
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.swarm=true
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=noddle-public
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+    ports:
+      - "80:80"
+    volumes:
+      # En lecture seule : Traefik découvre, il ne pilote pas.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - noddle-public
+
+  # ── état ─────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: noddle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
+      POSTGRES_DB: noddle
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noddle -d noddle"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - noddle-public
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # Le tampon de logs a un TTL et la file BullMQ se reconstruit ; ce qui
+    # compte vraiment est en Postgres. La persistance évite juste de perdre
+    # les jobs en attente au redémarrage.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - noddle-public
+
+  # ── plan de contrôle ─────────────────────────────────────────────────────
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_KEY: ${APP_KEY:?APP_KEY manquant}
+      DATABASE_URL: postgres://noddle:${POSTGRES_PASSWORD}@postgres:5432/noddle
+      REDIS_URL: redis://redis:6379
+      LOG_ROOT: /var/lib/noddle/logs
+      # Variable de better-auth lui-même, lue sans une ligne de code de notre
+      # part. Absente, l'origine est dérivée de la requête — ce qui convient à
+      # un accès par IP, mais vérifie moins.
+      BETTER_AUTH_URL: ${NODDLE_URL:-}
+    volumes:
+      # Le worker ÉCRIT les logs de build, le web les relit pour les
+      # déploiements terminés. Le direct, lui, passe par Redis : rien dans le
+      # chemin temps réel ne dépend de ce volume.
+      - noddle-logs:/var/lib/noddle/logs:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.noddle-web.entrypoints=web
+      # Attrape-tout, priorité minimale : le dashboard répond sur ce qu'aucune
+      # application déployée ne réclame. Les règles Host des applications ont
+      # une priorité plus élevée et passent donc devant, ce qui permet
+      # d'atteindre Noddle par l'IP nue avant d'avoir un domaine.
+      - traefik.http.routers.noddle-web.rule=PathPrefix(`/`)
+      - traefik.http.routers.noddle-web.priority=1
+      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
+    networks:
+      - noddle-public
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_KEY: ${APP_KEY:?APP_KEY manquant}
+      DATABASE_URL: postgres://noddle:${POSTGRES_PASSWORD}@postgres:5432/noddle
+      REDIS_URL: redis://redis:6379
+      LOG_ROOT: /var/lib/noddle/logs
+      TRAEFIK_NETWORK: noddle-public
+    volumes:
+      - noddle-logs:/var/lib/noddle/logs
+      # La clé de l'hôte, pour l'adoption initiale uniquement. Ensuite elle vit
+      # CHIFFRÉE en base, et c'est cette copie-là que le worker déchiffre.
+      - /etc/noddle/ssh:/etc/noddle/ssh:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks:
+      - noddle-public
+
+volumes:
+  postgres-data:
+  redis-data:
+  noddle-logs:
+
+networks:
+  # Créé par install.sh en overlay attachable, PAS par compose : c'est le même
+  # réseau que rejoignent les services Swarm déployés, et il doit donc exister
+  # avant, hors du cycle de vie de cette pile.
+  noddle-public:
+    external: true
