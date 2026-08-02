@@ -122,12 +122,24 @@ image rolled back with the previous version serving uninterrupted; a build that
 climbed to 896 MB was killed by the cap while the running service answered
 identically throughout.
 
-**Now on Phase 1.** Do not re-run Phase 0 by hand — wire `scripts/spike-local.sh`
-into CI so it re-runs on a schedule and on every dependency bump. Six of the seven
-Phase 0 failures were third-party version or flag interactions, none in our own
-logic. That is this project's real risk profile, and the spike is the only thing
-that detects it. Dokploy is currently shipping the Traefik/Docker break to users
-for exactly this reason.
+**CI is live** — `.github/workflows/spike.yml` runs all four checks on every push
+touching `scripts/`, on PRs, and nightly at 04:00 UTC. Green on the first run
+(7m53s). It runs the chain on the runner itself over SSH to localhost, since
+GitHub does not support nested virtualisation and the runner is already a VM with
+its own kernel. That is the settled topology, so CI exercises the production path.
+
+Do not re-run Phase 0 by hand, and **do not let a red spike sit**. Six of the
+seven Phase 0 failures were third-party version or flag interactions, none in our
+own logic — that is this project's real risk profile, and the spike is the only
+thing that detects it. Dokploy is currently shipping the Traefik/Docker break to
+users for exactly this reason. When it goes red, read the job summary first: it
+prints the Docker, Traefik and nixpacks versions so you can see what moved.
+
+CI does **not** reproduce the 2 GB constraint — a runner has 16 GB, so "the
+service survives the build" is trivially true there. It validates the cap
+*mechanism* and dependency drift. The local Multipass run stays the pre-ship gate.
+
+**Now on Phase 1.**
 
 ---
 

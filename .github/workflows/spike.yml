@@ -49,7 +49,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Libérer du disque
         # Les images nixpacks et les couches de build sont volumineuses, et le
