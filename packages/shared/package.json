@@ -7,7 +7,7 @@
     "./validation": "./src/validation.ts"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@noddle/tsconfig": "workspace:*"

@@ -12,8 +12,9 @@
     "@noddle/proxy-config": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
-    "bullmq": "^6.0.5",
-    "ioredis": "^6.0.0"
+    "bullmq": "catalog:",
+    "ioredis": "catalog:",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@noddle/tsconfig": "workspace:*"
