@@ -249,11 +249,21 @@ worker (`verify-multi.ts`, en direct) et côté UI pour l'échec (mêmes
 composants, seul le badge de statut diffère) — mais personne n'a regardé le
 badge passer à « Connecté » dans un vrai navigateur.
 
+**« Connecter un dépôt » fait et vérifié en direct dans un vrai navigateur.**
+Le manque hérité de la Phase 1 — aucune UI de création de service, toutes les
+vérifications précédentes créaient leurs services par SQL directement — est
+comblé : `connectRepo` (retrouve-ou-crée projet et environnement par nom,
+`sourceType`/`buildMethod` non exposés au formulaire puisque git+nixpacks est
+le seul chemin que le worker sache exécuter) et le dialogue
+`ConnectRepoDialog`. Testé de bout en bout contre une vraie infrastructure :
+dépôt public connecté, déployé, échec de bascule attendu (l'appli écoute sur
+`$PORT`, par défaut 5000, le service était configuré sur 3000), corrigé via la
+table de variables d'environnement déjà existante, redéployé, convergé, et la
+surveillance post-déploiement s'est levée d'elle-même après ses 5 minutes,
+sans rollback.
+
 **Reste pour la Phase 2 :** déploiements Docker Compose, webhooks, bases de
-données en un clic. Aucune UI de création de service/projet n'existe encore —
-un manque antérieur à la Phase 2, hérité de la Phase 1 : toutes les
-vérifications jusqu'ici créent leurs services par SQL directement, jamais
-depuis le dashboard.
+données en un clic.
 
 **Pièges déjà payés, à ne pas repayer :**
 
