@@ -7,23 +7,11 @@
 // fonctionne pas sur Bun, mesuré sur les deux approches possibles. Bun reste le
 // gestionnaire de paquets et le runtime du web.
 import { createDatabase } from "@noddle/db";
-import { deployments, services } from "@noddle/db/schema";
-import {
-  decryptSecret,
-  loadAppKey,
-  secretContext,
-} from "@noddle/shared/crypto";
-import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
+import { loadAppKey } from "@noddle/shared/crypto";
 import { Queue, Worker } from "bullmq";
-import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import IORedis from "ioredis";
-import {
-  type DeployContext,
-  type DeployJobData,
-  redeployImage,
-  runDeploy,
-} from "./deploy.ts";
-import { inspectServiceHealth } from "./watch.ts";
+import { type DeployContext, type DeployJobData, runDeploy } from "./deploy.ts";
+import { sweepWatch } from "./sweep.ts";
 
 const DEPLOY_QUEUE = "noddle:deploy";
 const WATCH_QUEUE = "noddle:watch";
@@ -73,97 +61,15 @@ const deployWorker = new Worker<DeployJobData>(
 // ─────────────────────────────────────────────────────────────────────────────
 // Surveillance post-déploiement
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Passe en revue les déploiements encore sous surveillance.
- *
- * Existe parce que la garantie de Swarm expire avec sa fenêtre monitor : un
- * service qui converge puis meurt une minute plus tard est déclaré « completed »
- * et boucle sur l'image cassée, sans plus rien à restaurer côté Swarm. Mesuré
- * en Phase 0 : 9 requêtes sur 12 en échec, indéfiniment.
- */
-async function sweepWatch(): Promise<void> {
-  const now = new Date();
-  const pending = await ctx.db.query.deployments.findMany({
-    where: and(
-      eq(deployments.status, "succeeded"),
-      isNotNull(deployments.watchUntil),
-      gt(deployments.watchUntil, now)
-    ),
-    with: { service: { with: { server: true } } },
-  });
-
-  await Promise.all(
-    pending.map(async (dep) => {
-      const { service } = dep;
-      const privateKey = decryptSecret(
-        service.server.sshPrivateKeyEncrypted,
-        ctx.appKey,
-        secretContext.serverSshKey(service.server.id)
-      );
-      const client = await connect({
-        host: service.server.host,
-        port: service.server.sshPort,
-        privateKey,
-        user: service.server.sshUser,
-      });
-
-      try {
-        const verdict = await inspectServiceHealth(
-          dockerClient(client),
-          service.name,
-          dep.finishedAt ?? dep.createdAt
-        );
-        if (!verdict.crashLooping) {
-          return;
-        }
-
-        // Le déploiement précédent qui a réellement servi. Noddle peut viser
-        // n'importe quelle version de son historique — Swarm n'en garde qu'une.
-        const previous = await ctx.db.query.deployments.findFirst({
-          orderBy: desc(deployments.createdAt),
-          where: and(
-            eq(deployments.serviceId, service.id),
-            eq(deployments.status, "succeeded"),
-            ne(deployments.id, dep.id),
-            isNotNull(deployments.imageTag),
-            lt(deployments.createdAt, dep.createdAt)
-          ),
-        });
-
-        await ctx.db
-          .update(deployments)
-          .set({
-            errorMessage: `boucle de crash détectée après le déploiement (${verdict.failures} échecs) : ${verdict.lastError ?? "sans détail"}`,
-            status: "reverted_by_watch",
-            watchUntil: null,
-          })
-          .where(eq(deployments.id, dep.id));
-
-        if (!previous?.imageTag) {
-          // Rien vers quoi revenir : première version du service. On ne peut que
-          // le signaler — masquer l'état serait pire.
-          await ctx.db
-            .update(services)
-            .set({ status: "crashed" })
-            .where(eq(services.id, service.id));
-          return;
-        }
-
-        await redeployImage(ctx, {
-          imageTag: previous.imageTag,
-          serviceId: service.id,
-          trigger: "watch_revert",
-        });
-      } finally {
-        disconnect(client);
-      }
-    })
-  );
-}
+//
+// La garantie de Swarm expire avec sa fenêtre monitor : un service qui converge
+// puis meurt une minute plus tard est déclaré « completed » et boucle sur
+// l'image cassée, sans plus rien à restaurer côté Swarm. Mesuré en Phase 0 :
+// 9 requêtes sur 12 en échec, indéfiniment. La logique vit dans sweep.ts pour
+// être testable sans démarrer ce processus.
 
 const watchQueue = new Queue(WATCH_QUEUE, { connection });
-const watchWorker = new Worker(WATCH_QUEUE, () => sweepWatch(), {
+const watchWorker = new Worker(WATCH_QUEUE, () => sweepWatch(ctx), {
   concurrency: 1,
   connection,
 });
