@@ -169,6 +169,26 @@ rollback depuis l'historique, surveillance post-déploiement, câblage BullMQ,
 SSE des logs, bouton déployer, rollback depuis l'historique, table de variables
 d'environnement avec diff avant enregistrement.
 
+**L'installateur est écrit et prouvé sur une VM neuve.** `curl | bash` amène
+Docker, Swarm, le réseau overlay, les secrets, une clé SSH, la pile Compose
+(Traefik/Postgres/Redis/web/worker), les migrations, puis l'adoption de
+l'hôte comme serveur n°1 — en une seule passe piped, sans intervention. Testé
+sur une VM Multipass à 2 Go, système d'exploitation vierge, jusqu'au compte
+administrateur créé au navigateur et un vrai déploiement (`installeur
+bonjour`) servi par le Traefik que le script vient d'installer.
+
+Un piège trouvé et corrigé, de la même famille que `cmd | grep -q` déjà noté
+plus bas mais sur l'ENTRÉE cette fois : sans `</dev/null` sur chaque
+`docker compose run`, le sous-processus hérite du flux d'entrée standard du
+script — qui est justement le canal par lequel `curl | bash` alimente
+`install.sh`. Il en consomme le reste, bash atteint une fin de fichier
+silencieuse, et le script sort en code 0 sans avoir exécuté les commandes
+restantes. Mesuré deux fois : les migrations tournaient, l'adoption jamais,
+et `$?` valait 0 dans les deux sens de vérification — donc invisible depuis
+l'appelant. C'est exactement pour ça que la méthode d'installation
+documentée doit être testée telle quelle, pas approximée par un `bash
+install.sh` local.
+
 **La boucle complète est prouvée contre du réel.** `apps/web/src/verify-live.ts`
 lance les TROIS processus (Postgres, worker Node, web Bun) et déclenche un vrai
 build nixpacks sur la VM : la sortie de nixpacks et de buildx traverse Redis et
@@ -187,8 +207,10 @@ Deux défauts que SEUL ce passage a montrés, tous deux corrigés :
   tournait mais plus quel CODE, alors que c'est exactement la question qu'on
   pose à ce moment-là. Le SHA est repris du déploiement qui a construit l'image.
 
-**Reste pour clore la Phase 1 :** `installer/` — `install.sh` + compose, qui
-enregistre sa propre machine comme serveur cible n°1.
+**La Phase 1 est close.** Les deux éléments qui restaient — le web et
+l'installateur — sont faits et vérifiés contre du réel, chacun sur une machine
+neuve. Phase 2 : multi-serveur, déploiements Docker Compose, webhooks,
+services de base de données en un clic.
 
 **Pièges déjà payés, à ne pas repayer :**
 
