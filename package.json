@@ -1,0 +1,15 @@
+{
+	"name": "noddle",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"typescript": "7.0.2"
+	}
+}
