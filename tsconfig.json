@@ -2,9 +2,10 @@
   // Config de la racine : sert au `bun run typecheck` qui vérifie tout le dépôt
   // d'un coup. Les options vivent dans @noddle/tsconfig, que chaque paquet
   // étend de son côté pour que les éditeurs voient la bonne config par paquet.
+  //
+  // `types` n'est pas surchargé ici : depuis TypeScript 6, le champ ne se
+  // remplit plus tout seul avec les @types présents, donc il est déclaré une
+  // fois dans la base (["bun"], qui embarque aussi les types Node).
   "extends": "@noddle/tsconfig/base.json",
-  "compilerOptions": {
-    "types": ["node"]
-  },
   "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"]
 }

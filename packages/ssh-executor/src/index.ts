@@ -42,7 +42,7 @@ export interface ExecResult {
 // pas tranché, tout doit pouvoir s'exécuter sous Node comme sous Bun.
 export class SshError extends Error {
   readonly host: string;
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
 
   constructor(message: string, host: string, cause?: unknown) {
     super(message);
@@ -201,7 +201,7 @@ class SshSocketAgent extends http.Agent {
   // repart par le callback, jamais par la valeur de retour. Déclarer l'union
   // complète obligerait à un `return undefined` explicite, que Biome supprime
   // aussitôt (règle noUselessUndefined) — d'où un TS2355 en boucle.
-  createConnection(
+  override createConnection(
     _options: http.ClientRequestArgs,
     callback?: (err: Error | null, stream: Duplex) => void
   ): undefined {
