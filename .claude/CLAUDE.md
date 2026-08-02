@@ -202,6 +202,11 @@ code; the socket-proxy variant was deleted rather than left as dead code.
 So: Bun for install/workspaces/scripts, Node for the worker process. Do not
 "simplify" this back to one runtime without re-running the verifier.
 
+Scope of the constraint: **only `dockerode` is affected.** `postgres.js` and
+Drizzle were smoke-tested on both runtimes against a real Postgres 17 — inserts,
+relational queries and enums all work identically. So `packages/db` is runtime
+agnostic; do not assume the Node requirement spreads.
+
 Two constraints that follow, both already cost time:
 
 - **No TypeScript parameter properties** (`constructor(private readonly x: T)`) in code the worker loads. Node's strip-only type stripping refuses them — it removes types, it does not transform. Biome flags them too.
