@@ -39,6 +39,7 @@ an answer.** Do not proceed on your own judgment.
 | Logs worker → web | **Redis pub/sub pour le direct, liste plafonnée pour le rattrapage, fichier pour l'archive** | Le worker et le web sont deux processus sur deux runtimes ; le callback `onLog` ne franchit pas cette frontière. Suivre le fichier depuis le web ferait reposer le direct sur inotify à travers un bind mount, entre Node qui écrit et Bun qui lit — la classe d'interaction tierce qui a causé toutes les ruptures. Redis est déjà là pour BullMQ |
 | Design system | **shadcn/ui, préréglage `b1VlJj2R`** (luma / neutral / phosphor / inter) sur Tailwind v4 | Base UI, pas Radix. Un seul jeton ajouté au préréglage : `--success`, parce que le neutre n'a que `destructive` et qu'un écran de déploiement doit dire « ça tourne » sans être lu |
 | Late crashes | **Noddle watches after the deploy and rolls back itself** | Swarm's guarantee expires with `--update-monitor`. Past that window there is nothing left to roll back to. Noddle keeps full deployment history, so it can return to *any* previous image — Swarm can only return to one |
+| Multi-serveur | **Un seul manager Swarm, tout serveur ajouté rejoint en WORKER** | `docker service create/update` exige un manager — il détient seul l'état répliqué du cluster ; un worker le refuse. Rester à un manager évite aussi la question de la taille du quorum Raft, qu'on ne veut pas rouvrir en Phase 2. `role` porte ce fait, colonne séparée d'`isSelf` qui reste display-only par décision déjà actée |
 
 **License: AGPL-3.0** (`LICENSE` at the repo root), open-core. The core is free;
 anyone who runs it as a hosted service must publish their modifications, which is
@@ -212,6 +213,48 @@ l'installateur — sont faits et vérifiés contre du réel, chacun sur une mach
 neuve. Phase 2 : multi-serveur, déploiements Docker Compose, webhooks,
 services de base de données en un clic.
 
+### Phase 2 — état au 2026-08-02
+
+**Multi-serveur fait et vérifié contre DEUX vraies VM Multipass.**
+
+Un seul manager, jamais plus : c'est la machine `role='manager'` en base
+(distincte d'`isSelf`, qui reste display-only par décision déjà actée — voir
+plus haut). Tout serveur ajouté rejoint le MÊME cluster Swarm en tant que
+worker. `docker service create/update` refuse sur un worker — lui seul détient
+l'état répliqué du cluster — donc `deploy.ts` ouvre deux connexions dès que le
+service n'est pas hébergé sur le manager : le BUILD sur le serveur du service,
+les commandes SWARM sur le manager, avec une contrainte de placement
+(`node.id==…`) qui épingle la task au nœud qui a réellement construit l'image
+— sans registre, elle n'existe nulle part ailleurs, et le planificateur Swarm
+la placerait aveuglément sans cette contrainte. `sweep.ts` (la surveillance
+post-déploiement) suit la même règle : `listTasks` doit lire le manager, un
+worker y répondrait par une erreur.
+
+L'ajout d'un serveur (`addServer` + `provisionServer`) installe Docker si
+absent, rejoint le cluster en WORKER — jamais manager, pour ne jamais rouvrir
+la question de la taille du quorum Raft — installe nixpacks, puis relève les
+mêmes faits que la machine n°1. Rejouable : une seconde exécution sur un
+serveur déjà connecté est un no-op silencieux.
+
+| Vérifié | Contre | |
+|---|---|---|
+| Provisionnement + placement + rollback + HTTP inter-nœuds | 2 VM Multipass réelles (`verify-multi.ts`) | 11/11 |
+| Formulaire « Ajouter un serveur », chemin d'échec | navigateur réel + worker réel | statut et `lastError` corrects, sans recharger la page |
+
+**Non vérifié par navigateur : le chemin de succès de l' UI d'ajout.** Il
+aurait fallu coller une vraie clé privée dans un champ de formulaire piloté par
+Playwright ; l'utilisateur a refusé l'action équivalente (`cat` de la clé) et
+ce refus a été respecté sans contournement. Le mécanisme est prouvé côté
+worker (`verify-multi.ts`, en direct) et côté UI pour l'échec (mêmes
+composants, seul le badge de statut diffère) — mais personne n'a regardé le
+badge passer à « Connecté » dans un vrai navigateur.
+
+**Reste pour la Phase 2 :** déploiements Docker Compose, webhooks, bases de
+données en un clic. Aucune UI de création de service/projet n'existe encore —
+un manque antérieur à la Phase 2, hérité de la Phase 1 : toutes les
+vérifications jusqu'ici créent leurs services par SQL directement, jamais
+depuis le dashboard.
+
 **Pièges déjà payés, à ne pas repayer :**
 
 - Une file BullMQ ne peut pas contenir `:` — la v6 s'en sert comme séparateur de
@@ -248,6 +291,21 @@ services de base de données en un clic.
   le flux SSE des logs se reconnecte en boucle pendant tout un build.
 - Les composants de `apps/web/src/components/ui/` viennent du registre shadcn
   et sont exclus de Biome : `shadcn add` les réécrit d'un bloc.
+- **L'utilisateur SSH d'un serveur qu'on vient de provisionner n'a pas encore
+  accès au socket Docker.** `usermod -aG docker` ne prend effet qu'à une
+  NOUVELLE session — la connexion SSH en cours ne le voit jamais, qu'on vienne
+  d'installer Docker ou non. Sans reconnexion explicite après l'ajout au
+  groupe, le premier `dockerClient()` échoue avec « Channel open failure »,
+  puisque ce chemin ouvre le socket EN DIRECT, sans `sudo` possible dessus
+  (déjà documenté dans `@noddle/ssh-executor`, mais oublié à l'écriture de
+  `provision.ts` — mesuré contre une VM réellement nue avant d'être corrigé).
+- **Traefik écoute en `mode=host`, sur le manager uniquement**
+  (`--constraint 'node.role==manager'`, `scripts/spike-local.sh`). Sur
+  plusieurs nœuds, le domaine sslip.io d'un service encode l'IP du nœud qui
+  l'exécute — souvent un WORKER, où rien n'écoute sur le port 80. Un test HTTP
+  doit dialoguer avec le manager, avec l'en-tête `Host` de la règle Traefik.
+  `fetch` ne peut pas le fournir (interdit par la spec, déjà noté plus haut) :
+  `curl -H` en sous-processus, jamais `fetch`, dès qu'on vérifie du multi-nœud.
 
 ---
 
