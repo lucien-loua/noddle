@@ -25,6 +25,10 @@ import { Client, type ConnectConfig } from "ssh2";
 // de ce paquet : le jour où il change, il ne doit pas changer partout.
 export type SshClient = Client;
 
+// Idem pour le client Docker : les appelants manipulent l'API Engine sans
+// avoir à déclarer dockerode dans leurs propres dépendances.
+export type DockerApi = Docker;
+
 export interface ServerCredentials {
   host: string;
   passphrase?: string;

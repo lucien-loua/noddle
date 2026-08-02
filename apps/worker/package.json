@@ -1,0 +1,21 @@
+{
+  "name": "@noddle/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "start": "node src/index.ts"
+  },
+  "dependencies": {
+    "@noddle/build-engine": "workspace:*",
+    "@noddle/db": "workspace:*",
+    "@noddle/proxy-config": "workspace:*",
+    "@noddle/shared": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*",
+    "bullmq": "^6.0.5",
+    "ioredis": "^6.0.0"
+  },
+  "devDependencies": {
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

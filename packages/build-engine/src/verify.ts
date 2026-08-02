@@ -113,21 +113,38 @@ try {
     ["URL -u", { repoUrl: "-u/tmp/pwn.sh" }],
     ["SHA drapeau", { commitSha: "--upload-pack=/tmp/pwn.sh" }],
   ];
-  for (const [label, override] of attacks) {
-    try {
-      await fetchSource(client, {
-        repoUrl: "https://example.com/x.git",
-        branch: "main",
-        dir: `${WORK}/attack`,
-        ...override,
-      });
-      ko(`${label} — AURAIT DÛ ÊTRE REFUSÉ`);
-    } catch (e) {
-      if (e instanceof BuildError && e.stage === "validation") {
-        ok(`${label} refusé avant toute exécution`);
-      } else {
-        ko(`${label} — mauvaise erreur : ${e instanceof Error ? e.message : e}`);
+  // Lancées en parallèle : la validation rejette AVANT toute I/O, donc rien à
+  // sérialiser — et un `await` en boucle ferait attendre chaque tentative pour
+  // rien.
+  const attempts = await Promise.all(
+    attacks.map(async ([label, override]) => {
+      try {
+        await fetchSource(client as SshClient, {
+          branch: "main",
+          dir: `${WORK}/attack`,
+          repoUrl: "https://example.com/x.git",
+          ...override,
+        });
+        return { label, outcome: "passé" as const };
+      } catch (e) {
+        return e instanceof BuildError && e.stage === "validation"
+          ? { label, outcome: "bloqué" as const }
+          : {
+              detail: e instanceof Error ? e.message : String(e),
+              label,
+              outcome: "erreur" as const,
+            };
       }
+    })
+  );
+
+  for (const a of attempts) {
+    if (a.outcome === "bloqué") {
+      ok(`${a.label} refusé avant toute exécution`);
+    } else if (a.outcome === "passé") {
+      ko(`${a.label} — AURAIT DÛ ÊTRE REFUSÉ`);
+    } else {
+      ko(`${a.label} — mauvaise erreur : ${a.detail}`);
     }
   }
 
