@@ -13,6 +13,15 @@
         "ultracite": "7.9.4",
       },
     },
+    "packages/build-engine": {
+      "name": "@noddle/build-engine",
+      "dependencies": {
+        "@noddle/ssh-executor": "workspace:*",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
     "packages/db": {
       "name": "@noddle/db",
       "dependencies": {
@@ -22,6 +31,12 @@
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
         "drizzle-kit": "^0.31.10",
+      },
+    },
+    "packages/proxy-config": {
+      "name": "@noddle/proxy-config",
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/shared": {
@@ -163,7 +178,11 @@
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
+    "@noddle/build-engine": ["@noddle/build-engine@workspace:packages/build-engine"],
+
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
+
+    "@noddle/proxy-config": ["@noddle/proxy-config@workspace:packages/proxy-config"],
 
     "@noddle/shared": ["@noddle/shared@workspace:packages/shared"],
 

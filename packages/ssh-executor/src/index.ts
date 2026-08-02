@@ -20,6 +20,11 @@ import type { Duplex } from "node:stream";
 import Docker from "dockerode";
 import { Client, type ConnectConfig } from "ssh2";
 
+// Ré-exporté pour que les paquets qui consomment l'exécuteur (build-engine,
+// worker) n'aient pas à dépendre de ssh2 eux-mêmes. Le transport est un détail
+// de ce paquet : le jour où il change, il ne doit pas changer partout.
+export type SshClient = Client;
+
 export interface ServerCredentials {
   host: string;
   passphrase?: string;
