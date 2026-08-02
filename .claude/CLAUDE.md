@@ -36,6 +36,8 @@ an answer.** Do not proceed on your own judgment.
 | Deploy targets | **Docker only** | no bare-metal or systemd paths |
 | Reverse proxy | **Traefik**, Swarm provider | dynamic label-based routing, native Let's Encrypt |
 | RPC layer | **TanStack Start `createServerFn`**, no tRPC | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
+| Logs worker → web | **Redis pub/sub pour le direct, liste plafonnée pour le rattrapage, fichier pour l'archive** | Le worker et le web sont deux processus sur deux runtimes ; le callback `onLog` ne franchit pas cette frontière. Suivre le fichier depuis le web ferait reposer le direct sur inotify à travers un bind mount, entre Node qui écrit et Bun qui lit — la classe d'interaction tierce qui a causé toutes les ruptures. Redis est déjà là pour BullMQ |
+| Design system | **shadcn/ui, préréglage `b1VlJj2R`** (luma / neutral / phosphor / inter) sur Tailwind v4 | Base UI, pas Radix. Un seul jeton ajouté au préréglage : `--success`, parce que le neutre n'a que `destructive` et qu'un écran de déploiement doit dire « ça tourne » sans être lu |
 | Late crashes | **Noddle watches after the deploy and rolls back itself** | Swarm's guarantee expires with `--update-monitor`. Past that window there is nothing left to roll back to. Noddle keeps full deployment history, so it can return to *any* previous image — Swarm can only return to one |
 
 **License: AGPL-3.0** (`LICENSE` at the repo root), open-core. The core is free;
@@ -157,18 +159,36 @@ des dépendances, qui est le risque principal de ce projet.
 | `apps/worker` — bout en bout | Postgres + VM | 12/12, base → URL vivante |
 | `apps/worker` — surveillance | Postgres + VM | 8/8, boucle de crash rattrapée |
 | `apps/worker` — file | Postgres + Redis | 5/5, processus + BullMQ |
+| `apps/web` | Postgres + Redis, serveur CONSTRUIT | 17/17, auth → dashboard → file → SSE |
+| `apps/web` — en direct | Postgres + Redis + VM, **3 processus** | 14/14, build réel vu depuis le dashboard |
 
 **Fait :** exécuteur SSH, schéma + migration, chiffrement AES-256-GCM lié par
 AAD, validation Zod, moteur de build capé, labels Traefik, job de déploiement,
-rollback depuis l'historique, surveillance post-déploiement, câblage BullMQ.
+rollback depuis l'historique, surveillance post-déploiement, câblage BullMQ,
+**et `apps/web`** : better-auth (compte admin unique), dashboard unique, flux
+SSE des logs, bouton déployer, rollback depuis l'historique, table de variables
+d'environnement avec diff avant enregistrement.
 
-**Reste pour clore la Phase 1 :**
+**La boucle complète est prouvée contre du réel.** `apps/web/src/verify-live.ts`
+lance les TROIS processus (Postgres, worker Node, web Bun) et déclenche un vrai
+build nixpacks sur la VM : la sortie de nixpacks et de buildx traverse Redis et
+ressort dans le flux SSE du dashboard, le service passe en service, et le
+rollback rejoue l'image sans reconstruire. Le bouton Déployer a aussi été
+cliqué dans un vrai navigateur.
 
-1. `apps/web` — TanStack Start : better-auth, le dashboard unique, le flux SSE
-   des logs, le bouton déployer toujours visible, le rollback, la table de
-   variables d'environnement avec diff avant enregistrement.
-2. `installer/` — `install.sh` + compose, qui enregistre sa propre machine
-   comme serveur cible n°1. Ne peut pas précéder le web, puisqu'il le démarre.
+Deux défauts que SEUL ce passage a montrés, tous deux corrigés :
+
+- buildx émet des séquences ANSI **même sous `--progress=plain`** : le dashboard
+  affichait « `[33m1 warning found` ». Le nettoyage est à l'affichage
+  (`log-stream.tsx`), pas dans le puits de logs — le fichier d'archive doit
+  rester l'octet exact produit par la VM.
+- `redeployImage` n'écrivait pas de `commit_sha` : après un rollback,
+  l'historique affichait « — » en commit. Le dashboard savait quelle IMAGE
+  tournait mais plus quel CODE, alors que c'est exactement la question qu'on
+  pose à ce moment-là. Le SHA est repris du déploiement qui a construit l'image.
+
+**Reste pour clore la Phase 1 :** `installer/` — `install.sh` + compose, qui
+enregistre sa propre machine comme serveur cible n°1.
 
 **Pièges déjà payés, à ne pas repayer :**
 
@@ -186,6 +206,26 @@ rollback depuis l'historique, surveillance post-déploiement, câblage BullMQ.
 - Les versions des dépendances tierces vivent dans `workspaces.catalog` à la
   racine, et chaque paquet écrit `catalog:`. Deux versions de `drizzle-orm` ont
   cohabité en silence et produit des types incompatibles.
+- **Aucun import relatif sans extension dans le code que Node charge.** Node ne
+  devine ni l'extension ni un `index.ts` de dossier : `./schema/auth` échoue
+  avec `ERR_MODULE_NOT_FOUND`, mesuré. La réponse retenue est le champ
+  `imports` de package.json (`"#*": "./src/*.ts"`), qui donne des
+  specificateurs SANS extension (`#schema/auth`) et que Node résout. Vérifié
+  sur les deux runtimes. `apps/web` n'en a pas besoin — Vite résout tout — et
+  utilise l'alias `@/`.
+- `vite/client` ne se résout PAS dans le champ `types` de tsconfig sous
+  TypeScript 7 : l'échec est silencieux et se manifeste par un
+  `*.css?url` introuvable. Passer par une référence triple-slash dans
+  `src/vite-env.d.ts`. Pour la même raison, importer la feuille de style en
+  RELATIF : un chemin passé par `paths` est résolu avant que le joker
+  `declare module '*?url'` s'applique.
+- `vite build` de TanStack Start produit un gestionnaire `fetch` et les
+  fichiers statiques, mais **aucun serveur**. L'adaptateur officiel (nitro) est
+  en beta ; `apps/web/server.ts` sert le tout avec `Bun.serve`, en douze
+  lignes. Son `idleTimeout: 0` est obligatoire : par défaut Bun coupe à 10 s et
+  le flux SSE des logs se reconnecte en boucle pendant tout un build.
+- Les composants de `apps/web/src/components/ui/` viennent du registre shadcn
+  et sont exclus de Biome : `shadcn add` les réécrit d'un bloc.
 
 ---
 
