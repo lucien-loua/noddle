@@ -21,7 +21,7 @@ import {
   ensureOverlayNetwork,
   isDeployAccepted,
   removeService,
-} from "./swarm.ts";
+} from "#swarm";
 
 const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";

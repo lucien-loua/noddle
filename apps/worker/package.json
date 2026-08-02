@@ -2,6 +2,9 @@
   "name": "@noddle/worker",
   "private": true,
   "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
   "scripts": {
     "dev": "node --watch src/index.ts",
     "start": "node src/index.ts"
