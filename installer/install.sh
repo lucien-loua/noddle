@@ -145,13 +145,23 @@ fi
 # ── 5. La pile ───────────────────────────────────────────────────────────────
 say "Construction et démarrage du plan de contrôle"
 COMPOSE=("$SUDO" docker compose --project-directory "$NODDLE_DIR/installer" --env-file "$ENV_FILE")
-"${COMPOSE[@]}" build
-"${COMPOSE[@]}" up -d
+"${COMPOSE[@]}" build </dev/null
+"${COMPOSE[@]}" up -d </dev/null
 
 # ── 6. Base et adoption ──────────────────────────────────────────────────────
+#
+# `</dev/null` sur chaque `docker compose run` n'est pas cosmétique : la
+# méthode d'installation documentée est `curl | bash`, qui alimente CE script
+# par son entrée standard. Sans cette redirection, `docker compose run`
+# hérite du même flux et y lit — même sans TTY, `-T` ne ferme pas l'entrée. Le
+# sous-processus consomme alors la SUITE du script encore non lue par bash,
+# qui atteint une fin de fichier silencieuse et sort en code 0 sans exécuter
+# les commandes restantes. Aucune erreur nulle part : juste un script qui
+# s'arrête. Mesuré ici — les migrations tournaient, l'adoption jamais, et
+# `$?` valait 0 dans les deux sens de vérification.
 say "Migrations"
 "${COMPOSE[@]}" run --rm --no-deps -T worker \
-  node /noddle/packages/db/src/migrate.ts
+  node /noddle/packages/db/src/migrate.ts </dev/null
 
 say "Adoption de cette machine comme serveur n°1"
 "${COMPOSE[@]}" run --rm --no-deps -T \
@@ -159,7 +169,7 @@ say "Adoption de cette machine comme serveur n°1"
   -e HOST_USER="$TARGET_USER" \
   -e HOST_SSH_KEY="$SSH_DIR/id_ed25519" \
   -e HOST_NAME="$(hostname)" \
-  worker node src/adopt-host.ts
+  worker node src/adopt-host.ts </dev/null
 
 printf '\n\033[32m✓ Noddle est installé.\033[0m\n\n'
 printf '  Dashboard : http://%s\n' "$HOST_IP"
