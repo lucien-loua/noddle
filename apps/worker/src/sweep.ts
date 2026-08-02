@@ -3,7 +3,12 @@
 // Module séparé de index.ts pour être testable sans démarrer le processus, et
 // séparé de watch.ts pour éviter un cycle d'import — il a besoin de
 // redeployImage, qui a besoin de watchUntilFor.
-import { deployments, services } from "@noddle/db/schema";
+//
+// Phase 2 — multi-serveur : `docker.listTasks`/`listServices` lit l'état
+// répliqué du cluster, que seul un MANAGER détient. Un worker y répondrait
+// par une erreur — d'où la connexion systématique au manager, jamais à
+// `service.server` quand les deux diffèrent.
+import { deployments, servers, services } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
@@ -33,24 +38,38 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
   const reverted: string[] = [];
   const strandedServices: string[] = [];
 
-  await Promise.all(
-    pending.map(async (dep) => {
-      const { service } = dep;
-      const privateKey = decryptSecret(
-        service.server.sshPrivateKeyEncrypted,
-        ctx.appKey,
-        secretContext.serverSshKey(service.server.id)
-      );
-      const client = await connect({
-        host: service.server.host,
-        port: service.server.sshPort,
-        privateKey,
-        user: service.server.sshUser,
-      });
+  if (pending.length === 0) {
+    return { inspected: 0, reverted, strandedServices };
+  }
 
-      try {
+  // Un seul manager : une connexion pour tout le passage, pas une par
+  // déploiement inspecté.
+  const manager = await ctx.db.query.servers.findFirst({
+    where: eq(servers.role, "manager"),
+  });
+  if (!manager) {
+    throw new Error("aucun manager Swarm enregistré");
+  }
+  const privateKey = decryptSecret(
+    manager.sshPrivateKeyEncrypted,
+    ctx.appKey,
+    secretContext.serverSshKey(manager.id)
+  );
+  const managerClient = await connect({
+    host: manager.host,
+    port: manager.sshPort,
+    privateKey,
+    user: manager.sshUser,
+  });
+  const docker = dockerClient(managerClient);
+
+  try {
+    await Promise.all(
+      pending.map(async (dep) => {
+        const { service } = dep;
+
         const verdict = await inspectServiceHealth(
-          dockerClient(client),
+          docker,
           service.name,
           dep.finishedAt ?? dep.createdAt
         );
@@ -97,11 +116,11 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
           trigger: "watch_revert",
         });
         reverted.push(dep.id);
-      } finally {
-        disconnect(client);
-      }
-    })
-  );
+      })
+    );
+  } finally {
+    disconnect(managerClient);
+  }
 
   return { inspected: pending.length, reverted, strandedServices };
 }

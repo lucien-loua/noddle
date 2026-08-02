@@ -28,6 +28,19 @@ export interface DeploySpec {
   image: string;
   labels: TraefikLabels;
   networkName: string;
+  /**
+   * ID Swarm du nœud qui a construit l'image, à distinguer d'un ID de base de
+   * données : c'est `docker info` sur CE nœud qui le donne, valeur locale au
+   * cluster Swarm et pas un identifiant que Noddle invente.
+   *
+   * `undefined` sur un cluster à un seul nœud — la contrainte serait un
+   * no-op, mais l'omettre évite une clause vide dans la spec envoyée à
+   * l'API. Sur plusieurs nœuds, l'omettre laisserait le PLANIFICATEUR choisir
+   * : sans registre, une image construite localement n'existe QUE sur ce
+   * nœud, et Swarm planifierait aveuglément une task qui ne trouvera jamais
+   * l'image ailleurs.
+   */
+  placementNodeId?: string;
   port: number;
   serviceName: string;
 }
@@ -58,6 +71,12 @@ function serviceSpec(s: DeploySpec) {
       Parallelism: 1,
     },
     TaskTemplate: {
+      // Absent (pas `{ Constraints: [] }`) sur un seul nœud : une liste vide
+      // est déjà correcte pour l'API, mais la distinction reste plus honnête
+      // sur ce qui est réellement demandé.
+      ...(s.placementNodeId
+        ? { Placement: { Constraints: [`node.id==${s.placementNodeId}`] } }
+        : {}),
       ContainerSpec: {
         Env: Object.entries(s.env).map(([k, v]) => `${k}=${v}`),
         // curl est présent dans l'image de base nixpacks, wget non, et node
@@ -280,4 +299,24 @@ export async function ensureOverlayNetwork(
     Driver: "overlay",
     Name: name,
   });
+}
+
+/**
+ * L'ID Swarm du nœud DERRIÈRE cette connexion — celui qui vient de construire
+ * l'image, jamais celui qui reçoit la commande `docker service create/update`
+ * quand les deux diffèrent.
+ *
+ * `docker info` est une lecture locale : un nœud worker y répond correctement
+ * sur lui-même, contrairement à `docker service` ou `docker node`, réservés
+ * au manager parce qu'ils lisent l'état répliqué du cluster.
+ */
+export async function getSwarmNodeId(docker: DockerApi): Promise<string> {
+  const info = (await docker.info()) as { Swarm?: { NodeID?: string } };
+  const nodeId = info.Swarm?.NodeID;
+  if (!nodeId) {
+    throw new Error(
+      "ce nœud n'a pas d'ID Swarm — a-t-il bien rejoint le cluster ?"
+    );
+  }
+  return nodeId;
 }
