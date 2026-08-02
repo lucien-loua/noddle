@@ -7,11 +7,14 @@
 // fonctionne pas sur Bun, mesuré sur les deux approches possibles. Bun reste le
 // gestionnaire de paquets et le runtime du web.
 import { createDatabase } from "@noddle/db";
+import { deployments } from "@noddle/db/schema";
 import { loadAppKey } from "@noddle/shared/crypto";
 import { Queue, Worker } from "bullmq";
+import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
-import { type DeployContext, type DeployJobData, runDeploy } from "./deploy.ts";
-import { sweepWatch } from "./sweep.ts";
+import { type DeployContext, type DeployJobData, runJob } from "#deploy";
+import { createLogBus } from "#log-bus";
+import { sweepWatch } from "#sweep";
 
 // Pas de « : » dans un nom de file : BullMQ 6 le refuse, il s'en sert comme
 // séparateur de clés Redis. Le processus ne démarre même pas.
@@ -31,11 +34,18 @@ const connection = new IORedis(required("REDIS_URL"), {
   maxRetriesPerRequest: null,
 });
 
+// Le pont vers le dashboard. Le puits de logs écrit sur disque pour
+// l'historique ; ceci publie la même source vers le web, qui vit dans un autre
+// processus et sur un autre runtime.
+const logBus = createLogBus(connection);
+
 const ctx: DeployContext = {
   appKey: loadAppKey(process.env.APP_KEY),
   db: createDatabase({ url: required("DATABASE_URL") }),
   logRoot: process.env.LOG_ROOT ?? "/var/lib/noddle/logs",
   networkName: process.env.TRAEFIK_NETWORK ?? "noddle-public",
+  onLog: (deploymentId, chunk) =>
+    logBus.publish(deploymentId, { data: chunk, type: "chunk" }),
 };
 
 export const deployQueue = new Queue<DeployJobData>(DEPLOY_QUEUE, {
@@ -46,9 +56,37 @@ export const deployQueue = new Queue<DeployJobData>(DEPLOY_QUEUE, {
 // Déploiements
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Clôt le flux SSE des spectateurs.
+ *
+ * Le statut est RELU en base plutôt que déduit du fait que le job ait levé ou
+ * non : `docker service update` renvoie 0 même après un rollback, et c'est
+ * précisément l'erreur que la règle « ne jamais inférer le succès d'un code de
+ * sortie » interdit. La base porte l'état réel, lu depuis l'API Docker.
+ */
+async function announceEnd(deploymentId: string): Promise<void> {
+  const row = await ctx.db.query.deployments.findFirst({
+    where: eq(deployments.id, deploymentId),
+  });
+  logBus.publish(deploymentId, {
+    status: row?.status ?? "failed",
+    type: "end",
+  });
+}
+
 const deployWorker = new Worker<DeployJobData>(
   DEPLOY_QUEUE,
-  (job) => runDeploy(ctx, job.data),
+  async (job) => {
+    try {
+      await runJob(ctx, job.data);
+    } finally {
+      // Même en cas d'échec : un onglet ouvert doit voir le flux se fermer,
+      // pas rester à attendre indéfiniment.
+      if (job.data.kind === "deploy") {
+        await announceEnd(job.data.deploymentId);
+      }
+    }
+  },
   {
     // Un seul déploiement à la fois par worker. Deux builds simultanés sur une
     // VM à 2 Go se disputeraient la mémoire que le plafond est censé protéger.
@@ -94,6 +132,7 @@ async function shutdown(): Promise<void> {
   // Fermeture propre : un déploiement en cours va au bout plutôt que d'être
   // coupé au milieu d'une bascule Swarm.
   await Promise.all([deployWorker.close(), watchWorker.close()]);
+  await logBus.close();
   await connection.quit();
 }
 

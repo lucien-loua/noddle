@@ -14,12 +14,12 @@ import {
   loadAppKey,
   safeEqual,
   secretContext,
-} from "./crypto.ts";
+} from "#crypto";
 import {
   envVarKeySchema,
   gitBranchSchema,
   serviceNameSchema,
-} from "./validation.ts";
+} from "#validation";
 
 const runtime =
   typeof (globalThis as { Bun?: unknown }).Bun === "undefined"

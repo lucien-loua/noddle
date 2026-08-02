@@ -23,8 +23,8 @@ import {
 import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { runDeploy } from "./deploy.ts";
-import { removeService } from "./swarm.ts";
+import { runDeploy } from "#deploy";
+import { removeService } from "#swarm";
 
 const DB_URL =
   process.env.DATABASE_URL ??

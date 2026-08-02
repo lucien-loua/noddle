@@ -93,7 +93,7 @@ try {
     .returning();
   ok("service et déploiement en attente créés");
 
-  await queue.add("deploy", { deploymentId: dep?.id ?? "" });
+  await queue.add("deploy", { deploymentId: dep?.id ?? "", kind: "deploy" });
   ok("job déposé dans la file");
 
   // Le worker doit le prendre et écrire un résultat. On attend un statut

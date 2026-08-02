@@ -31,9 +31,9 @@ import {
   quoteArg,
 } from "@noddle/ssh-executor";
 import { desc, eq } from "drizzle-orm";
-import { type DeployContext, runDeploy } from "./deploy.ts";
-import { removeService } from "./swarm.ts";
-import { sweepWatch } from "./sweep.ts";
+import { type DeployContext, runDeploy } from "#deploy";
+import { removeService } from "#swarm";
+import { sweepWatch } from "#sweep";
 
 const DB_URL =
   process.env.DATABASE_URL ??

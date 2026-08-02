@@ -2,6 +2,9 @@
   "name": "@noddle/ssh-executor",
   "private": true,
   "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
   "exports": {
     ".": "./src/index.ts"
   },

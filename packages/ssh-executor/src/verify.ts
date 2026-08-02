@@ -22,7 +22,7 @@ import {
   execArgv,
   quoteArg,
   type ServerCredentials,
-} from "./index.ts";
+} from "#index";
 
 const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";

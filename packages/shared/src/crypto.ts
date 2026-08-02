@@ -11,6 +11,7 @@
 import {
   createCipheriv,
   createDecipheriv,
+  hkdfSync,
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
@@ -147,6 +148,23 @@ export function safeEqual(a: string, b: string): boolean {
     return false;
   }
   return timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Dérive une sous-clé indépendante d'APP_KEY.
+ *
+ * Évite d'ajouter un second secret à gérer dans l'installateur : better-auth a
+ * besoin du sien, et le lui donner par HKDF garde une seule racine à
+ * sauvegarder. Les sous-clés sont indépendantes — connaître celle de
+ * better-auth ne donne rien sur les clés SSH chiffrées.
+ *
+ * Sans sel : APP_KEY est déjà 32 octets aléatoires uniformes, pas un mot de
+ * passe. C'est `info` qui sépare les usages.
+ */
+export function deriveSubkey(key: Buffer, info: string): Buffer {
+  return Buffer.from(
+    hkdfSync("sha256", key, new Uint8Array(0), info, KEY_BYTES)
+  );
 }
 
 /** Contextes AAD normalisés. Les construire ailleurs invite l'incohérence. */

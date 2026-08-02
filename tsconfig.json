@@ -6,6 +6,10 @@
   // `types` n'est pas surchargé ici : depuis TypeScript 6, le champ ne se
   // remplit plus tout seul avec les @types présents, donc il est déclaré une
   // fois dans la base (["bun"], qui embarque aussi les types Node).
+  //
+  // `apps/web` a sa propre config et n'est PAS inclus ici : c'est le seul
+  // paquet qui voit le DOM et le JSX. Les mélanger rendrait `document`
+  // typable depuis le worker. Le script `typecheck` enchaîne les deux.
   "extends": "@noddle/tsconfig/base.json",
-  "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"]
+  "include": ["packages/*/src/**/*.ts", "apps/worker/src/**/*.ts"]
 }

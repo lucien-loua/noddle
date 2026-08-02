@@ -7,8 +7,8 @@ import { deployments, services } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
-import { type DeployContext, redeployImage } from "./deploy.ts";
-import { inspectServiceHealth } from "./watch.ts";
+import { type DeployContext, redeployImage } from "#deploy";
+import { inspectServiceHealth } from "#watch";
 
 export interface SweepResult {
   /** Déploiements encore sous surveillance à ce passage. */

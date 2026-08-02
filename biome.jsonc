@@ -4,5 +4,16 @@
     "ultracite/biome/core",
     "ultracite/biome/react",
     "ultracite/biome/tanstack"
-  ]
+  ],
+  "files": {
+    "includes": [
+      "!apps/web/src/components/ui",
+      // Régénéré par le plugin de TanStack Router à chaque build.
+      "!apps/web/src/routeTree.gen.ts",
+      "!**/dist"
+    ]
+  },
+  "javascript": {
+    "globals": ["Bun"]
+  }
 }

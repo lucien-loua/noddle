@@ -7,8 +7,8 @@ export default defineConfig({
     url: process.env.DATABASE_URL ?? "postgres://localhost:5432/noddle",
   },
   dialect: "postgresql",
-  out: "./migrations",
-  schema: "./src/schema.ts",
+  out: "./src/migrations",
+  schema: "./src/schema/index.ts",
   strict: true,
   verbose: true,
 });
