@@ -20,7 +20,7 @@ import {
 import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
 import { deployService, ensureOverlayNetwork, isDeployAccepted } from "#swarm";
 import { watchUntilFor } from "#watch";
@@ -253,9 +253,24 @@ export async function redeployImage(
     throw new Error(`service introuvable : ${opts.serviceId}`);
   }
 
+  // Le commit que cette image porte, repris du déploiement qui l'a construite.
+  //
+  // Sans ça, la ligne « retour arrière » de l'historique affiche « — » en
+  // commit : le dashboard sait quelle IMAGE tourne mais plus quel CODE, et
+  // « quel commit est en production ? » est précisément la question qu'on pose
+  // juste après un rollback.
+  const origin = await ctx.db.query.deployments.findFirst({
+    orderBy: desc(deployments.createdAt),
+    where: and(
+      eq(deployments.serviceId, service.id),
+      eq(deployments.imageTag, opts.imageTag)
+    ),
+  });
+
   const [created] = await ctx.db
     .insert(deployments)
     .values({
+      commitSha: origin?.commitSha ?? null,
       imageTag: opts.imageTag,
       serviceId: service.id,
       status: "deploying",
