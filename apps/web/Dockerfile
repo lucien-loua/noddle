@@ -6,9 +6,17 @@ FROM oven/bun:1
 WORKDIR /noddle
 
 COPY package.json bun.lock ./
+# TOUS les manifestes de l'espace de travail, pas seulement ceux dont cette
+# image a besoin : `--frozen-lockfile` compare le lockfile à l'espace de
+# travail ENTIER. S'il en manque un, la résolution diffère et l'installation
+# échoue sur « lockfile had changes ».
 COPY apps/web/package.json apps/web/
+COPY apps/worker/package.json apps/worker/
+COPY packages/build-engine/package.json packages/build-engine/
 COPY packages/db/package.json packages/db/
+COPY packages/proxy-config/package.json packages/proxy-config/
 COPY packages/shared/package.json packages/shared/
+COPY packages/ssh-executor/package.json packages/ssh-executor/
 COPY packages/tsconfig/package.json packages/tsconfig/
 
 RUN bun install --frozen-lockfile
