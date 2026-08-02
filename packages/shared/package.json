@@ -2,8 +2,12 @@
   "name": "@noddle/shared",
   "private": true,
   "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
   "exports": {
     "./crypto": "./src/crypto.ts",
+    "./logs": "./src/logs.ts",
     "./validation": "./src/validation.ts"
   },
   "dependencies": {
