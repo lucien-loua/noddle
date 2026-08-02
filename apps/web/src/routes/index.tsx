@@ -13,6 +13,7 @@ import { useCallback, useState } from "react";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
+import { ServersPanel } from "@/components/servers-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
 } from "@/server/dashboard";
 import { triggerDeploy, triggerRollback } from "@/server/deployments";
 import { getEnvVars, saveEnvVars } from "@/server/env-vars";
+import { getServers } from "@/server/servers";
 
 interface DashboardSearch {
   deployment?: string;
@@ -54,6 +56,7 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
   loader: async ({ context }) => ({
     email: context.email,
+    servers: await getServers(),
     services: await getDashboard(),
   }),
   validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
@@ -64,7 +67,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { email, services } = Route.useLoaderData();
+  const { email, servers, services } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
@@ -142,6 +145,8 @@ function Dashboard() {
           ))}
         </div>
       )}
+
+      <ServersPanel initial={servers} />
     </main>
   );
 }
