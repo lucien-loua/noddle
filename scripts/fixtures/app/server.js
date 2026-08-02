@@ -31,11 +31,12 @@ const port = Number(process.env.PORT) || 3000;
 
 let raw = "healthy";
 try {
-	raw =
-		fs.readFileSync(path.join(__dirname, "mode.txt"), "utf8").trim() ||
-		"healthy";
+  raw =
+    fs
+      .readFileSync(path.join(import.meta.dirname, "mode.txt"), "utf8")
+      .trim() || "healthy";
 } catch {
-	// pas de mode.txt → healthy
+  // pas de mode.txt → healthy
 }
 
 const [mode, crashArg] = raw.split(":");
@@ -47,24 +48,24 @@ const crashAfterMs = (Number(crashArg) || 25) * 1000;
 const version = process.env.APP_VERSION || "dev";
 
 if (mode === "crash") {
-	setTimeout(() => {
-		console.error(
-			`[spike] crash simulé après ${crashAfterMs / 1000}s (healthcheck réussi)`,
-		);
-		process.exit(1);
-	}, crashAfterMs);
+  setTimeout(() => {
+    console.error(
+      `[spike] crash simulé après ${crashAfterMs / 1000}s (healthcheck réussi)`
+    );
+    process.exit(1);
+  }, crashAfterMs);
 }
 
 http
-	.createServer((_req, res) => {
-		if (mode === "unhealthy") {
-			res.writeHead(500, { "content-type": "text/plain" });
-			res.end("unhealthy\n");
-			return;
-		}
-		res.writeHead(200, { "content-type": "text/plain" });
-		res.end(`noddle-spike mode=${mode} version=${version}\n`);
-	})
-	.listen(port, () =>
-		console.log(`[spike] listening on ${port} mode=${mode} version=${version}`),
-	);
+  .createServer((_req, res) => {
+    if (mode === "unhealthy") {
+      res.writeHead(500, { "content-type": "text/plain" });
+      res.end("unhealthy\n");
+      return;
+    }
+    res.writeHead(200, { "content-type": "text/plain" });
+    res.end(`noddle-spike mode=${mode} version=${version}\n`);
+  })
+  .listen(port, () =>
+    console.log(`[spike] listening on ${port} mode=${mode} version=${version}`)
+  );

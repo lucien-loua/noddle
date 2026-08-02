@@ -1,15 +1,21 @@
 {
-	"name": "noddle",
-	"private": true,
-	"type": "module",
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
-	"scripts": {
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"typescript": "7.0.2"
-	}
+  "devDependencies": {
+    "@biomejs/biome": "2.5.6",
+    "@types/node": "^26.1.2",
+    "typescript": "7.0.2",
+    "ultracite": "7.9.4",
+    "@noddle/tsconfig": "workspace:*"
+  },
+  "name": "noddle",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check": "ultracite check",
+    "fix": "ultracite fix"
+  },
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "private": true
 }

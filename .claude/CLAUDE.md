@@ -176,11 +176,35 @@ correctness is what the entire product's trust rests on.
 
 ## Hard rules
 
-**Bun is the package manager everywhere. Bun as the *runtime* for `apps/worker`
-is unverified.** The worker depends on `ssh2` and `dockerode`; `ssh2` carries
-optional native addons. Prove the SSH and Docker paths actually run on Bun before
-building on top of them. If they don't, `apps/worker` runs on Node and everything
-else stays Bun — that is a normal outcome, not a failure.
+**Bun is the package manager everywhere. `apps/worker` runs on NODE — settled by
+measurement, not preference.** `packages/ssh-executor/src/verify.ts` runs the real
+paths against a real VM; run it on both runtimes to re-check after any upgrade:
+
+| | `ssh2` | `dockerode` over the SSH tunnel | |
+|---|---|---|---|
+| Node 24 | ✓ | ✓ Docker 29.7.1, `UpdateStatus.State` readable | **9/9** |
+| Bun 1.3.13 | ✓ | ✗ `ECONNREFUSED` | 6/7 |
+
+`ssh2` itself is fine on Bun — connection, exec, exit codes, chunked streaming.
+What breaks is `dockerode` over the tunnel. **Two independent approaches were
+tried and both fail on Bun:**
+
+| approach | Node | Bun |
+|---|---|---|
+| custom `createConnection` on `http.Agent` | ✓ | ✗ `ECONNREFUSED` — Bun ignores it and opens a real TCP connection to the placeholder host |
+| local Unix socket proxied to the remote socket over an SSH channel (no agent at all) | ✓ | ✗ hangs forever on the first request |
+
+The second was the obvious escape hatch — no custom agent, so nothing for a
+runtime to ignore — and it still hangs. Only the `http.Agent` path is kept in the
+code; the socket-proxy variant was deleted rather than left as dead code.
+
+So: Bun for install/workspaces/scripts, Node for the worker process. Do not
+"simplify" this back to one runtime without re-running the verifier.
+
+Two constraints that follow, both already cost time:
+
+- **No TypeScript parameter properties** (`constructor(private readonly x: T)`) in code the worker loads. Node's strip-only type stripping refuses them — it removes types, it does not transform. Biome flags them too.
+- **An ssh2 `Channel` is a `Duplex`, not a `net.Socket`.** Node's HTTP agent calls `setKeepAlive`/`setNoDelay`/`ref` on whatever `createConnection` returns, and the failure surfaces as an unreadable `TypeError` from inside `node:_http_agent`. The executor stubs the missing methods and disables agent keep-alive.
 
 **Infrastructure code is not done when it typechecks.** Anything touching SSH,
 Swarm, Nixpacks or Traefik must be run against a real VPS before it is considered
@@ -308,3 +332,127 @@ The design system is deliberately constrained. Treat these as limits, not defaul
 - Do not scaffold files "for later." Build what the current phase needs.
 - When something is genuinely ambiguous, ask one specific question rather than picking and moving on.
 - When you are uncertain whether something works, say so directly. Confident wrong infra code is the main risk on this project.
+
+# Ultracite Code Standards
+
+This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+
+## Quick Reference
+
+- **Format code**: `bun x ultracite fix`
+- **Check for issues**: `bun x ultracite check`
+- **Diagnose setup**: `bun x ultracite doctor`
+
+Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+
+---
+
+## Core Principles
+
+Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+
+### Type Safety & Explicitness
+
+- Use explicit types for function parameters and return values when they enhance clarity
+- Prefer `unknown` over `any` when the type is genuinely unknown
+- Use const assertions (`as const`) for immutable values and literal types
+- Leverage TypeScript's type narrowing instead of type assertions
+- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
+
+### Modern JavaScript/TypeScript
+
+- Use arrow functions for callbacks and short functions
+- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
+- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
+- Prefer template literals over string concatenation
+- Use destructuring for object and array assignments
+- Use `const` by default, `let` only when reassignment is needed, never `var`
+
+### Async & Promises
+
+- Always `await` promises in async functions - don't forget to use the return value
+- Use `async/await` syntax instead of promise chains for better readability
+- Handle errors appropriately in async code with try-catch blocks
+- Don't use async functions as Promise executors
+
+### React & JSX
+
+- Use function components over class components
+- Call hooks at the top level only, never conditionally
+- Specify all dependencies in hook dependency arrays correctly
+- Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
+- Nest children between opening and closing tags instead of passing as props
+- Don't define components inside other components
+- Use semantic HTML and ARIA attributes for accessibility:
+  - Provide meaningful alt text for images
+  - Use proper heading hierarchy
+  - Add labels for form inputs
+  - Include keyboard event handlers alongside mouse events
+  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+
+### Error Handling & Debugging
+
+- Remove `console.log`, `debugger`, and `alert` statements from production code
+- Throw `Error` objects with descriptive messages, not strings or other values
+- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
+- Prefer early returns over nested conditionals for error cases
+
+### Code Organization
+
+- Keep functions focused and under reasonable cognitive complexity limits
+- Extract complex conditions into well-named boolean variables
+- Use early returns to reduce nesting
+- Prefer simple conditionals over nested ternary operators
+- Group related code together and separate concerns
+
+### Security
+
+- Add `rel="noopener"` when using `target="_blank"` on links
+- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
+- Don't use `eval()` or assign directly to `document.cookie`
+- Validate and sanitize user input
+
+### Performance
+
+- Avoid spread syntax in accumulators within loops
+- Use top-level regex literals instead of creating them in loops
+- Prefer specific imports over namespace imports
+- Avoid barrel files (index files that re-export everything)
+- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
+
+### Framework-Specific Guidance
+
+**Next.js:**
+- Use Next.js `<Image>` component for images
+- Use `next/head` or App Router metadata API for head elements
+- Use Server Components for async data fetching instead of async Client Components
+
+**React 19+:**
+- Use ref as a prop instead of `React.forwardRef`
+
+**Solid/Svelte/Vue/Qwik:**
+- Use `class` and `for` attributes (not `className` or `htmlFor`)
+
+---
+
+## Testing
+
+- Write assertions inside `it()` or `test()` blocks
+- Avoid done callbacks in async tests - use async/await instead
+- Don't use `.only` or `.skip` in committed code
+- Keep test suites reasonably flat - avoid excessive `describe` nesting
+
+## When Biome Can't Help
+
+Biome's linter will catch most issues automatically. Focus your attention on:
+
+1. **Business logic correctness** - Biome can't validate your algorithms
+2. **Meaningful naming** - Use descriptive names for functions, variables, and types
+3. **Architecture decisions** - Component structure, data flow, and API design
+4. **Edge cases** - Handle boundary conditions and error states
+5. **User experience** - Accessibility, performance, and usability considerations
+6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
+
+---
+
+Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.

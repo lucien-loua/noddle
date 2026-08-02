@@ -1,0 +1,10 @@
+{
+  // Config de la racine : sert au `bun run typecheck` qui vérifie tout le dépôt
+  // d'un coup. Les options vivent dans @noddle/tsconfig, que chaque paquet
+  // étend de son côté pour que les éditeurs voient la bonne config par paquet.
+  "extends": "@noddle/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"]
+}
