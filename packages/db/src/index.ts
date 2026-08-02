@@ -1,13 +1,9 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-// L'API de requêtes relationnelles de Drizzle exige l'objet schéma complet ;
-// l'énumérer table par table le désynchroniserait de schema.ts à chaque ajout.
+// L'API relationnelle de Drizzle exige l'objet schéma complet ; l'énumérer
+// table par table le désynchroniserait du dossier à chaque ajout.
 // biome-ignore lint/performance/noNamespaceImport: exigé par drizzle({ schema })
-import * as schema from "./schema.ts";
-
-// Pas de ré-export du schéma ici : les consommateurs importent
-// `@noddle/db/schema`. Un fichier tonneau obligerait chaque appelant à charger
-// tout le schéma pour un seul type.
+import * as schema from "#schema/index";
 
 export type Database = ReturnType<typeof createDatabase>;
 
