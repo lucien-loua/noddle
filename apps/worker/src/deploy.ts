@@ -21,13 +21,9 @@ import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { createLogSink } from "./log-sink.ts";
-import {
-  deployService,
-  ensureOverlayNetwork,
-  isDeployAccepted,
-} from "./swarm.ts";
-import { watchUntilFor } from "./watch.ts";
+import { createLogSink } from "#log-sink";
+import { deployService, ensureOverlayNetwork, isDeployAccepted } from "#swarm";
+import { watchUntilFor } from "#watch";
 
 export interface DeployContext {
   appKey: Buffer;
@@ -40,13 +36,36 @@ export interface DeployContext {
   onLog?: (deploymentId: string, chunk: string) => void;
 }
 
-export interface DeployJobData {
-  deploymentId: string;
+/**
+ * Une seule file porte les deux formes de travail. Volontairement : elles
+ * touchent le MÊME service Swarm, et la file est en concurrence 1. Deux files
+ * séparées laisseraient un rollback et un déploiement se croiser sur le même
+ * service.
+ */
+export type DeployJobData =
+  | { kind: "deploy"; deploymentId: string }
+  | { kind: "rollback"; imageTag: string; serviceId: string };
+
+/** Aiguillage de la file. Le web n'exécute jamais rien de tout ceci : il tourne
+ *  sur Bun, où `dockerode` à travers un tunnel SSH ne fonctionne pas. */
+export async function runJob(
+  ctx: DeployContext,
+  data: DeployJobData
+): Promise<void> {
+  if (data.kind === "rollback") {
+    await redeployImage(ctx, {
+      imageTag: data.imageTag,
+      serviceId: data.serviceId,
+      trigger: "rollback",
+    });
+    return;
+  }
+  await runDeploy(ctx, data);
 }
 
 export async function runDeploy(
   ctx: DeployContext,
-  data: DeployJobData
+  data: { deploymentId: string }
 ): Promise<void> {
   const { db } = ctx;
 
