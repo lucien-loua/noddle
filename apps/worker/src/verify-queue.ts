@@ -113,7 +113,6 @@ try {
         break;
       }
     }
-    // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
     await new Promise((r) => setTimeout(r, 2000));
   }
 

@@ -210,7 +210,6 @@ try {
   while (Date.now() < deadline && !reverted) {
     // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
     await new Promise((r) => setTimeout(r, 20_000));
-    // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
     const result = await sweepWatch(ctx);
     if (result.reverted.length > 0) {
       reverted = true;
@@ -257,13 +256,11 @@ try {
       signal: AbortSignal.timeout(8000),
     }).catch(() => null);
     if (res?.ok) {
-      // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
       body = (await res.text()).trim();
       if (body === "SAINE") {
         break;
       }
     }
-    // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
     await new Promise((r) => setTimeout(r, 3000));
   }
   if (body === "SAINE") {
