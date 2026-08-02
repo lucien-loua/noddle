@@ -36,6 +36,7 @@ an answer.** Do not proceed on your own judgment.
 | Deploy targets | **Docker only** | no bare-metal or systemd paths |
 | Reverse proxy | **Traefik**, Swarm provider | dynamic label-based routing, native Let's Encrypt |
 | RPC layer | **TanStack Start `createServerFn`**, no tRPC | Start already gives end-to-end type safety; two RPC layers is waste. tRPC only if a public API or CLI ever needs a versioned contract outside the app |
+| Late crashes | **Noddle watches after the deploy and rolls back itself** | Swarm's guarantee expires with `--update-monitor`. Past that window there is nothing left to roll back to. Noddle keeps full deployment history, so it can return to *any* previous image — Swarm can only return to one |
 
 **License: AGPL-3.0** (`LICENSE` at the repo root), open-core. The core is free;
 anyone who runs it as a hosted service must publish their modifications, which is
@@ -151,7 +152,7 @@ dies. That is the one hand-rolled swap logic always gets wrong.
 
 Then, in order:
 
-1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, one-click rollback (`docker service rollback` — free from the Swarm decision, so it ships with the deploy loop).
+1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, rollback, and the **post-deploy watch** (see Hard rules: Swarm's guarantee expires with the monitor window, so the worker keeps observing and rolls back from Noddle's own history). Rollback is not a Phase 3 nicety here — it is the mechanism the watch depends on.
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
 3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, teams/RBAC.
 4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
@@ -178,6 +179,27 @@ start-first --update-failure-action rollback` with a `HEALTHCHECK` on the servic
 The whole point of running Swarm is that this behaviour is already correct.
 Verified on a real VM: a broken image fails its healthcheck, Swarm rolls back on
 its own, and the previous version keeps serving without interruption.
+
+**Swarm's safety net expires. `--update-monitor` is not a tuning knob — it is the
+definition of "when is a deploy considered final".** Measured on a real VM, same
+image, only the crash delay changed:
+
+| App dies at | vs `monitor=45s` | Outcome |
+|---|---|---|
+| 25 s | inside | Swarm counts the failure and **rolls back**. Previous version serves again. |
+| 90 s | outside | Update reported `completed`. Previous task already drained. Restart policy relaunches **the broken image**, forever. Measured availability: **9/12 requests over 60 s**, indefinitely. |
+
+Raising the window is not the fix: it makes every deploy wait that long before it
+is confirmed, and a crash one minute later still slips through. Real apps die
+under load after minutes, not seconds — so the outside case is the *common* one.
+
+**Therefore the worker keeps watching after the deploy "succeeds."** Swarm's
+monitor stays short so deploys stay fast; Noddle observes the service for a few
+minutes afterwards, and if the task restarts repeatedly it marks the deployment
+failed and redeploys the previous image **from its own database**. This is
+something Swarm structurally cannot do: Noddle has the whole deployment history,
+Swarm retains one previous spec. Ship it with the deploy loop in Phase 1 — the
+one-click rollback already scheduled there is the same machinery.
 
 **A failed deploy exits 0.** `docker service update --update-failure-action
 rollback` returns 0 after a *successful rollback* — the deploy failed, the command

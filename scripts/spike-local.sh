@@ -29,7 +29,8 @@
 #   ./spike-local.sh              # provisionne + déploie (create au 1er passage,
 #                                 # update au 2e — c'est là qu'on voit le zéro-downtime)
 #   ./spike-local.sh break        # déploie une image cassée, vérifie que l'ancienne sert toujours
-#   ./spike-local.sh break crash  # variante : passe le healthcheck puis meurt
+#   ./spike-local.sh break crash 25  # crash DANS la fenêtre monitor -> rollback
+#   ./spike-local.sh break crash 90  # crash HORS fenêtre -> boucle de crash
 #   ./spike-local.sh cap          # build gourmand, vérifie que le cap tient et que le service survit
 #   ./spike-local.sh status       # état du service et des tasks
 #   ./spike-local.sh reset        # détruit la VM et recommence
@@ -494,7 +495,19 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 if [[ "$MODE" == "break" ]]; then
   BREAK_MODE="${2:-unhealthy}"
-  log "Test du déploiement cassé (mode=$BREAK_MODE)"
+
+  # `break crash [secondes]` — le délai décide de tout. La fenêtre
+  # --update-monitor du service est à 45 s (cf. deploy_image) :
+  #   crash 25  → dans la fenêtre  → rollback vers la version saine
+  #   crash 90  → hors fenêtre     → update réussi, boucle de crash
+  CRASH_AFTER="${3:-25}"
+  MONITOR_HINT="monitor=45s"
+  if [[ "$BREAK_MODE" == "crash" ]]; then
+    BREAK_MODE="crash:$CRASH_AFTER"
+    log "Test du crash différé (${CRASH_AFTER}s, $MONITOR_HINT)"
+  else
+    log "Test du déploiement cassé (mode=$BREAK_MODE)"
+  fi
 
   BEFORE="$(http_body || true)"
   [[ -n "$BEFORE" ]] || fail "Rien ne tourne. Lance d'abord ./spike-local.sh — ce test
@@ -516,6 +529,7 @@ if [[ "$MODE" == "break" ]]; then
   AFTER="$(http_body || true)"
 
   if [[ "$BREAK_MODE" == "unhealthy" ]]; then
+    # health gate : la task ne devient jamais saine, Swarm refuse la bascule
     [[ $DEPLOY_RC -ne 0 ]] \
       && ok "docker service update a échoué (code $DEPLOY_RC) — le health gate a fait son travail." \
       || warn "L'update a retourné 0. Vérifie le rollback dans docker service ps."
@@ -532,14 +546,46 @@ if [[ "$MODE" == "break" ]]; then
     fi
   else
     # crash : la task passe le healthcheck, l'update réussit, PUIS le conteneur
-    # meurt. On vérifie que Swarm le relance et que le service se rétablit.
-    echo "Update terminé (code $DEPLOY_RC). Attente du crash simulé (25 s)…"
-    sleep 35
+    # meurt. Ce qui se passe ensuite dépend entièrement de quel côté de la
+    # fenêtre --update-monitor le crash tombe. Ne PAS conclure « Swarm a
+    # relancé la task » : mesuré, ce n'est pas ce qui arrive dans le cas court.
+    echo "Update terminé (code $DEPLOY_RC). Attente du crash à ${CRASH_AFTER}s…"
+    sleep $((CRASH_AFTER + 20))
+
     RECOVERED="$(http_body || true)"
-    [[ -n "$RECOVERED" ]] \
-      && ok "Le service répond encore après le crash — Swarm a relancé la task." \
-      || fail "Le service est mort et n'est pas revenu. Regarde la restart policy :
-    ssh -i $SSH_KEY $VPS sudo docker service ps $APP_NAME --no-trunc"
+    RUNNING_IMG="$(rexec "${BASE_ENV[@]}" <<'REMOTE' 2>/dev/null || true
+sudo docker service inspect "$APP_NAME" --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+REMOTE
+)"
+    UPD_STATE="$(rexec "${BASE_ENV[@]}" <<'REMOTE' 2>/dev/null || true
+sudo docker service inspect "$APP_NAME" --format '{{.UpdateStatus.State}}'
+REMOTE
+)"
+    echo "  image active : ${RUNNING_IMG:-?}"
+    echo "  update state : ${UPD_STATE:-?}"
+
+    if [[ -z "$RECOVERED" ]]; then
+      fail "Le service est mort et n'est pas revenu.
+    $SSH_HINT sudo docker service ps $APP_NAME --no-trunc"
+    fi
+
+    case "$UPD_STATE" in
+      rollback_completed)
+        ok "Crash DANS la fenêtre monitor → Swarm a fait un ROLLBACK (pas un simple redémarrage)."
+        [[ "$RECOVERED" == "$BEFORE" ]] \
+          && ok "La version saine précédente sert de nouveau : $RECOVERED" \
+          || warn "Le service répond mais le corps a changé : $RECOVERED"
+        ;;
+      completed)
+        warn "Crash APRÈS la fenêtre monitor (${MONITOR_HINT}) → l'update est déclaré réussi."
+        warn "Il n'y a plus d'ancienne version à restaurer : la restart policy relance"
+        warn "l'IMAGE CASSÉE. Le service répond peut-être entre deux crashs — c'est une"
+        warn "boucle, pas un rétablissement. Sert actuellement : $RECOVERED"
+        ;;
+      *)
+        warn "État d'update inattendu : ${UPD_STATE:-?}. Sert : $RECOVERED"
+        ;;
+    esac
   fi
 
   echo
