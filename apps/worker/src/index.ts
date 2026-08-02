@@ -81,7 +81,8 @@ const deployWorker = new Worker<DeployJobData>(
       await runJob(ctx, job.data);
     } finally {
       // Même en cas d'échec : un onglet ouvert doit voir le flux se fermer,
-      // pas rester à attendre indéfiniment.
+      // pas rester à attendre indéfiniment. Un provisionnement de serveur n'a
+      // pas de déploiement associé : rien à clore côté SSE.
       if (job.data.kind === "deploy") {
         await announceEnd(job.data.deploymentId);
       }

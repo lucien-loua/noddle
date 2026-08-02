@@ -49,10 +49,19 @@ const existing = await db.query.servers.findFirst({
 
 if (existing) {
   // La clé peut avoir été régénérée : on la réécrit, liée au MÊME identifiant.
+  //
+  // `role: "manager"` est réécrit ici aussi, et pas seulement à la création :
+  // c'est `isSelf`, une colonne d'affichage, qui reste la source de vérité
+  // sur « quelle machine a lancé l'installateur ». `role` porte le fait
+  // d'orchestration — deux colonnes indépendantes qui, en Phase 2, décrivent
+  // TOUJOURS la même ligne, parce que cette machine est la seule à avoir
+  // exécuté `docker swarm init`, jamais parce que l'une serait déduite de
+  // l'autre.
   await db
     .update(servers)
     .set({
       isSelf: true,
+      role: "manager",
       sshPrivateKeyEncrypted: encryptSecret(
         privateKey,
         appKey,
@@ -70,6 +79,7 @@ if (existing) {
       host,
       isSelf: true,
       name: process.env.HOST_NAME ?? "cette machine",
+      role: "manager",
       sshPort: port,
       sshPrivateKeyEncrypted: "placeholder",
       sshUser: user,
