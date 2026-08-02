@@ -97,6 +97,49 @@ function serviceSpec(s: DeploySpec) {
   };
 }
 
+/**
+ * Attend qu'une task du service soit réellement `running`.
+ *
+ * Avec un HEALTHCHECK, Swarm garde la task en `starting` tant qu'elle n'est pas
+ * saine : atteindre `running` vaut donc health gate à la création, exactement
+ * comme UpdateStatus le fait pour une mise à jour.
+ */
+async function waitForRunningTask(
+  docker: DockerApi,
+  serviceName: string,
+  timeoutMs = 180_000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = "";
+
+  while (Date.now() < deadline) {
+    // biome-ignore lint/performance/noAwaitInLoops: boucle de sondage volontaire
+    const tasks = (await docker.listTasks({
+      filters: JSON.stringify({ service: [serviceName] }),
+    })) as unknown as Array<{
+      DesiredState?: string;
+      Status?: { Err?: string; State?: string };
+    }>;
+
+    if (tasks.some((t) => t.Status?.State === "running")) {
+      return;
+    }
+    const dead = tasks.filter(
+      (t) => t.Status?.State === "failed" || t.Status?.State === "rejected"
+    );
+    if (dead.length > 0) {
+      lastError = dead.at(-1)?.Status?.Err ?? "";
+    }
+    // La restart policy retente : on ne sort pas au premier échec, on laisse
+    // le délai courir. Un service qui ne converge jamais finira en timeout.
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  throw new Error(
+    `le service ${serviceName} n'a pas convergé en ${timeoutMs / 1000}s${lastError ? ` — ${lastError}` : ""}`
+  );
+}
+
 export interface DeployOutcome {
   created: boolean;
   runningImage: string | null;
@@ -121,6 +164,12 @@ export async function deployService(
 
   if (!existing) {
     await docker.createService(serviceSpec(spec));
+    // Une création n'a PAS d'UpdateStatus — il n'y a pas eu de mise à jour.
+    // readUpdateState rendrait donc la main immédiatement et on annoncerait un
+    // déploiement réussi alors que le conteneur démarre encore : le service
+    // passe running, mais Traefik répond 404 le temps que la task converge.
+    // Sur une création, la convergence se lit sur les TASKS.
+    await waitForRunningTask(docker, spec.serviceName);
     const state = await readUpdateState(docker, spec.serviceName);
     return { created: true, ...state };
   }
