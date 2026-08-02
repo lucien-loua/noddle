@@ -35,6 +35,18 @@ export const serverInputSchema = z.object({
 export type ServerInput = z.infer<typeof serverInputSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// projets / environnements
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Simple étiquette d'organisation, jamais un identifiant Docker ou Traefik —
+ * contrairement au nom de service, elle n'a donc pas besoin d'être en
+ * minuscules ni de suivre les contraintes d'un nom d'hôte.
+ */
+export const projectNameSchema = z.string().min(1).max(64);
+export const environmentNameSchema = z.string().min(1).max(64);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // services
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -95,6 +107,27 @@ export const serviceInputSchema = z.object({
   port: z.number().int().min(1).max(65_535).default(3000),
   sourceType: z.enum(["git", "docker_image", "compose"]),
 });
+
+/**
+ * « Connecter un dépôt » — le seul chemin de déploiement que le worker sache
+ * réellement exécuter aujourd'hui : dépôt git, build nixpacks. `sourceType`
+ * n'est donc pas un choix ici, contrairement à `serviceInputSchema` : proposer
+ * `docker_image` ou `compose` dans un formulaire avant que le worker sache les
+ * construire ferait miroiter une fonctionnalité qui échouerait au premier
+ * déploiement.
+ */
+export const connectRepoSchema = z.object({
+  domain: domainSchema.optional(),
+  environmentName: environmentNameSchema,
+  gitBranch: gitBranchSchema.default("main"),
+  gitRepoUrl: gitRepoUrlSchema,
+  name: serviceNameSchema,
+  port: z.number().int().min(1).max(65_535).default(3000),
+  projectName: projectNameSchema,
+  serverId: z.uuid(),
+});
+
+export type ConnectRepoInput = z.infer<typeof connectRepoSchema>;
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 

@@ -10,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
@@ -111,6 +112,7 @@ function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-xs">{email}</span>
+          <ConnectRepoDialog servers={servers} />
           <Button onClick={handleSignOut} size="sm" variant="ghost">
             Se déconnecter
           </Button>
@@ -121,8 +123,7 @@ function Dashboard() {
         <Empty>
           <EmptyTitle>Aucun service</EmptyTitle>
           <EmptyDescription>
-            L'installateur enregistre la machine hôte comme serveur cible n°1 ;
-            les services s'ajoutent ensuite.
+            Connectez un dépôt pour déployer votre premier service.
           </EmptyDescription>
         </Empty>
       ) : (
