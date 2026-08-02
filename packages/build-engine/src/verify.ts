@@ -18,6 +18,7 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import {
+  BuildError,
   buildImage,
   computeBuildCap,
   ensureCappedBuilder,
@@ -102,6 +103,34 @@ try {
     ko(`cgroup CPU absent ou faux : ${quota}, attendu ${cap.cpuQuota}`);
   }
 
+  // ── 2bis. injection d'ARGUMENT (distincte de l'injection shell) ───────────
+  // quoteArg neutralise les métacaractères du shell, PAS les valeurs qui
+  // commencent par un tiret : git les lit comme des drapeaux, et
+  // --upload-pack exécute une commande arbitraire. Aucun guillemet n'aide.
+  const attacks: [string, Record<string, string>][] = [
+    ["branche --upload-pack", { branch: "--upload-pack=/tmp/pwn.sh" }],
+    ["URL --upload-pack", { repoUrl: "--upload-pack=/tmp/pwn.sh" }],
+    ["URL -u", { repoUrl: "-u/tmp/pwn.sh" }],
+    ["SHA drapeau", { commitSha: "--upload-pack=/tmp/pwn.sh" }],
+  ];
+  for (const [label, override] of attacks) {
+    try {
+      await fetchSource(client, {
+        repoUrl: "https://example.com/x.git",
+        branch: "main",
+        dir: `${WORK}/attack`,
+        ...override,
+      });
+      ko(`${label} — AURAIT DÛ ÊTRE REFUSÉ`);
+    } catch (e) {
+      if (e instanceof BuildError && e.stage === "validation") {
+        ok(`${label} refusé avant toute exécution`);
+      } else {
+        ko(`${label} — mauvaise erreur : ${e instanceof Error ? e.message : e}`);
+      }
+    }
+  }
+
   // ── 3. récupération du code, avec le SHA en retour ────────────────────────
   const origin = `${WORK}/origin`;
   await exec(
@@ -117,7 +146,7 @@ try {
   const sha = await fetchSource(client, {
     branch: "master",
     dir: `${WORK}/src`,
-    repoUrl: origin,
+    repoUrl: `file://${origin}`,
   });
   if (/^[0-9a-f]{40}$/.test(sha)) {
     ok(`fetchSource renvoie un SHA complet : ${sha.slice(0, 8)}`);
