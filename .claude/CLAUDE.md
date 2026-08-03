@@ -338,10 +338,40 @@ déclenche un build réel qui converge — avec le SHA du payload (`after`)
 effectivement utilisé comme commit à checkout, pas seulement HEAD de la
 branche.
 
-**Reste pour la Phase 2 :** bases de données en un clic.
+**Bases de données en un clic faites et vérifiées, 6/6 (`verify-database.ts`)
+puis en direct dans un vrai navigateur.** Nouvelle table `databases` :
+Postgres ou Redis, un conteneur officiel, un volume nommé épinglé au serveur
+qui le porte — même raison que `services`/`stacks` : une image (ici locale
+au registre officiel, mais le volume, lui, est toujours local à CE nœud) ne
+se déplace pas toute seule, Swarm ne résout pas le stockage distribué.
+Contrairement à `services`/`stacks`, aucun historique de déploiement : une
+base a une seule version en cours, jamais de build, jamais de rollback.
+`waitForRunningTask`/`readUpdateState`/`isDeployAccepted` sont réutilisés tels
+quels depuis `swarm.ts` — ce sont des sondages dockerode génériques, pas un
+mécanisme lié au chemin HTTP/Traefik des services.
+
+**Le mot de passe n'est jamais montré, pas même une fois.** Contrairement au
+secret d'un webhook (qui doit sortir vers un tiers, donc s'affiche une fois),
+une base de données n'a aucun tiers externe à qui le donner : « Attacher à un
+service » construit la chaîne de connexion et l'écrit CHIFFRÉE directement
+comme variable d'environnement du service choisi, entièrement côté serveur —
+réutilise le mécanisme `env_vars` déjà existant plutôt que d'inventer un
+système d'attachement séparé. Le navigateur ne voit jamais que « Attaché ».
+
+**Reste pour la Phase 2 : rien.** Les quatre chantiers du plan initial
+(multi-serveur, déploiements Compose, webhooks, bases de données) sont faits
+et vérifiés contre du réel. Phase 3 : sauvegardes vers S3, notifications,
+graphiques de ressources, équipes/RBAC.
 
 **Pièges déjà payés, à ne pas repayer :**
 
+- **`redis-cli -u "redis://:<mdp>@hôte:port"` (utilisateur vide) échoue avec
+  `WRONGPASS`, alors que le MÊME mot de passe passé en `-a <mdp> -h <hôte>`
+  fonctionne.** Sans ACL, le parseur d'URI a besoin de l'utilisateur explicite
+  `default` pour reconnaître le mot de passe — `redis://default:<mdp>@…`.
+  Mesuré contre une vraie instance avant correction ; la chaîne de connexion
+  que « Attacher à un service » écrit utilise donc `default`, jamais un
+  utilisateur vide.
 - Le premier passage de `verify-webhook.ts` a envoyé un `after` inventé dans
   le payload simulé : `git checkout` a échoué (code 128, "couldn't find
   remote ref") — comportement CORRECT du worker, pas un bug du webhook. Un
