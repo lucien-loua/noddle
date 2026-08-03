@@ -9,6 +9,7 @@
 // Les relations de better-auth ne sont PAS ici : elles vivent dans `auth.ts`,
 // qui est généré par son CLI et se réécrit d'un bloc.
 import { relations } from "drizzle-orm";
+import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
 import { envVars } from "#schema/env-vars";
 import { environments, projects } from "#schema/projects";
@@ -23,6 +24,7 @@ export const projectsRelations = relations(projects, ({ many }) => ({
 export const environmentsRelations = relations(
   environments,
   ({ one, many }) => ({
+    databases: many(databases),
     project: one(projects, {
       fields: [environments.projectId],
       references: [projects.id],
@@ -33,6 +35,7 @@ export const environmentsRelations = relations(
 );
 
 export const serversRelations = relations(servers, ({ many }) => ({
+  databases: many(databases),
   services: many(services),
   stacks: many(stacks),
 }));
@@ -104,3 +107,14 @@ export const stackDeploymentLogsRelations = relations(
     }),
   })
 );
+
+export const databasesRelations = relations(databases, ({ one }) => ({
+  environment: one(environments, {
+    fields: [databases.environmentId],
+    references: [environments.id],
+  }),
+  server: one(servers, {
+    fields: [databases.serverId],
+    references: [servers.id],
+  }),
+}));
