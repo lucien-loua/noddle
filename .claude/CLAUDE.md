@@ -389,6 +389,40 @@ labels Swarm (`entrypoints=websecure`, `tls.certresolver=le`).
 et vérifiés contre du réel, et HTTPS l'est aussi. Phase 3 : sauvegardes vers
 S3, notifications, graphiques de ressources, équipes/RBAC.
 
+**Trois défauts que SEUL un vrai navigateur sur l'installation publique a
+montrés**, tous les trois invisibles en local et invisibles au curl :
+
+- **Personne ne pouvait se connecter.** `BETTER_AUTH_URL` vide laisse
+  better-auth déduire l'origine de la requête ; Traefik terminant le TLS, le
+  processus web voit du HTTP en clair sur le port 3000 et déduit
+  `http://<domaine>`, alors que le navigateur envoie `Origin: https://…`.
+  Toute requête POST partait en 403 `INVALID_ORIGIN`. **La même requête passe
+  en 200 sans en-tête `Origin` — c'est-à-dire au curl.** La vérification au
+  curl réussissait donc pour la mauvaise raison, y compris le test « le verrou
+  à un seul compte fonctionne ». `docker-compose.tls.yml` fixe désormais
+  `BETTER_AUTH_URL: https://${NODDLE_DOMAIN}`.
+
+- **La feuille de style répondait 404 à chaque chargement.** Tailwind v4
+  détecte ses sources seul et élague avec le `.gitignore` ; l'image Docker n'a
+  pas de `.git` (exclu par `.dockerignore`), donc `dist/` cesse d'être élagué
+  et la passe SERVEUR de `vite build` scanne le bundle CLIENT écrit trois
+  secondes plus tôt. Elle génère une feuille différente et écrit SON empreinte
+  dans le HTML rendu côté serveur — feuille jamais émise. Mesuré : client
+  `styles-CrpERSPK.css`, serveur `styles-EVvdB83F.css`, même build. La page
+  restait sans style jusqu'à ce que le JS client injecte la vraie, donc
+  l'écran finissait correct et le défaut ne se voyait que dans la console.
+  Corrigé par `@source not "../dist"` dans `styles.css`.
+
+- **La machine n°1 restait « Provisionnement… » pour toujours.**
+  `adopt-host.ts` n'écrivait jamais `status`, qui restait à `pending` — sur un
+  serveur qui construisait et déployait déjà. C'est le cas mono-machine, donc
+  le cas courant, et un écran dont le seul travail est de dire « est-ce que ça
+  va » se trompait chez tout le monde. Corrigé en relevant les mêmes faits que
+  `provisionServer`, par le MÊME chemin (SSH réel puis socket Docker à travers
+  lui) : marquer `connected` sans vérifier aurait été faux dans l'autre sens,
+  et c'est ici que le chemin de bouclage doit être exercé pour la première
+  fois.
+
 **Pièges déjà payés, à ne pas repayer :**
 
 - **`$SUDO` vide dans un TABLEAU bash n'est pas ignoré, contrairement à `$SUDO`

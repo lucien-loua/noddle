@@ -58,6 +58,21 @@ services:
       - letsencrypt:/letsencrypt
 
   web:
+    # Sans ça, personne ne peut se connecter sur une installation à domaine.
+    #
+    # `BETTER_AUTH_URL` vide laisse better-auth déduire l'origine de la requête
+    # entrante. Or Traefik termine le TLS : le processus web voit du HTTP en
+    # clair sur le port 3000, et déduit donc `http://<domaine>` — alors que le
+    # navigateur envoie `Origin: https://<domaine>`. Les deux ne correspondent
+    # pas, et toute requête POST est refusée en 403 `INVALID_ORIGIN`.
+    #
+    # Mesuré sur l'installation réelle : la MÊME requête passe en 200 sans
+    # en-tête `Origin` (cas de curl) et échoue en 403 avec (cas de tout
+    # navigateur). C'est précisément pourquoi une vérification au curl ne
+    # remplace pas un vrai navigateur ici — elle réussit pour la mauvaise
+    # raison.
+    environment:
+      BETTER_AUTH_URL: https://${NODDLE_DOMAIN:?NODDLE_DOMAIN manquant}
     labels:
       - traefik.enable=true
       - traefik.http.services.noddle-web.loadbalancer.server.port=3000
