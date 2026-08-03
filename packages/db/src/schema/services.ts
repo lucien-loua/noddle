@@ -61,6 +61,11 @@ export const services = pgTable(
     sourceType: sourceType("source_type").notNull(),
     status: serviceStatus("status").notNull().default("created"),
     updatedAt,
+
+    // Absent = pas de webhook configuré. Présent une seule fois en clair, au
+    // moment de sa génération — jamais relu ensuite, même chiffré : le
+    // formulaire ne peut que le régénérer, exactement comme un jeton d'API.
+    webhookSecretEncrypted: text("webhook_secret_encrypted"),
   },
   (t) => [
     uniqueIndex("services_env_name_idx").on(t.environmentId, t.name),

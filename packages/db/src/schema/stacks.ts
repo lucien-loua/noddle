@@ -63,6 +63,10 @@ export const stacks = pgTable(
       .references(() => servers.id, { onDelete: "restrict" }),
     status: serviceStatus("status").notNull().default("created"),
     updatedAt,
+
+    // Même principe que `services.webhookSecretEncrypted` : absent = pas de
+    // webhook, et jamais relu en clair après sa génération.
+    webhookSecretEncrypted: text("webhook_secret_encrypted"),
   },
   (t) => [
     uniqueIndex("stacks_env_name_idx").on(t.environmentId, t.name),

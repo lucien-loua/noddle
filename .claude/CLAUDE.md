@@ -311,9 +311,42 @@ validation du formulaire est confirmée correcte ; personne n'a regardé le
 bouton Déployer d'une pile fonctionner de bout en bout dans un vrai
 navigateur.
 
-**Reste pour la Phase 2 :** webhooks, bases de données en un clic.
+**Webhooks faits et vérifiés en direct, 7/7 (`verify-webhook.ts`).** Un
+secret par service ou par pile (`webhook_secret_encrypted`), montré UNE SEULE
+fois à sa génération — comme un jeton d'API, jamais relu ensuite, même
+chiffré : le panneau ne peut que le régénérer. `queueServiceDeploy` /
+`queueStackDeploy` (`apps/web/src/lib/deploy-queue.server.ts`) factorisent ce
+que `triggerDeploy`/`triggerStackDeploy` faisaient déjà, pour que le
+déclenchement manuel (session requise) et le webhook (signature requise à la
+place) déposent EXACTEMENT la même ligne et le même job — un webhook n'est
+pas un chemin parallèle, c'est une autre porte d'entrée vers le même
+mécanisme.
+
+Le récepteur (`api/webhooks/service/$serviceId`, `api/webhooks/stack/$stackId`)
+lit le corps BRUT avant tout parsing JSON — la signature se vérifie sur les
+octets exacts, pas sur une relecture. GitHub signe (`X-Hub-Signature-256`,
+HMAC-SHA256) ; GitLab envoie le secret en clair (`X-Gitlab-Token`) : les deux
+sont acceptés, comparés à temps constant dans les deux cas. Les deux
+partagent le même schéma de payload push (`ref`/`after`) pour cet événement,
+donc un seul lecteur suffit. Une branche différente de celle configurée
+répond 200 (ignoré) plutôt que 4xx : GitHub retenterait sinon indéfiniment un
+événement qui n'a simplement rien à faire ici.
+
+Vérifié contre une vraie VM : signature invalide refusée (401), branche
+différente ignorée sans rien déployer, et un push signé sur la bonne branche
+déclenche un build réel qui converge — avec le SHA du payload (`after`)
+effectivement utilisé comme commit à checkout, pas seulement HEAD de la
+branche.
+
+**Reste pour la Phase 2 :** bases de données en un clic.
 
 **Pièges déjà payés, à ne pas repayer :**
+
+- Le premier passage de `verify-webhook.ts` a envoyé un `after` inventé dans
+  le payload simulé : `git checkout` a échoué (code 128, "couldn't find
+  remote ref") — comportement CORRECT du worker, pas un bug du webhook. Un
+  test qui simule un push doit utiliser un SHA qui existe réellement dans le
+  dépôt, jamais une valeur de convenance.
 
 - **Le healthcheck injecté suppose `curl` présent, vrai pour les images
   nixpacks mais PAS pour un Dockerfile Compose arbitraire.** Une image

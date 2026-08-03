@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
+import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
+import { Route as ApiWebhooksStackStackIdRouteImport } from './routes/api/webhooks/stack/$stackId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +36,33 @@ const ApiLogsDeploymentIdRoute = ApiLogsDeploymentIdRouteImport.update({
   path: '/api/logs/$deploymentId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksServiceServiceIdRoute =
+  ApiWebhooksServiceServiceIdRouteImport.update({
+    id: '/api/webhooks/service/$serviceId',
+    path: '/api/webhooks/service/$serviceId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiWebhooksStackStackIdRoute = ApiWebhooksStackStackIdRouteImport.update({
+  id: '/api/webhooks/stack/$stackId',
+  path: '/api/webhooks/stack/$stackId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
+  '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
+  '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +70,34 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
+  '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/api/auth/$' | '/api/logs/$deploymentId'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/api/auth/$'
+    | '/api/logs/$deploymentId'
+    | '/api/webhooks/service/$serviceId'
+    | '/api/webhooks/stack/$stackId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/api/auth/$' | '/api/logs/$deploymentId'
-  id: '__root__' | '/' | '/login' | '/api/auth/$' | '/api/logs/$deploymentId'
+  to:
+    | '/'
+    | '/login'
+    | '/api/auth/$'
+    | '/api/logs/$deploymentId'
+    | '/api/webhooks/service/$serviceId'
+    | '/api/webhooks/stack/$stackId'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/api/auth/$'
+    | '/api/logs/$deploymentId'
+    | '/api/webhooks/service/$serviceId'
+    | '/api/webhooks/stack/$stackId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +105,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
+  ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
+  ApiWebhooksStackStackIdRoute: typeof ApiWebhooksStackStackIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +139,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogsDeploymentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/service/$serviceId': {
+      id: '/api/webhooks/service/$serviceId'
+      path: '/api/webhooks/service/$serviceId'
+      fullPath: '/api/webhooks/service/$serviceId'
+      preLoaderRoute: typeof ApiWebhooksServiceServiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/stack/$stackId': {
+      id: '/api/webhooks/stack/$stackId'
+      path: '/api/webhooks/stack/$stackId'
+      fullPath: '/api/webhooks/stack/$stackId'
+      preLoaderRoute: typeof ApiWebhooksStackStackIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +161,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
+  ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
+  ApiWebhooksStackStackIdRoute: ApiWebhooksStackStackIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

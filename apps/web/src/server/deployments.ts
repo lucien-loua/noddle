@@ -4,7 +4,7 @@
 // minutes ; rien ici ne doit vivre dans le cycle requête/réponse. Et le web
 // tourne sur Bun, où `dockerode` à travers un tunnel SSH ne fonctionne pas :
 // même en le voulant, il ne pourrait pas faire le travail lui-même.
-import { deployments, services } from "@noddle/db/schema";
+import { deployments } from "@noddle/db/schema";
 import {
   deployRequestSchema,
   rollbackRequestSchema,
@@ -12,6 +12,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -19,37 +20,14 @@ export const triggerDeploy = createServerFn({ method: "POST" })
   .validator(deployRequestSchema)
   .handler(async ({ data }): Promise<{ deploymentId: string }> => {
     await requireSession();
-
-    const service = await db.query.services.findFirst({
-      where: eq(services.id, data.serviceId),
-    });
-    if (!service) {
-      throw new Error("service introuvable");
-    }
-
     // La ligne est créée ICI, pas dans le worker : le bouton doit rendre un
     // identifiant tout de suite pour que l'écran s'abonne au flux de logs
-    // avant même que le build commence.
-    const [created] = await db
-      .insert(deployments)
-      .values({
-        commitSha: data.commitSha ?? null,
-        serviceId: service.id,
-        status: "queued",
-        trigger: "manual",
-      })
-      .returning();
-    if (!created) {
-      throw new Error("création du déploiement impossible");
-    }
-
-    await db
-      .update(services)
-      .set({ status: "deploying" })
-      .where(eq(services.id, service.id));
-
-    await enqueueDeploy({ deploymentId: created.id, kind: "deploy" });
-    return { deploymentId: created.id };
+    // avant même que le build commence. Même chemin que le webhook, qui
+    // dépose le même genre de ligne sans passer par une session.
+    return await queueServiceDeploy(data.serviceId, {
+      commitSha: data.commitSha,
+      trigger: "manual",
+    });
   });
 
 export const triggerRollback = createServerFn({ method: "POST" })
