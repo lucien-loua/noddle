@@ -138,6 +138,7 @@ async function clearSupersededStackWatch(
 
 interface InjectOptions {
   builtKeys: readonly string[];
+  certResolver?: string;
   domain?: string | null;
   networkName: string;
   placementNodeId?: string;
@@ -204,6 +205,7 @@ function injectDeployConfig(doc: ComposeFile, opts: InjectOptions): void {
   const swarmName = `${opts.stackName}_${opts.publicService}`;
   const deploy = { ...(pub.deploy ?? {}) } as Record<string, unknown>;
   deploy.labels = routeLabels({
+    certResolver: opts.certResolver,
     domain: opts.domain ?? undefined,
     port: opts.port,
     serviceName: swarmName,
@@ -496,6 +498,7 @@ export async function runStackDeploy(
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
+      certResolver: ctx.certResolver,
       domain: stack.domain,
       networkName: ctx.networkName,
       placementNodeId,
@@ -646,6 +649,7 @@ export async function redeployStack(
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
+      certResolver: ctx.certResolver,
       domain: stack.domain,
       networkName: ctx.networkName,
       placementNodeId,

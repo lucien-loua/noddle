@@ -96,6 +96,14 @@ else
 APP_KEY=$(openssl rand -base64 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 NODDLE_URL=${NODDLE_URL:-}
+# HTTPS. Les deux ensemble, ou aucun : Let's Encrypt certifie un NOM, jamais
+# une adresse IP. Sans domaine, Noddle sert en HTTP simple — ce qui reste
+# correct pour une machine qu'on atteint par son IP.
+NODDLE_DOMAIN=${NODDLE_DOMAIN:-}
+ACME_EMAIL=${ACME_EMAIL:-}
+# Vide = le vrai Let's Encrypt. Le serveur de test sert à la mise au point,
+# sans consommer le quota de production.
+ACME_CASERVER=${ACME_CASERVER:-}
 EOF
   $SUDO chmod 600 "$ENV_FILE"
   echo "générés dans $ENV_FILE (à sauvegarder)"
@@ -144,7 +152,29 @@ fi
 
 # ── 5. La pile ───────────────────────────────────────────────────────────────
 say "Construction et démarrage du plan de contrôle"
-COMPOSE=("$SUDO" docker compose --project-directory "$NODDLE_DIR/installer" --env-file "$ENV_FILE")
+
+# Le domaine est lu depuis le .env, pas depuis l'environnement : sur une
+# réinstallation, c'est le fichier qui fait foi — il a été conservé plus haut.
+CONFIGURED_DOMAIN="$($SUDO grep -E '^NODDLE_DOMAIN=' "$ENV_FILE" | cut -d= -f2- || true)"
+CONFIGURED_EMAIL="$($SUDO grep -E '^ACME_EMAIL=' "$ENV_FILE" | cut -d= -f2- || true)"
+
+COMPOSE_FILES=(-f "$NODDLE_DIR/installer/docker-compose.yml")
+if [ -n "$CONFIGURED_DOMAIN" ]; then
+  [ -n "$CONFIGURED_EMAIL" ] \
+    || die "NODDLE_DOMAIN est défini mais ACME_EMAIL est vide — Let's Encrypt exige une adresse de contact."
+  COMPOSE_FILES+=(-f "$NODDLE_DIR/installer/docker-compose.tls.yml")
+  echo "HTTPS activé pour $CONFIGURED_DOMAIN"
+else
+  echo "HTTP simple : aucun domaine configuré (NODDLE_DOMAIN vide)"
+fi
+
+# `$SUDO` est VIDE quand on est déjà root, et un tableau ne l'oublie pas comme
+# le fait le découpage en mots : `"${COMPOSE[@]}"` passerait une chaîne vide en
+# guise de commande, et bash répond « : command not found ». Le préfixe n'est
+# donc ajouté que s'il existe. Mesuré en installant en root — tous les essais
+# précédents tournaient sous un utilisateur avec sudo, où le bug est invisible.
+COMPOSE=(docker compose --project-directory "$NODDLE_DIR/installer" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
+[ -z "$SUDO" ] || COMPOSE=("$SUDO" "${COMPOSE[@]}")
 "${COMPOSE[@]}" build </dev/null
 "${COMPOSE[@]}" up -d </dev/null
 
@@ -172,6 +202,11 @@ say "Adoption de cette machine comme serveur n°1"
   worker node src/adopt-host.ts </dev/null
 
 printf '\n\033[32m✓ Noddle est installé.\033[0m\n\n'
-printf '  Dashboard : http://%s\n' "$HOST_IP"
+if [ -n "$CONFIGURED_DOMAIN" ]; then
+  printf '  Dashboard : https://%s\n' "$CONFIGURED_DOMAIN"
+  printf '              (le premier chargement attend le certificat, quelques secondes)\n'
+else
+  printf '  Dashboard : http://%s\n' "$HOST_IP"
+fi
 printf '  Secrets   : %s  (sauvegardez ce fichier)\n' "$ENV_FILE"
 printf '\n  Le premier écran crée le compte administrateur.\n\n'

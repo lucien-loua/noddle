@@ -1,0 +1,109 @@
+# TLS — appliqué PAR-DESSUS docker-compose.yml, et seulement quand
+# l'installation a un domaine.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml …
+#
+# Pourquoi un fichier séparé plutôt qu'un bloc conditionnel : sans nom de
+# domaine, aucun certificat n'est possible — Let's Encrypt valide un NOM, pas
+# une adresse IP. Le chemin sans domaine doit donc rester exactement celui qui
+# a déjà été prouvé sur une machine neuve, sans une ligne de plus.
+#
+# ⚠ `command:` est REMPLACÉ par Compose, jamais fusionné. Les drapeaux des
+# providers ci-dessous sont donc recopiés de docker-compose.yml : toute
+# modification là-bas doit être répercutée ici. C'est le prix de garder le
+# chemin sans domaine intact, et c'est le seul endroit du dépôt où deux copies
+# doivent bouger ensemble.
+
+services:
+  traefik:
+    command:
+      # ── recopié de docker-compose.yml ──
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.swarm=true
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=noddle-public
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+      # ── TLS ──
+      - --entrypoints.websecure.address=:443
+      # Redirection globale vers HTTPS. Elle NE casse PAS le défi HTTP-01 :
+      # Traefik enregistre son routeur de challenge en interne, prioritaire sur
+      # la redirection d'entrypoint. Mesuré en tapant directement
+      # `/.well-known/acme-challenge/<jeton>` sur le port 80 : la réponse est
+      # 404, PAS 301 — donc le chemin est bien exempté.
+      #
+      # Ce test-là est nécessaire : le log de lego ne suffit pas à conclure.
+      # Let's Encrypt suit les redirections pendant un HTTP-01 et y ignore la
+      # validité du certificat, donc « Validations succeeded » serait apparu
+      # même si le challenge avait été redirigé.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL manquant}
+      # Le stockage DOIT être persistant. Sur un volume éphémère, chaque
+      # redémarrage redemande un certificat et brûle le quota Let's Encrypt
+      # (5 échecs/heure, 50 certificats/semaine et par domaine) jusqu'au
+      # blocage.
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      # Vide = le vrai Let's Encrypt. Pointé sur le serveur de test pendant la
+      # mise au point, pour ne pas consommer le quota de production.
+      - --certificatesresolvers.le.acme.caserver=${ACME_CASERVER:-https://acme-v02.api.letsencrypt.org/directory}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  web:
+    # Sans ça, personne ne peut se connecter sur une installation à domaine.
+    #
+    # `BETTER_AUTH_URL` vide laisse better-auth déduire l'origine de la requête
+    # entrante. Or Traefik termine le TLS : le processus web voit du HTTP en
+    # clair sur le port 3000, et déduit donc `http://<domaine>` — alors que le
+    # navigateur envoie `Origin: https://<domaine>`. Les deux ne correspondent
+    # pas, et toute requête POST est refusée en 403 `INVALID_ORIGIN`.
+    #
+    # Mesuré sur l'installation réelle : la MÊME requête passe en 200 sans
+    # en-tête `Origin` (cas de curl) et échoue en 403 avec (cas de tout
+    # navigateur). C'est précisément pourquoi une vérification au curl ne
+    # remplace pas un vrai navigateur ici — elle réussit pour la mauvaise
+    # raison.
+    environment:
+      BETTER_AUTH_URL: https://${NODDLE_DOMAIN:?NODDLE_DOMAIN manquant}
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
+      # Aucun routeur en clair n'est redéclaré ici — mais ATTENTION, celui de
+      # docker-compose.yml survit quand même à la fusion. Contrairement à
+      # `command:` (une liste, REMPLACÉE — voir l'en-tête), Compose normalise
+      # `labels:` en table et les FUSIONNE, même écrits en liste. Deux champs
+      # côte à côte, deux règles opposées ; vérifié sur `docker compose config`.
+      #
+      # Ça ne nuit pas : la redirection est posée sur l'ENTRYPOINT, donc elle
+      # s'applique avant tout routage et aucun routeur du point d'entrée `web`
+      # ne peut plus être atteint. Le routeur hérité est inerte.
+      #
+      # Conséquence à connaître : une fois un domaine configuré, la machine
+      # n'est plus joignable par son IP nue. `http://<ip>/` est redirigé vers
+      # `https://<ip>/`, que le certificat — émis pour le NOM — ne couvre pas ;
+      # le navigateur avertit. Mesuré (openssl verify code 20). C'est le bon
+      # compromis : le dashboard prend un mot de passe administrateur, le
+      # servir en clair serait pire. Mais tant que le DNS n'a pas propagé, il
+      # n'y a pas d'accès de secours par l'IP.
+      - traefik.http.routers.noddle-web-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN manquant}`)
+      - traefik.http.routers.noddle-web-tls.entrypoints=websecure
+      - traefik.http.routers.noddle-web-tls.tls=true
+      - traefik.http.routers.noddle-web-tls.tls.certresolver=le
+
+  # Le worker pose le résolveur sur les applications qu'il déploie. Sans cette
+  # variable, elles sortiraient en HTTP simple sur une machine qui a pourtant
+  # un certificat.
+  worker:
+    environment:
+      CERT_RESOLVER: le
+
+volumes:
+  letsencrypt:

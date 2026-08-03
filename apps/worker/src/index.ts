@@ -41,6 +41,9 @@ const logBus = createLogBus(connection);
 
 const ctx: DeployContext = {
   appKey: loadAppKey(process.env.APP_KEY),
+  // Posé par l'installateur UNIQUEMENT quand un domaine est configuré : sans
+  // nom, aucun certificat n'est possible et les applications sortent en HTTP.
+  certResolver: process.env.CERT_RESOLVER || undefined,
   db: createDatabase({ url: required("DATABASE_URL") }),
   logRoot: process.env.LOG_ROOT ?? "/var/lib/noddle/logs",
   networkName: process.env.TRAEFIK_NETWORK ?? "noddle-public",

@@ -3,6 +3,19 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 
+/* Tailwind v4 détecte ses sources tout seul, et élague avec le .gitignore. Or
+   l'image Docker n'a PAS de .git — `.dockerignore` l'exclut. `dist/` cesse
+   alors d'être élagué, et la passe SERVEUR de `vite build` scanne le bundle
+   CLIENT écrit trois secondes plus tôt. Elle produit donc une feuille de
+   style différente, dont elle écrit l'empreinte dans le HTML rendu côté
+   serveur — feuille qui n'est jamais émise nulle part.
+   En production : un <link> qui répond 404 à CHAQUE chargement, et une page
+   sans style jusqu'à ce que le JS client injecte la vraie. Invisible en
+   local, où .git existe et où les deux passes s'accordent.
+   Mesuré sur l'installation réelle : client `styles-CrpERSPK.css`, serveur
+   `styles-EVvdB83F.css`, même build à trois secondes d'écart. */
+@source not "../dist";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

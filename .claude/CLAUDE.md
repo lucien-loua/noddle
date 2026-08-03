@@ -113,8 +113,10 @@ do not exist in production.
 domain. In dev, Traefik serves plain HTTP. To exercise the ACME code path
 without real certificates, point
 `--certificatesresolvers.le.acme.caserver` at **Pebble** (Let's Encrypt's test
-server). Real certificate issuance needs exactly one run against a real VPS with
-real DNS before shipping — budget for it, do not skip it.
+server).
+
+**Cette course a été faite, le 2026-08-03** — VPS Debian 13 public,
+`noddle.ouestlabs.xyz`, vrai Let's Encrypt. Voir « HTTPS » en Phase 2.
 
 ---
 
@@ -358,12 +360,123 @@ comme variable d'environnement du service choisi, entièrement côté serveur �
 réutilise le mécanisme `env_vars` déjà existant plutôt que d'inventer un
 système d'attachement séparé. Le navigateur ne voit jamais que « Attaché ».
 
+**HTTPS fait et vérifié contre le VRAI Let's Encrypt, le 2026-08-03.** VPS
+public Debian 13 (72.62.88.7), domaine `noddle.ouestlabs.xyz`, installation
+par le chemin documenté. Étagé exprès : d'abord le serveur de STAGING, puis
+seulement après la production — la production n'autorise que 5 échecs de
+validation par heure et 50 certificats par semaine et par domaine, et brûler
+ce quota sur la première exécution d'un code jamais lancé aurait bloqué
+`ouestlabs.xyz` pour la semaine.
+
+Mesuré, pas déduit : certificat émis pour le plan de contrôle
+(`Verification: OK`, `ssl_verify_result=0`, émetteur `CN=YR1`, pas de marqueur
+STAGING), redirection 80→443, et une application déployée par le worker sur
+son propre sous-domaine servie en HTTPS avec son propre certificat — ce qui
+prouve que `CERT_RESOLVER` traverse bien `deploy.ts` → `routeLabels` jusqu'aux
+labels Swarm (`entrypoints=websecure`, `tls.certresolver=le`).
+
+| Vérifié | Comment | |
+|---|---|---|
+| Ports 80/443 joignables depuis l'extérieur | listeners jetables + `curl` depuis une autre machine | ✓ |
+| Émission staging puis production | logs lego + `openssl x509` | ✓ |
+| Certificat réellement de confiance | `curl` SANS `-k`, `ssl_verify_result=0` | ✓ |
+| Le défi HTTP-01 survit à la redirection globale | `/.well-known/acme-challenge/…` répond **404, pas 301** | ✓ |
+| Application déployée en HTTPS bout en bout | build nixpacks → Swarm → Traefik → cert | ✓ |
+| `acme.json` survit à un redémarrage | redémarrage complet : **0** nouvelle demande | ✓ |
+
 **Reste pour la Phase 2 : rien.** Les quatre chantiers du plan initial
 (multi-serveur, déploiements Compose, webhooks, bases de données) sont faits
-et vérifiés contre du réel. Phase 3 : sauvegardes vers S3, notifications,
-graphiques de ressources, équipes/RBAC.
+et vérifiés contre du réel, et HTTPS l'est aussi. Phase 3 : sauvegardes vers
+S3, notifications, graphiques de ressources, équipes/RBAC.
+
+**Trois défauts que SEUL un vrai navigateur sur l'installation publique a
+montrés**, tous les trois invisibles en local et invisibles au curl :
+
+- **Personne ne pouvait se connecter.** `BETTER_AUTH_URL` vide laisse
+  better-auth déduire l'origine de la requête ; Traefik terminant le TLS, le
+  processus web voit du HTTP en clair sur le port 3000 et déduit
+  `http://<domaine>`, alors que le navigateur envoie `Origin: https://…`.
+  Toute requête POST partait en 403 `INVALID_ORIGIN`. **La même requête passe
+  en 200 sans en-tête `Origin` — c'est-à-dire au curl.** La vérification au
+  curl réussissait donc pour la mauvaise raison, y compris le test « le verrou
+  à un seul compte fonctionne ». `docker-compose.tls.yml` fixe désormais
+  `BETTER_AUTH_URL: https://${NODDLE_DOMAIN}`.
+
+- **La feuille de style répondait 404 à chaque chargement.** Tailwind v4
+  détecte ses sources seul et élague avec le `.gitignore` ; l'image Docker n'a
+  pas de `.git` (exclu par `.dockerignore`), donc `dist/` cesse d'être élagué
+  et la passe SERVEUR de `vite build` scanne le bundle CLIENT écrit trois
+  secondes plus tôt. Elle génère une feuille différente et écrit SON empreinte
+  dans le HTML rendu côté serveur — feuille jamais émise. Mesuré : client
+  `styles-CrpERSPK.css`, serveur `styles-EVvdB83F.css`, même build. La page
+  restait sans style jusqu'à ce que le JS client injecte la vraie, donc
+  l'écran finissait correct et le défaut ne se voyait que dans la console.
+  Corrigé par `@source not "../dist"` dans `styles.css`.
+
+- **La machine n°1 restait « Provisionnement… » pour toujours.**
+  `adopt-host.ts` n'écrivait jamais `status`, qui restait à `pending` — sur un
+  serveur qui construisait et déployait déjà. C'est le cas mono-machine, donc
+  le cas courant, et un écran dont le seul travail est de dire « est-ce que ça
+  va » se trompait chez tout le monde. Corrigé en relevant les mêmes faits que
+  `provisionServer`, par le MÊME chemin (SSH réel puis socket Docker à travers
+  lui) : marquer `connected` sans vérifier aurait été faux dans l'autre sens,
+  et c'est ici que le chemin de bouclage doit être exercé pour la première
+  fois.
 
 **Pièges déjà payés, à ne pas repayer :**
+
+- **`$SUDO` vide dans un TABLEAU bash n'est pas ignoré, contrairement à `$SUDO`
+  non quoté.** `install.sh` construisait `COMPOSE=("$SUDO" docker compose …)` :
+  en root, `SUDO=""` et `"${COMPOSE[@]}"` passe une CHAÎNE VIDE comme nom de
+  commande — bash répond `: command not found` et l'installation s'arrête juste
+  avant de démarrer la pile. Invisible jusqu'ici parce que toutes les
+  installations d'essai tournaient sur une VM Multipass sous un utilisateur
+  avec `sudo`, où `SUDO="sudo"` ; le premier VPS loué, où l'on est root, l'a
+  déclenché immédiatement. Le préfixe ne doit être ajouté que s'il est non
+  vide. **Corollaire : `curl | bash` en root et `sudo bash` sont deux chemins
+  distincts, et seul le second était testé.**
+
+- **Une redirection posée sur l'ENTRYPOINT rend TOUS les routeurs de cet
+  entrypoint inatteignables.** `docker-compose.tls.yml` gardait un routeur
+  attrape-tout en clair sur `web`, avec un commentaire affirmant qu'il servait
+  encore le dashboard par l'IP nue tant que le DNS n'avait pas propagé. C'est
+  faux : la redirection s'applique AVANT le routage, donc `http://<ip>/` part
+  en 301 vers `https://<ip>/`, que le certificat — émis pour le NOM — ne
+  couvre pas (`openssl` verify code 20). Le routeur est inerte ; cessé de le
+  redéclarer, rien n'a changé (redirection, HTTPS et exemption ACME
+  identiques). **Conséquence produit : une fois un domaine configuré, il n'y a
+  plus d'accès de secours par l'IP.** C'est le bon compromis — le dashboard
+  prend un mot de passe admin — mais il faut le savoir.
+
+- **Dans un override Compose, `command:` est REMPLACÉ mais `labels:` est
+  FUSIONNÉ** — y compris écrits tous les deux en liste. Compose normalise les
+  labels en table et fusionne les clés, là où il écrase la liste `command`.
+  Conséquence concrète : les drapeaux de provider doivent être recopiés dans
+  `docker-compose.tls.yml` (sinon ils disparaissent), alors qu'un routeur
+  Traefik déclaré dans `docker-compose.yml` survit à la fusion même si
+  l'override ne le mentionne pas. Constaté sur `docker compose config` : on
+  croyait avoir retiré le routeur en clair, il était toujours là.
+
+- **Le défi ACME HTTP-01 n'est PAS cassé par la redirection globale
+  80→443** : Traefik enregistre son routeur de challenge en interne, avec une
+  priorité supérieure à la redirection d'entrypoint. Vérifié en tapant
+  `/.well-known/acme-challenge/<jeton>` sur le port 80 : la réponse est **404,
+  pas 301**. À noter parce que le log lego seul ne le prouve PAS — Let's
+  Encrypt suit les redirections et ignore la validité du certificat pendant un
+  HTTP-01, donc « Validations succeeded » serait apparu dans les deux cas.
+
+- **Changer `caserver` sans effacer `acme.json` ne bascule pas de staging à
+  production.** Le compte ACME stocké est lié au CA qui l'a émis ; le résolveur
+  garde le même nom (`le`). Le volume doit être vidé à la bascule. En sens
+  inverse, `acme.json` DOIT persister en usage normal : redémarrage complet de
+  la pile mesuré à **0** nouvelle demande de certificat, ce qui est exactement
+  ce qui protège le quota.
+
+- **`pkill -f <motif>` sur une machine distante se tue lui-même** si le motif
+  apparaît dans sa propre ligne de commande — c'est le cas quand la commande
+  arrive par SSH. La session tombe, `ssh` sort en 255, et aucune sortie ne
+  revient : ça ressemble à une panne réseau. Écrire le motif de façon à ne pas
+  se matcher (`[h]ttp.server`).
 
 - **`redis-cli -u "redis://:<mdp>@hôte:port"` (utilisateur vide) échoue avec
   `WRONGPASS`, alors que le MÊME mot de passe passé en `-a <mdp> -h <hôte>`
