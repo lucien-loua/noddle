@@ -51,6 +51,7 @@
     "apps/worker": {
       "name": "@noddle/worker",
       "dependencies": {
+        "@noddle/backup-store": "workspace:*",
         "@noddle/build-engine": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/proxy-config": "workspace:*",

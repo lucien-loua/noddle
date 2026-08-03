@@ -70,6 +70,7 @@ export interface DeployContext {
  * service.
  */
 export type DeployJobData =
+  | { backupId: string; kind: "backup" }
   | { kind: "deploy"; deploymentId: string }
   | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-database"; databaseId: string }
@@ -99,6 +100,15 @@ export async function runJob(
   if (data.kind === "provision-database") {
     const { provisionDatabase } = await import("#database");
     await provisionDatabase(ctx, data.databaseId);
+    return;
+  }
+  // Sur la MÊME file que les déploiements, à dessein : concurrence 1. Une
+  // sauvegarde nocturne ne tournera donc pas pendant un build, ce qui est le
+  // choix conservateur sur une machine à 2 Go — le plafond de build protège
+  // du build, pas d'un dump qui s'y ajoute.
+  if (data.kind === "backup") {
+    const { runBackup } = await import("#backup");
+    await runBackup(ctx, data.backupId);
     return;
   }
   if (data.kind === "deploy-stack") {
@@ -148,7 +158,7 @@ async function clearSupersededWatch(
 }
 
 /** Ouvre une connexion SSH vers un serveur, déjà déchiffré. */
-async function connectTo(
+export async function connectTo(
   ctx: DeployContext,
   server: ServerRow
 ): ReturnType<typeof connect> {
