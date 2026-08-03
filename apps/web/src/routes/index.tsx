@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import { WebhookPanel } from "@/components/webhook-panel";
 import { authClient } from "@/lib/auth-client";
 import {
   badgeVariant,
@@ -51,6 +52,12 @@ import {
   triggerStackDeploy,
   triggerStackRollback,
 } from "@/server/stacks";
+import {
+  generateServiceWebhook,
+  generateStackWebhook,
+  getServiceWebhook,
+  getStackWebhook,
+} from "@/server/webhooks";
 
 interface DashboardSearch {
   deployment?: string;
@@ -400,6 +407,15 @@ function ServicePanel({
     [save]
   );
 
+  const handleGetWebhook = useCallback(
+    () => getServiceWebhook({ data: { serviceId: service.id } }),
+    [service.id]
+  );
+  const handleGenerateWebhook = useCallback(
+    () => generateServiceWebhook({ data: { serviceId: service.id } }),
+    [service.id]
+  );
+
   const currentDeploymentId = service.lastDeployment
     ? service.lastDeployment.id
     : null;
@@ -470,6 +486,16 @@ function ServicePanel({
             <AlertDescription>{saveError}</AlertDescription>
           </Alert>
         ) : null}
+      </CardContent>
+
+      <Separator />
+
+      <CardContent className="p-4">
+        <WebhookPanel
+          generateWebhook={handleGenerateWebhook}
+          getWebhook={handleGetWebhook}
+          queryKey={["webhook", "service", service.id]}
+        />
       </CardContent>
     </Card>
   );
@@ -605,6 +631,15 @@ function StackPanel({
     [rollback]
   );
 
+  const handleGetWebhook = useCallback(
+    () => getStackWebhook({ data: { stackId: stack.id } }),
+    [stack.id]
+  );
+  const handleGenerateWebhook = useCallback(
+    () => generateStackWebhook({ data: { stackId: stack.id } }),
+    [stack.id]
+  );
+
   const currentDeploymentId = stack.lastDeployment
     ? stack.lastDeployment.id
     : null;
@@ -650,6 +685,16 @@ function StackPanel({
             <AlertDescription>{rollback.error.message}</AlertDescription>
           </Alert>
         ) : null}
+      </CardContent>
+
+      <Separator />
+
+      <CardContent className="p-4">
+        <WebhookPanel
+          generateWebhook={handleGenerateWebhook}
+          getWebhook={handleGetWebhook}
+          queryKey={["webhook", "stack", stack.id]}
+        />
       </CardContent>
     </Card>
   );

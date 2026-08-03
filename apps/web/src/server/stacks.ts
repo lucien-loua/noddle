@@ -17,6 +17,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { queueStackDeploy } from "@/lib/deploy-queue.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 import type { DeploymentSummary } from "@/server/dashboard";
@@ -84,35 +85,8 @@ export const triggerStackDeploy = createServerFn({ method: "POST" })
   .validator(stackDeployRequestSchema)
   .handler(async ({ data }): Promise<{ stackDeploymentId: string }> => {
     await requireSession();
-
-    const stack = await db.query.stacks.findFirst({
-      where: eq(stacks.id, data.stackId),
-    });
-    if (!stack) {
-      throw new Error("pile introuvable");
-    }
-
-    // Créée ICI, pas dans le worker : le bouton doit rendre un identifiant
-    // tout de suite pour que l'écran s'abonne au flux de logs avant même que
-    // le clone commence.
-    const [created] = await db
-      .insert(stackDeployments)
-      .values({ stackId: stack.id, status: "queued", trigger: "manual" })
-      .returning();
-    if (!created) {
-      throw new Error("création du déploiement de pile impossible");
-    }
-
-    await db
-      .update(stacks)
-      .set({ status: "deploying" })
-      .where(eq(stacks.id, stack.id));
-
-    await enqueueDeploy({
-      kind: "deploy-stack",
-      stackDeploymentId: created.id,
-    });
-    return { stackDeploymentId: created.id };
+    // Même chemin que le webhook, qui dépose la même ligne sans session.
+    return await queueStackDeploy(data.stackId, { trigger: "manual" });
   });
 
 export const triggerStackRollback = createServerFn({ method: "POST" })
