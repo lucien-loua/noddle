@@ -8,6 +8,9 @@
   "files": {
     "includes": [
       "!apps/web/src/components/ui",
+      // Même raison que `components/ui` : livré par `shadcn add`, qui le
+      // réécrit d'un bloc (c'est une dépendance de `sidebar`).
+      "!apps/web/src/hooks/use-mobile.ts",
       // Régénéré par le plugin de TanStack Router à chaque build.
       "!apps/web/src/routeTree.gen.ts",
       "!**/dist"

@@ -1,15 +1,13 @@
-// Les serveurs cibles : liste compacte, et le formulaire d'ajout.
+// Les serveurs cibles : même langage de ligne que tout le reste.
 //
-// Volontairement à part du tableau des services : « chaque service visible
-// d'un coup d'œil » ne veut pas dire que la topologie des serveurs doit vivre
-// sur le même écran principal — mais ça reste ICI, pas une route séparée, pour
-// ne pas ajouter de page à un outil qui refuse d'en ajouter.
-import { PlusIcon } from "@phosphor-icons/react";
+// L'erreur d'un serveur injoignable vit DANS sa ligne, pas en texte rouge
+// flottant sous la liste : une erreur détachée de ce qu'elle décrit oblige à
+// relire les deux pour faire le lien.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { ResourceRow, RowGroup } from "@/components/resource-row";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,14 +16,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { badgeVariant, dotClass } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { addServer, getServers, type ServerView } from "@/server/servers";
 
 /** Le badge et la pastille partagent le même vocabulaire que les services :
@@ -54,31 +49,31 @@ const POLL_MS = 3000;
 
 function ServerRow({ server }: { server: ServerView }) {
   const tone = statusTone(server.status);
+  const facts = [
+    server.host,
+    server.role === "manager" ? "manager" : null,
+    server.dockerVersion ? `Docker ${server.dockerVersion}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2 text-sm">
-      <span
-        aria-label={STATUS_LABEL[server.status]}
-        className={cn("size-2 shrink-0 rounded-full", dotClass(tone))}
-        role="img"
-      />
-      <span className="min-w-0 flex-1 truncate">
-        <span className="font-medium">{server.name}</span>{" "}
-        <span className="text-muted-foreground text-xs">
-          {server.host}
-          {server.role === "manager" ? " · manager" : ""}
-          {server.dockerVersion ? ` · Docker ${server.dockerVersion}` : ""}
-        </span>
-      </span>
-      <Badge variant={badgeVariant(tone)}>{STATUS_LABEL[server.status]}</Badge>
-    </div>
+    <ResourceRow
+      name={server.name}
+      secondary={
+        server.status === "unreachable" && server.lastError ? (
+          <span className="text-destructive">{server.lastError}</span>
+        ) : (
+          facts
+        )
+      }
+      tone={tone}
+      toneLabel={STATUS_LABEL[server.status]}
+    />
   );
 }
 
-export function ServersPanel({ initial }: { initial: ServerView[] }) {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
+export function ServersList({ initial }: { initial: ServerView[] }) {
   const serversQuery = useQuery({
     initialData: initial,
     queryFn: () => getServers(),
@@ -87,6 +82,33 @@ export function ServersPanel({ initial }: { initial: ServerView[] }) {
       query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
   });
   const servers = serversQuery.data ?? initial;
+
+  if (servers.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        Aucun serveur. Ajoutez-en un pour pouvoir déployer quoi que ce soit.
+      </p>
+    );
+  }
+
+  return (
+    <RowGroup>
+      {servers.map((server) => (
+        <ServerRow key={server.id} server={server} />
+      ))}
+    </RowGroup>
+  );
+}
+
+export function AddServerDialog({
+  onOpenChange,
+  open,
+}: {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
@@ -138,7 +160,7 @@ export function ServersPanel({ initial }: { initial: ServerView[] }) {
     onError: (error: Error) => setFormError(error.message),
     onSuccess: async () => {
       reset();
-      setOpen(false);
+      onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ["servers"] });
     },
   });
@@ -160,126 +182,91 @@ export function ServersPanel({ initial }: { initial: ServerView[] }) {
     }
   }, [open, reset]);
 
-  const unreachable = servers.filter(
-    (s) => s.status === "unreachable" && s.lastError
-  );
-
   return (
-    <section className="mt-8">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-medium text-muted-foreground text-sm">Serveurs</h2>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ajouter un serveur</DialogTitle>
+          <DialogDescription>
+            Un hôte et une clé SSH suffisent. Noddle installe Docker si besoin,
+            rejoint son cluster Swarm en tant que worker, et installe nixpacks —
+            sans rien d'autre à faire à la main sur cette machine.
+          </DialogDescription>
+        </DialogHeader>
 
-        <Dialog onOpenChange={setOpen} open={open}>
-          <DialogTrigger render={<Button size="sm" variant="outline" />}>
-            <PlusIcon data-icon="inline-start" />
-            Ajouter un serveur
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ajouter un serveur</DialogTitle>
-              <DialogDescription>
-                Un hôte et une clé SSH suffisent. Noddle installe Docker si
-                besoin, rejoint son cluster Swarm en tant que worker, et
-                installe nixpacks — sans rien d'autre à faire à la main sur
-                cette machine.
-              </DialogDescription>
-            </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="server-name">Nom</FieldLabel>
+              <Input
+                id="server-name"
+                onChange={handleNameChange}
+                placeholder="vps-lyon"
+                required
+                value={name}
+              />
+            </Field>
 
-            <form onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="server-name">Nom</FieldLabel>
-                  <Input
-                    id="server-name"
-                    onChange={handleNameChange}
-                    placeholder="vps-lyon"
-                    required
-                    value={name}
-                  />
-                </Field>
+            <Field>
+              <FieldLabel htmlFor="server-host">Hôte</FieldLabel>
+              <Input
+                id="server-host"
+                onChange={handleHostChange}
+                placeholder="203.0.113.7"
+                required
+                value={host}
+              />
+            </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="server-host">Hôte</FieldLabel>
-                  <Input
-                    id="server-host"
-                    onChange={handleHostChange}
-                    placeholder="203.0.113.7"
-                    required
-                    value={host}
-                  />
-                </Field>
+            <Field orientation="horizontal">
+              <div className="flex-3">
+                <FieldLabel htmlFor="server-user">Utilisateur SSH</FieldLabel>
+                <Input
+                  id="server-user"
+                  onChange={handleUserChange}
+                  required
+                  value={sshUser}
+                />
+              </div>
+              <div className="flex-1">
+                <FieldLabel htmlFor="server-port">Port</FieldLabel>
+                <Input
+                  id="server-port"
+                  inputMode="numeric"
+                  onChange={handlePortChange}
+                  value={sshPort}
+                />
+              </div>
+            </Field>
 
-                <Field orientation="horizontal">
-                  <div className="flex-3">
-                    <FieldLabel htmlFor="server-user">
-                      Utilisateur SSH
-                    </FieldLabel>
-                    <Input
-                      id="server-user"
-                      onChange={handleUserChange}
-                      required
-                      value={sshUser}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <FieldLabel htmlFor="server-port">Port</FieldLabel>
-                    <Input
-                      id="server-port"
-                      inputMode="numeric"
-                      onChange={handlePortChange}
-                      value={sshPort}
-                    />
-                  </div>
-                </Field>
+            <Field>
+              <FieldLabel htmlFor="server-key">Clé privée SSH (PEM)</FieldLabel>
+              <Textarea
+                className="min-h-32 font-mono text-xs"
+                id="server-key"
+                onChange={handleKeyChange}
+                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                required
+                spellCheck={false}
+                value={privateKey}
+              />
+            </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="server-key">
-                    Clé privée SSH (PEM)
-                  </FieldLabel>
-                  <Textarea
-                    className="min-h-32 font-mono text-xs"
-                    id="server-key"
-                    onChange={handleKeyChange}
-                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-                    required
-                    spellCheck={false}
-                    value={privateKey}
-                  />
-                </Field>
+            {formError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            ) : null}
+          </FieldGroup>
 
-                {formError ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>{formError}</AlertDescription>
-                  </Alert>
-                ) : null}
-              </FieldGroup>
-
-              <DialogFooter className="mt-6">
-                <Button disabled={add.isPending} type="submit">
-                  {add.isPending ? <Spinner data-icon="inline-start" /> : null}
-                  Ajouter
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {servers.map((server) => (
-          <ServerRow key={server.id} server={server} />
-        ))}
-
-        {unreachable.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            {unreachable.map((s) => (
-              <p className="px-1 text-destructive text-xs" key={s.id}>
-                {s.name} : {s.lastError}
-              </p>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </section>
+          <DialogFooter className="mt-6">
+            <Button disabled={add.isPending} type="submit">
+              {add.isPending ? <Spinner data-icon="inline-start" /> : null}
+              Ajouter
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

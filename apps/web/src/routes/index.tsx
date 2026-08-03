@@ -1,18 +1,20 @@
 // LE dashboard. Il n'y en a qu'un.
 //
-// Tous les services d'un coup d'œil, avec leur statut et leur dernier
-// déploiement. Sélectionner un service ouvre son détail SOUS la ligne, sans
-// quitter l'écran : c'est ce que veut dire « pas de page vue d'ensemble
-// séparée ». La sélection vit dans l'URL, donc un état précis se partage.
+// Tout ce qui tourne, groupé par projet / environnement, chaque ligne
+// répondant à « est-ce que ça tourne ? » sans lecture et portant son bouton
+// Déployer — jamais dans un menu. Le contexte partagé (projet, environnement)
+// vit dans le titre du groupe, pas répété sur chaque ligne : ce qui se répète
+// n'informe plus.
 //
-// Le bouton Déployer est sur chaque ligne, toujours visible, jamais dans un
-// menu — c'est la seule action qu'on vient faire ici.
-//
-// Les piles Compose vivent sur ce même écran, dans leur propre section : deux
-// TYPES de déploiement, pas deux écrans.
+// Le détail s'ouvre SOUS la ligne, dans le même conteneur, en onglets. Empilé,
+// il faisait mille pixels et repoussait tous les autres services hors de
+// l'écran — c'est-à-dire qu'il cassait la seule chose que ce dashboard doit
+// faire.
+import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { AppShell, type ScopeLink } from "@/components/app-shell";
 import { AttachDatabaseDialog } from "@/components/attach-database-dialog";
 import { ConnectDatabaseDialog } from "@/components/connect-database-dialog";
 import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
@@ -20,24 +22,21 @@ import { ConnectStackDialog } from "@/components/connect-stack-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
-import { ServersPanel } from "@/components/servers-panel";
+import { ResourceRow, RowGroup } from "@/components/resource-row";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
-import { WebhookPanel } from "@/components/webhook-panel";
-import { authClient } from "@/lib/auth-client";
 import {
-  badgeVariant,
-  dotClass,
-  relativeTime,
-  serviceLabel,
-  shortSha,
-} from "@/lib/format";
-import { cn } from "@/lib/utils";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WebhookPanel } from "@/components/webhook-panel";
+import { relativeTime, serviceLabel, shortSha } from "@/lib/format";
 import { getAuthState } from "@/server/auth";
 import {
   getDashboard,
@@ -92,24 +91,95 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+/** Clé de groupe : ce que les lignes d'un même groupe ont en commun, et donc
+ *  ce qu'elles n'ont plus à répéter chacune. */
+function scopeKey(project: string, environment: string): string {
+  return `${project}/${environment}`;
+}
+
+interface Scope {
+  databases: DatabaseRow[];
+  environment: string;
+  project: string;
+  services: ServiceRow[];
+  stacks: StackRow[];
+}
+
+function buildScopes(
+  services: ServiceRow[],
+  stacks: StackRow[],
+  databases: DatabaseRow[]
+): Scope[] {
+  const map = new Map<string, Scope>();
+  const ensure = (project: string, environment: string): Scope => {
+    const key = scopeKey(project, environment);
+    const found = map.get(key);
+    if (found) {
+      return found;
+    }
+    const created: Scope = {
+      databases: [],
+      environment,
+      project,
+      services: [],
+      stacks: [],
+    };
+    map.set(key, created);
+    return created;
+  };
+
+  for (const s of services) {
+    ensure(s.project, s.environment).services.push(s);
+  }
+  for (const s of stacks) {
+    ensure(s.project, s.environment).stacks.push(s);
+  }
+  for (const d of databases) {
+    ensure(d.project, d.environment).databases.push(d);
+  }
+
+  return [...map.values()].sort((a, b) =>
+    scopeKey(a.project, a.environment).localeCompare(
+      scopeKey(b.project, b.environment)
+    )
+  );
+}
+
 function Dashboard() {
   const { databases, email, servers, services, stacks } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const router = useRouter();
+
+  const [dialog, setDialog] = useState<"database" | "repo" | "stack" | null>(
+    null
+  );
+  const closeDialog = useCallback((open: boolean) => {
+    if (!open) {
+      setDialog(null);
+    }
+  }, []);
+  const openRepo = useCallback(() => setDialog("repo"), []);
+  const openStack = useCallback(() => setDialog("stack"), []);
+  const openDatabase = useCallback(() => setDialog("database"), []);
+
+  const scopes = useMemo(
+    () => buildScopes(services, stacks, databases),
+    [services, stacks, databases]
+  );
+
+  const scopeLinks: ScopeLink[] = useMemo(
+    () =>
+      scopes.map((s) => ({
+        environment: s.environment,
+        key: scopeKey(s.project, s.environment),
+        project: s.project,
+      })),
+    [scopes]
+  );
 
   const selectedService = services.find((s) => s.id === search.service) ?? null;
   const selectedStack = stacks.find((s) => s.id === search.stack) ?? null;
 
-  const handleSignOut = useCallback(async () => {
-    await authClient.signOut();
-    await router.invalidate();
-    await router.navigate({ to: "/login" });
-  }, [router]);
-
-  // Stables, et pris par les enfants qui y lient leur propre identifiant :
-  // une fermeture créée dans le `.map()` en fabriquerait une nouvelle par
-  // ligne à chaque rendu du dashboard.
   const handleToggleService = useCallback(
     (serviceId: string) =>
       navigate({
@@ -158,43 +228,73 @@ function Dashboard() {
     [navigate]
   );
 
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-medium text-lg tracking-tight">Noddle</h1>
-          <span className="text-muted-foreground text-xs">
-            {services.length} service{services.length > 1 ? "s" : ""}
-            {stacks.length > 0
-              ? ` · ${stacks.length} pile${stacks.length > 1 ? "s" : ""}`
-              : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground text-xs">{email}</span>
-          <ConnectDatabaseDialog servers={servers} />
-          <ConnectStackDialog servers={servers} />
-          <ConnectRepoDialog servers={servers} />
-          <Button onClick={handleSignOut} size="sm" variant="ghost">
-            Se déconnecter
-          </Button>
-        </div>
-      </header>
+  const empty = scopes.length === 0;
 
-      {services.length === 0 && stacks.length === 0 ? (
+  return (
+    <AppShell
+      actions={
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button size="sm" />}>
+            <PlusIcon data-icon="inline-start" />
+            Nouveau
+            <CaretDownIcon data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={openRepo}>Dépôt Git</DropdownMenuItem>
+            <DropdownMenuItem onClick={openStack}>
+              Pile Compose
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openDatabase}>
+              Base de données
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+      email={email}
+      scopes={scopeLinks}
+      title="Déploiements"
+    >
+      <ConnectRepoDialog
+        onOpenChange={closeDialog}
+        open={dialog === "repo"}
+        servers={servers}
+      />
+      <ConnectStackDialog
+        onOpenChange={closeDialog}
+        open={dialog === "stack"}
+        servers={servers}
+      />
+      <ConnectDatabaseDialog
+        onOpenChange={closeDialog}
+        open={dialog === "database"}
+        servers={servers}
+      />
+
+      {empty ? (
         <Empty>
-          <EmptyTitle>Aucun service</EmptyTitle>
+          <EmptyTitle>Rien de déployé</EmptyTitle>
           <EmptyDescription>
-            Connectez un dépôt ou une pile Compose pour déployer votre premier
-            service.
+            {servers.length === 0
+              ? "Ajoutez d'abord un serveur, puis connectez un dépôt."
+              : "Connectez un dépôt, une pile Compose ou une base de données pour commencer."}
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-6">
-          {services.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {services.map((service) => (
-                <div className="flex flex-col gap-2" key={service.id}>
+        <div className="flex min-w-0 flex-col gap-6">
+          {scopes.map((scope) => (
+            <RowGroup
+              id={scopeKey(scope.project, scope.environment)}
+              key={scopeKey(scope.project, scope.environment)}
+              title={
+                <>
+                  {scope.project}
+                  <span className="text-muted-foreground/50"> / </span>
+                  {scope.environment}
+                </>
+              }
+            >
+              {scope.services.map((service) => (
+                <div key={service.id}>
                   <ServiceCard
                     onToggle={handleToggleService}
                     selected={search.service === service.id}
@@ -209,16 +309,9 @@ function Dashboard() {
                   ) : null}
                 </div>
               ))}
-            </div>
-          ) : null}
 
-          {stacks.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                Piles Compose
-              </h2>
-              {stacks.map((stack) => (
-                <div className="flex flex-col gap-2" key={stack.id}>
+              {scope.stacks.map((stack) => (
+                <div key={stack.id}>
                   <StackCard
                     onToggle={handleToggleStack}
                     selected={search.stack === stack.id}
@@ -233,29 +326,26 @@ function Dashboard() {
                   ) : null}
                 </div>
               ))}
-            </div>
-          ) : null}
 
-          {databases.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                Bases de données
-              </h2>
-              {databases.map((database) => (
+              {scope.databases.map((database) => (
                 <DatabaseCard
                   database={database}
                   key={database.id}
                   services={services}
                 />
               ))}
-            </div>
-          ) : null}
+            </RowGroup>
+          ))}
         </div>
       )}
-
-      <ServersPanel initial={servers} />
-    </main>
+    </AppShell>
   );
+}
+
+/** Le panneau de détail, dans le MÊME conteneur que sa ligne : un panneau
+ *  flottant à côté ne dirait pas à quoi il appartient. */
+function DetailPanel({ children }: { children: React.ReactNode }) {
+  return <div className="border-t bg-muted/20 px-3 py-3">{children}</div>;
 }
 
 function ServiceCard({
@@ -296,55 +386,40 @@ function ServiceCard({
   const handleDeploy = useCallback(() => deploy.mutate(), [deploy]);
 
   return (
-    <Card className={cn("py-0", selected && "border-ring")}>
-      <CardContent className="flex items-center gap-4 px-4 py-3">
-        {/* `role="img"` : un span nu ne porte pas d'aria-label, et cette
-            pastille est la réponse à « est-ce que ça tourne ? » pour qui ne
-            distingue pas les couleurs. */}
-        <span
-          aria-label={status.label}
-          className={cn("size-2 shrink-0 rounded-full", dotClass(status.tone))}
-          role="img"
-        />
-
-        <button
-          className="min-w-0 flex-1 text-start"
-          onClick={handleSelect}
-          type="button"
-        >
-          <span className="flex items-center gap-2 font-medium">
-            {service.name}
-            {service.watching ? (
-              <Badge
-                title="Surveillance post-déploiement en cours : Noddle observe encore ce service et reviendra en arrière s'il se met à boucler."
-                variant="outline"
-              >
-                sous surveillance
-              </Badge>
-            ) : null}
-          </span>
-          <span className="block truncate text-muted-foreground text-xs">
-            {service.project} / {service.environment} · {service.serverName}
-            {service.domain ? ` · ${service.domain}` : ""}
-          </span>
-        </button>
-
-        <div className="flex shrink-0 items-center gap-3">
-          <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
-
-          <span className="hidden text-muted-foreground text-xs sm:inline">
-            {service.lastDeployment
-              ? `${shortSha(service.lastDeployment.commitSha)} · ${relativeTime(service.lastDeployment.createdAt)}`
-              : "jamais déployé"}
-          </span>
-
-          <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
-            {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-            Déployer
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <ResourceRow
+      action={
+        <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
+          {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
+          Déployer
+        </Button>
+      }
+      meta={
+        service.lastDeployment
+          ? `${shortSha(service.lastDeployment.commitSha)} · ${relativeTime(service.lastDeployment.createdAt)}`
+          : null
+      }
+      name={service.name}
+      onToggle={handleSelect}
+      secondary={
+        <>
+          {service.serverName}
+          {service.domain ? ` · ${service.domain}` : ""}
+        </>
+      }
+      selected={selected}
+      tag={
+        service.watching ? (
+          <Badge
+            title="Surveillance post-déploiement en cours : Noddle observe encore ce service et reviendra en arrière s'il se met à boucler."
+            variant="outline"
+          >
+            sous surveillance
+          </Badge>
+        ) : null
+      }
+      tone={status.tone}
+      toneLabel={status.label}
+    />
   );
 }
 
@@ -442,82 +517,81 @@ function ServicePanel({
   const shown = focusedDeploymentId ?? currentDeploymentId;
 
   return (
-    <Card className="gap-0 py-0">
-      <CardContent className="p-4">
-        {shown ? (
-          <LogStream deploymentId={shown} onEnd={handleEnd} />
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            Aucun déploiement : les logs apparaîtront au premier build.
-          </p>
-        )}
-      </CardContent>
+    <DetailPanel>
+      <Tabs defaultValue="logs">
+        {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
+            de l'écran et devenait inatteignable — mesuré. */}
+        <TabsList className="max-w-full overflow-x-auto" variant="line">
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+          <TabsTrigger value="history">Historique</TabsTrigger>
+          <TabsTrigger value="env">Variables</TabsTrigger>
+          <TabsTrigger value="webhook">Webhook</TabsTrigger>
+        </TabsList>
 
-      <Separator />
+        <TabsContent className="pt-3" value="logs">
+          {shown ? (
+            <LogStream deploymentId={shown} onEnd={handleEnd} />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Aucun déploiement : les logs apparaîtront au premier build.
+            </p>
+          )}
+        </TabsContent>
 
-      <CardContent className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-medium text-sm">Historique</h2>
-          <span className="truncate text-muted-foreground text-xs">
+        <TabsContent className="pt-3" value="history">
+          <p className="mb-2 truncate text-muted-foreground text-xs">
             {service.gitRepoUrl ?? "—"}
             {service.gitBranch ? ` · ${service.gitBranch}` : ""}
-          </span>
-        </div>
+          </p>
+          {deployments.data ? (
+            <DeploymentHistory
+              currentDeploymentId={currentDeploymentId}
+              deployments={deployments.data}
+              onRollback={handleRollback}
+              onSelect={handleFocus}
+              pending={rollback.isPending}
+              selectedId={shown}
+            />
+          ) : (
+            <Spinner />
+          )}
+          {rollback.error ? (
+            <Alert className="mt-3" variant="destructive">
+              <AlertDescription>{rollback.error.message}</AlertDescription>
+            </Alert>
+          ) : null}
+        </TabsContent>
 
-        {deployments.data ? (
-          <DeploymentHistory
-            currentDeploymentId={currentDeploymentId}
-            deployments={deployments.data}
-            onRollback={handleRollback}
-            onSelect={handleFocus}
-            pending={rollback.isPending}
-            selectedId={shown}
+        <TabsContent className="pt-3" value="env">
+          {envVars.data ? (
+            <EnvVarTable
+              // Remonte le tableau quand le serveur a confirmé : le brouillon
+              // repart de l'état réellement enregistré, jamais de ce qu'on
+              // croyait avoir envoyé.
+              key={envVars.data.map((v) => `${v.id}:${v.key}`).join(",")}
+              onSave={handleSave}
+              pending={save.isPending}
+              saved={envVars.data}
+            />
+          ) : (
+            <Spinner />
+          )}
+          {saveError ? (
+            <Alert className="mt-3" variant="destructive">
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          ) : null}
+        </TabsContent>
+
+        <TabsContent className="pt-3" value="webhook">
+          <WebhookPanel
+            generateWebhook={handleGenerateWebhook}
+            getWebhook={handleGetWebhook}
+            queryKey={["webhook", "service", service.id]}
           />
-        ) : (
-          <Spinner />
-        )}
-
-        {rollback.error ? (
-          <Alert className="mt-3" variant="destructive">
-            <AlertDescription>{rollback.error.message}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-
-      <Separator />
-
-      <CardContent className="p-4">
-        {envVars.data ? (
-          <EnvVarTable
-            // Remonte le tableau quand le serveur a confirmé : le brouillon
-            // repart de l'état réellement enregistré, jamais de ce qu'on
-            // croyait avoir envoyé.
-            key={envVars.data.map((v) => `${v.id}:${v.key}`).join(",")}
-            onSave={handleSave}
-            pending={save.isPending}
-            saved={envVars.data}
-          />
-        ) : (
-          <Spinner />
-        )}
-
-        {saveError ? (
-          <Alert className="mt-3" variant="destructive">
-            <AlertDescription>{saveError}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-
-      <Separator />
-
-      <CardContent className="p-4">
-        <WebhookPanel
-          generateWebhook={handleGenerateWebhook}
-          getWebhook={handleGetWebhook}
-          queryKey={["webhook", "service", service.id]}
-        />
-      </CardContent>
-    </Card>
+        </TabsContent>
+      </Tabs>
+    </DetailPanel>
   );
 }
 
@@ -556,53 +630,41 @@ function StackCard({
   const handleDeploy = useCallback(() => deploy.mutate(), [deploy]);
 
   return (
-    <Card className={cn("py-0", selected && "border-ring")}>
-      <CardContent className="flex items-center gap-4 px-4 py-3">
-        <span
-          aria-label={status.label}
-          className={cn("size-2 shrink-0 rounded-full", dotClass(status.tone))}
-          role="img"
-        />
-
-        <button
-          className="min-w-0 flex-1 text-start"
-          onClick={handleSelect}
-          type="button"
-        >
-          <span className="flex items-center gap-2 font-medium">
-            {stack.name}
-            {stack.watching ? (
-              <Badge
-                title="Surveillance post-déploiement en cours : Noddle observe encore cette pile et reviendra en arrière si un de ses services se met à boucler."
-                variant="outline"
-              >
-                sous surveillance
-              </Badge>
-            ) : null}
-          </span>
-          <span className="block truncate text-muted-foreground text-xs">
-            {stack.project} / {stack.environment} · {stack.serverName}
-            {stack.publicService ? ` · ${stack.publicService}` : ""}
-            {stack.domain ? ` · ${stack.domain}` : ""}
-          </span>
-        </button>
-
-        <div className="flex shrink-0 items-center gap-3">
-          <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
-
-          <span className="hidden text-muted-foreground text-xs sm:inline">
-            {stack.lastDeployment
-              ? `${shortSha(stack.lastDeployment.commitSha)} · ${relativeTime(stack.lastDeployment.createdAt)}`
-              : "jamais déployée"}
-          </span>
-
-          <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
-            {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-            Déployer
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <ResourceRow
+      action={
+        <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
+          {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
+          Déployer
+        </Button>
+      }
+      meta={
+        stack.lastDeployment
+          ? `${shortSha(stack.lastDeployment.commitSha)} · ${relativeTime(stack.lastDeployment.createdAt)}`
+          : null
+      }
+      name={stack.name}
+      onToggle={handleSelect}
+      secondary={
+        <>
+          <span className="text-muted-foreground/70">pile · </span>
+          {stack.serverName}
+          {stack.domain ? ` · ${stack.domain}` : ""}
+        </>
+      }
+      selected={selected}
+      tag={
+        stack.watching ? (
+          <Badge
+            title="Surveillance post-déploiement en cours : Noddle observe encore cette pile et reviendra en arrière si un de ses services se met à boucler."
+            variant="outline"
+          >
+            sous surveillance
+          </Badge>
+        ) : null
+      }
+      tone={status.tone}
+      toneLabel={status.label}
+    />
   );
 }
 
@@ -666,63 +728,69 @@ function StackPanel({
   const shown = focusedDeploymentId ?? currentDeploymentId;
 
   return (
-    <Card className="gap-0 py-0">
-      <CardContent className="p-4">
-        {shown ? (
-          <LogStream deploymentId={shown} onEnd={handleEnd} />
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            Aucun déploiement : les logs apparaîtront au premier build.
-          </p>
-        )}
-      </CardContent>
+    <DetailPanel>
+      <Tabs defaultValue="logs">
+        {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
+            de l'écran et devenait inatteignable — mesuré. */}
+        <TabsList className="max-w-full overflow-x-auto" variant="line">
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+          <TabsTrigger value="history">Historique</TabsTrigger>
+          <TabsTrigger value="webhook">Webhook</TabsTrigger>
+        </TabsList>
 
-      <Separator />
+        <TabsContent className="pt-3" value="logs">
+          {shown ? (
+            <LogStream deploymentId={shown} onEnd={handleEnd} />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Aucun déploiement : les logs apparaîtront au premier build.
+            </p>
+          )}
+        </TabsContent>
 
-      <CardContent className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-medium text-sm">Historique</h2>
-          <span className="truncate text-muted-foreground text-xs">
+        <TabsContent className="pt-3" value="history">
+          <p className="mb-2 truncate text-muted-foreground text-xs">
             {stack.gitRepoUrl} · {stack.gitBranch}
-          </span>
-        </div>
+          </p>
+          {deployments.data ? (
+            <DeploymentHistory
+              currentDeploymentId={currentDeploymentId}
+              deployments={deployments.data}
+              onRollback={handleRollback}
+              onSelect={handleFocus}
+              pending={rollback.isPending}
+              selectedId={shown}
+            />
+          ) : (
+            <Spinner />
+          )}
+          {rollback.error ? (
+            <Alert className="mt-3" variant="destructive">
+              <AlertDescription>{rollback.error.message}</AlertDescription>
+            </Alert>
+          ) : null}
+        </TabsContent>
 
-        {deployments.data ? (
-          <DeploymentHistory
-            currentDeploymentId={currentDeploymentId}
-            deployments={deployments.data}
-            onRollback={handleRollback}
-            onSelect={handleFocus}
-            pending={rollback.isPending}
-            selectedId={shown}
+        <TabsContent className="pt-3" value="webhook">
+          <WebhookPanel
+            generateWebhook={handleGenerateWebhook}
+            getWebhook={handleGetWebhook}
+            queryKey={["webhook", "stack", stack.id]}
           />
-        ) : (
-          <Spinner />
-        )}
-
-        {rollback.error ? (
-          <Alert className="mt-3" variant="destructive">
-            <AlertDescription>{rollback.error.message}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-
-      <Separator />
-
-      <CardContent className="p-4">
-        <WebhookPanel
-          generateWebhook={handleGenerateWebhook}
-          getWebhook={handleGetWebhook}
-          queryKey={["webhook", "stack", stack.id]}
-        />
-      </CardContent>
-    </Card>
+        </TabsContent>
+      </Tabs>
+    </DetailPanel>
   );
 }
 
 const DEFAULT_ENV_VAR_KEY: Record<DatabaseRow["engine"], string> = {
   postgres: "DATABASE_URL",
   redis: "REDIS_URL",
+};
+
+const ENGINE_LABEL: Record<DatabaseRow["engine"], string> = {
+  postgres: "PostgreSQL",
+  redis: "Redis",
 };
 
 function DatabaseCard({
@@ -735,32 +803,25 @@ function DatabaseCard({
   const status = serviceLabel(database.status);
 
   return (
-    <Card className="py-0">
-      <CardContent className="flex items-center gap-4 px-4 py-3">
-        <span
-          aria-label={status.label}
-          className={cn("size-2 shrink-0 rounded-full", dotClass(status.tone))}
-          role="img"
+    <ResourceRow
+      action={
+        <AttachDatabaseDialog
+          databaseId={database.id}
+          defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
+          services={services}
         />
-
-        <div className="min-w-0 flex-1">
-          <span className="font-medium">{database.name}</span>
-          <span className="block truncate text-muted-foreground text-xs">
-            {database.project} / {database.environment} ·{" "}
-            {database.engine === "postgres" ? "PostgreSQL" : "Redis"} ·{" "}
-            {database.serverName}
+      }
+      name={database.name}
+      secondary={
+        <>
+          <span className="text-muted-foreground/70">
+            {ENGINE_LABEL[database.engine]} ·{" "}
           </span>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-3">
-          <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
-          <AttachDatabaseDialog
-            databaseId={database.id}
-            defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
-            services={services}
-          />
-        </div>
-      </CardContent>
-    </Card>
+          {database.serverName}
+        </>
+      }
+      tone={status.tone}
+      toneLabel={status.label}
+    />
   );
 }
