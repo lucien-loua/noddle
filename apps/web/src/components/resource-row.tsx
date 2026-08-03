@@ -87,9 +87,19 @@ export function ResourceRow({
 
       {/* La métadonnée cède la place avant le statut et l'action : sur un
           téléphone, « quel commit » importe moins que « ça tourne » et
-          « redéployer ». */}
+          « redéployer ».
+
+          `suppressHydrationWarning` : elle contient un temps RELATIF, calculé
+          au rendu. Le serveur écrit « il y a 49 min », le client réhydrate une
+          seconde plus tard et calcule « il y a 50 min ». React voyait là une
+          divergence et jetait tout l'arbre pour le reconstruire — à chaque
+          chargement du dashboard. C'est l'échappatoire prévue pour un
+          horodatage, pas un pansement sur un vrai désaccord. */}
       {meta ? (
-        <span className="relative hidden shrink-0 whitespace-nowrap text-muted-foreground text-xs md:inline">
+        <span
+          className="relative hidden shrink-0 whitespace-nowrap text-muted-foreground text-xs md:inline"
+          suppressHydrationWarning
+        >
           {meta}
         </span>
       ) : null}

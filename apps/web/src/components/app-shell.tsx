@@ -52,7 +52,11 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
   const onDashboard = pathname === "/";
 
   return (
-    <SidebarProvider>
+    // Hauteur de viewport VERROUILLÉE, pas seulement minimale : avec la
+    // variante « inset », la carte doit rester posée dans l'écran et défiler
+    // par l'intérieur. Sinon c'est la page entière qui défile et la carte —
+    // ses coins arrondis, son en-tête — s'en va vers le haut.
+    <SidebarProvider className="h-svh overflow-hidden">
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>
@@ -154,17 +158,28 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>
+      {/* `min-h-0` : sans lui, un enfant en `flex-1` refuse de rétrécir sous
+          sa hauteur de contenu et déborde au lieu de faire défiler. */}
+      <SidebarInset className="min-h-0 overflow-hidden">
         {/* Collant : sur un écran qu'on parcourt, l'action de création et le
             repli de la barre doivent rester atteignables sans remonter. */}
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-sm md:rounded-t-2xl">
+        {/* L'en-tête ne défile pas parce qu'il est HORS du conteneur qui
+            défile, pas parce qu'il serait `sticky` : rien ne peut donc passer
+            dessous. */}
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ms-1" />
           <h1 className="font-medium text-sm tracking-tight">{title}</h1>
           <div className="ms-auto flex min-w-0 items-center gap-2">
             {actions}
           </div>
         </header>
-        <div className="min-w-0 flex-1 p-4">{children}</div>
+        {/* `scroll-fade` est piloté par le défilement : le dégradé n'apparaît
+            que s'il reste quelque chose à faire défiler de ce côté-là. Il
+            remplace donc la barre, que `no-scrollbar` retire — sans lui, plus
+            rien n'indiquerait qu'il y a une suite. */}
+        <div className="scroll-fade no-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto p-4">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

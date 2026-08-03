@@ -521,7 +521,10 @@ function ServicePanel({
       <Tabs defaultValue="logs">
         {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
             de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList className="max-w-full overflow-x-auto" variant="line">
+        <TabsList
+          className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto"
+          variant="line"
+        >
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="env">Variables</TabsTrigger>
@@ -732,7 +735,10 @@ function StackPanel({
       <Tabs defaultValue="logs">
         {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
             de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList className="max-w-full overflow-x-auto" variant="line">
+        <TabsList
+          className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto"
+          variant="line"
+        >
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>

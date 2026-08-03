@@ -185,7 +185,7 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
         // Hauteur PLAFONNÉE, pas fixe : un déploiement sans log affichait
         // sinon 320 px de vide, et repoussait le reste du dashboard pour ne
         // rien montrer.
-        className="wrap-break-word max-h-80 min-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed"
+        className="scroll-fade no-scrollbar wrap-break-word max-h-80 min-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed"
         onScroll={handleScroll}
         ref={viewRef}
       >
