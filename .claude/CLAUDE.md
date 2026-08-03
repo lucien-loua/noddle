@@ -262,10 +262,69 @@ table de variables d'environnement déjà existante, redéployé, convergé, et 
 surveillance post-déploiement s'est levée d'elle-même après ses 5 minutes,
 sans rollback.
 
-**Reste pour la Phase 2 :** déploiements Docker Compose, webhooks, bases de
-données en un clic.
+**Déploiements Docker Compose faits et vérifiés contre une vraie VM, 10/10
+(`verify-stack.ts`).** Nouvelle table `stacks` (+ `stack_deployments`,
+`stack_deployment_logs`) : plusieurs conteneurs sous un même nom, distincte de
+`services` — un seul serveur (même raison qu'un service : une image construite
+localement n'existe que sur ce nœud), et AU PLUS un sous-service public
+(`publicService` + `domain` + `port`), pas N domaines par pile.
+
+Le mécanisme, dans `apps/worker/src/compose.ts` : lire le fichier compose,
+construire chaque service avec un `build:` sur le MÊME builder capé que le
+chemin nixpacks (Dockerfile fourni par l'utilisateur, pas de génération),
+réécrire `build:` en `image:`, injecter placement/health-gate/labels, puis
+**`docker stack deploy`** — littéralement la commande, jamais une boucle de
+`docker service create` maison, pour laisser Swarm traduire une syntaxe
+compose arbitraire (réseaux, volumes) plutôt que la réimplémenter. Elle rend
+la main avant convergence tout comme `docker service update` — même piège,
+multiplié par service — donc chaque service résultant est relu un par un avec
+`waitForRunningTask`/`readUpdateState`, EXPORTÉS de `swarm.ts` sans un
+changement de logique. Le rollback stocke le texte compose PRÉ-réécriture et
+les tags construits dans `stack_deployments` : rejouer une version passée ne
+touche ni au dépôt ni à un nouveau build, même principe que `redeployImage`.
+La surveillance post-déploiement (`sweep.ts`) couvre les piles : une pile
+boucle si N'IMPORTE LEQUEL de ses services boucle, pas seulement le public.
+
+**Un bug préexistant trouvé en vérifiant que `sweep.ts` ne régressait pas** (
+la Phase 1, pas ce chantier) : deux déploiements successifs du MÊME service,
+tous deux encore sous surveillance, se confondaient — `inspectServiceHealth`
+vérifie un nom de service Swarm, pas quel déploiement a produit quelle task,
+donc le crash du PLUS RÉCENT se lisait comme une boucle de l'ANCIEN, qui se
+retrouvait sans version antérieure vers laquelle revenir. `verify-watch.ts`
+échouait par exactement ce chemin. Corrigé par `clearSupersededWatch` (et son
+équivalent pour les piles) : dès qu'un déploiement devient le courant, la
+fenêtre de surveillance de tout autre déploiement du même service/pile est
+purgée. Reproduit sur le code d'AVANT ce chantier (stash + DB propre) avant
+correction, pour confirmer que ce n'était pas une régression — voir `git
+stash` dans l'historique de session si le doute revient.
+
+**Non vérifié par navigateur : le chemin de succès du formulaire « Connecter
+une pile Compose ».** Même obstacle que le formulaire d'ajout de serveur en
+Phase 2 : la validation Zod refuse `file://` (correct, même règle que
+`connectRepoSchema`), donc un test de bout en bout demande une vraie URL
+`https://` ou `git@`. Une tentative de servir le dépôt de test via git+ssh
+directement sur la VM cible (nouvel utilisateur système `git`) a été
+abandonnée sur refus de l'utilisateur — changement jugé trop intrusif pour une
+VM de test partagée — et annulée proprement (utilisateur supprimé). Le
+mécanisme est prouvé côté worker (`verify-stack.ts`, 10/10, en direct) et la
+validation du formulaire est confirmée correcte ; personne n'a regardé le
+bouton Déployer d'une pile fonctionner de bout en bout dans un vrai
+navigateur.
+
+**Reste pour la Phase 2 :** webhooks, bases de données en un clic.
 
 **Pièges déjà payés, à ne pas repayer :**
+
+- **Le healthcheck injecté suppose `curl` présent, vrai pour les images
+  nixpacks mais PAS pour un Dockerfile Compose arbitraire.** Une image
+  `python:3-alpine` toute nue n'a pas `curl` : le healthcheck échoue en boucle,
+  Swarm tue le conteneur (exit 137), et ça se présente comme un déploiement
+  qui « n'a pas convergé en 180s » — aucune indication que la cause est un
+  binaire manquant. Mesuré sur `verify-stack.ts` avant d'ajouter `RUN apk add
+  --no-cache curl` au Dockerfile de test. Conséquence produit : un utilisateur
+  Compose dont l'image de base n'a pas `curl` verra son service public échouer
+  à converger pour cette seule raison — pas documenté ailleurs qu'ici pour
+  l'instant.
 
 - Une file BullMQ ne peut pas contenir `:` — la v6 s'en sert comme séparateur de
   clés Redis, et le processus ne démarre pas du tout.
