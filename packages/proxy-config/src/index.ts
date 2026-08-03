@@ -59,7 +59,11 @@ export function routeLabels(cfg: RouteConfig): TraefikLabels {
   }
 
   assertRuleSafe(domain);
-  const entrypoint = cfg.entrypoint ?? "web";
+  // Un résolveur de certificat implique l'entrypoint TLS : demander un
+  // certificat pour un routeur qui n'écoute qu'en clair produit un routeur
+  // parfaitement valide, un certificat réellement émis, et zéro HTTPS — une
+  // panne qui ne se voit qu'en tapant l'URL en https.
+  const entrypoint = cfg.entrypoint ?? (cfg.certResolver ? "websecure" : "web");
 
   const labels: TraefikLabels = {
     "traefik.enable": "true",

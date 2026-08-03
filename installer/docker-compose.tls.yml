@@ -1,0 +1,79 @@
+# TLS — appliqué PAR-DESSUS docker-compose.yml, et seulement quand
+# l'installation a un domaine.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml …
+#
+# Pourquoi un fichier séparé plutôt qu'un bloc conditionnel : sans nom de
+# domaine, aucun certificat n'est possible — Let's Encrypt valide un NOM, pas
+# une adresse IP. Le chemin sans domaine doit donc rester exactement celui qui
+# a déjà été prouvé sur une machine neuve, sans une ligne de plus.
+#
+# ⚠ `command:` est REMPLACÉ par Compose, jamais fusionné. Les drapeaux des
+# providers ci-dessous sont donc recopiés de docker-compose.yml : toute
+# modification là-bas doit être répercutée ici. C'est le prix de garder le
+# chemin sans domaine intact, et c'est le seul endroit du dépôt où deux copies
+# doivent bouger ensemble.
+
+services:
+  traefik:
+    command:
+      # ── recopié de docker-compose.yml ──
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.swarm=true
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=noddle-public
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+      # ── TLS ──
+      - --entrypoints.websecure.address=:443
+      # Redirection globale vers HTTPS. Elle NE casse PAS le défi HTTP-01 :
+      # Traefik sert le challenge ACME depuis un routeur interne prioritaire
+      # sur les redirections d'entrypoint. Vérifié contre le vrai Let's
+      # Encrypt, pas déduit de la documentation.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL manquant}
+      # Le stockage DOIT être persistant. Sur un volume éphémère, chaque
+      # redémarrage redemande un certificat et brûle le quota Let's Encrypt
+      # (5 échecs/heure, 50 certificats/semaine et par domaine) jusqu'au
+      # blocage.
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      # Vide = le vrai Let's Encrypt. Pointé sur le serveur de test pendant la
+      # mise au point, pour ne pas consommer le quota de production.
+      - --certificatesresolvers.le.acme.caserver=${ACME_CASERVER:-https://acme-v02.api.letsencrypt.org/directory}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  web:
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
+      # L'attrape-tout en clair reste : il sert le dashboard par l'IP nue
+      # tant que le DNS n'a pas propagé, et c'est aussi lui qui répond au
+      # défi ACME si Traefik devait le déléguer.
+      - traefik.http.routers.noddle-web.rule=PathPrefix(`/`)
+      - traefik.http.routers.noddle-web.priority=1
+      - traefik.http.routers.noddle-web.entrypoints=web
+      # Le routeur du domaine, en TLS. Priorité laissée par défaut : une règle
+      # Host est naturellement plus spécifique que le PathPrefix ci-dessus.
+      - traefik.http.routers.noddle-web-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN manquant}`)
+      - traefik.http.routers.noddle-web-tls.entrypoints=websecure
+      - traefik.http.routers.noddle-web-tls.tls=true
+      - traefik.http.routers.noddle-web-tls.tls.certresolver=le
+
+  # Le worker pose le résolveur sur les applications qu'il déploie. Sans cette
+  # variable, elles sortiraient en HTTP simple sur une machine qui a pourtant
+  # un certificat.
+  worker:
+    environment:
+      CERT_RESOLVER: le
+
+volumes:
+  letsencrypt:

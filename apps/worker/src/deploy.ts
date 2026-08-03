@@ -48,6 +48,12 @@ import { watchUntilFor } from "#watch";
 
 export interface DeployContext {
   appKey: Buffer;
+  /**
+   * Résolveur ACME de Traefik, quand l'installation en a un. Absent = les
+   * applications déployées sortent en HTTP simple, ce qui reste le cas
+   * d'une machine sans domaine — un certificat ne s'obtient que pour un nom.
+   */
+  certResolver?: string;
   db: Database;
   /** Racine des logs de build sur le plan de contrôle. */
   logRoot: string;
@@ -299,6 +305,7 @@ export async function runDeploy(
       env,
       image: imageTag,
       labels: routeLabels({
+        certResolver: ctx.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
         serviceName: service.name,
@@ -458,6 +465,7 @@ export async function redeployImage(
       env,
       image: opts.imageTag,
       labels: routeLabels({
+        certResolver: ctx.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
         serviceName: service.name,
