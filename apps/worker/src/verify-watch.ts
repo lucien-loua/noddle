@@ -106,6 +106,7 @@ try {
     .values({
       host: HOST,
       name: "watch-target",
+      role: "manager",
       sshPrivateKeyEncrypted: "x",
       sshUser: USER,
       totalMemoryMb: 2048,

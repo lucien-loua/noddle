@@ -11,7 +11,7 @@
 // un écran vide jusqu'à la ligne suivante : le pub/sub Redis est du
 // fire-and-forget, il ne rejoue rien.
 
-import { deployments } from "@noddle/db/schema";
+import { deployments, stackDeployments } from "@noddle/db/schema";
 import { isTerminalStatus, type LogMessage } from "@noddle/shared/logs";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
@@ -42,9 +42,16 @@ export const Route = createFileRoute("/api/logs/$deploymentId")({
           return new Response("identifiant invalide", { status: 400 });
         }
 
-        const deployment = await db.query.deployments.findFirst({
-          where: eq(deployments.id, deploymentId),
-        });
+        // Un service ou une pile — même flux SSE, même clé générique côté
+        // Redis (posée par le worker sous ce même identifiant dans les deux
+        // cas). On cherche d'abord côté service, le cas courant.
+        const deployment =
+          (await db.query.deployments.findFirst({
+            where: eq(deployments.id, deploymentId),
+          })) ??
+          (await db.query.stackDeployments.findFirst({
+            where: eq(stackDeployments.id, deploymentId),
+          }));
         if (!deployment) {
           return new Response("déploiement introuvable", { status: 404 });
         }

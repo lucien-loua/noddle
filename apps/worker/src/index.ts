@@ -7,7 +7,7 @@
 // fonctionne pas sur Bun, mesuré sur les deux approches possibles. Bun reste le
 // gestionnaire de paquets et le runtime du web.
 import { createDatabase } from "@noddle/db";
-import { deployments } from "@noddle/db/schema";
+import { deployments, stackDeployments } from "@noddle/db/schema";
 import { loadAppKey } from "@noddle/shared/crypto";
 import { Queue, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
@@ -74,6 +74,17 @@ async function announceEnd(deploymentId: string): Promise<void> {
   });
 }
 
+/** Même rôle qu'`announceEnd`, pour un déploiement de pile. */
+async function announceStackEnd(stackDeploymentId: string): Promise<void> {
+  const row = await ctx.db.query.stackDeployments.findFirst({
+    where: eq(stackDeployments.id, stackDeploymentId),
+  });
+  logBus.publish(stackDeploymentId, {
+    status: row?.status ?? "failed",
+    type: "end",
+  });
+}
+
 const deployWorker = new Worker<DeployJobData>(
   DEPLOY_QUEUE,
   async (job) => {
@@ -85,6 +96,8 @@ const deployWorker = new Worker<DeployJobData>(
       // pas de déploiement associé : rien à clore côté SSE.
       if (job.data.kind === "deploy") {
         await announceEnd(job.data.deploymentId);
+      } else if (job.data.kind === "deploy-stack") {
+        await announceStackEnd(job.data.stackDeploymentId);
       }
     }
   },

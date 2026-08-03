@@ -4,7 +4,12 @@
 // d'œil » n'est pas qu'une consigne d'affichage : si l'écran demandait le
 // dernier déploiement service par service, il ferait N+1 requêtes et
 // afficherait ses lignes en cascade.
-import { deployments, services } from "@noddle/db/schema";
+import {
+  deployments,
+  services,
+  stackDeployments,
+  stacks,
+} from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -36,6 +41,22 @@ export interface ServiceRow {
   watching: boolean;
 }
 
+export interface StackRow {
+  domain: string | null;
+  environment: string;
+  gitBranch: string;
+  gitRepoUrl: string;
+  id: string;
+  lastDeployment: DeploymentSummary | null;
+  name: string;
+  port: number | null;
+  project: string;
+  publicService: string | null;
+  serverName: string;
+  status: string;
+  watching: boolean;
+}
+
 function toSummary(row: typeof deployments.$inferSelect): DeploymentSummary {
   return {
     commitSha: row.commitSha,
@@ -43,6 +64,25 @@ function toSummary(row: typeof deployments.$inferSelect): DeploymentSummary {
     finishedAt: row.finishedAt?.toISOString() ?? null,
     id: row.id,
     imageTag: row.imageTag,
+    status: row.status,
+    trigger: row.trigger,
+  };
+}
+
+function toStackSummary(
+  row: typeof stackDeployments.$inferSelect
+): DeploymentSummary {
+  return {
+    commitSha: row.commitSha,
+    createdAt: row.createdAt.toISOString(),
+    finishedAt: row.finishedAt?.toISOString() ?? null,
+    id: row.id,
+    // Rejouable dès qu'un texte compose est enregistré, que la pile ait
+    // construit une image ou seulement pointé vers `image:` — même logique
+    // que dans `server/stacks.ts`, dupliquée ici pour la même raison que
+    // `toSummary` : une seule ligne, pas une dépendance croisée entre deux
+    // modules server-only pour un mapping.
+    imageTag: row.composeSource ? row.id : null,
     status: row.status,
     trigger: row.trigger,
   };
@@ -101,6 +141,62 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
         serverName: service.server.name,
         status: service.status,
         watching: watched.has(service.id),
+      };
+    });
+  }
+);
+
+export const getStackDashboard = createServerFn({ method: "GET" }).handler(
+  async (): Promise<StackRow[]> => {
+    await requireSession();
+
+    const rows = await db.query.stacks.findMany({
+      orderBy: stacks.name,
+      with: {
+        environment: { with: { project: true } },
+        server: true,
+      },
+    });
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const recent = await db.query.stackDeployments.findMany({
+      orderBy: desc(stackDeployments.createdAt),
+      where: inArray(
+        stackDeployments.stackId,
+        rows.map((r) => r.id)
+      ),
+    });
+
+    const latest = new Map<string, typeof stackDeployments.$inferSelect>();
+    const now = Date.now();
+    const watched = new Set<string>();
+    for (const dep of recent) {
+      if (!latest.has(dep.stackId)) {
+        latest.set(dep.stackId, dep);
+      }
+      if (dep.watchUntil && dep.watchUntil.getTime() > now) {
+        watched.add(dep.stackId);
+      }
+    }
+
+    return rows.map((stack) => {
+      const last = latest.get(stack.id);
+      return {
+        domain: stack.domain,
+        environment: stack.environment.name,
+        gitBranch: stack.gitBranch,
+        gitRepoUrl: stack.gitRepoUrl,
+        id: stack.id,
+        lastDeployment: last ? toStackSummary(last) : null,
+        name: stack.name,
+        port: stack.port,
+        project: stack.environment.project.name,
+        publicService: stack.publicService,
+        serverName: stack.server.name,
+        status: stack.status,
+        watching: watched.has(stack.id),
       };
     });
   }

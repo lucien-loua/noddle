@@ -21,8 +21,10 @@ const DEPLOY_QUEUE = "noddle-deploy";
  */
 export type DeployJob =
   | { kind: "deploy"; deploymentId: string }
+  | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-server"; serverId: string }
-  | { kind: "rollback"; imageTag: string; serviceId: string };
+  | { kind: "rollback"; imageTag: string; serviceId: string }
+  | { kind: "rollback-stack"; sourceDeploymentId: string; stackId: string };
 
 const globalForQueue = globalThis as typeof globalThis & {
   __noddleDeployQueue?: Queue<DeployJob>;

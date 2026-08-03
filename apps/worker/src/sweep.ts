@@ -8,10 +8,17 @@
 // répliqué du cluster, que seul un MANAGER détient. Un worker y répondrait
 // par une erreur — d'où la connexion systématique au manager, jamais à
 // `service.server` quand les deux diffèrent.
-import { deployments, servers, services } from "@noddle/db/schema";
+import {
+  deployments,
+  servers,
+  services,
+  stackDeployments,
+  stacks,
+} from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
+import { listComposeServiceKeys, redeployStack } from "#compose";
 import { type DeployContext, redeployImage } from "#deploy";
 import { inspectServiceHealth } from "#watch";
 
@@ -22,6 +29,8 @@ export interface SweepResult {
   reverted: string[];
   /** Détectés mais sans version antérieure vers laquelle revenir. */
   strandedServices: string[];
+  /** Même chose, pour une pile compose. */
+  strandedStacks: string[];
 }
 
 export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
@@ -34,16 +43,25 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
     ),
     with: { service: { with: { server: true } } },
   });
+  const pendingStacks = await ctx.db.query.stackDeployments.findMany({
+    where: and(
+      eq(stackDeployments.status, "succeeded"),
+      isNotNull(stackDeployments.watchUntil),
+      gt(stackDeployments.watchUntil, now)
+    ),
+    with: { stack: true },
+  });
 
   const reverted: string[] = [];
   const strandedServices: string[] = [];
+  const strandedStacks: string[] = [];
 
-  if (pending.length === 0) {
-    return { inspected: 0, reverted, strandedServices };
+  if (pending.length === 0 && pendingStacks.length === 0) {
+    return { inspected: 0, reverted, strandedServices, strandedStacks };
   }
 
   // Un seul manager : une connexion pour tout le passage, pas une par
-  // déploiement inspecté.
+  // déploiement inspecté — ni par service de pile inspecté.
   const manager = await ctx.db.query.servers.findFirst({
     where: eq(servers.role, "manager"),
   });
@@ -118,9 +136,77 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
         reverted.push(dep.id);
       })
     );
+
+    await Promise.all(
+      pendingStacks.map(async (dep) => {
+        const { stack } = dep;
+        if (!dep.composeSource) {
+          return;
+        }
+
+        // Une pile boucle si N'IMPORTE LEQUEL de ses conteneurs boucle — un
+        // Redis à soi qui redémarre en boucle est tout aussi cassé qu'un
+        // service public qui le fait, même si Traefik ne le voit jamais.
+        const keys = listComposeServiceKeys(dep.composeSource);
+        const verdicts = await Promise.all(
+          keys.map((key) =>
+            inspectServiceHealth(
+              docker,
+              `${stack.name}_${key}`,
+              dep.finishedAt ?? dep.createdAt
+            )
+          )
+        );
+        if (!verdicts.some((v) => v.crashLooping)) {
+          return;
+        }
+
+        const previous = await ctx.db.query.stackDeployments.findFirst({
+          orderBy: desc(stackDeployments.createdAt),
+          where: and(
+            eq(stackDeployments.stackId, stack.id),
+            eq(stackDeployments.status, "succeeded"),
+            ne(stackDeployments.id, dep.id),
+            isNotNull(stackDeployments.composeSource),
+            lt(stackDeployments.createdAt, dep.createdAt)
+          ),
+        });
+
+        await ctx.db
+          .update(stackDeployments)
+          .set({
+            errorMessage:
+              "boucle de crash après déploiement : au moins un service de la pile boucle",
+            status: "reverted_by_watch",
+            watchUntil: null,
+          })
+          .where(eq(stackDeployments.id, dep.id));
+
+        if (!previous) {
+          await ctx.db
+            .update(stacks)
+            .set({ status: "crashed" })
+            .where(eq(stacks.id, stack.id));
+          strandedStacks.push(stack.id);
+          return;
+        }
+
+        await redeployStack(ctx, {
+          sourceDeploymentId: previous.id,
+          stackId: stack.id,
+          trigger: "watch_revert",
+        });
+        reverted.push(dep.id);
+      })
+    );
   } finally {
     disconnect(managerClient);
   }
 
-  return { inspected: pending.length, reverted, strandedServices };
+  return {
+    inspected: pending.length + pendingStacks.length,
+    reverted,
+    strandedServices,
+    strandedStacks,
+  };
 }

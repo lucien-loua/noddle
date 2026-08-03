@@ -5,7 +5,7 @@
 // colonne est une URL précisément pour que S3 remplace le disque plus tard
 // sans migration.
 import { open, stat } from "node:fs/promises";
-import { deploymentLogs } from "@noddle/db/schema";
+import { deploymentLogs, stackDeploymentLogs } from "@noddle/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 
@@ -19,12 +19,23 @@ const MAX_TAIL_BYTES = 1024 * 1024;
 export async function readArchive(
   deploymentId: string
 ): Promise<string | null> {
-  const [pointer] = await db
+  // Service ou pile : même mécanisme de pointeur, deux tables. On cherche
+  // d'abord côté service, le cas courant.
+  const [serviceRow] = await db
     .select()
     .from(deploymentLogs)
     .where(eq(deploymentLogs.deploymentId, deploymentId))
     .orderBy(desc(deploymentLogs.createdAt))
     .limit(1);
+  const [stackRow] = serviceRow
+    ? []
+    : await db
+        .select()
+        .from(stackDeploymentLogs)
+        .where(eq(stackDeploymentLogs.stackDeploymentId, deploymentId))
+        .orderBy(desc(stackDeploymentLogs.createdAt))
+        .limit(1);
+  const pointer = serviceRow ?? stackRow;
 
   if (!pointer?.storageUrl.startsWith("file://")) {
     return null;

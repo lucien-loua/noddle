@@ -15,3 +15,4 @@ export * from "#schema/projects";
 export * from "#schema/relations";
 export * from "#schema/servers";
 export * from "#schema/services";
+export * from "#schema/stacks";

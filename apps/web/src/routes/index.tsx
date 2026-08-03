@@ -7,10 +7,14 @@
 //
 // Le bouton Déployer est sur chaque ligne, toujours visible, jamais dans un
 // menu — c'est la seule action qu'on vient faire ici.
+//
+// Les piles Compose vivent sur ce même écran, dans leur propre section : deux
+// TYPES de déploiement, pas deux écrans.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
+import { ConnectStackDialog } from "@/components/connect-stack-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
@@ -35,15 +39,23 @@ import { getAuthState } from "@/server/auth";
 import {
   getDashboard,
   getDeployments,
+  getStackDashboard,
   type ServiceRow,
+  type StackRow,
 } from "@/server/dashboard";
 import { triggerDeploy, triggerRollback } from "@/server/deployments";
 import { getEnvVars, saveEnvVars } from "@/server/env-vars";
 import { getServers } from "@/server/servers";
+import {
+  getStackDeployments,
+  triggerStackDeploy,
+  triggerStackRollback,
+} from "@/server/stacks";
 
 interface DashboardSearch {
   deployment?: string;
   service?: string;
+  stack?: string;
 }
 
 export const Route = createFileRoute("/")({
@@ -59,21 +71,24 @@ export const Route = createFileRoute("/")({
     email: context.email,
     servers: await getServers(),
     services: await getDashboard(),
+    stacks: await getStackDashboard(),
   }),
   validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
     deployment:
       typeof search.deployment === "string" ? search.deployment : undefined,
     service: typeof search.service === "string" ? search.service : undefined,
+    stack: typeof search.stack === "string" ? search.stack : undefined,
   }),
 });
 
 function Dashboard() {
-  const { email, servers, services } = Route.useLoaderData();
+  const { email, servers, services, stacks } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
 
-  const selected = services.find((s) => s.id === search.service) ?? null;
+  const selectedService = services.find((s) => s.id === search.service) ?? null;
+  const selectedStack = stacks.find((s) => s.id === search.stack) ?? null;
 
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
@@ -83,21 +98,52 @@ function Dashboard() {
 
   // Stables, et pris par les enfants qui y lient leur propre identifiant :
   // une fermeture créée dans le `.map()` en fabriquerait une nouvelle par
-  // service à chaque rendu du dashboard.
-  const handleToggle = useCallback(
+  // ligne à chaque rendu du dashboard.
+  const handleToggleService = useCallback(
     (serviceId: string) =>
       navigate({
         search: {
           deployment: undefined,
           service: search.service === serviceId ? undefined : serviceId,
+          stack: undefined,
         },
       }),
     [navigate, search.service]
   );
 
+  const handleToggleStack = useCallback(
+    (stackId: string) =>
+      navigate({
+        search: {
+          deployment: undefined,
+          service: undefined,
+          stack: search.stack === stackId ? undefined : stackId,
+        },
+      }),
+    [navigate, search.stack]
+  );
+
   const handleFocusDeployment = useCallback(
     (serviceId: string, deploymentId: string) =>
-      navigate({ search: { deployment: deploymentId, service: serviceId } }),
+      navigate({
+        search: {
+          deployment: deploymentId,
+          service: serviceId,
+          stack: undefined,
+        },
+      }),
+    [navigate]
+  );
+
+  const handleFocusStackDeployment = useCallback(
+    (stackId: string, deploymentId: string) =>
+      navigate({
+        search: {
+          deployment: deploymentId,
+          service: undefined,
+          stack: stackId,
+        },
+      }),
     [navigate]
   );
 
@@ -108,10 +154,14 @@ function Dashboard() {
           <h1 className="font-medium text-lg tracking-tight">Noddle</h1>
           <span className="text-muted-foreground text-xs">
             {services.length} service{services.length > 1 ? "s" : ""}
+            {stacks.length > 0
+              ? ` · ${stacks.length} pile${stacks.length > 1 ? "s" : ""}`
+              : ""}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-xs">{email}</span>
+          <ConnectStackDialog servers={servers} />
           <ConnectRepoDialog servers={servers} />
           <Button onClick={handleSignOut} size="sm" variant="ghost">
             Se déconnecter
@@ -119,31 +169,60 @@ function Dashboard() {
         </div>
       </header>
 
-      {services.length === 0 ? (
+      {services.length === 0 && stacks.length === 0 ? (
         <Empty>
           <EmptyTitle>Aucun service</EmptyTitle>
           <EmptyDescription>
-            Connectez un dépôt pour déployer votre premier service.
+            Connectez un dépôt ou une pile Compose pour déployer votre premier
+            service.
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-2">
-          {services.map((service) => (
-            <div className="flex flex-col gap-2" key={service.id}>
-              <ServiceCard
-                onToggle={handleToggle}
-                selected={search.service === service.id}
-                service={service}
-              />
-              {search.service === service.id && selected ? (
-                <ServicePanel
-                  focusedDeploymentId={search.deployment ?? null}
-                  onFocusDeployment={handleFocusDeployment}
-                  service={selected}
-                />
-              ) : null}
+        <div className="flex flex-col gap-6">
+          {services.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {services.map((service) => (
+                <div className="flex flex-col gap-2" key={service.id}>
+                  <ServiceCard
+                    onToggle={handleToggleService}
+                    selected={search.service === service.id}
+                    service={service}
+                  />
+                  {search.service === service.id && selectedService ? (
+                    <ServicePanel
+                      focusedDeploymentId={search.deployment ?? null}
+                      onFocusDeployment={handleFocusDeployment}
+                      service={selectedService}
+                    />
+                  ) : null}
+                </div>
+              ))}
             </div>
-          ))}
+          ) : null}
+
+          {stacks.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                Piles Compose
+              </h2>
+              {stacks.map((stack) => (
+                <div className="flex flex-col gap-2" key={stack.id}>
+                  <StackCard
+                    onToggle={handleToggleStack}
+                    selected={search.stack === stack.id}
+                    stack={stack}
+                  />
+                  {search.stack === stack.id && selectedStack ? (
+                    <StackPanel
+                      focusedDeploymentId={search.deployment ?? null}
+                      onFocusDeployment={handleFocusStackDeployment}
+                      stack={selectedStack}
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -177,7 +256,11 @@ function ServiceCard({
       // le worker n'a probablement pas encore écrit une ligne, et c'est
       // exactement pour ça que le flux commence par le tampon de rattrapage.
       await navigate({
-        search: { deployment: result.deploymentId, service: service.id },
+        search: {
+          deployment: result.deploymentId,
+          service: service.id,
+          stack: undefined,
+        },
       });
       await router.invalidate();
     },
@@ -385,6 +468,186 @@ function ServicePanel({
         {saveError ? (
           <Alert className="mt-3" variant="destructive">
             <AlertDescription>{saveError}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StackCard({
+  onToggle,
+  selected,
+  stack,
+}: {
+  onToggle: (stackId: string) => void;
+  selected: boolean;
+  stack: StackRow;
+}) {
+  const router = useRouter();
+  const navigate = Route.useNavigate();
+  const status = serviceLabel(stack.status);
+
+  const handleSelect = useCallback(
+    () => onToggle(stack.id),
+    [onToggle, stack.id]
+  );
+
+  const deploy = useMutation({
+    mutationFn: () => triggerStackDeploy({ data: { stackId: stack.id } }),
+    onSuccess: async (result) => {
+      await navigate({
+        search: {
+          deployment: result.stackDeploymentId,
+          service: undefined,
+          stack: stack.id,
+        },
+      });
+      await router.invalidate();
+    },
+  });
+
+  const handleDeploy = useCallback(() => deploy.mutate(), [deploy]);
+
+  return (
+    <Card className={cn("py-0", selected && "border-ring")}>
+      <CardContent className="flex items-center gap-4 px-4 py-3">
+        <span
+          aria-label={status.label}
+          className={cn("size-2 shrink-0 rounded-full", dotClass(status.tone))}
+          role="img"
+        />
+
+        <button
+          className="min-w-0 flex-1 text-start"
+          onClick={handleSelect}
+          type="button"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            {stack.name}
+            {stack.watching ? (
+              <Badge
+                title="Surveillance post-déploiement en cours : Noddle observe encore cette pile et reviendra en arrière si un de ses services se met à boucler."
+                variant="outline"
+              >
+                sous surveillance
+              </Badge>
+            ) : null}
+          </span>
+          <span className="block truncate text-muted-foreground text-xs">
+            {stack.project} / {stack.environment} · {stack.serverName}
+            {stack.publicService ? ` · ${stack.publicService}` : ""}
+            {stack.domain ? ` · ${stack.domain}` : ""}
+          </span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
+
+          <span className="hidden text-muted-foreground text-xs sm:inline">
+            {stack.lastDeployment
+              ? `${shortSha(stack.lastDeployment.commitSha)} · ${relativeTime(stack.lastDeployment.createdAt)}`
+              : "jamais déployée"}
+          </span>
+
+          <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
+            {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
+            Déployer
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StackPanel({
+  focusedDeploymentId,
+  onFocusDeployment,
+  stack,
+}: {
+  focusedDeploymentId: string | null;
+  onFocusDeployment: (stackId: string, deploymentId: string) => void;
+  stack: StackRow;
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const deployments = useQuery({
+    queryFn: () => getStackDeployments({ data: { stackId: stack.id } }),
+    queryKey: ["stack-deployments", stack.id],
+  });
+
+  const rollback = useMutation({
+    mutationFn: (sourceDeploymentId: string) =>
+      triggerStackRollback({ data: { sourceDeploymentId, stackId: stack.id } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["stack-deployments", stack.id],
+      });
+      await router.invalidate();
+    },
+  });
+
+  const handleEnd = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["stack-deployments", stack.id],
+    });
+    await router.invalidate();
+  }, [queryClient, router, stack.id]);
+
+  const handleFocus = useCallback(
+    (deploymentId: string) => onFocusDeployment(stack.id, deploymentId),
+    [onFocusDeployment, stack.id]
+  );
+
+  const handleRollback = useCallback(
+    (deploymentId: string) => rollback.mutate(deploymentId),
+    [rollback]
+  );
+
+  const currentDeploymentId = stack.lastDeployment
+    ? stack.lastDeployment.id
+    : null;
+  const shown = focusedDeploymentId ?? currentDeploymentId;
+
+  return (
+    <Card className="gap-0 py-0">
+      <CardContent className="p-4">
+        {shown ? (
+          <LogStream deploymentId={shown} onEnd={handleEnd} />
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            Aucun déploiement : les logs apparaîtront au premier build.
+          </p>
+        )}
+      </CardContent>
+
+      <Separator />
+
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-medium text-sm">Historique</h2>
+          <span className="truncate text-muted-foreground text-xs">
+            {stack.gitRepoUrl} · {stack.gitBranch}
+          </span>
+        </div>
+
+        {deployments.data ? (
+          <DeploymentHistory
+            currentDeploymentId={currentDeploymentId}
+            deployments={deployments.data}
+            onRollback={handleRollback}
+            onSelect={handleFocus}
+            pending={rollback.isPending}
+            selectedId={shown}
+          />
+        ) : (
+          <Spinner />
+        )}
+
+        {rollback.error ? (
+          <Alert className="mt-3" variant="destructive">
+            <AlertDescription>{rollback.error.message}</AlertDescription>
           </Alert>
         ) : null}
       </CardContent>
