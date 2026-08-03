@@ -1,10 +1,3 @@
-// Connecter une pile Compose — plusieurs conteneurs sous un même nom.
-//
-// AU PLUS un service de la pile reçoit une route Traefik (« service public » +
-// domaine + port) : c'est le cas courant que Compose sert, app + à-côtés, pas
-// N domaines par pile. Les autres conteneurs (un worker, un Redis à soi) n'ont
-// besoin d'aucun champ ici.
-import { PlusIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
@@ -18,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -27,13 +19,14 @@ import type { ServerView } from "@/server/servers";
 import { connectStack } from "@/server/stacks";
 
 interface Props {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
   servers: ServerView[];
 }
 
-export function ConnectStackDialog({ servers }: Props) {
+export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,7 +125,7 @@ export function ConnectStackDialog({ servers }: Props) {
             serverId,
           },
         });
-        setOpen(false);
+        onOpenChange(false);
         await queryClient.invalidateQueries({ queryKey: ["servers"] });
         await router.invalidate();
       } catch (err) {
@@ -148,6 +141,7 @@ export function ConnectStackDialog({ servers }: Props) {
       gitBranch,
       gitRepoUrl,
       name,
+      onOpenChange,
       port,
       projectName,
       publicService,
@@ -160,11 +154,7 @@ export function ConnectStackDialog({ servers }: Props) {
   const noServers = servers.length === 0;
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>
-        <PlusIcon data-icon="inline-start" />
-        Connecter une pile Compose
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Connecter une pile Compose</DialogTitle>
@@ -254,7 +244,7 @@ export function ConnectStackDialog({ servers }: Props) {
                     value={gitBranch}
                   />
                 </div>
-                <div className="flex-[2]">
+                <div className="flex-2">
                   <FieldLabel htmlFor="stack-compose-path">
                     Fichier compose
                   </FieldLabel>
@@ -291,7 +281,7 @@ export function ConnectStackDialog({ servers }: Props) {
                     value={port}
                   />
                 </div>
-                <div className="flex-[2]">
+                <div className="flex-2">
                   <FieldLabel htmlFor="stack-domain">
                     Domaine (optionnel)
                   </FieldLabel>

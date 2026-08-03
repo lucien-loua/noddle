@@ -1,10 +1,3 @@
-// Connecter un dépôt — la porte d'entrée qui manquait au dashboard.
-//
-// Un seul chemin de déploiement proposé : dépôt git, build nixpacks. C'est le
-// seul que le worker sache réellement exécuter aujourd'hui ; proposer
-// `docker_image` ou `compose` ici ferait miroiter une fonctionnalité qui
-// échouerait au premier déploiement.
-import { PlusIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
@@ -18,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -27,13 +19,14 @@ import type { ServerView } from "@/server/servers";
 import { connectRepo } from "@/server/services";
 
 interface Props {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
   servers: ServerView[];
 }
 
-export function ConnectRepoDialog({ servers }: Props) {
+export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,7 +114,7 @@ export function ConnectRepoDialog({ servers }: Props) {
             serverId,
           },
         });
-        setOpen(false);
+        onOpenChange(false);
         await queryClient.invalidateQueries({ queryKey: ["servers"] });
         await router.invalidate();
       } catch (err) {
@@ -136,6 +129,7 @@ export function ConnectRepoDialog({ servers }: Props) {
       gitBranch,
       gitRepoUrl,
       name,
+      onOpenChange,
       port,
       projectName,
       queryClient,
@@ -147,11 +141,7 @@ export function ConnectRepoDialog({ servers }: Props) {
   const noServers = servers.length === 0;
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={<Button size="sm" />}>
-        <PlusIcon data-icon="inline-start" />
-        Connecter un dépôt
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Connecter un dépôt</DialogTitle>

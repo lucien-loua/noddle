@@ -1,7 +1,3 @@
-// Connecter une base de données — un conteneur officiel, un volume, épinglé
-// au serveur choisi. Pas de champ mot de passe : Noddle le génère, il n'est
-// ni saisi ni jamais affiché.
-import { PlusIcon } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -23,12 +18,13 @@ import { connectDatabase } from "@/server/databases";
 import type { ServerView } from "@/server/servers";
 
 interface Props {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
   servers: ServerView[];
 }
 
-export function ConnectDatabaseDialog({ servers }: Props) {
+export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +83,7 @@ export function ConnectDatabaseDialog({ servers }: Props) {
         await connectDatabase({
           data: { engine, environmentName, name, projectName, serverId },
         });
-        setOpen(false);
+        onOpenChange(false);
         await router.invalidate();
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -95,17 +91,13 @@ export function ConnectDatabaseDialog({ servers }: Props) {
         setPending(false);
       }
     },
-    [engine, environmentName, name, projectName, router, serverId]
+    [engine, environmentName, name, onOpenChange, projectName, router, serverId]
   );
 
   const noServers = servers.length === 0;
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>
-        <PlusIcon data-icon="inline-start" />
-        Base de données
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Connecter une base de données</DialogTitle>

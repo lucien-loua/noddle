@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ServeursRouteImport } from './routes/serveurs'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServeursRoute = ServeursRouteImport.update({
+  id: '/serveurs',
+  path: '/serveurs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -51,6 +57,7 @@ const ApiWebhooksStackStackIdRoute = ApiWebhooksStackStackIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/serveurs': typeof ServeursRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/serveurs': typeof ServeursRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/serveurs': typeof ServeursRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/serveurs'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/serveurs'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/serveurs'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -103,6 +115,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ServeursRoute: typeof ServeursRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
@@ -123,6 +136,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/serveurs': {
+      id: '/serveurs'
+      path: '/serveurs'
+      fullPath: '/serveurs'
+      preLoaderRoute: typeof ServeursRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -159,6 +179,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ServeursRoute: ServeursRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
