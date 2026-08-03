@@ -22,6 +22,13 @@
       "when": 1785685979124,
       "tag": "0002_numerous_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785747201140,
+      "tag": "0003_tranquil_the_order",
+      "breakpoints": true
     }
   ]
 }

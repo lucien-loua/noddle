@@ -14,6 +14,7 @@ import { envVars } from "#schema/env-vars";
 import { environments, projects } from "#schema/projects";
 import { servers } from "#schema/servers";
 import { services } from "#schema/services";
+import { stackDeploymentLogs, stackDeployments, stacks } from "#schema/stacks";
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   environments: many(environments),
@@ -27,11 +28,13 @@ export const environmentsRelations = relations(
       references: [projects.id],
     }),
     services: many(services),
+    stacks: many(stacks),
   })
 );
 
 export const serversRelations = relations(servers, ({ many }) => ({
   services: many(services),
+  stacks: many(stacks),
 }));
 
 export const servicesRelations = relations(services, ({ one, many }) => ({
@@ -68,3 +71,36 @@ export const deploymentLogsRelations = relations(deploymentLogs, ({ one }) => ({
     references: [deployments.id],
   }),
 }));
+
+export const stacksRelations = relations(stacks, ({ one, many }) => ({
+  deployments: many(stackDeployments),
+  environment: one(environments, {
+    fields: [stacks.environmentId],
+    references: [environments.id],
+  }),
+  server: one(servers, {
+    fields: [stacks.serverId],
+    references: [servers.id],
+  }),
+}));
+
+export const stackDeploymentsRelations = relations(
+  stackDeployments,
+  ({ one, many }) => ({
+    logs: many(stackDeploymentLogs),
+    stack: one(stacks, {
+      fields: [stackDeployments.stackId],
+      references: [stacks.id],
+    }),
+  })
+);
+
+export const stackDeploymentLogsRelations = relations(
+  stackDeploymentLogs,
+  ({ one }) => ({
+    deployment: one(stackDeployments, {
+      fields: [stackDeploymentLogs.stackDeploymentId],
+      references: [stackDeployments.id],
+    }),
+  })
+);
