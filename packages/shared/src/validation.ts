@@ -132,6 +132,54 @@ export type ConnectRepoInput = z.infer<typeof connectRepoSchema>;
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// piles Compose
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Même contrainte que le nom d'un service compose côté worker : ce qui suit
+ *  devient `${nomDePile}_${clé}` en nom de service Swarm. */
+const composeServiceKeySchema = z
+  .string()
+  .min(1)
+  .max(48)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, "clé de service compose invalide");
+
+const composeFilePathSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(
+    /^(?!\/)(?!.*\.\.)[\w./-]+$/,
+    "chemin relatif attendu, sans évasion du dépôt"
+  )
+  .default("docker-compose.yml");
+
+/**
+ * « Connecter un dépôt Compose » — comme `connectRepoSchema`, mais pour
+ * plusieurs conteneurs sous un même nom. AU PLUS un service reçoit une route
+ * Traefik (`publicService` + `domain` + `port`) : c'est le cas courant que
+ * Compose sert (app + à-côtés), pas N domaines par pile.
+ */
+export const connectStackSchema = z
+  .object({
+    composeFilePath: composeFilePathSchema,
+    domain: domainSchema.optional(),
+    environmentName: environmentNameSchema,
+    gitBranch: gitBranchSchema.default("main"),
+    gitRepoUrl: gitRepoUrlSchema,
+    name: serviceNameSchema,
+    port: z.number().int().min(1).max(65_535).optional(),
+    projectName: projectNameSchema,
+    publicService: composeServiceKeySchema.optional(),
+    serverId: z.uuid(),
+  })
+  .refine((v) => !v.publicService || v.port !== undefined, {
+    message: "un port est requis pour exposer un service",
+    path: ["port"],
+  });
+
+export type ConnectStackInput = z.infer<typeof connectStackSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // variables d'environnement
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -180,3 +228,18 @@ export const rollbackRequestSchema = z.object({
 });
 
 export type RollbackRequest = z.infer<typeof rollbackRequestSchema>;
+
+export const stackDeployRequestSchema = z.object({
+  stackId: z.uuid(),
+});
+
+export type StackDeployRequest = z.infer<typeof stackDeployRequestSchema>;
+
+export const stackRollbackRequestSchema = z.object({
+  /** Le `stack_deployments` vers lequel revenir — même principe que
+   *  `rollbackRequestSchema`, un par pile plutôt que par service. */
+  sourceDeploymentId: z.uuid(),
+  stackId: z.uuid(),
+});
+
+export type StackRollbackRequest = z.infer<typeof stackRollbackRequestSchema>;
