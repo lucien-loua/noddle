@@ -173,4 +173,9 @@ export const secretContext = {
   serverSshKey: (serverId: string): SecretContext => ({
     aad: `server_ssh_key:${serverId}`,
   }),
+  // Un service ou une pile — l'id suffit à lier le chiffré à SA ligne, une
+  // collision entre les deux tables étant hors de portée pour un uuid v4.
+  webhookSecret: (ownerId: string): SecretContext => ({
+    aad: `webhook_secret:${ownerId}`,
+  }),
 } as const;
