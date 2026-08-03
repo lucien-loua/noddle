@@ -16,8 +16,11 @@ import {
   secretContext,
 } from "#crypto";
 import {
+  backupDestinationSchema,
+  bucketNameSchema,
   envVarKeySchema,
   gitBranchSchema,
+  objectPrefixSchema,
   serviceNameSchema,
 } from "#validation";
 
@@ -175,6 +178,76 @@ if (
   ok("envVarKeySchema impose un identifiant shell");
 } else {
   ko("envVarKeySchema incohérent");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sauvegardes vers S3
+// ─────────────────────────────────────────────────────────────────────────────
+
+const bucketCases: [string, boolean][] = [
+  ["noddle-sauvegardes", true],
+  ["a.b.c", true],
+  ["ab", false], // moins de 3 caractères, refusé par S3 lui-même
+  ["Noddle", false], // une majuscule, refusée par S3 lui-même
+  ["-noddle", false],
+  ["noddle-", false],
+];
+if (
+  bucketCases.every(
+    ([v, want]) => bucketNameSchema.safeParse(v).success === want
+  )
+) {
+  ok("bucketNameSchema applique les règles de nommage d'AWS");
+} else {
+  ko("bucketNameSchema incohérent");
+}
+
+// Le préfixe est NORMALISÉ, pas seulement validé : sans ça, `sauvegardes/` et
+// `sauvegardes` produiraient deux dispositions de clés différentes pour une
+// saisie que l'utilisateur croit identique.
+const prefixed = objectPrefixSchema.safeParse("/sauvegardes/noddle/");
+if (prefixed.success && prefixed.data === "sauvegardes/noddle") {
+  ok("objectPrefixSchema normalise les barres obliques de bord");
+} else {
+  ko(`objectPrefixSchema n'a pas normalisé : ${JSON.stringify(prefixed)}`);
+}
+
+if (objectPrefixSchema.safeParse("a/../b").success) {
+  ko("objectPrefixSchema accepte `..`");
+} else {
+  ok("objectPrefixSchema refuse `..`");
+}
+
+const destination = backupDestinationSchema.safeParse({
+  accessKeyId: "rustfsadmin",
+  bucket: "noddle-sauvegardes",
+  endpoint: "http://localhost:9000",
+  secretAccessKey: "rustfsadmin",
+});
+if (
+  destination.success &&
+  destination.data.region === "us-east-1" &&
+  destination.data.forcePathStyle &&
+  destination.data.prefix === ""
+) {
+  ok("backupDestinationSchema applique ses valeurs par défaut");
+} else {
+  ko(`backupDestinationSchema : ${JSON.stringify(destination)}`);
+}
+
+// Un point de terminaison sans schéma est l'erreur de saisie la plus probable
+// du formulaire — le SDK échouerait bien plus loin, au premier appel réseau.
+if (
+  backupDestinationSchema.safeParse({
+    accessKeyId: "k",
+    bucket: "noddle-sauvegardes",
+    endpoint: "localhost:9000",
+    secretAccessKey: "s",
+  }).success
+) {
+  ko("backupDestinationSchema accepte un point de terminaison sans schéma");
+} else {
+  ok("backupDestinationSchema refuse un point de terminaison sans http(s)://");
 }
 
 console.log(`\n[1m${runtime} — réussis ${pass}, échoués ${fail}[0m\n`);

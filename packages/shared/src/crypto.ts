@@ -169,6 +169,10 @@ export function deriveSubkey(key: Buffer, info: string): Buffer {
 
 /** Contextes AAD normalisés. Les construire ailleurs invite l'incohérence. */
 export const secretContext = {
+  /** La clé secrète S3 de la destination de sauvegarde. */
+  backupDestination: (destinationId: string): SecretContext => ({
+    aad: `backup_destination:${destinationId}`,
+  }),
   databasePassword: (databaseId: string): SecretContext => ({
     aad: `database_password:${databaseId}`,
   }),

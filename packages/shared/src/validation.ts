@@ -11,6 +11,9 @@ import { z } from "zod";
 const BRANCH_FORBIDDEN_CHARS = /[\s~^:?*[\\]/;
 const GIT_SSH_URL = /^git@[\w.-]+:/;
 const HTTPS_URL = /^https:\/\//;
+const HTTP_OR_HTTPS_URL = /^https?:\/\//;
+const LEADING_SLASHES = /^\/+/;
+const TRAILING_SLASHES = /\/+$/;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // serveurs
@@ -279,3 +282,89 @@ export const attachDatabaseSchema = z.object({
 });
 
 export type AttachDatabaseInput = z.infer<typeof attachDatabaseSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sauvegardes vers S3
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Les règles d'AWS, pas les nôtres : 3 à 63 caractères, minuscules, chiffres,
+ * points et tirets, commençant et finissant par un alphanumérique. Un
+ * compartiment en majuscules est refusé par le service, donc autant le dire
+ * dans le formulaire plutôt qu'à la première sauvegarde.
+ */
+export const bucketNameSchema = z
+  .string()
+  .min(3)
+  .max(63)
+  .regex(
+    /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/,
+    "minuscules, chiffres, points et tirets ; doit commencer et finir par un alphanumérique"
+  );
+
+/**
+ * Préfixe de clé. Optionnel, et normalisé sans `/` initial ni final : il est
+ * recollé avec un séparateur explicite au moment de construire la clé, et
+ * deux sources de vérité sur qui pose la barre obliquent produisent des clés
+ * `noddle//base/…`.
+ */
+export const objectPrefixSchema = z
+  .string()
+  .max(256)
+  .regex(
+    /^[a-zA-Z0-9!\-_.*'()/]*$/,
+    "caractères sûrs pour une clé S3 uniquement"
+  )
+  .refine((v) => !v.includes(".."), "`..` interdit dans un préfixe")
+  .transform((v) =>
+    v.replace(LEADING_SLASHES, "").replace(TRAILING_SLASHES, "")
+  );
+
+export const backupDestinationSchema = z.object({
+  accessKeyId: z.string().min(1).max(128),
+  bucket: bucketNameSchema,
+  endpoint: z
+    .string()
+    .min(1)
+    .max(512)
+    .refine(
+      (v) => HTTP_OR_HTTPS_URL.test(v),
+      "URL http:// ou https:// du service S3 attendue"
+    ),
+  // Vrai partout sauf sur le S3 d'Amazon lui-même : `compartiment.hôte` ne
+  // résout pas pour RustFS, MinIO ou une instance jointe par IP.
+  forcePathStyle: z.boolean().default(true),
+  prefix: objectPrefixSchema.default(""),
+  // Entre dans le calcul de la signature SigV4 : une région fausse fait
+  // échouer l'authentification, même sur une implémentation qui l'ignore par
+  // ailleurs.
+  region: z.string().min(1).max(64).default("us-east-1"),
+  secretAccessKey: z.string().min(1).max(256),
+});
+
+export type BackupDestinationInput = z.infer<typeof backupDestinationSchema>;
+
+export const backupRequestSchema = z.object({
+  databaseId: z.uuid(),
+});
+
+export type BackupRequest = z.infer<typeof backupRequestSchema>;
+
+/**
+ * Restaurer est la SEULE opération irréversible du produit : elle écrase les
+ * données courantes, là où rejouer une image ne détruit rien.
+ *
+ * `confirmName` porte cette différence jusqu'au serveur. Une boîte de dialogue
+ * qui demande de taper le nom ne protège que les clients qui l'affichent ;
+ * exiger le nom ICI fait que le garde-fou existe pour de bon, quel que soit
+ * l'appelant. `databaseId` est demandé pour la même raison : il est déductible
+ * de la sauvegarde, mais le fournir permet de refuser une restauration croisée
+ * plutôt que de la découvrir après coup.
+ */
+export const restoreRequestSchema = z.object({
+  backupId: z.uuid(),
+  confirmName: z.string().min(1).max(48),
+  databaseId: z.uuid(),
+});
+
+export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
