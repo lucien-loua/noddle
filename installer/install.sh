@@ -168,7 +168,13 @@ else
   echo "HTTP simple : aucun domaine configuré (NODDLE_DOMAIN vide)"
 fi
 
-COMPOSE=("$SUDO" docker compose --project-directory "$NODDLE_DIR/installer" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
+# `$SUDO` est VIDE quand on est déjà root, et un tableau ne l'oublie pas comme
+# le fait le découpage en mots : `"${COMPOSE[@]}"` passerait une chaîne vide en
+# guise de commande, et bash répond « : command not found ». Le préfixe n'est
+# donc ajouté que s'il existe. Mesuré en installant en root — tous les essais
+# précédents tournaient sous un utilisateur avec sudo, où le bug est invisible.
+COMPOSE=(docker compose --project-directory "$NODDLE_DIR/installer" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
+[ -z "$SUDO" ] || COMPOSE=("$SUDO" "${COMPOSE[@]}")
 "${COMPOSE[@]}" build </dev/null
 "${COMPOSE[@]}" up -d </dev/null
 

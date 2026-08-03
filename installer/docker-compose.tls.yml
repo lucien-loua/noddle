@@ -28,9 +28,15 @@ services:
       # ── TLS ──
       - --entrypoints.websecure.address=:443
       # Redirection globale vers HTTPS. Elle NE casse PAS le défi HTTP-01 :
-      # Traefik sert le challenge ACME depuis un routeur interne prioritaire
-      # sur les redirections d'entrypoint. Vérifié contre le vrai Let's
-      # Encrypt, pas déduit de la documentation.
+      # Traefik enregistre son routeur de challenge en interne, prioritaire sur
+      # la redirection d'entrypoint. Mesuré en tapant directement
+      # `/.well-known/acme-challenge/<jeton>` sur le port 80 : la réponse est
+      # 404, PAS 301 — donc le chemin est bien exempté.
+      #
+      # Ce test-là est nécessaire : le log de lego ne suffit pas à conclure.
+      # Let's Encrypt suit les redirections pendant un HTTP-01 et y ignore la
+      # validité du certificat, donc « Validations succeeded » serait apparu
+      # même si le challenge avait été redirigé.
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL manquant}
@@ -55,14 +61,23 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.services.noddle-web.loadbalancer.server.port=3000
-      # L'attrape-tout en clair reste : il sert le dashboard par l'IP nue
-      # tant que le DNS n'a pas propagé, et c'est aussi lui qui répond au
-      # défi ACME si Traefik devait le déléguer.
-      - traefik.http.routers.noddle-web.rule=PathPrefix(`/`)
-      - traefik.http.routers.noddle-web.priority=1
-      - traefik.http.routers.noddle-web.entrypoints=web
-      # Le routeur du domaine, en TLS. Priorité laissée par défaut : une règle
-      # Host est naturellement plus spécifique que le PathPrefix ci-dessus.
+      # Aucun routeur en clair n'est redéclaré ici — mais ATTENTION, celui de
+      # docker-compose.yml survit quand même à la fusion. Contrairement à
+      # `command:` (une liste, REMPLACÉE — voir l'en-tête), Compose normalise
+      # `labels:` en table et les FUSIONNE, même écrits en liste. Deux champs
+      # côte à côte, deux règles opposées ; vérifié sur `docker compose config`.
+      #
+      # Ça ne nuit pas : la redirection est posée sur l'ENTRYPOINT, donc elle
+      # s'applique avant tout routage et aucun routeur du point d'entrée `web`
+      # ne peut plus être atteint. Le routeur hérité est inerte.
+      #
+      # Conséquence à connaître : une fois un domaine configuré, la machine
+      # n'est plus joignable par son IP nue. `http://<ip>/` est redirigé vers
+      # `https://<ip>/`, que le certificat — émis pour le NOM — ne couvre pas ;
+      # le navigateur avertit. Mesuré (openssl verify code 20). C'est le bon
+      # compromis : le dashboard prend un mot de passe administrateur, le
+      # servir en clair serait pire. Mais tant que le DNS n'a pas propagé, il
+      # n'y a pas d'accès de secours par l'IP.
       - traefik.http.routers.noddle-web-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN manquant}`)
       - traefik.http.routers.noddle-web-tls.entrypoints=websecure
       - traefik.http.routers.noddle-web-tls.tls=true
