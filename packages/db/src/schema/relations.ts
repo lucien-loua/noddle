@@ -9,6 +9,7 @@
 // Les relations de better-auth ne sont PAS ici : elles vivent dans `auth.ts`,
 // qui est généré par son CLI et se réécrit d'un bloc.
 import { relations } from "drizzle-orm";
+import { backups } from "#schema/backups";
 import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
 import { envVars } from "#schema/env-vars";
@@ -108,7 +109,8 @@ export const stackDeploymentLogsRelations = relations(
   })
 );
 
-export const databasesRelations = relations(databases, ({ one }) => ({
+export const databasesRelations = relations(databases, ({ many, one }) => ({
+  backups: many(backups),
   environment: one(environments, {
     fields: [databases.environmentId],
     references: [environments.id],
@@ -116,5 +118,15 @@ export const databasesRelations = relations(databases, ({ one }) => ({
   server: one(servers, {
     fields: [databases.serverId],
     references: [servers.id],
+  }),
+}));
+
+// Le job de sauvegarde a besoin du serveur qui porte le volume et du moteur
+// pour choisir son dumper : il charge la base AVEC son serveur depuis cette
+// relation, jamais par une seconde requête.
+export const backupsRelations = relations(backups, ({ one }) => ({
+  database: one(databases, {
+    fields: [backups.databaseId],
+    references: [databases.id],
   }),
 }));

@@ -9,6 +9,7 @@
  * casserait `db.query`.
  */
 export * from "#schema/auth";
+export * from "#schema/backups";
 export * from "#schema/databases";
 export * from "#schema/deployments";
 export * from "#schema/env-vars";

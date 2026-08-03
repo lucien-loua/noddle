@@ -43,6 +43,13 @@
       "when": 1785771490386,
       "tag": "0005_superb_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785795297224,
+      "tag": "0006_amused_ozymandias",
+      "breakpoints": true
     }
   ]
 }
