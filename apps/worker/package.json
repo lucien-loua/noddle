@@ -17,7 +17,8 @@
     "@noddle/ssh-executor": "workspace:*",
     "bullmq": "catalog:",
     "ioredis": "catalog:",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@noddle/tsconfig": "workspace:*"

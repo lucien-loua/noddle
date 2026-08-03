@@ -328,3 +328,49 @@ export async function buildImage(
     )
   );
 }
+
+export interface DockerfileBuildOptions extends ExecOptions {
+  builderName: string;
+  /** Racine du contexte de build — le répertoire depuis lequel `COPY` résout. */
+  contextDir: string;
+  /**
+   * Chemin du Dockerfile, RELATIF à `contextDir`. Un déploiement Compose
+   * fournit son propre Dockerfile par service (c'est ce que `build:` référence
+   * dans le fichier) — pas de génération nixpacks ici, l'utilisateur en a déjà
+   * un.
+   */
+  dockerfilePath: string;
+  imageTag: string;
+}
+
+/**
+ * Même builder capé, même `--progress=plain`, mais le Dockerfile vient de
+ * l'utilisateur au lieu d'être généré par nixpacks. C'est le chemin de build
+ * d'un service Compose : chaque service avec un `build:` dans le fichier
+ * passe par ici, un par un, avant que `docker stack deploy` ne voie le
+ * fichier réécrit avec des `image:` à la place.
+ */
+export async function buildImageFromDockerfile(
+  client: SshClient,
+  o: DockerfileBuildOptions
+): Promise<void> {
+  // `contextDir` et `dockerfilePath` viennent d'un fichier compose fourni par
+  // l'utilisateur, jamais d'une constante du code — même prudence qu'à
+  // l'entrée de `fetchSource`.
+  assertNotFlag(o.contextDir, "répertoire de contexte");
+  assertNotFlag(o.dockerfilePath, "chemin du Dockerfile");
+  assertNotFlag(o.imageTag, "tag d'image");
+
+  check(
+    "docker buildx build",
+    await exec(
+      client,
+      `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
+        ` --builder ${quoteArg(o.builderName)}` +
+        " --progress=plain --load" +
+        ` -f ${quoteArg(o.dockerfilePath)}` +
+        ` -t ${quoteArg(o.imageTag)} .`,
+      o
+    )
+  );
+}

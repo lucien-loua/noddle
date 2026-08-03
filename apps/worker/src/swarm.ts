@@ -123,7 +123,13 @@ function serviceSpec(s: DeploySpec) {
  * saine : atteindre `running` vaut donc health gate à la création, exactement
  * comme UpdateStatus le fait pour une mise à jour.
  */
-async function waitForRunningTask(
+/**
+ * Exportée pour `compose.ts` : un déploiement de pile appelle `docker stack
+ * deploy`, qui rend la main avant convergence exactement comme `docker
+ * service update` — chaque service résultant a besoin de CE MÊME sondage, un
+ * par un.
+ */
+export async function waitForRunningTask(
   docker: DockerApi,
   serviceName: string,
   timeoutMs = 180_000

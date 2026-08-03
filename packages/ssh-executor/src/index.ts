@@ -188,6 +188,36 @@ export function disconnect(client: Client): void {
   client.end();
 }
 
+/**
+ * Écrit un fichier distant par SFTP plutôt qu'un heredoc passé à `exec` :
+ * un fichier compose généré peut contenir n'importe quel octet (guillemets,
+ * `$`, backticks), et le faire traverser un shell distant rouvrirait
+ * exactement la classe d'injection que `quoteArg` existe pour fermer côté
+ * argument.
+ */
+export function writeRemoteFile(
+  client: Client,
+  path: string,
+  content: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    client.sftp((err, sftp) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      sftp.writeFile(path, content, (writeErr) => {
+        sftp.end();
+        if (writeErr) {
+          reject(writeErr);
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+}
+
 /** Ouvre une connexion, exécute, referme — même si `fn` lève. */
 export async function withServer<T>(
   creds: ServerCredentials,

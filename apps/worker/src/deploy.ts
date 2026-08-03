@@ -36,7 +36,7 @@ import {
 import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
 import {
   deployService,
@@ -65,8 +65,10 @@ export interface DeployContext {
  */
 export type DeployJobData =
   | { kind: "deploy"; deploymentId: string }
+  | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-server"; serverId: string }
-  | { kind: "rollback"; imageTag: string; serviceId: string };
+  | { kind: "rollback"; imageTag: string; serviceId: string }
+  | { kind: "rollback-stack"; sourceDeploymentId: string; stackId: string };
 
 /** Aiguillage de la file. Le web n'exécute jamais rien de tout ceci : il tourne
  *  sur Bun, où `dockerode` à travers un tunnel SSH ne fonctionne pas. */
@@ -87,10 +89,51 @@ export async function runJob(
     await provisionServer(ctx, data.serverId);
     return;
   }
+  if (data.kind === "deploy-stack") {
+    const { runStackDeploy } = await import("#compose");
+    await runStackDeploy(ctx, { stackDeploymentId: data.stackDeploymentId });
+    return;
+  }
+  if (data.kind === "rollback-stack") {
+    const { redeployStack } = await import("#compose");
+    await redeployStack(ctx, {
+      sourceDeploymentId: data.sourceDeploymentId,
+      stackId: data.stackId,
+      trigger: "rollback",
+    });
+    return;
+  }
   await runDeploy(ctx, data);
 }
 
-type ServerRow = typeof servers.$inferSelect;
+export type ServerRow = typeof servers.$inferSelect;
+
+/**
+ * N'importe quel déploiement encore « sous surveillance » pour ce service
+ * cesse de l'être dès qu'un AUTRE déploiement devient le courant : sa fenêtre
+ * ne porte plus sur la version qui sert réellement. Le laisser actif fait
+ * dérailler la détection — un crash du NOUVEAU déploiement se lit alors comme
+ * une boucle de l'ANCIEN, puisque `inspectServiceHealth` vérifie le nom du
+ * service Swarm, pas quel déploiement a produit quelle task. Mesuré :
+ * `verify-watch.ts` échouait par exactement ce chemin, une version antérieure
+ * pourtant saine déclarée en boucle de crash à la place de la vraie coupable.
+ */
+async function clearSupersededWatch(
+  db: Database,
+  serviceId: string,
+  currentDeploymentId: string
+): Promise<void> {
+  await db
+    .update(deployments)
+    .set({ watchUntil: null })
+    .where(
+      and(
+        eq(deployments.serviceId, serviceId),
+        ne(deployments.id, currentDeploymentId),
+        isNotNull(deployments.watchUntil)
+      )
+    );
+}
 
 /** Ouvre une connexion SSH vers un serveur, déjà déchiffré. */
 async function connectTo(
@@ -123,7 +166,7 @@ async function connectTo(
  * mono-serveur), pour ne pas ouvrir une session SSH inutile vers la machine
  * qu'on vient déjà de joindre.
  */
-async function connectForDeploy(
+export async function connectForDeploy(
   ctx: DeployContext,
   server: ServerRow
 ): Promise<{
@@ -302,6 +345,7 @@ export async function runDeploy(
       .update(services)
       .set({ currentDeploymentId: deployment.id, status: "running" })
       .where(eq(services.id, service.id));
+    await clearSupersededWatch(db, service.id, deployment.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     sink.write(`✗ ${message}\n`);
@@ -433,6 +477,7 @@ export async function redeployImage(
         .update(services)
         .set({ currentDeploymentId: created.id, status: "running" })
         .where(eq(services.id, service.id));
+      await clearSupersededWatch(ctx.db, service.id, created.id);
     }
 
     return created?.id ?? "";
