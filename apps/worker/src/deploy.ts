@@ -75,6 +75,7 @@ export type DeployJobData =
   | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-database"; databaseId: string }
   | { kind: "provision-server"; serverId: string }
+  | { backupId: string; databaseId: string; kind: "restore" }
   | { kind: "rollback"; imageTag: string; serviceId: string }
   | { kind: "rollback-stack"; sourceDeploymentId: string; stackId: string };
 
@@ -109,6 +110,14 @@ export async function runJob(
   if (data.kind === "backup") {
     const { runBackup } = await import("#backup");
     await runBackup(ctx, data.backupId);
+    return;
+  }
+  if (data.kind === "restore") {
+    const { runRestore } = await import("#restore");
+    await runRestore(ctx, {
+      backupId: data.backupId,
+      databaseId: data.databaseId,
+    });
     return;
   }
   if (data.kind === "deploy-stack") {
