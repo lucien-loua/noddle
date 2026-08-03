@@ -169,6 +169,9 @@ export function deriveSubkey(key: Buffer, info: string): Buffer {
 
 /** Contextes AAD normalisés. Les construire ailleurs invite l'incohérence. */
 export const secretContext = {
+  databasePassword: (databaseId: string): SecretContext => ({
+    aad: `database_password:${databaseId}`,
+  }),
   envVar: (envVarId: string): SecretContext => ({ aad: `env_var:${envVarId}` }),
   serverSshKey: (serverId: string): SecretContext => ({
     aad: `server_ssh_key:${serverId}`,

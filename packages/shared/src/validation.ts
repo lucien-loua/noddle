@@ -243,3 +243,39 @@ export const stackRollbackRequestSchema = z.object({
 });
 
 export type StackRollbackRequest = z.infer<typeof stackRollbackRequestSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bases de données en un clic
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const databaseEngineSchema = z.enum(["postgres", "redis"]);
+
+/**
+ * « Connecter une base de données » — comme `connectRepoSchema`/
+ * `connectStackSchema` : retrouve-ou-crée projet et environnement par nom.
+ * Pas de champ pour le mot de passe : Noddle le génère, il n'est jamais saisi
+ * ni affiché.
+ */
+export const connectDatabaseSchema = z.object({
+  engine: databaseEngineSchema,
+  environmentName: environmentNameSchema,
+  name: serviceNameSchema,
+  projectName: projectNameSchema,
+  serverId: z.uuid(),
+});
+
+export type ConnectDatabaseInput = z.infer<typeof connectDatabaseSchema>;
+
+/**
+ * Écrit la chaîne de connexion directement comme variable d'environnement du
+ * service choisi — jamais renvoyée au client. `envVarKey` a une valeur par
+ * défaut proposée côté UI (`DATABASE_URL`/`REDIS_URL`) mais reste un choix de
+ * l'utilisateur, pour ne pas entrer en conflit avec une variable déjà posée.
+ */
+export const attachDatabaseSchema = z.object({
+  databaseId: z.uuid(),
+  envVarKey: envVarKeySchema,
+  serviceId: z.uuid(),
+});
+
+export type AttachDatabaseInput = z.infer<typeof attachDatabaseSchema>;

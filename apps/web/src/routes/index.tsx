@@ -13,6 +13,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+import { AttachDatabaseDialog } from "@/components/attach-database-dialog";
+import { ConnectDatabaseDialog } from "@/components/connect-database-dialog";
 import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
 import { ConnectStackDialog } from "@/components/connect-stack-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
@@ -44,6 +46,7 @@ import {
   type ServiceRow,
   type StackRow,
 } from "@/server/dashboard";
+import { type DatabaseRow, getDatabaseDashboard } from "@/server/databases";
 import { triggerDeploy, triggerRollback } from "@/server/deployments";
 import { getEnvVars, saveEnvVars } from "@/server/env-vars";
 import { getServers } from "@/server/servers";
@@ -75,6 +78,7 @@ export const Route = createFileRoute("/")({
   },
   component: Dashboard,
   loader: async ({ context }) => ({
+    databases: await getDatabaseDashboard(),
     email: context.email,
     servers: await getServers(),
     services: await getDashboard(),
@@ -89,7 +93,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { email, servers, services, stacks } = Route.useLoaderData();
+  const { databases, email, servers, services, stacks } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
@@ -168,6 +172,7 @@ function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground text-xs">{email}</span>
+          <ConnectDatabaseDialog servers={servers} />
           <ConnectStackDialog servers={servers} />
           <ConnectRepoDialog servers={servers} />
           <Button onClick={handleSignOut} size="sm" variant="ghost">
@@ -227,6 +232,21 @@ function Dashboard() {
                     />
                   ) : null}
                 </div>
+              ))}
+            </div>
+          ) : null}
+
+          {databases.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                Bases de données
+              </h2>
+              {databases.map((database) => (
+                <DatabaseCard
+                  database={database}
+                  key={database.id}
+                  services={services}
+                />
               ))}
             </div>
           ) : null}
@@ -695,6 +715,51 @@ function StackPanel({
           getWebhook={handleGetWebhook}
           queryKey={["webhook", "stack", stack.id]}
         />
+      </CardContent>
+    </Card>
+  );
+}
+
+const DEFAULT_ENV_VAR_KEY: Record<DatabaseRow["engine"], string> = {
+  postgres: "DATABASE_URL",
+  redis: "REDIS_URL",
+};
+
+function DatabaseCard({
+  database,
+  services,
+}: {
+  database: DatabaseRow;
+  services: ServiceRow[];
+}) {
+  const status = serviceLabel(database.status);
+
+  return (
+    <Card className="py-0">
+      <CardContent className="flex items-center gap-4 px-4 py-3">
+        <span
+          aria-label={status.label}
+          className={cn("size-2 shrink-0 rounded-full", dotClass(status.tone))}
+          role="img"
+        />
+
+        <div className="min-w-0 flex-1">
+          <span className="font-medium">{database.name}</span>
+          <span className="block truncate text-muted-foreground text-xs">
+            {database.project} / {database.environment} ·{" "}
+            {database.engine === "postgres" ? "PostgreSQL" : "Redis"} ·{" "}
+            {database.serverName}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
+          <AttachDatabaseDialog
+            databaseId={database.id}
+            defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
+            services={services}
+          />
+        </div>
       </CardContent>
     </Card>
   );

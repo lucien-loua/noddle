@@ -66,6 +66,7 @@ export interface DeployContext {
 export type DeployJobData =
   | { kind: "deploy"; deploymentId: string }
   | { kind: "deploy-stack"; stackDeploymentId: string }
+  | { kind: "provision-database"; databaseId: string }
   | { kind: "provision-server"; serverId: string }
   | { kind: "rollback"; imageTag: string; serviceId: string }
   | { kind: "rollback-stack"; sourceDeploymentId: string; stackId: string };
@@ -87,6 +88,11 @@ export async function runJob(
   if (data.kind === "provision-server") {
     const { provisionServer } = await import("#provision");
     await provisionServer(ctx, data.serverId);
+    return;
+  }
+  if (data.kind === "provision-database") {
+    const { provisionDatabase } = await import("#database");
+    await provisionDatabase(ctx, data.databaseId);
     return;
   }
   if (data.kind === "deploy-stack") {
