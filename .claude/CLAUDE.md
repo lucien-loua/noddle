@@ -514,8 +514,64 @@ rythme — **l'écran affirmait une protection qui n'existait pas.** Corrigé pa
 annulée sur échec, sinon le dashboard ment sur l'état réel, ce qui est
 précisément ce qu'il existe pour éviter.
 
-**Reste pour la Phase 3 :** notifications, graphiques de ressources,
-équipes/RBAC.
+**Notifications faites et vérifiées** — `packages/notifier` 14/14 sur les deux
+runtimes contre un vrai récepteur HTTP, `verify-notify.ts` 8/8 contre un vrai
+Postgres, et la boucle complète dans un navigateur.
+
+Trois types de canaux (webhook générique, Discord, Slack), un seul mécanisme
+d'envoi, seule la forme de la charge utile change. Aucune dépendance ajoutée :
+`fetch` suffit, et un client Discord ne ferait qu'emballer un POST tout en
+ajoutant une bibliothèque à suivre. Pas de SMTP — délivrabilité, identifiants
+et dépendance, pour un cas qu'un webhook couvre déjà.
+
+**Plusieurs canaux permis**, contrairement à la destination S3 : la raison qui
+imposait l'unicité là-bas (un sélecteur sur chaque écran) ne s'applique pas à
+une liste dans un écran de réglages.
+
+**On notifie ce qui va MAL.** Déploiement échoué, bascule annulée par Swarm,
+reprise par la surveillance, sauvegarde échouée. `notify_success` existe mais
+est décochée par défaut : prévenir de chaque succès est le moyen le plus sûr
+de rendre le canal invisible le jour où il porte un échec. `deploy_reverted`
+et `watch_reverted` restent DISTINCTS, comme en base.
+
+**L'équivalent du « dump tronqué » ici : une notification qui échoue en
+silence est pire que pas de notification** — on se croit surveillé. D'où
+`last_error`/`last_success_at` sur chaque canal, un état « jamais sollicité »
+qu'on ne confond pas avec un succès, et « Éprouver » qui envoie un VRAI
+message. Le code HTTP est lu, pas supposé : un webhook Discord révoqué répond
+404 sans que la requête échoue au sens réseau.
+
+**Et symétriquement : `notify` ne lève JAMAIS**, try/catch posé une fois dans
+le module plutôt que recopié à chaque appel. Un Discord injoignable ne
+transforme pas un déploiement réussi en déploiement échoué — même règle que la
+purge de rétention.
+
+**`https` exigé pour Discord et Slack, `http` accepté pour un webhook
+générique.** Chez les deux premiers une URL `http` est une faute de frappe qui
+échouerait au premier envoi ; pour le troisième, un service interne en clair
+(`http://10.0.0.5:5678`) est un cas légitime et fréquent en auto-hébergé, et
+l'interdire ne sécuriserait personne — ça pousserait à contourner Noddle.
+
+**Deux défauts que seul le navigateur a montrés :**
+
+- **Les erreurs de validation Zod s'affichaient en JSON brut** — le tableau
+  d'issues sérialisé, avec crochets, guillemets et champ `code`. C'est la
+  forme du transport de TanStack Start, qu'on ne peut pas changer sans
+  renoncer à la validation partagée ; elle se défait donc à l'affichage
+  (`errorMessage` dans `lib/format.ts`). **Cela concernait tous les
+  formulaires validés côté serveur**, pas seulement celui des canaux.
+- **Le message de panne était celui du RUNTIME** : Node dit « fetch failed »,
+  Bun « Unable to connect… ». Or les deux envoient — le web éprouve, le worker
+  émet — donc le même canal en panne s'affichait différemment selon qui avait
+  essayé, et en anglais. Ne reste que la distinction utile : trop tard, ou pas
+  du tout.
+
+**Non vérifié : le vrai Discord et le vrai Slack.** Il faudrait une URL de
+webhook réelle, qui est un secret porteur. Les formes sont asserties contre ce
+que leurs API documentent et le transport est réel, mais personne n'a vu le
+message s'afficher dans un salon.
+
+**Reste pour la Phase 3 :** graphiques de ressources, équipes/RBAC.
 
 **Préalable connu pour les équipes/RBAC.** Aujourd'hui `requireSession()` EST
 le contrôle d'autorisation complet, et c'est correct : il n'existe qu'un

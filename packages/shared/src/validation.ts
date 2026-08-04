@@ -361,6 +361,82 @@ export type BackupRequest = z.infer<typeof backupRequestSchema>;
  * de la sauvegarde, mais le fournir permet de refuser une restauration croisée
  * plutôt que de la découvrir après coup.
  */
+// ─────────────────────────────────────────────────────────────────────────────
+// notifications
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const notificationKindSchema = z.enum(["webhook", "discord", "slack"]);
+
+/**
+ * L'URL d'un canal.
+ *
+ * `http` est accepté, `https` exigé pour Discord et Slack. Ces URL sont des
+ * secrets porteurs — qui les détient peut écrire dans le salon — donc les
+ * faire voyager en clair n'est pas anodin. Mais un webhook maison sur un
+ * service interne (`http://10.0.0.5:5678`) est un cas légitime et fréquent en
+ * auto-hébergé ; l'interdire ne sécuriserait personne, ça pousserait à
+ * contourner Noddle.
+ */
+export const notificationUrlSchema = z
+  .string()
+  .min(1)
+  .max(1024)
+  .refine((v) => HTTP_OR_HTTPS_URL.test(v), "URL http:// ou https:// attendue");
+
+/**
+ * Discord et Slack ne servent QUE du https : une URL `http` chez eux n'est pas
+ * un choix d'infrastructure, c'est une faute de frappe qui échouerait au
+ * premier envoi. On la refuse dans le formulaire plutôt qu'au moment où une
+ * alerte devait partir.
+ */
+function hostedChannelIsHttps(data: {
+  kind: "discord" | "slack" | "webhook";
+  url?: string;
+}): boolean {
+  if (data.kind === "webhook" || !data.url) {
+    return true;
+  }
+  return HTTPS_URL.test(data.url);
+}
+
+const HOSTED_HTTPS_MESSAGE =
+  "Discord et Slack n'acceptent que des URL https://";
+
+export const notificationChannelSchema = z
+  .object({
+    kind: notificationKindSchema,
+    name: z.string().min(1).max(64),
+    notifySuccess: z.boolean().default(false),
+    url: notificationUrlSchema,
+  })
+  .refine(hostedChannelIsHttps, HOSTED_HTTPS_MESSAGE);
+
+export type NotificationChannelInput = z.infer<
+  typeof notificationChannelSchema
+>;
+
+/**
+ * Modification d'un canal existant. L'URL est optionnelle : elle ne ressort
+ * jamais du serveur — même règle que la clé secrète S3 et le mot de passe
+ * d'une base — donc la laisser vide veut dire « garde celle d'avant ».
+ */
+export const notificationChannelUpdateSchema = z
+  .object({
+    channelId: z.uuid(),
+    enabled: z.boolean(),
+    kind: notificationKindSchema,
+    name: z.string().min(1).max(64),
+    notifySuccess: z.boolean(),
+    url: notificationUrlSchema.optional(),
+  })
+  .refine(hostedChannelIsHttps, HOSTED_HTTPS_MESSAGE);
+
+export type NotificationChannelUpdate = z.infer<
+  typeof notificationChannelUpdateSchema
+>;
+
+export const notificationChannelIdSchema = z.object({ channelId: z.uuid() });
+
 export const backupScheduleSchema = z.enum(["off", "daily", "weekly"]);
 
 /**

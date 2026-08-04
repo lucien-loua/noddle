@@ -177,6 +177,10 @@ export const secretContext = {
     aad: `database_password:${databaseId}`,
   }),
   envVar: (envVarId: string): SecretContext => ({ aad: `env_var:${envVarId}` }),
+  /** L'URL d'un canal : qui la détient peut écrire dans le salon. */
+  notificationChannel: (channelId: string): SecretContext => ({
+    aad: `notification_channel:${channelId}`,
+  }),
   serverSshKey: (serverId: string): SecretContext => ({
     aad: `server_ssh_key:${serverId}`,
   }),

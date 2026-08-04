@@ -38,6 +38,7 @@ import {
   badgeVariant,
   byteSize,
   duration,
+  errorMessage,
   relativeTime,
 } from "@/lib/format";
 import {
@@ -160,7 +161,7 @@ function ScheduleControl({
 
       {save.isError ? (
         <span className="text-destructive text-xs">
-          {save.error instanceof Error ? save.error.message : "échec"}
+          {errorMessage(save.error, "échec")}
         </span>
       ) : null}
     </div>
@@ -243,9 +244,7 @@ export function BackupPanel({
       {run.isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {run.error instanceof Error
-              ? run.error.message
-              : "sauvegarde impossible"}
+            {errorMessage(run.error, "sauvegarde impossible")}
           </AlertDescription>
         </Alert>
       ) : null}

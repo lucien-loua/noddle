@@ -13,6 +13,7 @@
     "@noddle/backup-store": "workspace:*",
     "@noddle/build-engine": "workspace:*",
     "@noddle/db": "workspace:*",
+    "@noddle/notifier": "workspace:*",
     "@noddle/proxy-config": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",

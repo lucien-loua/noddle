@@ -20,6 +20,7 @@ import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import { listComposeServiceKeys, redeployStack } from "#compose";
 import { type DeployContext, redeployImage } from "#deploy";
+import { notify } from "#notify";
 import { inspectServiceHealth } from "#watch";
 
 export interface SweepResult {
@@ -117,6 +118,15 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
           })
           .where(eq(deployments.id, dep.id));
 
+        // L'événement le plus important du produit : Noddle a repris la main
+        // tout seul, sur un déploiement que Swarm avait déclaré réussi. Si une
+        // seule notification devait exister, ce serait celle-là.
+        await notify(ctx, {
+          detail: verdict.lastError ?? undefined,
+          resource: service.name,
+          type: "watch_reverted",
+        });
+
         if (!previous?.imageTag) {
           // Première version du service : rien vers quoi revenir. On le signale
           // plutôt que de masquer l'état.
@@ -181,6 +191,12 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
             watchUntil: null,
           })
           .where(eq(stackDeployments.id, dep.id));
+
+        await notify(ctx, {
+          detail: "au moins un service de la pile boucle",
+          resource: stack.name,
+          type: "watch_reverted",
+        });
 
         if (!previous) {
           await ctx.db

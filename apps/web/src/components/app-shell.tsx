@@ -1,5 +1,6 @@
 import {
   ArchiveIcon,
+  BellIcon,
   HardDrivesIcon,
   SignOutIcon,
   SquaresFourIcon,
@@ -116,6 +117,22 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                       }
                     />
                     <span>Sauvegardes</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith("/notifications")}
+                    render={<Link to="/notifications" />}
+                    tooltip="Notifications"
+                  >
+                    <BellIcon
+                      weight={
+                        pathname.startsWith("/notifications")
+                          ? "fill"
+                          : "regular"
+                      }
+                    />
+                    <span>Notifications</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

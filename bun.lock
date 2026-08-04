@@ -20,6 +20,7 @@
         "@fontsource-variable/inter": "^5.3.0",
         "@noddle/backup-store": "workspace:*",
         "@noddle/db": "workspace:*",
+        "@noddle/notifier": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@phosphor-icons/react": "^2.1.10",
         "@tanstack/react-query": "catalog:",
@@ -55,6 +56,7 @@
         "@noddle/backup-store": "workspace:*",
         "@noddle/build-engine": "workspace:*",
         "@noddle/db": "workspace:*",
+        "@noddle/notifier": "workspace:*",
         "@noddle/proxy-config": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
@@ -95,6 +97,12 @@
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
         "drizzle-kit": "catalog:",
+      },
+    },
+    "packages/notifier": {
+      "name": "@noddle/notifier",
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/proxy-config": {
@@ -452,6 +460,8 @@
     "@noddle/build-engine": ["@noddle/build-engine@workspace:packages/build-engine"],
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
+
+    "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
 
     "@noddle/proxy-config": ["@noddle/proxy-config@workspace:packages/proxy-config"],
 

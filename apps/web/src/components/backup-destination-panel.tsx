@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { errorMessage } from "@/lib/format";
 import { type DestinationRow, saveDestination } from "@/server/backups";
 
 interface Props {
@@ -168,9 +169,7 @@ export function BackupDestinationPanel({ initial }: Props) {
       {save.isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {save.error instanceof Error
-              ? save.error.message
-              : "destination refusée"}
+            {errorMessage(save.error, "destination refusée")}
           </AlertDescription>
         </Alert>
       ) : null}
