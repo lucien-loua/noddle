@@ -24,12 +24,19 @@ export function TabRail({ children }: { children: ReactNode }) {
         en `auto`, CSS force l'autre de `visible` à `auto`. Avec le seul
         `overflow-x-auto`, le rail défilait aussi verticalement.
 
-        Le `-my-1 py-1` rend au conteneur la place que l'anneau de focus d'un
-        déclencheur déborde (3 px) : sans lui, `overflow-y` le raserait. La
-        marge négative reprend ce qu'ajoute le padding, donc la pastille
-        mesure toujours 36 px.
+        Le `-m-1 p-1` rend au conteneur la place que l'anneau de focus d'un
+        déclencheur déborde — 3 px d'anneau plus 1 px de contour, sur les
+        QUATRE côtés : le premier déclencheur touche le bord de la zone
+        défilante, donc un padding seulement vertical le rasait quand même à
+        gauche. La marge négative reprend ce qu'ajoute le padding, donc la
+        pastille mesure toujours 36 px.
+
+        `scroll-px-10` vaut la largeur du fondu (`min(12%, 40px)`) : au clavier
+        le navigateur amène le déclencheur suivant dans la vue, et sans ça il
+        s'arrêterait pile sous le dégradé — focus posé sur un onglet à moitié
+        effacé.
       */}
-      <div className="scroll-fade-x no-scrollbar -my-1 overflow-x-auto overflow-y-hidden py-1">
+      <div className="scroll-fade-x no-scrollbar -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1">
         {/*
           La hauteur se reprend AVEC son préfixe de variante. `tabsListVariants`
           la pose en `group-data-horizontal/tabs:h-9` : tailwind-merge ne
