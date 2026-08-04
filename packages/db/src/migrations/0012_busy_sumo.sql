@@ -1,0 +1,1 @@
+ALTER TABLE "deployments" ADD COLUMN "node_id" text;

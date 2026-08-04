@@ -33,16 +33,35 @@ export interface DeploySpec {
    * données : c'est `docker info` sur CE nœud qui le donne, valeur locale au
    * cluster Swarm et pas un identifiant que Noddle invente.
    *
-   * `undefined` sur un cluster à un seul nœud — la contrainte serait un
-   * no-op, mais l'omettre évite une clause vide dans la spec envoyée à
-   * l'API. Sur plusieurs nœuds, l'omettre laisserait le PLANIFICATEUR choisir
-   * : sans registre, une image construite localement n'existe QUE sur ce
-   * nœud, et Swarm planifierait aveuglément une task qui ne trouvera jamais
-   * l'image ailleurs.
+   * `undefined` quand l'image est PORTABLE — c'est-à-dire qu'elle vit dans le
+   * registre : Swarm peut alors la placer où il veut, et c'est précisément ce
+   * qu'on cherche. `undefined` aussi sur un cluster à un seul nœud, où la
+   * contrainte serait un no-op.
+   *
+   * Renseigné pour toute image LOCALE à un nœud, y compris un rollback vers
+   * une image d'avant le registre : elle n'existe nulle part ailleurs, et
+   * Swarm planifierait aveuglément une task qui ne la trouvera jamais. La
+   * décision se prend donc image par image, jamais globalement.
    */
   placementNodeId?: string;
   port: number;
+  /**
+   * Identifiants du registre, transmis à Swarm et non employés ici.
+   *
+   * Le manager les chiffre dans la spec du service et les distribue aux
+   * agents : ce sont EUX qui tirent, sur des nœuds où Noddle n'ouvre aucune
+   * session. C'est l'équivalent API de `--with-registry-auth`, et c'est ce qui
+   * évite un `docker login` persistant sur chaque machine.
+   */
+  registryAuth?: RegistryAuth;
   serviceName: string;
+}
+
+/** La forme attendue par l'en-tête `X-Registry-Auth` de l'API Engine. */
+export interface RegistryAuth {
+  password: string;
+  serveraddress: string;
+  username: string;
 }
 
 export type SwarmUpdateState =
@@ -186,9 +205,16 @@ export async function deployService(
   spec: DeploySpec
 ): Promise<DeployOutcome> {
   const existing = await findService(docker, spec.serviceName);
+  // dockerode transforme `authconfig` en en-tête X-Registry-Auth. Sur une mise
+  // à jour, l'API prend par défaut l'authentification de la spec ENVOYÉE — donc
+  // celle-ci — ce qui est le comportement voulu : les identifiants suivent la
+  // nouvelle image.
+  const auth = spec.registryAuth
+    ? { authconfig: spec.registryAuth }
+    : undefined;
 
   if (!existing) {
-    await docker.createService(serviceSpec(spec));
+    await docker.createService({ ...serviceSpec(spec), ...auth });
     // Une création n'a PAS d'UpdateStatus — il n'y a pas eu de mise à jour.
     // readUpdateState rendrait donc la main immédiatement et on annoncerait un
     // déploiement réussi alors que le conteneur démarre encore : le service
@@ -202,11 +228,40 @@ export async function deployService(
   const service = docker.getService(existing.ID);
   await service.update({
     ...serviceSpec(spec),
+    ...auth,
     version: existing.Version?.Index,
   });
 
   const state = await readUpdateState(docker, spec.serviceName);
   return { created: false, ...state };
+}
+
+/**
+ * Le nœud sur lequel une task du service tourne RÉELLEMENT.
+ *
+ * Tant que chaque image était locale, la question ne se posait pas : la
+ * contrainte de placement donnait la réponse d'avance. Avec un registre, c'est
+ * le planificateur Swarm qui choisit, et un tableau de bord qui continuerait
+ * d'afficher le serveur de BUILD comme lieu d'exécution affirmerait quelque
+ * chose de faux.
+ *
+ * Rend `null` plutôt qu'une valeur de repli quand aucune task ne tourne : un
+ * trou reste un trou. « On ne sait pas où ça tourne » et « ça tourne sur le
+ * serveur de build » sont deux affirmations différentes, et la seconde serait
+ * inventée.
+ */
+export async function readRunningNodeId(
+  docker: DockerApi,
+  serviceName: string
+): Promise<string | null> {
+  const tasks = (await docker.listTasks({
+    filters: JSON.stringify({ service: [serviceName] }),
+  })) as unknown as Array<{
+    NodeID?: string;
+    Status?: { State?: string };
+  }>;
+  const running = tasks.find((t) => t.Status?.State === "running");
+  return running?.NodeID ?? null;
 }
 
 /**

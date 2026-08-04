@@ -46,6 +46,22 @@ export const deployments = pgTable(
     // Le tag exact construit et déployé. C'est LA colonne qui rend le rollback
     // possible vers n'importe quelle version, pas seulement la précédente.
     imageTag: text("image_tag"),
+
+    // Le nœud Swarm sur lequel la task tourne RÉELLEMENT, relevé après
+    // convergence — pas celui qu'on avait demandé.
+    //
+    // Tant que chaque image était locale à son nœud, la question ne se posait
+    // pas : `services.server_id` était à la fois là où ça se construisait et
+    // là où ça tournait. Avec un registre, l'image est portable et c'est le
+    // planificateur Swarm qui choisit. `server_id` ne veut donc plus dire que
+    // « là où ça se construit », et un tableau de bord qui continuerait de
+    // l'afficher comme lieu d'exécution affirmerait quelque chose de faux.
+    //
+    // NULL pour tout déploiement d'avant le registre, et pour tout déploiement
+    // dont aucune task ne tourne : un trou reste un trou, il ne se comble pas
+    // avec le serveur de build « à défaut ».
+    nodeId: text("node_id"),
+
     serviceId: uuid("service_id")
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),

@@ -12,14 +12,20 @@
 //            besoin du dépôt, SON buildx capé qui produit l'image.
 //   SWARM    toujours sur le manager : `docker service create/update` est
 //            refusé par un nœud worker, qui ne détient pas l'état répliqué
-//            du cluster. Une contrainte de placement épingle ensuite la task
-//            au nœud qui a réellement l'image — sans registre, elle n'existe
-//            NULLE PART ailleurs, et le planificateur Swarm la placerait
-//            aveuglément faute de cette contrainte.
+//            du cluster.
 //
 // Les deux connexions sont la MÊME sur un cluster à un seul nœud (le cas
 // Phase 1, inchangé) : `manager.id === server.id` alors, et `connectTo` ne se
 // connecte qu'une fois.
+//
+// Phase 4 — registre : l'image est POUSSÉE après le build, et le service n'est
+// plus épinglé. La contrainte de placement ne disparaît pas pour autant, elle
+// devient conditionnelle : elle s'applique à toute image qui n'est pas dans le
+// registre — une image locale n'existe que sur le nœud qui l'a construite, et
+// le planificateur Swarm la placerait aveuglément ailleurs. Voir
+// `placementFor` : la décision se prend sur la RÉFÉRENCE de l'image, ce qui
+// laisse un rollback vers une version d'avant le registre continuer de
+// fonctionner sans rien migrer.
 import {
   buildImage,
   computeBuildCap,
@@ -39,12 +45,20 @@ import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
-import type { RegistryConfig } from "#registry";
+import {
+  isPortableImage,
+  pushImage,
+  REGISTRY_USER,
+  type RegistryConfig,
+  registryImageTag,
+} from "#registry";
 import {
   deployService,
   ensureOverlayNetwork,
   getSwarmNodeId,
   isDeployAccepted,
+  type RegistryAuth,
+  readRunningNodeId,
 } from "#swarm";
 import { watchUntilFor } from "#watch";
 
@@ -234,6 +248,59 @@ export async function connectForDeploy(
   return { buildClient, managerClient, sameConnection: false };
 }
 
+/**
+ * Faut-il épingler cette image à un nœud, et auquel ?
+ *
+ * LA question de tout ce chantier, et elle se tranche image par image — jamais
+ * par un réglage global.
+ *
+ * Une image du registre est joignable depuis n'importe quel nœud : aucune
+ * contrainte, Swarm place où il veut, et c'est tout l'intérêt. Une image
+ * locale n'existe QUE sur le nœud qui l'a construite : sans contrainte, le
+ * planificateur en choisirait un autre et la task ne démarrerait jamais.
+ *
+ * C'est ce qui rend la migration gratuite. Un rollback vers un déploiement
+ * d'avant le registre porte un tag non qualifié, donc reste épinglé au bon
+ * nœud et continue de fonctionner, pendant que les déploiements neufs sont
+ * libres. Rien à re-pousser, rien à réécrire dans l'historique.
+ */
+async function placementFor(opts: {
+  buildDocker: ReturnType<typeof dockerClient>;
+  image: string;
+  registry: RegistryConfig | undefined;
+  sameConnection: boolean;
+  server: ServerRow;
+}): Promise<string | undefined> {
+  if (isPortableImage(opts.image, opts.registry)) {
+    return;
+  }
+  // Sur un cluster à un seul nœud, la contrainte serait un no-op : `manager`
+  // et le serveur du service sont la même machine. Comportement inchangé
+  // depuis la Phase 2.
+  if (opts.sameConnection) {
+    return;
+  }
+  // Relevé au provisionnement depuis la Phase 4. Le `docker info` de secours
+  // couvre les serveurs enregistrés avant que la colonne existe — c'est une
+  // lecture LOCALE, à laquelle un nœud worker répond correctement sur
+  // lui-même.
+  return opts.server.swarmNodeId ?? (await getSwarmNodeId(opts.buildDocker));
+}
+
+/** Ce que Swarm distribue à ses agents pour qu'ILS puissent tirer. */
+function authFor(
+  registry: RegistryConfig | undefined
+): RegistryAuth | undefined {
+  if (!registry) {
+    return;
+  }
+  return {
+    password: registry.password,
+    serveraddress: registry.host,
+    username: REGISTRY_USER,
+  };
+}
+
 export async function runDeploy(
   ctx: DeployContext,
   data: { deploymentId: string }
@@ -295,7 +362,15 @@ export async function runDeploy(
       ...stream,
     });
 
-    const imageTag = `${service.name}:${sha.slice(0, 12)}-${Date.now()}`;
+    // Le tag porte l'hôte du registre quand il y en a un — et ce préfixe n'est
+    // pas décoratif : c'est lui que Docker lit pour savoir où tirer, donc lui
+    // qui porte le fait « cette image est portable ». Il est écrit tel quel
+    // dans l'historique, et c'est ce qui permettra plus tard de décider du
+    // placement d'un rollback sans rien deviner.
+    const version = `${sha.slice(0, 12)}-${Date.now()}`;
+    const imageTag = ctx.registry
+      ? registryImageTag(ctx.registry, service.name, version)
+      : `${service.name}:${version}`;
     await db
       .update(deployments)
       .set({ commitSha: sha, imageTag, status: "deploying" })
@@ -308,6 +383,18 @@ export async function runDeploy(
       ...stream,
     });
 
+    if (ctx.registry) {
+      sink.write("▸ envoi vers le registre\n");
+      // `removeLocal` : le nœud de build cesse d'accumuler. L'image vit
+      // désormais dans le registre, et Swarm la tirera de là — y compris sur
+      // ce nœud-ci s'il est celui qui l'exécute.
+      await pushImage(buildClient, ctx.registry, {
+        imageTag,
+        removeLocal: true,
+        ...stream,
+      });
+    }
+
     const env: Record<string, string> = {};
     for (const v of service.envVars) {
       env[v.key] = decryptSecret(
@@ -318,13 +405,15 @@ export async function runDeploy(
     }
 
     const buildDocker = dockerClient(buildClient);
-    // L'ID du nœud qui vient de construire l'image — lu sur la connexion de
-    // BUILD, jamais sur celle du manager quand elles diffèrent : c'est un
-    // fait local à ce nœud, que `docker info` rapporte correctement même
-    // depuis un worker.
-    const placementNodeId = sameConnection
-      ? undefined
-      : await getSwarmNodeId(buildDocker);
+    // Libre si l'image est dans le registre, épinglé au nœud de build sinon —
+    // décidé sur la référence d'image, jamais sur un réglage.
+    const placementNodeId = await placementFor({
+      buildDocker,
+      image: imageTag,
+      registry: ctx.registry,
+      sameConnection,
+      server,
+    });
 
     const managerDocker = sameConnection
       ? buildDocker
@@ -344,6 +433,7 @@ export async function runDeploy(
       networkName: ctx.networkName,
       placementNodeId,
       port: service.port,
+      registryAuth: authFor(ctx.registry),
       serviceName: service.name,
     });
 
@@ -378,10 +468,15 @@ export async function runDeploy(
     }
 
     sink.write("✓ déploiement accepté\n");
+    // Où la task tourne VRAIMENT, et non où on l'avait demandée. Avec une
+    // image portable, c'est Swarm qui a choisi : le tableau de bord doit
+    // afficher son choix, pas notre intention.
+    const nodeId = await readRunningNodeId(managerDocker, service.name);
     await db
       .update(deployments)
       .set({
         finishedAt,
+        nodeId,
         status: "succeeded",
         swarmUpdateState: outcome.updateState,
         // La garantie de Swarm expire avec sa fenêtre monitor. À partir d'ici,
@@ -497,9 +592,18 @@ export async function redeployImage(
     }
 
     const buildDocker = dockerClient(buildClient);
-    const placementNodeId = sameConnection
-      ? undefined
-      : await getSwarmNodeId(buildDocker);
+    // ICI se joue la migration. Une image d'AVANT le registre porte un tag non
+    // qualifié : elle n'existe que sur le nœud qui l'a construite, donc elle
+    // reste épinglée là et le rollback fonctionne comme avant. Une image du
+    // registre est libre. Aucune des deux n'a besoin qu'on sache laquelle —
+    // la référence le dit.
+    const placementNodeId = await placementFor({
+      buildDocker,
+      image: opts.imageTag,
+      registry: ctx.registry,
+      sameConnection,
+      server: service.server,
+    });
     const managerDocker = sameConnection
       ? buildDocker
       : dockerClient(managerClient);
@@ -519,6 +623,7 @@ export async function redeployImage(
       networkName: ctx.networkName,
       placementNodeId,
       port: service.port,
+      registryAuth: authFor(ctx.registry),
       serviceName: service.name,
     });
 
@@ -527,6 +632,9 @@ export async function redeployImage(
       .update(deployments)
       .set({
         finishedAt: new Date(),
+        nodeId: accepted
+          ? await readRunningNodeId(managerDocker, service.name)
+          : null,
         status: accepted ? "succeeded" : "rolled_back",
         swarmUpdateState: outcome.updateState,
       })
