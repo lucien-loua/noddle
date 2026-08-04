@@ -15,6 +15,7 @@ import IORedis from "ioredis";
 import { sweepBackups } from "#backup-sweep";
 import { type DeployContext, type DeployJobData, runJob } from "#deploy";
 import { createLogBus } from "#log-bus";
+import { collectMetrics } from "#metrics";
 import { sweepWatch } from "#sweep";
 
 // Pas de « : » dans un nom de file : BullMQ 6 le refuse, il s'en sert comme
@@ -166,8 +167,31 @@ await backupSweepQueue.upsertJobScheduler(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Collecte des ressources
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Une minute : assez fin pour voir une fuite mémoire monter, assez large pour
+// qu'une machine à 2 Go ne passe pas son temps à se mesurer elle-même.
 
-for (const w of [deployWorker, watchWorker, backupSweepWorker]) {
+const METRICS_QUEUE = "noddle-metrics";
+
+const metricsQueue = new Queue(METRICS_QUEUE, { connection });
+const metricsWorker = new Worker(METRICS_QUEUE, () => collectMetrics(ctx), {
+  // Concurrence 1 : deux passages qui se chevauchent ouvriraient deux
+  // connexions SSH par machine et fausseraient les deltas CPU.
+  concurrency: 1,
+  connection,
+});
+
+await metricsQueue.upsertJobScheduler(
+  "collect",
+  { every: 60_000 },
+  { name: "collect" }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+for (const w of [deployWorker, watchWorker, backupSweepWorker, metricsWorker]) {
   w.on("failed", (job, err) => {
     process.stderr.write(`job ${job?.id} échoué : ${err.message}\n`);
   });
@@ -180,6 +204,7 @@ async function shutdown(): Promise<void> {
     deployWorker.close(),
     watchWorker.close(),
     backupSweepWorker.close(),
+    metricsWorker.close(),
   ]);
   await logBus.close();
   await connection.quit();
