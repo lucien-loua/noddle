@@ -10,15 +10,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import type { ServiceRow } from "@/server/dashboard";
 import { attachDatabase } from "@/server/databases";
@@ -44,10 +54,11 @@ export function AttachDatabaseDialog({
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [envVarKey, setEnvVarKey] = useState(defaultKey);
 
-  const handleServiceChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => setServiceId(e.target.value),
-    []
-  );
+  const handleServiceChange = useCallback((next: unknown) => {
+    if (typeof next === "string") {
+      setServiceId(next);
+    }
+  }, []);
   const handleKeyChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setEnvVarKey(e.target.value),
     []
@@ -94,21 +105,21 @@ export function AttachDatabaseDialog({
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger render={<Button size="xs" variant="outline" />}>
         <PlusIcon data-icon="inline-start" />
-        Attacher
+        Attach
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Attacher à un service</DialogTitle>
+          <DialogTitle>Attach to a service</DialogTitle>
           <DialogDescription>
-            La chaîne de connexion est écrite comme variable d'environnement du
-            service choisi — elle ne s'affiche jamais ici.
+            The connection string is written as an environment variable of the
+            chosen service — it is never shown here.
           </DialogDescription>
         </DialogHeader>
 
         {noServices ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun service à attacher. Connectez d'abord un dépôt.
+              No services to attach to. Connect a repository first.
             </AlertDescription>
           </Alert>
         ) : (
@@ -144,66 +155,82 @@ function AttachBody({
   envVarKey: string;
   error: string | null;
   onKeyChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onServiceChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  onServiceChange: (next: unknown) => void;
   onSubmit: (e: FormEvent) => void;
   pending: boolean;
   serviceId: string;
   services: ServiceRow[];
 }) {
+  const serviceLabels = Object.fromEntries(
+    services.map((s) => [s.id, `${s.project} / ${s.environment} · ${s.name}`])
+  );
+
   if (done) {
     return (
       <Alert>
         <AlertDescription>
-          Attaché : <code>{done}</code> est disponible dans les variables
-          d'environnement du service, prêt au prochain déploiement.
+          Attached: <code>{done}</code> is now in the service environment
+          variables, ready for the next deploy.
         </AlertDescription>
       </Alert>
     );
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="attach-service">Service</FieldLabel>
-          <select
-            className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-            id="attach-service"
-            onChange={onServiceChange}
-            required
-            value={serviceId}
-          >
-            {services.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.project} / {s.environment} · {s.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+    <DialogForm onSubmit={onSubmit}>
+      <DialogBody>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="attach-service">Service</FieldLabel>
+            <Select
+              items={serviceLabels}
+              onValueChange={onServiceChange}
+              value={serviceId}
+            >
+              <SelectTrigger className="w-full" id="attach-service">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex flex-col gap-0.5">
+                        <span>{s.name}</span>
+                        <span className="font-normal text-muted-foreground text-xs">
+                          {s.project} / {s.environment}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="attach-key">Nom de la variable</FieldLabel>
-          <Input
-            id="attach-key"
-            onChange={onKeyChange}
-            required
-            value={envVarKey}
-          />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="attach-key">Variable name</FieldLabel>
+            <Input
+              id="attach-key"
+              onChange={onKeyChange}
+              required
+              value={envVarKey}
+            />
+          </Field>
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-      </FieldGroup>
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+        </FieldGroup>
+      </DialogBody>
 
-      <DialogFooter className="mt-6">
+      <DialogFooter>
         <Button disabled={pending} type="submit">
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          Attacher
+          Attach
         </Button>
       </DialogFooter>
-    </form>
+    </DialogForm>
   );
 }

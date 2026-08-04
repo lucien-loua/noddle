@@ -16,7 +16,7 @@ import { getAuthState } from "@/server/auth";
 import { getServerMetrics } from "@/server/metrics";
 import { getServers } from "@/server/servers";
 
-export const Route = createFileRoute("/serveurs")({
+export const Route = createFileRoute("/servers")({
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {
@@ -46,12 +46,12 @@ function ServersPage() {
         canAdd ? (
           <Button onClick={handleOpen} size="sm">
             <PlusIcon data-icon="inline-start" />
-            Ajouter un serveur
+            Add server
           </Button>
         ) : null
       }
       email={email}
-      title="Serveurs"
+      title="Servers"
     >
       {canAdd ? <AddServerDialog onOpenChange={setOpen} open={open} /> : null}
       <ServersList initial={servers} />
@@ -59,7 +59,7 @@ function ServersPage() {
       {/* Sous la liste : « quelles machines ai-je » vient avant « comment
           vont-elles ». */}
       <section className="mt-8">
-        <h2 className="mb-3 font-medium text-sm">Ressources</h2>
+        <h2 className="mb-3 font-medium text-sm">Resources</h2>
         <ResourceGraphs series={metrics} />
       </section>
     </AppShell>

@@ -97,7 +97,7 @@ export const removeAccount = createServerFn({ method: "POST" })
     });
 
     if (data.userId === session.user.id) {
-      throw new Error("On ne peut pas supprimer son propre compte.");
+      throw new Error("You cannot delete your own account.");
     }
     await assertNotLastOwner(data.userId, "viewer");
 
@@ -131,7 +131,7 @@ async function assertNotLastOwner(
   });
   if (owners.length <= 1) {
     throw new Error(
-      "Ce compte est le dernier propriétaire : le retirer laisserait l'installation sans personne pour y donner accès."
+      "This account is the last owner — removing it would leave the installation with nobody able to grant access."
     );
   }
 }

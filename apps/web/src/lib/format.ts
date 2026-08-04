@@ -14,28 +14,28 @@ export type Tone = "busy" | "danger" | "neutral" | "ok";
  * réussi, puis l'application s'est mise à boucler et Noddle est intervenu ».
  */
 const DEPLOYMENT_LABELS: Record<string, { label: string; tone: Tone }> = {
-  building: { label: "Build en cours", tone: "busy" },
-  deploying: { label: "Bascule en cours", tone: "busy" },
-  failed: { label: "Échec", tone: "danger" },
-  queued: { label: "En attente", tone: "neutral" },
-  reverted_by_watch: { label: "Repris par la surveillance", tone: "danger" },
-  rolled_back: { label: "Annulé par Swarm", tone: "danger" },
-  succeeded: { label: "Déployé", tone: "ok" },
+  building: { label: "Building", tone: "busy" },
+  deploying: { label: "Deploying", tone: "busy" },
+  failed: { label: "Failed", tone: "danger" },
+  queued: { label: "Queued", tone: "neutral" },
+  reverted_by_watch: { label: "Reverted by watch", tone: "danger" },
+  rolled_back: { label: "Rolled back by Swarm", tone: "danger" },
+  succeeded: { label: "Deployed", tone: "ok" },
 };
 
 const SERVICE_LABELS: Record<string, { label: string; tone: Tone }> = {
-  crashed: { label: "En échec", tone: "danger" },
-  created: { label: "Jamais déployé", tone: "neutral" },
-  deploying: { label: "Déploiement", tone: "busy" },
-  running: { label: "En service", tone: "ok" },
-  stopped: { label: "Arrêté", tone: "neutral" },
+  crashed: { label: "Crashed", tone: "danger" },
+  created: { label: "Never deployed", tone: "neutral" },
+  deploying: { label: "Deploying", tone: "busy" },
+  running: { label: "Running", tone: "ok" },
+  stopped: { label: "Stopped", tone: "neutral" },
 };
 
 const BACKUP_LABELS: Record<string, { label: string; tone: Tone }> = {
-  completed: { label: "Sauvegardée", tone: "ok" },
-  failed: { label: "Échec", tone: "danger" },
-  queued: { label: "En attente", tone: "neutral" },
-  running: { label: "En cours", tone: "busy" },
+  completed: { label: "Completed", tone: "ok" },
+  failed: { label: "Failed", tone: "danger" },
+  queued: { label: "Queued", tone: "neutral" },
+  running: { label: "Running", tone: "busy" },
 };
 
 /**
@@ -47,9 +47,9 @@ const BACKUP_LABELS: Record<string, { label: string; tone: Tone }> = {
  * moment précis où l'on cherche à se rassurer.
  */
 const BACKUP_KIND_LABELS: Record<string, string> = {
-  manual: "Manuelle",
-  pre_restore: "Avant restauration",
-  scheduled: "Planifiée",
+  manual: "Manual",
+  pre_restore: "Before restore",
+  scheduled: "Scheduled",
 };
 
 export function backupLabel(status: string): { label: string; tone: Tone } {
@@ -65,7 +65,7 @@ export function byteSize(bytes: number): string {
   if (bytes === 0) {
     return "—";
   }
-  const units = ["o", "Ko", "Mo", "Go", "To"];
+  const units = ["B", "KB", "MB", "GB", "TB"];
   const exp = Math.min(
     Math.floor(Math.log(bytes) / Math.log(1024)),
     units.length - 1
@@ -107,9 +107,9 @@ export function dotClass(tone: Tone): string {
 }
 
 const TRIGGER_LABELS: Record<string, string> = {
-  manual: "manuel",
-  rollback: "retour arrière",
-  watch_revert: "surveillance",
+  manual: "manual",
+  rollback: "rollback",
+  watch_revert: "watch",
   webhook: "webhook",
 };
 
@@ -124,15 +124,15 @@ const DAY = 86_400;
 export function relativeTime(iso: string): string {
   const seconds = Math.round((Date.now() - Date.parse(iso)) / 1000);
   if (seconds < MINUTE) {
-    return "à l'instant";
+    return "just now";
   }
   if (seconds < HOUR) {
-    return `il y a ${Math.floor(seconds / MINUTE)} min`;
+    return `${Math.floor(seconds / MINUTE)}m ago`;
   }
   if (seconds < DAY) {
-    return `il y a ${Math.floor(seconds / HOUR)} h`;
+    return `${Math.floor(seconds / HOUR)}h ago`;
   }
-  return `il y a ${Math.floor(seconds / DAY)} j`;
+  return `${Math.floor(seconds / DAY)}d ago`;
 }
 
 export function shortSha(sha: string | null): string {
@@ -148,9 +148,9 @@ export function duration(startIso: string, endIso: string | null): string {
     (Date.parse(endIso) - Date.parse(startIso)) / 1000
   );
   if (seconds < MINUTE) {
-    return `${seconds} s`;
+    return `${seconds}s`;
   }
-  return `${Math.floor(seconds / MINUTE)} min ${seconds % MINUTE} s`;
+  return `${Math.floor(seconds / MINUTE)}m ${seconds % MINUTE}s`;
 }
 
 /**

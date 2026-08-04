@@ -64,9 +64,9 @@ import {
 const POLL_MS = 3000;
 
 const SCHEDULES: { label: string; value: Schedule }[] = [
-  { label: "Jamais", value: "off" },
-  { label: "Chaque jour", value: "daily" },
-  { label: "Chaque semaine", value: "weekly" },
+  { label: "Never", value: "off" },
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
 ];
 
 type Schedule = "daily" | "off" | "weekly";
@@ -141,7 +141,7 @@ function ScheduleControl({
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-t pt-3">
-      <span className="text-muted-foreground text-xs">Automatique</span>
+      <span className="text-muted-foreground text-xs">Automatic</span>
       <div className="flex gap-1">
         {SCHEDULES.map((option) => (
           <ScheduleButton
@@ -156,7 +156,7 @@ function ScheduleControl({
 
       {value === "off" ? null : (
         <span className="flex items-center gap-2 text-muted-foreground text-xs">
-          en gardant
+          keeping
           <Input
             className="h-7 w-16 text-xs"
             inputMode="numeric"
@@ -169,7 +169,7 @@ function ScheduleControl({
 
       {save.isError ? (
         <span className="text-destructive text-xs">
-          {errorMessage(save.error, "échec")}
+          {errorMessage(save.error, "failed")}
         </span>
       ) : null}
     </div>
@@ -250,12 +250,12 @@ export function BackupPanel({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">
-          Vers le stockage S3 de l'installation.
+          To this installation's S3 storage.
         </p>
         {canCreate ? (
           <Button disabled={run.isPending} onClick={handleBackup} size="sm">
             {run.isPending ? <Spinner /> : null}
-            Sauvegarder
+            Back up now
           </Button>
         ) : null}
       </div>
@@ -263,7 +263,7 @@ export function BackupPanel({
       {run.isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {errorMessage(run.error, "sauvegarde impossible")}
+            {errorMessage(run.error, "backup failed")}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -274,10 +274,10 @@ export function BackupPanel({
             <ArchiveIcon />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle>Aucune sauvegarde</EmptyTitle>
+            <EmptyTitle>No backups yet</EmptyTitle>
             <EmptyDescription>
-              La première sauvegarde de {databaseName} sera restaurable depuis
-              cette liste.
+              The first backup of {databaseName} will be restorable from this
+              list.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -285,11 +285,11 @@ export function BackupPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Statut</TableHead>
-              <TableHead>Origine</TableHead>
-              <TableHead>Taille</TableHead>
-              <TableHead>Durée</TableHead>
-              <TableHead>Prise</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Taken</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -354,14 +354,14 @@ function BackupLine({
             n'est pas une option qu'on propose. Le serveur le revérifie. */}
         {backup.status === "completed" && canRestore ? (
           <Button onClick={handleRestore} size="sm" variant="outline">
-            Restaurer
+            Restore
           </Button>
         ) : (
           <span
             className="text-muted-foreground text-xs"
             title={backup.errorMessage ?? undefined}
           >
-            {backup.errorMessage ? "voir l'erreur" : "—"}
+            {backup.errorMessage ? "see error" : "—"}
           </span>
         )}
       </TableCell>
@@ -400,21 +400,19 @@ export function RestoreDialog({
     <Dialog onOpenChange={onOpenChange} open={backup !== null}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Restaurer {databaseName} ?</DialogTitle>
+          <DialogTitle>Restore {databaseName}?</DialogTitle>
           <DialogDescription>
-            Les données actuelles de cette base seront{" "}
-            <strong>définitivement remplacées</strong> par celles de la
-            sauvegarde
-            {backup ? ` prise ${relativeTime(backup.createdAt)}` : ""}. Noddle
-            prend automatiquement une sauvegarde de sûreté juste avant, pour que
-            l'opération reste réversible.
+            The current data in this database will be{" "}
+            <strong>permanently replaced</strong> by the backup
+            {backup ? ` taken ${relativeTime(backup.createdAt)}` : ""}. Noddle
+            automatically takes a safety backup just before, so the operation
+            stays reversible.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
           <Label htmlFor="confirmName">
-            Tapez <code className="font-mono">{databaseName}</code> pour
-            confirmer
+            Type <code className="font-mono">{databaseName}</code> to confirm
           </Label>
           <Input
             autoComplete="off"
@@ -425,14 +423,14 @@ export function RestoreDialog({
         </div>
 
         <DialogFooter>
-          <DialogClose render={<Button variant="outline">Annuler</Button>} />
+          <DialogClose render={<Button variant="outline">Cancel</Button>} />
           <Button
             disabled={typed !== databaseName || pending}
             onClick={handleConfirm}
             variant="destructive"
           >
             {pending ? <Spinner /> : null}
-            Restaurer
+            Restore
           </Button>
         </DialogFooter>
       </DialogContent>

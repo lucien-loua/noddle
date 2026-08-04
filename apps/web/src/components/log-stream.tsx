@@ -175,9 +175,9 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-medium text-sm">Logs de build</h2>
+        <h2 className="font-medium text-sm">Build logs</h2>
         <Badge variant={live ? "secondary" : "outline"}>
-          {live ? "en direct" : "terminé"}
+          {live ? "live" : "finished"}
         </Badge>
       </div>
 
@@ -191,7 +191,7 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
       >
         {text.length === 0 ? (
           <span className="text-muted-foreground">
-            En attente de la première ligne…
+            Waiting for the first line…
           </span>
         ) : null}
 
@@ -199,7 +199,7 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
           block.kind === "group" ? (
             <details key={block.id}>
               <summary className="cursor-pointer text-muted-foreground">
-                {block.lines.length} lignes de build
+                {block.lines.length} build lines
               </summary>
               {block.lines.map((line) => (
                 <div key={line.id}>{line.text}</div>

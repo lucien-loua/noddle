@@ -32,7 +32,7 @@ export const connectRepo = createServerFn({ method: "POST" })
         .values({ name: data.projectName })
         .returning();
       if (!created) {
-        throw new Error("création du projet impossible");
+        throw new Error("could not create project");
       }
       project = created;
     }
@@ -49,7 +49,7 @@ export const connectRepo = createServerFn({ method: "POST" })
         .values({ name: data.environmentName, projectId: project.id })
         .returning();
       if (!created) {
-        throw new Error("création de l'environnement impossible");
+        throw new Error("could not create environment");
       }
       environment = created;
     }
@@ -69,7 +69,7 @@ export const connectRepo = createServerFn({ method: "POST" })
       })
       .returning();
     if (!service) {
-      throw new Error("création du service impossible");
+      throw new Error("could not create service");
     }
 
     return { serviceId: service.id };

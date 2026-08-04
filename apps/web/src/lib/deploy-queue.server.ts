@@ -23,7 +23,7 @@ export async function queueServiceDeploy(
     where: eq(services.id, serviceId),
   });
   if (!service) {
-    throw new Error("service introuvable");
+    throw new Error("service not found");
   }
 
   const [created] = await db
@@ -36,7 +36,7 @@ export async function queueServiceDeploy(
     })
     .returning();
   if (!created) {
-    throw new Error("création du déploiement impossible");
+    throw new Error("could not create deployment");
   }
 
   await db
@@ -56,7 +56,7 @@ export async function queueStackDeploy(
     where: eq(stacks.id, stackId),
   });
   if (!stack) {
-    throw new Error("pile introuvable");
+    throw new Error("stack not found");
   }
 
   const [created] = await db
@@ -69,7 +69,7 @@ export async function queueStackDeploy(
     })
     .returning();
   if (!created) {
-    throw new Error("création du déploiement de pile impossible");
+    throw new Error("could not create stack deployment");
   }
 
   await db

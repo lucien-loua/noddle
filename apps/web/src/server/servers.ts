@@ -73,7 +73,7 @@ export const addServer = createServerFn({ method: "POST" })
       })
       .returning();
     if (!created) {
-      throw new Error("enregistrement du serveur impossible");
+      throw new Error("could not register server");
     }
 
     await db

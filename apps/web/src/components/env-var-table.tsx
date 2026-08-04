@@ -157,10 +157,10 @@ function KeyCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Input
-      aria-label="Nom de la variable"
+      aria-label="Variable name"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
-      placeholder="NOM_DE_VARIABLE"
+      placeholder="VARIABLE_NAME"
       spellCheck={false}
       value={row.key}
     />
@@ -176,7 +176,7 @@ function ValueCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Input
-      aria-label="Valeur"
+      aria-label="Value"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
       // Un secret déjà enregistré arrive avec `value: null`. Le placeholder dit
@@ -199,7 +199,7 @@ function SecretCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Checkbox
-      aria-label="Marquer comme secret"
+      aria-label="Mark as secret"
       checked={row.isSecret}
       onCheckedChange={handleChange}
     />
@@ -269,11 +269,11 @@ export function EnvVarTable({ onSave, pending, saved }: Props) {
     () => [
       columnHelper.accessor("key", {
         cell: (info) => <KeyCell onUpdate={update} row={info.row.original} />,
-        header: "Clé",
+        header: "Key",
       }),
       columnHelper.accessor("value", {
         cell: (info) => <ValueCell onUpdate={update} row={info.row.original} />,
-        header: "Valeur",
+        header: "Value",
       }),
       columnHelper.accessor("isSecret", {
         cell: (info) => (
@@ -301,57 +301,51 @@ export function EnvVarTable({ onSave, pending, saved }: Props) {
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-medium text-sm">Variables d'environnement</h2>
+        <h2 className="font-medium text-sm">Environment variables</h2>
         <Button onClick={addRow} size="sm" variant="outline">
           <PlusIcon data-icon="inline-start" />
-          Ajouter
+          Add variable
         </Button>
       </div>
 
       {draft.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          Aucune variable définie.
+          No environment variables yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {changes.length > 0 ? (
         <div className="mt-4 rounded-lg border border-ring bg-muted/40 p-3">
           <h3 className="mb-2 font-medium text-sm">
-            {changes.length} modification{changes.length > 1 ? "s" : ""} à
-            enregistrer
+            {changes.length} change{changes.length > 1 ? "s" : ""} to save
           </h3>
 
           <div className="flex flex-col gap-0.5">
@@ -393,15 +387,15 @@ export function EnvVarTable({ onSave, pending, saved }: Props) {
 
           <div className="mt-3 flex items-center gap-2">
             <Button disabled={pending} onClick={commit} size="sm">
-              {confirming ? "Confirmer l'enregistrement" : "Enregistrer"}
+              {confirming ? "Confirm save" : "Save"}
             </Button>
 
             <Button onClick={reset} size="sm" variant="ghost">
-              Annuler
+              Cancel
             </Button>
 
             <span className="text-muted-foreground text-xs">
-              Prend effet au prochain déploiement.
+              Takes effect on the next deploy.
             </span>
           </div>
         </div>

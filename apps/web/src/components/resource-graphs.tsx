@@ -172,10 +172,9 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
           <ChartLineIcon />
         </EmptyMedia>
         <EmptyHeader>
-          <EmptyTitle>Aucune machine</EmptyTitle>
+          <EmptyTitle>No machines</EmptyTitle>
           <EmptyDescription>
-            Les ressources sont relevées toutes les minutes sur chaque serveur
-            connecté.
+            Resources are sampled every minute on every connected server.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -188,28 +187,28 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
         <div className="rounded-md border p-3" key={s.serverId}>
           <div className="mb-3 flex items-center gap-2">
             <span className="font-medium text-sm">{s.serverName}</span>
-            <Badge variant="outline">{s.cpuCount} cœurs</Badge>
+            <Badge variant="outline">{s.cpuCount} cores</Badge>
             <ServerFreshness latest={s.latest} />
           </div>
 
           {s.latest ? (
             <div className="space-y-2">
               <MetricRow
-                label="Charge"
+                label="Load"
                 max={s.cpuCount}
                 points={s.points}
                 reading={s.latest.cpuLoad1.toFixed(2)}
                 value={readLoad}
               />
               <MetricRow
-                label="Mémoire"
+                label="Memory"
                 max={1}
                 points={s.points}
                 reading={pct(s.latest.memoryUsedRatio)}
                 value={readMemory}
               />
               <MetricRow
-                label="Disque"
+                label="Disk"
                 max={1}
                 points={s.points}
                 reading={pct(s.latest.diskUsedRatio)}
@@ -218,7 +217,7 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
             </div>
           ) : (
             <p className="text-muted-foreground text-xs">
-              Aucun relevé sur les six dernières heures.
+              No samples in the last six hours.
             </p>
           )}
         </div>
@@ -237,19 +236,19 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
  */
 function ServerFreshness({ latest }: { latest: MetricPoint | null }) {
   if (!latest) {
-    return <Badge variant="destructive">aucun relevé</Badge>;
+    return <Badge variant="destructive">no samples</Badge>;
   }
   const age = Date.now() - Date.parse(latest.sampledAt);
   if (age > GAP_MS) {
     return (
       <Badge variant="destructive">
-        figé <RelativeTime iso={latest.sampledAt} />
+        frozen <RelativeTime iso={latest.sampledAt} />
       </Badge>
     );
   }
   return (
     <span className="text-muted-foreground text-xs">
-      relevé <RelativeTime iso={latest.sampledAt} />
+      sampled <RelativeTime iso={latest.sampledAt} />
     </span>
   );
 }

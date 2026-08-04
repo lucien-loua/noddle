@@ -60,7 +60,7 @@ export async function requirePermission(
 
   if (!result.success) {
     throw new ForbiddenError(
-      `Action refusée : votre rôle ne permet pas « ${permission.action} » sur ${permission.resource}.`
+      `Action refused: your role does not allow "${permission.action}" on ${permission.resource}.`
     );
   }
   return session;

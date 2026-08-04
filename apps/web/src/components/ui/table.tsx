@@ -5,7 +5,10 @@ import { cn } from "@/lib/utils";
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
-      className="relative w-full overflow-x-auto"
+      // `scroll-fade-x` : un tableau plus large que son conteneur se coupait
+      // net au bord, sans rien pour dire qu'il continue. Le dégradé remplace
+      // la barre que `no-scrollbar` retire.
+      className="scroll-fade-x no-scrollbar relative w-full overflow-x-auto"
       data-slot="table-container"
     >
       <table

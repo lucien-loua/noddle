@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ComptesRouteImport } from './routes/comptes'
+import { Route as AccountsRouteImport } from './routes/accounts'
+import { Route as BackupsRouteImport } from './routes/backups'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as SauvegardesRouteImport } from './routes/sauvegardes'
-import { Route as ServeursRouteImport } from './routes/serveurs'
+import { Route as ServersRouteImport } from './routes/servers'
+import { Route as DatabasesDatabaseIdRouteImport } from './routes/databases.$databaseId'
+import { Route as ServicesServiceIdRouteImport } from './routes/services.$serviceId'
+import { Route as StacksStackIdRouteImport } from './routes/stacks.$stackId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
@@ -25,9 +28,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ComptesRoute = ComptesRouteImport.update({
-  id: '/comptes',
-  path: '/comptes',
+const AccountsRoute = AccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackupsRoute = BackupsRouteImport.update({
+  id: '/backups',
+  path: '/backups',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -40,14 +48,24 @@ const NotificationsRoute = NotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SauvegardesRoute = SauvegardesRouteImport.update({
-  id: '/sauvegardes',
-  path: '/sauvegardes',
+const ServersRoute = ServersRouteImport.update({
+  id: '/servers',
+  path: '/servers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ServeursRoute = ServeursRouteImport.update({
-  id: '/serveurs',
-  path: '/serveurs',
+const DatabasesDatabaseIdRoute = DatabasesDatabaseIdRouteImport.update({
+  id: '/databases/$databaseId',
+  path: '/databases/$databaseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServicesServiceIdRoute = ServicesServiceIdRouteImport.update({
+  id: '/services/$serviceId',
+  path: '/services/$serviceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StacksStackIdRoute = StacksStackIdRouteImport.update({
+  id: '/stacks/$stackId',
+  path: '/stacks/$stackId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -74,11 +92,14 @@ const ApiWebhooksStackStackIdRoute = ApiWebhooksStackStackIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/comptes': typeof ComptesRoute
+  '/accounts': typeof AccountsRoute
+  '/backups': typeof BackupsRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
-  '/sauvegardes': typeof SauvegardesRoute
-  '/serveurs': typeof ServeursRoute
+  '/servers': typeof ServersRoute
+  '/databases/$databaseId': typeof DatabasesDatabaseIdRoute
+  '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/stacks/$stackId': typeof StacksStackIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -86,11 +107,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/comptes': typeof ComptesRoute
+  '/accounts': typeof AccountsRoute
+  '/backups': typeof BackupsRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
-  '/sauvegardes': typeof SauvegardesRoute
-  '/serveurs': typeof ServeursRoute
+  '/servers': typeof ServersRoute
+  '/databases/$databaseId': typeof DatabasesDatabaseIdRoute
+  '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/stacks/$stackId': typeof StacksStackIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -99,11 +123,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/comptes': typeof ComptesRoute
+  '/accounts': typeof AccountsRoute
+  '/backups': typeof BackupsRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
-  '/sauvegardes': typeof SauvegardesRoute
-  '/serveurs': typeof ServeursRoute
+  '/servers': typeof ServersRoute
+  '/databases/$databaseId': typeof DatabasesDatabaseIdRoute
+  '/services/$serviceId': typeof ServicesServiceIdRoute
+  '/stacks/$stackId': typeof StacksStackIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
@@ -113,11 +140,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/comptes'
+    | '/accounts'
+    | '/backups'
     | '/login'
     | '/notifications'
-    | '/sauvegardes'
-    | '/serveurs'
+    | '/servers'
+    | '/databases/$databaseId'
+    | '/services/$serviceId'
+    | '/stacks/$stackId'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -125,11 +155,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/comptes'
+    | '/accounts'
+    | '/backups'
     | '/login'
     | '/notifications'
-    | '/sauvegardes'
-    | '/serveurs'
+    | '/servers'
+    | '/databases/$databaseId'
+    | '/services/$serviceId'
+    | '/stacks/$stackId'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -137,11 +170,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/comptes'
+    | '/accounts'
+    | '/backups'
     | '/login'
     | '/notifications'
-    | '/sauvegardes'
-    | '/serveurs'
+    | '/servers'
+    | '/databases/$databaseId'
+    | '/services/$serviceId'
+    | '/stacks/$stackId'
     | '/api/auth/$'
     | '/api/logs/$deploymentId'
     | '/api/webhooks/service/$serviceId'
@@ -150,11 +186,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ComptesRoute: typeof ComptesRoute
+  AccountsRoute: typeof AccountsRoute
+  BackupsRoute: typeof BackupsRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
-  SauvegardesRoute: typeof SauvegardesRoute
-  ServeursRoute: typeof ServeursRoute
+  ServersRoute: typeof ServersRoute
+  DatabasesDatabaseIdRoute: typeof DatabasesDatabaseIdRoute
+  ServicesServiceIdRoute: typeof ServicesServiceIdRoute
+  StacksStackIdRoute: typeof StacksStackIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
@@ -170,11 +209,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/comptes': {
-      id: '/comptes'
-      path: '/comptes'
-      fullPath: '/comptes'
-      preLoaderRoute: typeof ComptesRouteImport
+    '/accounts': {
+      id: '/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backups': {
+      id: '/backups'
+      path: '/backups'
+      fullPath: '/backups'
+      preLoaderRoute: typeof BackupsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -191,18 +237,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sauvegardes': {
-      id: '/sauvegardes'
-      path: '/sauvegardes'
-      fullPath: '/sauvegardes'
-      preLoaderRoute: typeof SauvegardesRouteImport
+    '/servers': {
+      id: '/servers'
+      path: '/servers'
+      fullPath: '/servers'
+      preLoaderRoute: typeof ServersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/serveurs': {
-      id: '/serveurs'
-      path: '/serveurs'
-      fullPath: '/serveurs'
-      preLoaderRoute: typeof ServeursRouteImport
+    '/databases/$databaseId': {
+      id: '/databases/$databaseId'
+      path: '/databases/$databaseId'
+      fullPath: '/databases/$databaseId'
+      preLoaderRoute: typeof DatabasesDatabaseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services/$serviceId': {
+      id: '/services/$serviceId'
+      path: '/services/$serviceId'
+      fullPath: '/services/$serviceId'
+      preLoaderRoute: typeof ServicesServiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stacks/$stackId': {
+      id: '/stacks/$stackId'
+      path: '/stacks/$stackId'
+      fullPath: '/stacks/$stackId'
+      preLoaderRoute: typeof StacksStackIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -238,11 +298,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ComptesRoute: ComptesRoute,
+  AccountsRoute: AccountsRoute,
+  BackupsRoute: BackupsRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
-  SauvegardesRoute: SauvegardesRoute,
-  ServeursRoute: ServeursRoute,
+  ServersRoute: ServersRoute,
+  DatabasesDatabaseIdRoute: DatabasesDatabaseIdRoute,
+  ServicesServiceIdRoute: ServicesServiceIdRoute,
+  StacksStackIdRoute: StacksStackIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,

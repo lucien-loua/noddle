@@ -11,7 +11,7 @@ import { BackupDestinationPanel } from "@/components/backup-destination-panel";
 import { getAuthState } from "@/server/auth";
 import { getDestination } from "@/server/backups";
 
-export const Route = createFileRoute("/sauvegardes")({
+export const Route = createFileRoute("/backups")({
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {
@@ -31,12 +31,11 @@ function BackupsPage() {
   const { destination, email, role } = Route.useLoaderData();
 
   return (
-    <AppShell email={email} title="Sauvegardes">
+    <AppShell email={email} title="Backups">
       <p className="mb-6 max-w-2xl text-muted-foreground text-sm">
-        Un stockage compatible S3 pour toute l'installation. Les identifiants
-        sont chiffrés au repos et ne quittent jamais le plan de contrôle : ce
-        sont les serveurs de Noddle qui poussent les dumps, jamais vos machines
-        cibles.
+        One S3-compatible store for the whole installation. Credentials are
+        encrypted at rest and never leave the control plane — Noddle's own
+        servers push the dumps, never your target machines.
       </p>
       <BackupDestinationPanel initial={destination} role={role} />
     </AppShell>

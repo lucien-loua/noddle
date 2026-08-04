@@ -83,12 +83,12 @@ export function NotificationChannels({
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
-          Noddle prévient quand un déploiement échoue, quand la surveillance
-          reprend la main, ou quand une sauvegarde casse.
+          Noddle alerts you when a deploy fails, when the watch takes over, or
+          when a backup breaks.
         </p>
         {canManage ? (
           <Button onClick={handleOpen} size="sm">
-            Ajouter
+            Add channel
           </Button>
         ) : null}
       </div>
@@ -103,10 +103,10 @@ export function NotificationChannels({
             <BellIcon />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle>Aucun canal</EmptyTitle>
+            <EmptyTitle>No channels</EmptyTitle>
             <EmptyDescription>
-              Sans canal, un déploiement repris par la surveillance ne se voit
-              que si quelqu'un ouvre le dashboard.
+              Without a channel, a deploy reverted by the watch is only visible
+              if someone opens the dashboard.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -169,9 +169,9 @@ function ChannelLine({
         <span className="flex items-center gap-2">
           <span className="truncate font-medium text-sm">{channel.name}</span>
           <Badge variant="outline">{KIND_LABEL[channel.kind]}</Badge>
-          {channel.enabled ? null : <Badge variant="outline">coupé</Badge>}
+          {channel.enabled ? null : <Badge variant="outline">muted</Badge>}
           {channel.notifySuccess ? (
-            <Badge variant="outline">succès inclus</Badge>
+            <Badge variant="outline">success included</Badge>
           ) : null}
         </span>
         <ChannelState channel={channel} />
@@ -186,7 +186,7 @@ function ChannelLine({
             variant="outline"
           >
             {test.isPending ? <Spinner /> : null}
-            Éprouver
+            Test
           </Button>
           <Button
             disabled={toggle.isPending}
@@ -194,7 +194,7 @@ function ChannelLine({
             size="sm"
             variant="outline"
           >
-            {channel.enabled ? "Couper" : "Réactiver"}
+            {channel.enabled ? "Mute" : "Unmute"}
           </Button>
           <Button
             disabled={remove.isPending}
@@ -202,7 +202,7 @@ function ChannelLine({
             size="sm"
             variant="ghost"
           >
-            Supprimer
+            Delete
           </Button>
         </>
       ) : null}
@@ -222,20 +222,20 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
   if (channel.lastError) {
     return (
       <span className="truncate text-destructive text-xs">
-        En panne — {channel.lastError}
+        Failing — {channel.lastError}
       </span>
     );
   }
   if (channel.lastSuccessAt) {
     return (
       <span className="text-muted-foreground text-xs">
-        Dernier envoi <RelativeTime iso={channel.lastSuccessAt} />
+        Last sent <RelativeTime iso={channel.lastSuccessAt} />
       </span>
     );
   }
   return (
     <span className="text-muted-foreground text-xs">
-      Jamais sollicité — éprouvez-le pour savoir s'il fonctionne
+      Never used — test it to find out whether it works
     </span>
   );
 }
@@ -289,10 +289,10 @@ function AddChannelDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Ajouter un canal</DialogTitle>
+            <DialogTitle>Add a channel</DialogTitle>
             <DialogDescription>
-              L'URL est chiffrée au repos et n'est jamais réaffichée — qui la
-              détient peut écrire dans le salon.
+              The URL is encrypted at rest and never shown again — whoever holds
+              it can post in the channel.
             </DialogDescription>
           </DialogHeader>
 
@@ -322,11 +322,11 @@ function AddChannelDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="channelName">Nom</Label>
+              <Label htmlFor="channelName">Name</Label>
               <Input
                 id="channelName"
                 onChange={handleName}
-                placeholder="Alertes production"
+                placeholder="Production alerts"
                 required
                 value={name}
               />
@@ -351,14 +351,14 @@ function AddChannelDialog({
                 onCheckedChange={handleSuccess}
               />
               <Label className="font-normal text-sm" htmlFor="notifySuccess">
-                Prévenir aussi des déploiements réussis
+                Also notify on successful deploys
               </Label>
             </div>
 
             {add.isError ? (
               <Alert variant="destructive">
                 <AlertDescription>
-                  {errorMessage(add.error, "canal refusé")}
+                  {errorMessage(add.error, "channel rejected")}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -367,7 +367,7 @@ function AddChannelDialog({
           <DialogFooter>
             <Button disabled={add.isPending} type="submit">
               {add.isPending ? <Spinner /> : null}
-              Ajouter
+              Add channel
             </Button>
           </DialogFooter>
         </form>

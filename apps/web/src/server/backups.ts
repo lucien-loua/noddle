@@ -148,7 +148,7 @@ export const saveDestination = createServerFn({ method: "POST" })
       })
       .returning();
     if (!created) {
-      throw new Error("création de la destination impossible");
+      throw new Error("could not create destination");
     }
     await db
       .update(backupDestinations)
@@ -181,7 +181,7 @@ export const saveBackupSchedule = createServerFn({ method: "POST" })
     const destination = await db.query.backupDestinations.findFirst();
     if (!destination && data.schedule !== "off") {
       throw new Error(
-        "aucune destination S3 configurée — une sauvegarde planifiée ne partirait nulle part"
+        "no S3 destination configured — a scheduled backup would go nowhere"
       );
     }
 
@@ -231,12 +231,12 @@ export const triggerBackup = createServerFn({ method: "POST" })
       where: eq(databases.id, data.databaseId),
     });
     if (!database) {
-      throw new Error("base de données introuvable");
+      throw new Error("database not found");
     }
     const destination = await db.query.backupDestinations.findFirst();
     if (!destination) {
       throw new Error(
-        "aucune destination S3 configurée — renseignez-en une avant de sauvegarder"
+        "no S3 destination configured — set one up before backing up"
       );
     }
 
@@ -255,7 +255,7 @@ export const triggerBackup = createServerFn({ method: "POST" })
       })
       .returning();
     if (!created) {
-      throw new Error("création de la sauvegarde impossible");
+      throw new Error("could not create backup");
     }
 
     await enqueueDeploy({ backupId: created.id, kind: "backup" });
@@ -279,7 +279,7 @@ export const triggerRestore = createServerFn({ method: "POST" })
       where: eq(databases.id, data.databaseId),
     });
     if (!database) {
-      throw new Error("base de données introuvable");
+      throw new Error("database not found");
     }
     if (data.confirmName !== database.name) {
       throw new Error(
@@ -291,11 +291,11 @@ export const triggerRestore = createServerFn({ method: "POST" })
       where: eq(backups.id, data.backupId),
     });
     if (!backup || backup.databaseId !== database.id) {
-      throw new Error("sauvegarde introuvable pour cette base");
+      throw new Error("backup not found for this database");
     }
     if (backup.status !== "completed") {
       throw new Error(
-        "seule une sauvegarde complète peut être restaurée — celle-ci ne l'est pas"
+        "only a completed backup can be restored — this one is not"
       );
     }
 
