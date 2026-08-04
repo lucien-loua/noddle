@@ -34,6 +34,18 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
+  /* TanStack Charts lit sa palette dans --ts-chart-N. On la branche sur les
+     jetons du preset shadcn plutot que de laisser ses defauts (#2563eb et
+     consorts), qui n'existent nulle part ailleurs dans Noddle. Passer par les
+     variables preserve aussi la bascule clair/sombre sans reconstruire la
+     definition du graphe. */
+  --ts-chart-1: var(--chart-1);
+  --ts-chart-2: var(--chart-2);
+  --ts-chart-3: var(--chart-3);
+  --ts-chart-4: var(--chart-4);
+  --ts-chart-5: var(--chart-5);
+  --ts-chart-6: var(--muted-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);

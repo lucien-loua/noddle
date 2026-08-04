@@ -89,6 +89,13 @@ function Sparkline({
         margin: 1,
         marks: [
           lineY(data, {
+            // `currentColor` plutôt que la palette catégorielle, même une
+            // fois celle-ci branchée sur les jetons shadcn : `--chart-1` vaut
+            // oklch(0.87 0 0), un gris très clair pensé pour des surfaces
+            // pleines — illisible en trait de 1,2 px sur une carte blanche.
+            // Une série UNIQUE n'est de toute façon pas catégorielle, donc
+            // elle suit la couleur du texte, ici `text-muted-foreground`.
+            stroke: "currentColor",
             strokeWidth: 1.2,
             x: readX,
             y: readY,
@@ -114,6 +121,7 @@ function Sparkline({
         },
       }}
       height={HEIGHT}
+      tabIndex={-1}
       width={WIDTH}
     />
   );
