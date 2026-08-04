@@ -101,6 +101,11 @@ export type DeployJobData =
   | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-database"; databaseId: string }
   | { kind: "provision-server"; serverId: string }
+  // Sur CETTE file, jamais la sienne : `garbage-collect` supprime les couches
+  // qu'aucun manifeste ne référence, et une couche EN COURS D'ENVOI est
+  // exactement dans ce cas. La concurrence 1 de cette file est la seule chose
+  // qui garantit qu'un GC ne tourne pas pendant un push.
+  | { kind: "prune-registry" }
   | { backupId: string; databaseId: string; kind: "restore" }
   | { kind: "rollback"; imageTag: string; serviceId: string }
   | { kind: "rollback-stack"; sourceDeploymentId: string; stackId: string };
@@ -122,6 +127,11 @@ export async function runJob(
   if (data.kind === "provision-server") {
     const { provisionServer } = await import("#provision");
     await provisionServer(ctx, data.serverId);
+    return;
+  }
+  if (data.kind === "prune-registry") {
+    const { sweepRegistry } = await import("#registry-sweep");
+    await sweepRegistry(ctx);
     return;
   }
   if (data.kind === "provision-database") {

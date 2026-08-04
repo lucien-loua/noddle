@@ -210,6 +210,36 @@ await trustQueue.upsertJobScheduler(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Rétention du registre
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Le passage n'exécute RIEN lui-même : il dépose un job sur la file des
+// déploiements. C'est le point qui compte — `garbage-collect` supprime les
+// couches qu'aucun manifeste ne référence, et une couche en cours d'envoi est
+// exactement dans ce cas. Seule la concurrence 1 de cette file-là garantit
+// qu'un GC ne tourne jamais pendant un push. Même raison que les sauvegardes,
+// qui partagent la file pour ne pas se disputer la mémoire d'une machine à
+// 2 Go.
+//
+// Une heure : le registre grossit d'un déploiement à la fois, il n'y a rien à
+// rattraper plus vite que ça.
+
+const PRUNE_QUEUE = "noddle-registry-prune";
+
+const pruneQueue = new Queue(PRUNE_QUEUE, { connection });
+const pruneWorker = new Worker(
+  PRUNE_QUEUE,
+  () => deployQueue.add("prune-registry", { kind: "prune-registry" }),
+  { concurrency: 1, connection }
+);
+
+await pruneQueue.upsertJobScheduler(
+  "registry-prune",
+  { every: 3_600_000 },
+  { name: "registry-prune" }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Collecte des ressources
 // ─────────────────────────────────────────────────────────────────────────────
 //
@@ -240,6 +270,7 @@ for (const w of [
   backupSweepWorker,
   metricsWorker,
   trustWorker,
+  pruneWorker,
 ]) {
   w.on("failed", (job, err) => {
     process.stderr.write(`job ${job?.id} échoué : ${err.message}\n`);
@@ -255,6 +286,7 @@ async function shutdown(): Promise<void> {
     backupSweepWorker.close(),
     metricsWorker.close(),
     trustWorker.close(),
+    pruneWorker.close(),
   ]);
   await logBus.close();
   await connection.quit();

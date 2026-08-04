@@ -41,7 +41,14 @@ import {
 import { eq, inArray } from "drizzle-orm";
 import { redeployImage, runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
-import { ensureRegistryTrust, pushImage, type RegistryConfig } from "#registry";
+import {
+  ensureRegistryTrust,
+  KEEP_PER_SERVICE,
+  pushImage,
+  type RegistryConfig,
+  registryImageTag,
+} from "#registry";
+import { sweepRegistry } from "#registry-sweep";
 import { removeService } from "#swarm";
 
 const execFileAsync = promisify(execFile);
@@ -58,6 +65,7 @@ const SERVICE_NAME = "noddle-reg";
 const ORIGIN = "/opt/noddle-reg-origin";
 const CERT_DIR = "/etc/noddle/registry";
 const REGISTRY_CONTAINER = "noddle-registry";
+const FIRST_FIELD = /\s/;
 
 let pass = 0;
 let fail = 0;
@@ -615,6 +623,99 @@ try {
     ok("et le rollback hérité converge quand même");
   } else {
     ko(`rollback hérité : ${legacyDep?.status} — ${legacyDep?.errorMessage}`);
+  }
+
+  // ── rétention : supprimer l'OBJET, pas seulement la ligne ────────────────
+  step("Rétention");
+  const volumeMb = async (): Promise<number> => {
+    const res = await exec(
+      managerSsh as Awaited<ReturnType<typeof connect>>,
+      `sudo docker exec ${REGISTRY_CONTAINER} du -sm /var/lib/registry`
+    );
+    return Number.parseInt(res.stdout.trim().split(FIRST_FIELD)[0] ?? "0", 10);
+  };
+
+  // Une image AVEC une couche exclusive : sans ça le GC n'a rien à rendre,
+  // puisque toutes les couches restent référencées par les autres versions —
+  // et « 0 Mo récupéré » serait alors indiscernable d'un GC cassé. Mesuré : la
+  // première tentative de cette vérification est tombée exactement là-dessus.
+  const fatTag = registryImageTag(registry, SERVICE_NAME, `fat-${Date.now()}`);
+  await exec(
+    managerSsh,
+    "sudo rm -rf /tmp/fat && mkdir -p /tmp/fat && cd /tmp/fat && " +
+      "head -c 120000000 /dev/urandom > gros.bin && " +
+      `printf 'FROM alpine:3\\nCOPY gros.bin /gros.bin\\n' > Dockerfile && ` +
+      `sudo docker build -q -t ${quoteArg(fatTag)} .`
+  );
+  await pushImage(managerSsh, registry, {
+    imageTag: fatTag,
+    removeLocal: true,
+  });
+
+  // Onze lignes de plus que la fenêtre, pour que celle-ci en sorte.
+  const [fatDep] = await db
+    .insert(deployments)
+    .values({
+      imageTag: fatTag,
+      serviceId: svc.id,
+      status: "succeeded",
+      trigger: "manual",
+    })
+    .returning();
+  for (let i = 0; i < KEEP_PER_SERVICE; i += 1) {
+    // biome-ignore lint/performance/noAwaitInLoops: décor séquentiel, volontaire
+    await db.insert(deployments).values({
+      imageTag: registryImageTag(registry, SERVICE_NAME, `pad-${i}`),
+      serviceId: svc.id,
+      status: "succeeded",
+      trigger: "manual",
+    });
+  }
+
+  const before = await volumeMb();
+  const swept = await sweepRegistry(ctx, { containerName: REGISTRY_CONTAINER });
+  const after = await volumeMb();
+
+  if (swept.purged.includes(fatTag)) {
+    ok(`la version hors fenêtre est purgée (${swept.purged.length} au total)`);
+  } else {
+    ko(
+      `la version hors fenêtre n'a pas été purgée : ${swept.purged.join(", ")}`
+    );
+  }
+
+  const purgedRow = await db.query.deployments.findFirst({
+    where: eq(deployments.id, fatDep?.id ?? ""),
+  });
+  if (purgedRow?.imagePurged) {
+    ok("la LIGNE d'historique reste, marquée comme purgée");
+  } else {
+    ko("image_purged n'a pas été posé sur la ligne");
+  }
+
+  // LE test. Supprimer un manifeste ne rend rien : seul le GC libère les
+  // octets. Un « purged » sans reprise de volume serait un dashboard propre
+  // sur un disque qui se remplit — exactement le défaut que la rétention
+  // corrige.
+  if (swept.collected && before - after > 50) {
+    ok(
+      `le garbage-collect a rendu ${before - after} Mo (${before} → ${after})`
+    );
+  } else {
+    ko(
+      `volume ${before} → ${after} Mo, collected=${swept.collected} — la ligne est effacée mais l'OBJET est resté`
+    );
+  }
+
+  // Et ce qui est DANS la fenêtre ne doit pas bouger : une rétention qui purge
+  // tout est aussi fausse qu'une qui ne purge rien.
+  const survivor = await db.query.deployments.findFirst({
+    where: eq(deployments.id, final.id),
+  });
+  if (survivor?.imagePurged === false) {
+    ok("le déploiement courant est épargné");
+  } else {
+    ko("le déploiement courant a été purgé");
   }
 } catch (err) {
   // SANS ce bloc, une exception traverse jusqu'au `finally`, qui sort en 0
