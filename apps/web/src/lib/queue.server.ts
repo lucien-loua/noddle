@@ -20,6 +20,8 @@ const DEPLOY_QUEUE = "noddle-deploy";
  * même pour un type.
  */
 export type DeployJob =
+  | { backupId: string; databaseId: string; kind: "restore" }
+  | { backupId: string; kind: "backup" }
   | { kind: "deploy"; deploymentId: string }
   | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-database"; databaseId: string }

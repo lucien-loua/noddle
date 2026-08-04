@@ -1,4 +1,5 @@
 import {
+  ArchiveIcon,
   HardDrivesIcon,
   SignOutIcon,
   SquaresFourIcon,
@@ -101,6 +102,20 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                       }
                     />
                     <span>Serveurs</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith("/sauvegardes")}
+                    render={<Link to="/sauvegardes" />}
+                    tooltip="Sauvegardes"
+                  >
+                    <ArchiveIcon
+                      weight={
+                        pathname.startsWith("/sauvegardes") ? "fill" : "regular"
+                      }
+                    />
+                    <span>Sauvegardes</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

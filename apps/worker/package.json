@@ -10,6 +10,7 @@
     "start": "node src/index.ts"
   },
   "dependencies": {
+    "@noddle/backup-store": "workspace:*",
     "@noddle/build-engine": "workspace:*",
     "@noddle/db": "workspace:*",
     "@noddle/proxy-config": "workspace:*",

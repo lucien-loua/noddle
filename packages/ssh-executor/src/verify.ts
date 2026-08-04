@@ -11,6 +11,7 @@
 //   node --experimental-strip-types packages/ssh-executor/src/verify.ts
 //
 // Il vise une vraie VM, pas un mock. La cible par défaut est celle du spike.
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -20,9 +21,14 @@ import {
   dockerClient,
   exec,
   execArgv,
+  execStream,
   quoteArg,
   type ServerCredentials,
 } from "#index";
+
+/** Empreinte relevée SUR la VM, pour la comparer à celle recalculée ici. */
+let remoteDigest = "";
+const WHITESPACE = /\s+/;
 
 const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
@@ -116,7 +122,111 @@ try {
     ko("streaming : aucun fragment reçu");
   }
 
-  // ── 7. dockerode à travers le tunnel SSH ────────────────────────────────
+  // ── 7. execStream : des OCTETS, pas du texte ────────────────────────────
+  // Le chemin des sauvegardes. `exec()` concatène en UTF-8 : sur un dump
+  // binaire il corrompt les octets. On fabrique 8 Mio d'aléa sur la VM, on
+  // relève son sha256 LÀ-BAS, puis on le fait traverser le canal et on
+  // recalcule ICI. Deux empreintes identiques prouvent le transport.
+  const REMOTE_BLOB = "/tmp/noddle-execstream-probe.bin";
+  await exec(
+    client,
+    `head -c 8388608 /dev/urandom > ${REMOTE_BLOB} && sha256sum ${REMOTE_BLOB}`
+  ).then((r) => {
+    remoteDigest = r.stdout.trim().split(WHITESPACE)[0] ?? "";
+  });
+
+  const streamed = await execStream(
+    client,
+    `cat ${REMOTE_BLOB}`,
+    async ({ stdout }) => {
+      const hash = createHash("sha256");
+      let bytes = 0;
+      for await (const chunk of stdout) {
+        bytes += (chunk as Buffer).length;
+        hash.update(chunk as Buffer);
+      }
+      return { bytes, digest: hash.digest("hex") };
+    }
+  );
+
+  if (streamed.value.bytes === 8_388_608) {
+    ok(`execStream : ${streamed.value.bytes} octets traversés`);
+  } else {
+    ko(`execStream : ${streamed.value.bytes} octets, attendu 8388608`);
+  }
+  if (streamed.value.digest === remoteDigest) {
+    ok(
+      `execStream : sha256 identique de bout en bout (${remoteDigest.slice(0, 16)}…)`
+    );
+  } else {
+    ko(
+      `execStream : sha256 DIFFÉRENT — ${streamed.value.digest} vs ${remoteDigest}`
+    );
+  }
+  if (streamed.code === 0) {
+    ok("execStream : code de sortie 0 relevé après le flux");
+  } else {
+    ko(`execStream : code ${streamed.code}, attendu 0`);
+  }
+
+  // ── 8. Le cas qui décide de tout : sortie complète, code NON nul ───────
+  // C'est la forme exacte d'un pg_dump tué en cours : des octets valides
+  // arrivent, le flux se ferme proprement, et RIEN dans les octets ne dit
+  // qu'il en manque. Si le code de sortie ne remontait pas, une demi-
+  // sauvegarde serait enregistrée comme réussie.
+  const truncated = await execStream(
+    client,
+    "echo -n 'moitie-de-dump'; exit 3",
+    async ({ stdout }) => {
+      let bytes = 0;
+      for await (const chunk of stdout) {
+        bytes += (chunk as Buffer).length;
+      }
+      return bytes;
+    }
+  );
+  if (truncated.value > 0 && truncated.code === 3) {
+    ok(
+      `execStream : ${truncated.value} octets reçus ET code ${truncated.code} — un dump tronqué est détectable`
+    );
+  } else {
+    ko(
+      `execStream : octets=${truncated.value} code=${truncated.code}, attendu >0 et 3`
+    );
+  }
+
+  // ── 9. Entrée standard — le chemin de la restauration ──────────────────
+  const payload = randomBytes(1_048_576);
+  const expectedIn = createHash("sha256").update(payload).digest("hex");
+  const pushed = await execStream(
+    client,
+    "sha256sum | cut -d' ' -f1",
+    async ({ stdin, stdout }) => {
+      let out = "";
+      stdout.setEncoding("utf8");
+      const collected = new Promise<void>((res) => {
+        stdout.on("data", (d: string) => {
+          out += d;
+        });
+        stdout.on("end", () => res());
+      });
+      await new Promise<void>((res, rej) => {
+        stdin.write(payload, (e) => (e ? rej(e) : res()));
+      });
+      stdin.end();
+      await collected;
+      return out.trim();
+    }
+  );
+  if (pushed.value === expectedIn) {
+    ok("execStream : 1 Mio poussé par stdin, sha256 confirmé à distance");
+  } else {
+    ko(`execStream stdin : ${pushed.value} vs ${expectedIn}`);
+  }
+
+  await exec(client, `rm -f ${REMOTE_BLOB}`);
+
+  // ── 10. dockerode à travers le tunnel SSH ────────────────────────────────
   const docker = dockerClient(client);
   const version = await docker.version();
   if (version?.Version) {
@@ -127,7 +237,7 @@ try {
     ko("dockerode : réponse de version vide");
   }
 
-  // ── 8. Lecture d'état structurée — ce pour quoi dockerode existe ────────
+  // ── 11. Lecture d'état structurée — ce pour quoi dockerode existe ────────
   // La Phase 0 a montré que `docker service update` renvoie 0 après un
   // rollback. L'état réel n'est lisible que dans UpdateStatus.
   const services = await docker.listServices();

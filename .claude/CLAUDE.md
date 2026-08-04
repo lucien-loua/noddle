@@ -389,6 +389,152 @@ labels Swarm (`entrypoints=websecure`, `tls.certresolver=le`).
 et vérifiés contre du réel, et HTTPS l'est aussi. Phase 3 : sauvegardes vers
 S3, notifications, graphiques de ressources, équipes/RBAC.
 
+### Phase 3 — état au 2026-08-04
+
+**Sauvegardes et restauration vers S3 faites et vérifiées contre du réel**,
+jusqu'au navigateur. Cible de développement : **RustFS** en conteneur, un vrai
+service compatible S3 (`localhost:9000`).
+
+| Vérifié | Contre | |
+|---|---|---|
+| `packages/shared` — schémas | pur, deux runtimes | 22/22 |
+| `packages/ssh-executor` — `execStream` | VM Multipass | Node 13/13, Bun 11/12 |
+| `packages/backup-store` | RustFS réel, deux runtimes | 12/12 de chaque côté |
+| `apps/worker` — sauvegarde | VM + RustFS | 11/11 |
+| `apps/worker` — restauration | VM + RustFS | 12/12, Postgres ET Redis |
+| Boucle complète au navigateur | 3 processus + VM + RustFS | destination → sauvegarde → restauration |
+
+**Deux décisions prises pour ce chantier :**
+
+| Décision | Choix | Pourquoi |
+|---|---|---|
+| Chemin du dump | **Par le worker ; le dumper vient de l'image de la base** | `pg_dump` est dans `postgres:17-alpine`, `redis-cli` dans `redis:7-alpine`. Rien à provisionner en face (tient « agentless, SSH only »), et le dumper a par construction la version du serveur — un binaire posé sur l'hôte dériverait dès qu'une base naîtrait en `postgres:18`. Les octets traversent le réseau deux fois : assumé, c'est du bouclage sur la machine unique, et pousser depuis la cible ferait voyager la clé S3 vers chaque serveur |
+| Destination S3 | **Une par installation**, unicité tenue par la BASE | Le cas courant est une machine, un compartiment ; « par base » imposerait un sélecteur sur chaque écran pour toujours. L'ouvrir plus tard est une migration additive (`destination_id` nullable), la refermer non. Vérifié dans les deux sens : index unique + contrainte `check` contre le contournement par `singleton=false` |
+
+**`Bun.s3` a été évalué et écarté.** Il existe bien (mesuré), mais le module
+`bun` n'est pas résolvable sous Node, et c'est le worker — sur Node par
+décision actée — qui téléverse. Il ne retirerait donc aucune dépendance, il
+ajouterait une SECONDE implémentation S3 pour la même opération. Ne pas le
+reproposer.
+
+**Le point de correction du chantier**, miroir exact de « a failed deploy
+exits 0 » : **un dump tronqué se téléverse parfaitement.** Mesuré contre
+RustFS — un flux qui se termine proprement mais incomplet produit un objet S3
+valide au contenu faux, et rien côté stockage ne peut le détecter. Seul le
+code de sortie du dumper tranche. D'où `execStream()` en forme à
+CONSOMMATEUR : les flux ne sont pas rendus à l'appelant, qui pourrait oublier
+d'attendre le code. Vérifié en direct : `pg_dump` tué en plein vol sort en
+137, la sauvegarde passe `failed` et l'objet incomplet est retiré du
+compartiment.
+
+À l'inverse, un flux qui ÉMET une erreur fait annuler l'envoi multipart par le
+SDK : aucun objet publié, aucun envoi laissé ouvert. Mesuré aussi — c'est ce
+qui autorise à ne PAS écrire de code de nettoyage sur ce chemin.
+
+**Restaurer est la seule opération irréversible du produit**, et l'écart avec
+le rollback d'un service est porté par le code, pas par un texte de
+confirmation : l'objet est vérifié présent dans le compartiment AVANT toute
+action destructrice, une sauvegarde de sûreté est prise juste avant
+(`kind='pre_restore'`), seule une sauvegarde `completed` est restaurable, et
+`confirmName` est revérifié CÔTÉ SERVEUR — une boîte de dialogue ne protège
+que les clients qui l'affichent.
+
+**Le piège Redis, en deux temps, tous deux mesurés sur une vraie VM :**
+
+- La base tourne en `--appendonly yes`, donc au démarrage Redis charge l'AOF
+  et **ignore le RDB**. Poser `dump.rdb` et redémarrer ne restaure RIEN : la
+  clé ajoutée après la sauvegarde était toujours là.
+- Purger l'AOF ne suffit pas non plus — sans AOF, Redis 7 démarre **vide** et
+  en fabrique un neuf ; il ne se rabat jamais sur le RDB. C'est le pire des
+  deux : une restauration « réussie » qui rend une base vide.
+
+La réponse retenue est un **conteneur jetable** monté sur le même volume,
+démarré en `--appendonly no` (il charge donc le RDB), puis AOF activé à chaud
+pour qu'il le réécrive depuis les données chargées. Le vrai service redémarre
+ensuite avec ses arguments habituels, inchangés — aucun `docker service
+update --args` sur le service de l'utilisateur.
+
+Une hypothèse écartée par la mesure, à ne pas rouvrir : **`docker cp` vers un
+conteneur ARRÊTÉ atteint bien le volume monté.** Ce n'était pas la cause.
+
+**Trois défauts que SEUL un vrai navigateur a montrés** (tous invisibles au
+curl, parce que les vérifications précédentes appelaient `checkDestination`
+sans jamais LIRE le message rendu) :
+
+- Une **clé secrète fausse** s'affichait « compartiment injoignable :
+  `Unknown: UnknownError` » — le message accusait le mauvais champ et
+  n'apprenait rien. `HeadBucket` répond **sans corps**, donc le SDK n'a ni code
+  ni message S3 à exposer. Le statut HTTP, lui, est toujours là : 403 →
+  « identifiants refusés », 404 → « compartiment introuvable ».
+- « de la sauvegarde **du** à l'instant » : `relativeTime` rend déjà une
+  locution complète.
+- La case « style chemin » était annoncée **deux fois** par l'arbre
+  d'accessibilité — un `<label htmlFor>` enveloppant la `Checkbox` de shadcn,
+  qui porte déjà son propre rôle.
+
+Et un faux positif noté pour ne pas le rouvrir : **l'arbre d'accessibilité
+n'affiche pas la valeur d'un input qui a un `placeholder`**, ce qui donne
+l'impression qu'un formulaire se vide après un échec. Les valeurs sont
+intactes — vérifier dans le DOM avant de « corriger ».
+
+**Planification et rétention faites et vérifiées, 11/11
+(`verify-backup-schedule.ts`).** Trois rythmes (`off`/`daily`/`weekly`), pas
+d'expression cron : les boutons Docker et Traefik ne sont pas exposés comme
+champs d'interface, et un cron est un langage à part entière dans un
+formulaire.
+
+**UN passage qui interroge Postgres, PAS un planificateur BullMQ par base.**
+Un planificateur par base devrait être créé, modifié et supprimé à chaque
+changement de réglage, et le jour où Redis est vidé — ce qui arrive, c'est un
+cache — toutes les planifications disparaîtraient en silence. L'état vit dans
+la base ; un passage qui redémarre reprend où il en était. Même forme que
+`sweepWatch`, même raison.
+
+Une base est due si sa dernière sauvegarde **réussie** remonte à plus que son
+intervalle. « Réussie » et pas « tentée » : sinon une base cassée cesserait
+d'être sauvegardée dès le premier échec, exactement quand on en a le plus
+besoin.
+
+La purge tourne APRÈS l'enregistrement du succès, jamais avant — purger
+d'abord réduirait la fenêtre pendant laquelle il reste quelque chose à
+restaurer si le dump en cours échoue — et elle n'a pas le droit de faire
+échouer une sauvegarde qui, elle, a réussi. Les deux tests qui comptent ne
+sont pas « le passage s'exécute » mais : **une base PAS due est-elle
+épargnée** (un planificateur qui déclenche tout le temps est aussi faux qu'un
+qui ne déclenche jamais) et **la rétention supprime-t-elle l'OBJET** et pas
+seulement la ligne — une ligne effacée sans son objet donne un compartiment
+qui grossit sans fin, invisible depuis le dashboard.
+
+**Un quatrième défaut vu seulement au navigateur**, de la même classe que les
+trois précédents : la bascule de rythme était optimiste mais n'était pas
+annulée sur refus du serveur. Activer « Chaque jour » sans destination
+configurée laissait le bouton sélectionné alors que la base gardait son ancien
+rythme — **l'écran affirmait une protection qui n'existait pas.** Corrigé par
+`onMutate`/`onError`. La règle générale : toute bascule optimiste doit être
+annulée sur échec, sinon le dashboard ment sur l'état réel, ce qui est
+précisément ce qu'il existe pour éviter.
+
+**Reste pour la Phase 3 :** notifications, graphiques de ressources,
+équipes/RBAC.
+
+**Préalable connu pour les équipes/RBAC.** Aujourd'hui `requireSession()` EST
+le contrôle d'autorisation complet, et c'est correct : il n'existe qu'un
+compte par installation (`needsSetup()` n'autorise la création que tant que
+`userCount() === 0`), aucune table ne porte de colonne de propriété, donc un
+seul principal possède tout. Toutes les server functions sont écrites ainsi —
+session vérifiée, puis un id libre.
+
+Le jour où les équipes arrivent, ce n'est donc PAS une fonction à corriger
+mais **toutes** : chacune devra porter un prédicat de tenancy, dans le `where`
+de la lecture ET dans celui de l'écriture. Le noter ici parce que c'est le
+genre de dette qu'un audit signale une fonction à la fois, ce qui donne
+l'illusion d'un correctif local alors que c'est une migration de modèle.
+
+**Dette repérée, hors chantier :** `ENGINE_SPECS` (`apps/worker/src/database.ts`)
+passe le mot de passe Redis dans `Command`, donc il est lisible en clair dans
+`docker service inspect` — antérieur à ce chantier, et en tension avec la
+règle « prefer `docker secret` ».
+
 **Trois défauts que SEUL un vrai navigateur sur l'installation publique a
 montrés**, tous les trois invisibles en local et invisibles au curl :
 
@@ -502,6 +648,24 @@ montrés**, tous les trois invisibles en local et invisibles au curl :
   à converger pour cette seule raison — pas documenté ailleurs qu'ici pour
   l'instant.
 
+- **`pg_dump` n'a besoin d'AUCUN mot de passe** quand on l'exécute DANS le
+  conteneur officiel : le `pg_hba` généré met les connexions par socket locale
+  en `trust`. Le secret ne touche donc jamais une ligne de commande. Redis n'a
+  pas cet échappatoire — son mot de passe passe par `REDISCLI_AUTH` et jamais
+  par `-a`, qui l'exposerait dans l'argv du `docker` distant.
+- **`redis-cli --rdb -` écrit un RDB pur sur stdout** (magie `REDIS0012`), tout
+  son bavardage partant sur stderr. Vérifié avant d'être utilisé.
+- **Un banc d'essai doit échouer bruyamment sur son propre MONTAGE.**
+  `execArgv` rend un code de sortie que rien n'oblige à lire : un
+  `CREATE TABLE` échouant sur une table déjà présente passait inaperçu, et le
+  test mesurait un dump minuscule en croyant en mesurer un gros. Corollaire :
+  un **volume nommé SURVIT à `removeService`**, donc chaque exécution héritait
+  des tables de la précédente.
+- **Des données de test « volumineuses » doivent être INCOMPRESSIBLES.** Deux
+  essais ratés avant d'y arriver : `repeat('x', 400)` passait de 360 Mo à
+  3,8 Mo, puis `repeat(md5(…), 10)` répétait le MÊME md5 dix fois par ligne.
+  Sans ça le dump se terminait avant la coupure et le test annonçait un défaut
+  qui n'existait pas.
 - Une file BullMQ ne peut pas contenir `:` — la v6 s'en sert comme séparateur de
   clés Redis, et le processus ne démarre pas du tout.
 - À la CRÉATION d'un service Swarm il n'y a pas d'`UpdateStatus` : sans attendre
@@ -577,7 +741,7 @@ Then, in order:
 
 1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, rollback, and the **post-deploy watch** (see Hard rules: Swarm's guarantee expires with the monitor window, so the worker keeps observing and rolls back from Noddle's own history). Rollback is not a Phase 3 nicety here — it is the mechanism the watch depends on.
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
-3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, teams/RBAC.
+3. **Phase 3** — backups to S3-compatible storage (**faits et vérifiés**, voir plus haut ; reste la planification), notifications, resource graphs, teams/RBAC.
 4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
 
 **Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's

@@ -7,7 +7,14 @@
 // une base n'a qu'UNE version en cours, jamais une pile de versions
 // antérieures vers lesquelles revenir. La politique de redémarrage de Swarm
 // suffit pour un crash isolé ; il n'y a rien d'autre à surveiller.
-import { pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "#schema/columns";
 import { environments } from "#schema/projects";
 import { servers } from "#schema/servers";
@@ -15,9 +22,31 @@ import { serviceStatus } from "#schema/services";
 
 export const databaseEngine = pgEnum("database_engine", ["postgres", "redis"]);
 
+/**
+ * Rythme des sauvegardes automatiques.
+ *
+ * Une énumération, pas une expression cron : les boutons Docker et Traefik ne
+ * sont pas exposés comme champs d'interface, et un cron n'est pas différent —
+ * c'est un langage à part entière dans un formulaire. « Tous les jours » et
+ * « toutes les semaines » couvrent ce qu'une base auto-hébergée demande ;
+ * l'heure exacte n'est pas un réglage tant que personne ne l'a demandée.
+ */
+export const backupSchedule = pgEnum("backup_schedule", [
+  "off",
+  "daily",
+  "weekly",
+]);
+
 export const databases = pgTable(
   "databases",
   {
+    /**
+     * Combien de sauvegardes RÉUSSIES on garde. Au-delà, la plus ancienne est
+     * supprimée, ligne ET objet — sinon le compartiment grossit sans fin et
+     * l'utilisateur découvre la facture avant de découvrir le réglage.
+     */
+    backupRetention: integer("backup_retention").notNull().default(7),
+    backupSchedule: backupSchedule("backup_schedule").notNull().default("off"),
     createdAt,
     engine: databaseEngine("engine").notNull(),
     environmentId: uuid("environment_id")

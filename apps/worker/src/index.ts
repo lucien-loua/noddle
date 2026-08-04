@@ -12,6 +12,7 @@ import { loadAppKey } from "@noddle/shared/crypto";
 import { Queue, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
+import { sweepBackups } from "#backup-sweep";
 import { type DeployContext, type DeployJobData, runJob } from "#deploy";
 import { createLogBus } from "#log-bus";
 import { sweepWatch } from "#sweep";
@@ -138,8 +139,35 @@ await watchQueue.upsertJobScheduler(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Sauvegardes planifiées
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Un passage qui interroge Postgres, pas un planificateur BullMQ par base :
+// l'état vit dans la base, donc un Redis vidé — ce qui arrive, c'est un cache —
+// ne fait pas disparaître les planifications en silence. Cinq minutes suffisent
+// pour un rythme quotidien ou hebdomadaire.
 
-for (const w of [deployWorker, watchWorker]) {
+const BACKUP_SWEEP_QUEUE = "noddle-backup-sweep";
+
+const backupSweepQueue = new Queue(BACKUP_SWEEP_QUEUE, { connection });
+const backupSweepWorker = new Worker(
+  BACKUP_SWEEP_QUEUE,
+  () =>
+    sweepBackups(ctx, (backupId) =>
+      deployQueue.add("backup", { backupId, kind: "backup" })
+    ),
+  { concurrency: 1, connection }
+);
+
+await backupSweepQueue.upsertJobScheduler(
+  "backup-sweep",
+  { every: 300_000 },
+  { name: "backup-sweep" }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+for (const w of [deployWorker, watchWorker, backupSweepWorker]) {
   w.on("failed", (job, err) => {
     process.stderr.write(`job ${job?.id} échoué : ${err.message}\n`);
   });
@@ -148,7 +176,11 @@ for (const w of [deployWorker, watchWorker]) {
 async function shutdown(): Promise<void> {
   // Fermeture propre : un déploiement en cours va au bout plutôt que d'être
   // coupé au milieu d'une bascule Swarm.
-  await Promise.all([deployWorker.close(), watchWorker.close()]);
+  await Promise.all([
+    deployWorker.close(),
+    watchWorker.close(),
+    backupSweepWorker.close(),
+  ]);
   await logBus.close();
   await connection.quit();
 }

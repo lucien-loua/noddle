@@ -138,6 +138,102 @@ export function exec(
 }
 
 /**
+ * Plafond de la sortie d'erreur retenue par `execStream`. Un dumper bavard ne
+ * doit pas faire gonfler la mémoire du worker ; les premiers kilo-octets
+ * portent la cause, la suite est de la répétition.
+ */
+const STREAM_STDERR_MAX = 64 * 1024;
+
+export interface ExecStreamIo {
+  /**
+   * Entrée standard du processus distant. C'est le MÊME objet que `stdout` —
+   * un canal ssh2 est un Duplex — mais nommé séparément parce que les deux
+   * sens ne servent jamais dans le même appel.
+   */
+  stdin: NodeJS.WritableStream;
+  /**
+   * Sortie standard BRUTE : des octets, jamais décodés. Le consommateur DOIT
+   * la lire jusqu'au bout (ou appeler `.resume()` s'il ne s'en sert pas) :
+   * sans lecteur, la fenêtre du canal se remplit et le processus distant se
+   * bloque à l'écriture, ce qui ressemble à un serveur qui ne répond plus.
+   */
+  stdout: NodeJS.ReadableStream;
+}
+
+export interface ExecStreamResult<T> {
+  code: number | null;
+  signal?: string;
+  stderr: string;
+  /** Ce que le consommateur a renvoyé. */
+  value: T;
+}
+
+/**
+ * Exécute une commande distante en donnant accès aux flux BRUTS.
+ *
+ * `exec()` ne peut pas servir ici : il concatène toute la sortie dans une
+ * chaîne UTF-8. Sur un dump binaire de plusieurs gigaoctets, cela corrompt les
+ * octets ET fait exploser la mémoire du worker. Cette fonction ne garde jamais
+ * la sortie standard.
+ *
+ * Le code de sortie est renvoyé APRÈS que le consommateur a terminé, et c'est
+ * tout l'intérêt : un `pg_dump` qui meurt à mi-course ferme proprement son
+ * flux, l'objet se téléverse sans erreur et RIEN dans les octets ne dit qu'il
+ * en manque. Mesuré contre RustFS. Seul le code de sortie distingue une
+ * sauvegarde d'une moitié de sauvegarde — c'est le miroir exact de « a failed
+ * deploy exits 0 ». D'où la forme à consommateur plutôt qu'un objet de flux
+ * rendu à l'appelant : on ne peut pas oublier d'attendre le code.
+ */
+export function execStream<T>(
+  client: Client,
+  command: string,
+  consume: (io: ExecStreamIo) => Promise<T>
+): Promise<ExecStreamResult<T>> {
+  return new Promise((resolve, reject) => {
+    client.exec(command, (err, stream) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      let stderr = "";
+      let code: number | null = null;
+      let signal: string | undefined;
+
+      stream.stderr.on("data", (d: Buffer) => {
+        if (stderr.length < STREAM_STDERR_MAX) {
+          stderr += d.toString("utf8");
+        }
+      });
+      stream.on("exit", (c: number | null, sig?: string) => {
+        code = c;
+        signal = sig;
+      });
+
+      // `exit` porte le code, `close` marque la fin réelle du canal. Attendre
+      // `close` est ce qui garantit que le code est déjà posé quand on résout
+      // — même raison que dans `exec`.
+      const closed = new Promise<void>((res) => {
+        stream.on("close", () => res());
+      });
+
+      consume({ stdin: stream, stdout: stream })
+        .then(async (value) => {
+          await closed;
+          resolve({ code, signal, stderr, value });
+        })
+        .catch((consumeErr: unknown) => {
+          // Sans ça, la commande distante continue de tourner et de produire
+          // dans le vide : le canal reste ouvert et la promesse ne retombe
+          // jamais.
+          stream.destroy();
+          reject(consumeErr);
+        });
+    });
+  });
+}
+
+/**
  * Échappe un argument pour un shell POSIX.
  *
  * `exec()` transmet une CHAÎNE, que le shell distant interprète. Tout ce qui
@@ -182,6 +278,22 @@ export function execArgv(
     throw new TypeError("argv vide");
   }
   return exec(client, argv.map(quoteArg).join(" "), opts);
+}
+
+/**
+ * `execStream` avec la même discipline qu'`execArgv` : la commande est un
+ * tableau, chaque élément est échappé. Les mêmes avertissements s'appliquent —
+ * ceci arrête l'injection SHELL, pas l'injection d'ARGUMENT.
+ */
+export function execStreamArgv<T>(
+  client: Client,
+  argv: readonly string[],
+  consume: (io: ExecStreamIo) => Promise<T>
+): Promise<ExecStreamResult<T>> {
+  if (argv.length === 0) {
+    throw new TypeError("argv vide");
+  }
+  return execStream(client, argv.map(quoteArg).join(" "), consume);
 }
 
 export function disconnect(client: Client): void {
