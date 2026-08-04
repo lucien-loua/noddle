@@ -9,6 +9,7 @@
 // biome-ignore lint/performance/noNamespaceImport: drizzleAdapter veut l'objet schéma
 import * as schema from "@noddle/db/schema";
 import { deriveSubkey } from "@noddle/shared/crypto";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
@@ -46,10 +47,21 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          // Le plugin `admin` crée les comptes suivants par son propre
-          // endpoint, qui ne passe PAS par l'inscription. Ce hook ne garde
-          // donc que /sign-up/email, et il n'a qu'un travail : il n'y a
-          // qu'un premier compte.
+          // ATTENTION — ce hook s'applique à TOUTE création de compte, y
+          // compris celle du plugin `admin`. La première version supposait
+          // l'inverse et bloquait donc `admin.createUser` : l'installation
+          // restait à un compte pour toujours, le verrou empêchant le
+          // mécanisme censé le remplacer. Mesuré, 403 sur create-user.
+          //
+          // On laisse donc passer quand la requête vient d'un compte déjà
+          // authentifié : seul un administrateur atteint cet endpoint, le
+          // plugin l'ayant lui-même gardé par `adminRoles`.
+          const existing = await auth.api
+            .getSession({ headers: getRequestHeaders() })
+            .catch(() => null);
+          if (existing) {
+            return;
+          }
           if ((await userCount()) > 0) {
             throw new APIError("FORBIDDEN", {
               message:
@@ -74,6 +86,10 @@ export const auth = betterAuth({
   plugins: [
     adminPlugin({
       ac,
+      // `owner` DOIT y figurer : le plugin garde ses propres endpoints
+      // (create-user, set-role, remove-user) derrière cette liste, qui vaut
+      // ["admin"] par défaut, et notre rôle d'installation s'appelle `owner`.
+      adminRoles: ["owner", "admin"],
       // `viewer` par défaut : un compte fraîchement créé ne doit rien pouvoir
       // casser avant qu'on lui ait donné son rôle. L'inverse — administrateur
       // par défaut, qu'on rétrograde ensuite — laisse une fenêtre pendant

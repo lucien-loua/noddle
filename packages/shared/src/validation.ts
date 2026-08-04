@@ -463,3 +463,27 @@ export const restoreRequestSchema = z.object({
 export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
 
 export const serviceMetricsRequestSchema = z.object({ serviceId: z.uuid() });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// comptes
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const accountRoleNameSchema = z.enum([
+  "owner",
+  "admin",
+  "deployer",
+  "viewer",
+]);
+
+export const createAccountSchema = z.object({
+  email: z.email(),
+  name: z.string().min(1).max(64),
+  role: accountRoleNameSchema,
+});
+
+export const accountRoleSchema = z.object({
+  role: accountRoleNameSchema,
+  userId: z.string().min(1),
+});
+
+export const accountIdSchema = z.object({ userId: z.string().min(1) });
