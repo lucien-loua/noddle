@@ -906,6 +906,8 @@ function DatabasePanel({ database }: { database: DatabaseRow }) {
         databaseId={database.id}
         databaseName={database.name}
         onRestore={setTarget}
+        retention={database.backupRetention}
+        schedule={database.backupSchedule}
       />
       {restore.isError ? (
         <Alert className="mt-3" variant="destructive">

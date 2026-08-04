@@ -40,7 +40,12 @@ import {
   duration,
   relativeTime,
 } from "@/lib/format";
-import { type BackupRow, getBackups, triggerBackup } from "@/server/backups";
+import {
+  type BackupRow,
+  getBackups,
+  saveBackupSchedule,
+  triggerBackup,
+} from "@/server/backups";
 
 /**
  * Tant qu'une sauvegarde tourne, on resonde. Elle dure des secondes à des
@@ -49,13 +54,157 @@ import { type BackupRow, getBackups, triggerBackup } from "@/server/backups";
  */
 const POLL_MS = 3000;
 
+const SCHEDULES: { label: string; value: Schedule }[] = [
+  { label: "Jamais", value: "off" },
+  { label: "Chaque jour", value: "daily" },
+  { label: "Chaque semaine", value: "weekly" },
+];
+
+type Schedule = "daily" | "off" | "weekly";
+
+/**
+ * Le rythme automatique, en trois boutons.
+ *
+ * Ni cron ni sélecteur d'heure : « tous les jours » suffit à la question que
+ * l'utilisateur se pose, et l'heure exacte n'est pas un réglage tant que
+ * personne ne l'a demandée. La rétention est à côté parce que les deux se
+ * décident ensemble — activer une planification sans borner ce qu'on garde,
+ * c'est signer pour une facture de stockage qui monte toute seule.
+ */
+function ScheduleControl({
+  databaseId,
+  retention,
+  schedule,
+}: {
+  databaseId: string;
+  retention: number;
+  schedule: Schedule;
+}) {
+  const [value, setValue] = useState<Schedule>(schedule);
+  const [keep, setKeep] = useState(String(retention));
+
+  const save = useMutation({
+    mutationFn: (next: { retention: number; schedule: Schedule }) =>
+      saveBackupSchedule({
+        data: {
+          databaseId,
+          retention: next.retention,
+          schedule: next.schedule,
+        },
+      }),
+    // La bascule est optimiste pour que le clic réponde tout de suite, donc
+    // elle DOIT être annulée quand le serveur refuse. Sans ça, un
+    // enregistrement rejeté — une planification sans destination, par exemple —
+    // laissait « Chaque jour » sélectionné alors que la base restait sur son
+    // ancien rythme : l'écran affirmait une protection qui n'existait pas.
+    // Constaté dans un vrai navigateur.
+    onError: (_err, _next, context: { previous: Schedule } | undefined) => {
+      if (context) {
+        setValue(context.previous);
+      }
+    },
+    onMutate: (next) => {
+      const previous = value;
+      setValue(next.schedule);
+      return { previous };
+    },
+  });
+
+  const handleSchedule = useCallback(
+    (next: Schedule) => {
+      save.mutate({ retention: Number(keep) || 1, schedule: next });
+    },
+    [keep, save]
+  );
+
+  const handleKeep = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setKeep(e.target.value),
+    []
+  );
+  const handleKeepBlur = useCallback(() => {
+    const n = Number(keep);
+    if (Number.isInteger(n) && n >= 1 && n <= 100) {
+      save.mutate({ retention: n, schedule: value });
+    } else {
+      setKeep(String(retention));
+    }
+  }, [keep, retention, save, value]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+      <span className="text-muted-foreground text-xs">Automatique</span>
+      <div className="flex gap-1">
+        {SCHEDULES.map((option) => (
+          <ScheduleButton
+            active={value === option.value}
+            key={option.value}
+            label={option.label}
+            onSelect={handleSchedule}
+            value={option.value}
+          />
+        ))}
+      </div>
+
+      {value === "off" ? null : (
+        <span className="flex items-center gap-2 text-muted-foreground text-xs">
+          en gardant
+          <Input
+            className="h-7 w-16 text-xs"
+            inputMode="numeric"
+            onBlur={handleKeepBlur}
+            onChange={handleKeep}
+            value={keep}
+          />
+        </span>
+      )}
+
+      {save.isError ? (
+        <span className="text-destructive text-xs">
+          {save.error instanceof Error ? save.error.message : "échec"}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function ScheduleButton({
+  active,
+  label,
+  onSelect,
+  value,
+}: {
+  active: boolean;
+  label: string;
+  onSelect: (value: Schedule) => void;
+  value: Schedule;
+}) {
+  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
+  return (
+    <Button
+      onClick={handleClick}
+      size="sm"
+      variant={active ? "secondary" : "ghost"}
+    >
+      {label}
+    </Button>
+  );
+}
+
 interface Props {
   databaseId: string;
   databaseName: string;
   onRestore: (backup: BackupRow) => void;
+  retention: number;
+  schedule: Schedule;
 }
 
-export function BackupPanel({ databaseId, databaseName, onRestore }: Props) {
+export function BackupPanel({
+  databaseId,
+  databaseName,
+  onRestore,
+  retention,
+  schedule,
+}: Props) {
   const queryClient = useQueryClient();
 
   const backups = useQuery({
@@ -132,6 +281,12 @@ export function BackupPanel({ databaseId, databaseName, onRestore }: Props) {
           </TableBody>
         </Table>
       )}
+
+      <ScheduleControl
+        databaseId={databaseId}
+        retention={retention}
+        schedule={schedule}
+      />
     </div>
   );
 }

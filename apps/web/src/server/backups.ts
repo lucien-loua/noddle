@@ -17,6 +17,7 @@ import {
 import {
   backupDestinationSchema,
   backupRequestSchema,
+  backupScheduleRequestSchema,
   restoreRequestSchema,
 } from "@noddle/shared/validation";
 import { createServerFn } from "@tanstack/react-start";
@@ -159,6 +160,39 @@ export const saveDestination = createServerFn({ method: "POST" })
       })
       .where(eq(backupDestinations.id, created.id));
     return { id: created.id };
+  });
+
+/**
+ * Le réglage automatique d'une base.
+ *
+ * Pas de server function de lecture séparée : le dashboard charge déjà les
+ * bases, donc `DatabaseRow` porte ces deux champs et une requête de moins
+ * part au chargement.
+ */
+export const saveBackupSchedule = createServerFn({ method: "POST" })
+  .validator(backupScheduleRequestSchema)
+  .handler(async ({ data }): Promise<{ saved: true }> => {
+    await requireSession();
+
+    // Une planification sans destination ne se déclencherait jamais et
+    // l'utilisateur croirait être protégé — le pire état possible. On le dit
+    // au moment où il l'active, pas au moment où il en aurait eu besoin.
+    const destination = await db.query.backupDestinations.findFirst();
+    if (!destination && data.schedule !== "off") {
+      throw new Error(
+        "aucune destination S3 configurée — une sauvegarde planifiée ne partirait nulle part"
+      );
+    }
+
+    await db
+      .update(databases)
+      .set({
+        backupRetention: data.retention,
+        backupSchedule: data.schedule,
+        updatedAt: new Date(),
+      })
+      .where(eq(databases.id, data.databaseId));
+    return { saved: true };
   });
 
 export const getBackups = createServerFn({ method: "GET" })

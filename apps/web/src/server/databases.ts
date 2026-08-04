@@ -27,6 +27,8 @@ import { requireSession } from "@/lib/session.server";
 const PASSWORD_BYTES = 24;
 
 export interface DatabaseRow {
+  backupRetention: number;
+  backupSchedule: "daily" | "off" | "weekly";
   engine: "postgres" | "redis";
   environment: string;
   id: string;
@@ -47,6 +49,8 @@ export const getDatabaseDashboard = createServerFn({ method: "GET" }).handler(
       },
     });
     return rows.map((d) => ({
+      backupRetention: d.backupRetention,
+      backupSchedule: d.backupSchedule,
       engine: d.engine,
       environment: d.environment.name,
       id: d.id,
