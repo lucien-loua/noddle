@@ -87,8 +87,8 @@ export function BackupDestinationPanel({ initial }: Props) {
   );
 
   return (
-    <form className="max-w-2xl space-y-6" onSubmit={handleSubmit}>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="endpoint">Point de terminaison</Label>
           <Input

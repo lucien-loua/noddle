@@ -66,7 +66,7 @@ export function AccountsPanel({
   const handleOpen = useCallback(() => setOpen(true), []);
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           Un rôle décide de ce qu'un compte peut faire, jamais de ce qu'il peut

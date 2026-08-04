@@ -171,7 +171,7 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
   }
 
   return (
-    <div className="max-w-3xl space-y-3">
+    <div className="space-y-3">
       {series.map((s) => (
         <div className="rounded-md border p-3" key={s.serverId}>
           <div className="mb-3 flex items-center gap-2">
