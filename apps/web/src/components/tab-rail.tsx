@@ -13,10 +13,28 @@
 //
 // Atteignable en vrai : cinq onglets font 415 px, une zone de contenu de
 // téléphone en fait ~343.
-import type { ReactNode } from "react";
+import type { FocusEvent, ReactNode } from "react";
+import { useCallback } from "react";
 import { TabsList } from "@/components/ui/tabs";
 
 export function TabRail({ children }: { children: ReactNode }) {
+  /**
+   * Ramène dans la vue le déclencheur qui vient de prendre le focus.
+   *
+   * Le navigateur le ferait seul, mais Base UI déplace le focus au clavier
+   * avec `preventScroll` — sinon chaque flèche ferait sauter la PAGE. Mesuré
+   * sans ce rappel : les flèches atteignaient bien le dernier onglet, la zone
+   * restait à `scrollLeft` 0, et le focus se posait 23 px au-delà du bord
+   * droit. C'est-à-dire invisible.
+   *
+   * `nearest` sur les deux axes : le minimum qui rende l'onglet entier: on ne
+   * veut ni recentrer le rail à chaque flèche, ni faire défiler la page
+   * verticalement pour un mouvement horizontal.
+   */
+  const keepInView = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    event.target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, []);
+
   return (
     <div className="max-w-full shrink-0 rounded-full bg-muted p-1">
       {/*
@@ -31,10 +49,9 @@ export function TabRail({ children }: { children: ReactNode }) {
         gauche. La marge négative reprend ce qu'ajoute le padding, donc la
         pastille mesure toujours 36 px.
 
-        `scroll-px-10` vaut la largeur du fondu (`min(12%, 40px)`) : au clavier
-        le navigateur amène le déclencheur suivant dans la vue, et sans ça il
-        s'arrêterait pile sous le dégradé — focus posé sur un onglet à moitié
-        effacé.
+        `scroll-px-10` vaut la largeur du fondu (`min(12%, 40px)`), et c'est
+        `scrollIntoView` ci-dessus qui l'honore : sans lui l'onglet s'arrêterait
+        pile sous le dégradé — focus posé sur un onglet à moitié effacé.
       */}
       <div className="scroll-fade-x no-scrollbar -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1">
         {/*
@@ -44,7 +61,10 @@ export function TabRail({ children }: { children: ReactNode }) {
           en spécificité. Un `h-full` nu laissait donc une liste de 36 px dans
           une boîte de 28 — coupée par le bas.
         */}
-        <TabsList className="bg-transparent p-0 group-data-horizontal/tabs:h-7">
+        <TabsList
+          className="bg-transparent p-0 group-data-horizontal/tabs:h-7"
+          onFocus={keepInView}
+        >
           {children}
         </TabsList>
       </div>
