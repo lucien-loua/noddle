@@ -11,6 +11,7 @@
 //   - dire si une référence d'image est portable ou locale à un nœud.
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
 import type { Database } from "@noddle/db";
 import { servers } from "@noddle/db/schema";
 import {
@@ -346,6 +347,54 @@ export function registryImageTag(
  */
 export const KEEP_PER_SERVICE = 10;
 
+/**
+ * Un appel à l'API du registre, avec SON AC et rien qu'elle.
+ *
+ * `fetch` obligerait à faire confiance à l'AC au niveau du PROCESSUS entier
+ * (`NODE_EXTRA_CA_CERTS`), donc aussi pour S3 et pour les notifications, qui
+ * n'ont rien à voir avec elle. `node:https` prend la chaîne de confiance par
+ * requête : la portée correspond alors à ce qu'on voulait dire.
+ *
+ * Accessoirement, ça rend les pannes lisibles. `fetch` échoue en « fetch
+ * failed » quoi qu'il arrive — le même message opaque déjà relevé sur les
+ * notifications ; ici l'erreur porte le code TLS réel.
+ */
+function registryRequest(
+  registry: RegistryConfig,
+  o: { headers?: Record<string, string>; method: string; path: string }
+): Promise<{
+  headers: Record<string, string | string[] | undefined>;
+  status: number;
+}> {
+  const [hostname, port] = registry.host.split(":");
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      {
+        ca: registry.caCert,
+        headers: {
+          authorization: `Basic ${Buffer.from(`${REGISTRY_USER}:${registry.password}`).toString("base64")}`,
+          ...o.headers,
+        },
+        hostname,
+        method: o.method,
+        path: o.path,
+        port: port ?? "443",
+      },
+      (res) => {
+        // Le corps ne nous sert jamais — seuls le statut et les en-têtes
+        // portent la réponse — mais il DOIT être consommé, sinon la socket
+        // reste ouverte et le processus ne rend pas la main.
+        res.resume();
+        res.on("end", () =>
+          resolve({ headers: res.headers, status: res.statusCode ?? 0 })
+        );
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 /** Découpe `hôte:port/dépôt:tag` en ses deux moitiés utiles. */
 export function parseRegistryRef(
   image: string,
@@ -377,8 +426,6 @@ export async function deleteManifest(
   registry: RegistryConfig,
   ref: { repository: string; tag: string }
 ): Promise<boolean> {
-  const base = `https://${registry.host}/v2/${ref.repository}`;
-  const auth = `Basic ${Buffer.from(`${REGISTRY_USER}:${registry.password}`).toString("base64")}`;
   // Le digest ne se lit que si l'on ANNONCE les types de manifeste acceptés :
   // sans cet en-tête, le registre répond dans un format ancien et le
   // `Docker-Content-Digest` ne désigne pas le manifeste qu'on veut effacer.
@@ -389,17 +436,20 @@ export async function deleteManifest(
     "application/vnd.docker.distribution.manifest.v2+json",
   ].join(", ");
 
-  const head = await fetch(`${base}/manifests/${ref.tag}`, {
-    headers: { accept, authorization: auth },
+  const head = await registryRequest(registry, {
+    headers: { accept },
     method: "HEAD",
+    path: `/v2/${ref.repository}/manifests/${ref.tag}`,
   });
-  const digest = head.headers.get("docker-content-digest");
-  if (!(head.ok && digest)) {
+  const digest = head.headers["docker-content-digest"];
+  if (
+    !(head.status >= 200 && head.status < 300 && typeof digest === "string")
+  ) {
     return false;
   }
-  const del = await fetch(`${base}/manifests/${digest}`, {
-    headers: { authorization: auth },
+  const del = await registryRequest(registry, {
     method: "DELETE",
+    path: `/v2/${ref.repository}/manifests/${digest}`,
   });
   // 202 = accepté, 404 = déjà parti. Les deux valent « il n'est plus là ».
   return del.status === 202 || del.status === 404;

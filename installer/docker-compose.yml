@@ -169,12 +169,6 @@ services:
       # nouveau sur une pile pas encore redémarrée se comporte comme l'ancien.
       REGISTRY_HOST: ${REGISTRY_HOST:-}
       REGISTRY_PASSWORD: ${REGISTRY_PASSWORD:-}
-      # Le worker interroge l'API du registre pour la rétention. Le certificat
-      # vient d'une AC privée : sans ça, chaque appel échouerait en
-      # `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. La variable AJOUTE cette AC aux
-      # racines par défaut, elle ne les remplace pas — les notifications et S3
-      # continuent de valider normalement.
-      NODE_EXTRA_CA_CERTS: /etc/noddle/registry/ca.crt
     volumes:
       - noddle-logs:/var/lib/noddle/logs
       # La clé de l'hôte, pour l'adoption initiale uniquement. Ensuite elle vit

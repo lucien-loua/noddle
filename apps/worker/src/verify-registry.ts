@@ -662,14 +662,21 @@ try {
       trigger: "manual",
     })
     .returning();
+  const padIds: string[] = [];
   for (let i = 0; i < KEEP_PER_SERVICE; i += 1) {
     // biome-ignore lint/performance/noAwaitInLoops: décor séquentiel, volontaire
-    await db.insert(deployments).values({
-      imageTag: registryImageTag(registry, SERVICE_NAME, `pad-${i}`),
-      serviceId: svc.id,
-      status: "succeeded",
-      trigger: "manual",
-    });
+    const [pad] = await db
+      .insert(deployments)
+      .values({
+        imageTag: registryImageTag(registry, SERVICE_NAME, `pad-${i}`),
+        serviceId: svc.id,
+        status: "succeeded",
+        trigger: "manual",
+      })
+      .returning();
+    if (pad) {
+      padIds.push(pad.id);
+    }
   }
 
   const before = await volumeMb();
@@ -709,13 +716,21 @@ try {
 
   // Et ce qui est DANS la fenêtre ne doit pas bouger : une rétention qui purge
   // tout est aussi fausse qu'une qui ne purge rien.
-  const survivor = await db.query.deployments.findFirst({
-    where: eq(deployments.id, final.id),
+  //
+  // Le sujet est une ligne de bourrage, PAS le premier déploiement : à ce
+  // stade il a été doublé par deux rollbacks et onze versions plus récentes,
+  // il est donc légitimement hors fenêtre. L'asserter reviendrait à exiger que
+  // la rétention ne fasse pas son travail — c'est ce qu'a montré la première
+  // exécution de ce bloc.
+  const survivors = await db.query.deployments.findMany({
+    where: inArray(deployments.id, padIds),
   });
-  if (survivor?.imagePurged === false) {
-    ok("le déploiement courant est épargné");
+  if (survivors.length > 0 && survivors.every((d) => !d.imagePurged)) {
+    ok(`les ${survivors.length} versions dans la fenêtre sont épargnées`);
   } else {
-    ko("le déploiement courant a été purgé");
+    ko(
+      `${survivors.filter((d) => d.imagePurged).length} version(s) de la fenêtre ont été purgées`
+    );
   }
 } catch (err) {
   // SANS ce bloc, une exception traverse jusqu'au `finally`, qui sort en 0
