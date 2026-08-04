@@ -771,6 +771,130 @@ quoi que ce soit (`styles.css`, `adopt-host.ts`, `docker-compose.tls.yml`)
 écraser, pour ne pas perdre un correctif appliqué à la main et jamais
 repoussé.
 
+### Phase 4 — registre d'images, le 2026-08-04
+
+**Fait et vérifié contre DEUX vraies VM Multipass, 24/24
+(`apps/worker/src/verify-registry.ts`).** C'est le premier chantier de la
+Phase 4, et celui qui débloque les autres : jusqu'ici une image construite
+n'existait que sur SON nœud, donc chaque service était épinglé par une
+contrainte `node.id==…` et Swarm ne pouvait rien replanifier.
+
+Le test qui compte : une image construite sur le worker, le nœud vidé
+(`docker node update --availability drain`), la task **replanifiée sur le
+manager** — une machine qui n'a jamais construit cette image — et qui sert
+du HTTP. Sans registre, Swarm n'avait nulle part où aller.
+
+| Décision | Choix | Pourquoi |
+|---|---|---|
+| Registre | **Embarqué dans la pile du plan de contrôle**, `registry:3.1.1` épinglé | Un registre externe demanderait un compte tiers et des identifiants collés AVANT le premier déploiement, ce qui casse « une commande sur n'importe quel VPS ». Même forme que la destination S3 : un par installation |
+| TLS | **AC générée par l'installateur**, déposée dans `/etc/docker/certs.d/<hôte:port>/ca.crt` sur chaque nœud | `insecure-registries` exigerait un redémarrage du démon, donc — en mode Swarm où `live-restore` n'existe pas — une coupure de toutes les tasks du nœud. Un certificat ACME derrière Traefik ne marcherait qu'avec un domaine, et donnerait deux chemins de code dont un seul serait jamais exercé |
+| Adresse | **`<manager.host>:5000`**, figée dans le `.env` à la première installation | Ce n'est pas une nouvelle hypothèse réseau : les workers rejoignent déjà le cluster par `${manager.host}:2377`. Et elle est inscrite dans chaque `image_tag` de l'historique — la recalculer ferait mentir les déploiements passés le jour où `hostname -I` répond autre chose |
+| Auth au tirage | **`X-Registry-Auth` dans la spec Swarm**, pas de `docker login` par nœud | Le manager chiffre les identifiants dans la spec et les distribue à ses agents ; ce sont EUX qui tirent, sur des nœuds où Noddle n'ouvre aucune session |
+| Placement | **Décidé PAR IMAGE, sur la référence** (`isPortableImage`) | Ce n'est pas une heuristique : c'est le fait que Docker lui-même lit pour savoir où tirer. Une image du registre est libre, une image locale reste épinglée |
+
+**La migration est gratuite, et c'est le point de conception.** Un rollback
+vers un déploiement d'AVANT le registre porte un tag non qualifié, reste donc
+épinglé au bon nœud et continue de fonctionner, pendant que les déploiements
+neufs sont libres. Rien à re-pousser, aucune ligne d'historique à réécrire,
+aucun drapeau à lire. Vérifié explicitement (`verify-registry.ts`).
+
+`REGISTRY_HOST` absent = comportement d'avant, à l'identique. Une installation
+dont le code est à jour mais la pile pas encore redémarrée se comporte comme
+avant, sans rien casser.
+
+**Trois choses mesurées AVANT d'écrire le code, parce qu'elles décidaient
+de la conception :**
+
+- **`/etc/docker/certs.d` est relu à CHAQUE requête, sans redémarrage du
+  démon.** Sur un démon en place depuis trois jours : push refusé en
+  « x509: certificate signed by unknown authority », dépôt de l'AC, push
+  accepté, `ActiveEnterTimestamp` identique. C'est ce qui permet de migrer
+  une installation qui tourne sans couper une seule application.
+- **Rien sur une Ubuntu 24.04 nue ne produit du bcrypt**, seule forme que
+  le registre accepte : `htpasswd` n'est pas installé, `openssl passwd -5`
+  rend du SHA-256 crypt (`$5$`), et `registry:3` n'embarque pas htpasswd.
+  Docker, lui, est garanti présent — d'où `docker run --rm -i httpd:2-alpine
+  htpasswd -Bin`, en `-i` pour que le mot de passe ne passe pas par l'argv
+  d'un `docker run`, visible dans `ps`.
+- **Une image nixpacks de 929 Mo pèse 245 Mo dans le registre** (couches
+  compressées, ~26 %), et la couche de base est PARTAGÉE entre toutes les
+  versions et toutes les applications — une seconde application n'a coûté
+  que ~1 Mo. C'est ce qui rend une rétention à dix versions bon marché.
+
+**Le défaut du chantier, invisible au typecheck et invisible au second
+déploiement : `docker.createService(spec)` appelé avec UN seul argument
+laisse `auth` valoir la spec entière** (branche `else if (!opts && !callback)`
+de dockerode), que docker-modem encode en base64 dans `X-Registry-Auth`. Le
+démon n'y trouve aucun identifiant, et l'agent qui tire répond « pull access
+denied… no basic auth credentials » — un déploiement qui ne converge pas en
+180 s, dont le message ne désigne pas la cause.
+
+`Service.prototype.update` extrait bien `opts.authconfig` dans ce même cas.
+L'asymétrie fait que SEULE une création de service déclenche le défaut : le
+premier déploiement d'un service, jamais les suivants. Chaque méthode reçoit
+donc la forme qui marche pour elle. **Ne pas « harmoniser » les deux appels
+sans relire ce paragraphe.**
+
+**La rétention fait partie du chantier, pas d'un suivant.** Dix versions par
+service, comptées en TAGS DISTINCTS et non en lignes — un rollback crée une
+ligne de plus avec le même tag, et compter les lignes purgerait des images
+encore jeunes. Le déploiement courant n'est jamais candidat, même sorti de la
+fenêtre : rejouer une vieille version la rend courante sans la rendre récente.
+
+**Supprimer un manifeste ne libère RIEN.** Mesuré deux fois : le tag disparaît
+de `tags/list`, le volume ne bouge pas d'un octet. Seul `registry
+garbage-collect --delete-untagged /etc/distribution/config.yml` rend les octets
+(359 Mo repris sur 364, en vérification). Sans lui, la rétention donnerait un
+dashboard propre et un disque qui se remplit quand même — exactement le défaut
+qu'elle corrige, et la même leçon que « supprimer la ligne sans supprimer
+l'objet » des sauvegardes.
+
+Le GC passe par la **file des déploiements**, en concurrence 1 : il collecte
+les couches qu'aucun manifeste ne référence, et une couche EN COURS D'ENVOI est
+exactement dans ce cas.
+
+**Assumé et à dire : « revenir à n'importe quelle version antérieure » devient
+« aux dix dernières ».** L'alternative n'était pas « toutes » mais « jusqu'à ce
+que le disque soit plein », limite que rien n'annonce.
+`deployments.image_purged` garde la ligne d'historique — quel commit a tourné
+quand n'a pas à disparaître parce qu'on a récupéré du disque — et retire le
+bouton « Redeploy », qui serait un échec certain.
+
+**Deux choses que le registre casse ailleurs, et qu'il fallait corriger dans le
+même chantier :**
+
+- **La collecte de métriques devenait aveugle.** `sampleServer` partait de
+  `services.server_id` ; un service déplacé n'aurait produit AUCUNE ligne, et
+  le dashboard aurait affiché « aucun relevé », badge rouge, sur un service en
+  parfaite santé. Le contresens que la règle du trou existe pour éviter, sauf
+  qu'il aurait été fabriqué par nous. On part maintenant de ce qui TOURNE sur
+  le nœud (un `listContainers`, label `com.docker.swarm.service.name`).
+- **`services.server_id` ne veut plus dire que « où ça se construit ».**
+  `deployments.node_id` relève où la task tourne réellement, et l'écran
+  n'affiche les deux que lorsqu'ils DIFFÈRENT. `null` quand on ne sait pas —
+  jamais l'identifiant Swarm brut, qui n'informe personne.
+
+**L'AC du registre ne vaut QUE pour le registre.** `fetch` aurait obligé à
+`NODE_EXTRA_CA_CERTS`, donc à une confiance élargie au processus entier — S3
+et webhooks de notification compris. `node:https` prend la chaîne par requête.
+Et ça rend les pannes lisibles : `fetch` échoue en « fetch failed » quoi qu'il
+arrive, le même message opaque déjà relevé sur les notifications.
+
+**Ce que la vérification NE couvre pas :** `verify-registry.ts` monte SON
+registre avec les mêmes commandes openssl qu'`install.sh`, reproduites et non
+partagées — un helper commun ferait passer le test et l'installateur par le
+même code, et le test cesserait de pouvoir détecter une divergence. L'
+installateur se vérifie donc séparément, par une vraie installation.
+
+**Conséquence pour les installations existantes : la mise à jour DOIT repasser
+par `install.sh`**, qui est idempotent. Un `docker compose up` seul trouverait
+`/etc/noddle/registry` vide, et Docker fabriquerait un répertoire à la place du
+certificat attendu.
+
+**Piles Compose et bases de données restent ÉPINGLÉES**, et c'est délibéré :
+un fichier compose peut déclarer des volumes, et un volume ne se déplace pas.
+Elles poussent quand même au registre.
+
 **Passe UI, le 2026-08-04.** L'interface était « trop basique », ne
 respectait pas les principes de regroupement, et des dialogues débordaient
 du viewport. Trois défauts structurels, tous vérifiés au navigateur en
@@ -1040,7 +1164,7 @@ Then, in order:
 1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, rollback, and the **post-deploy watch** (see Hard rules: Swarm's guarantee expires with the monitor window, so the worker keeps observing and rolls back from Noddle's own history). Rollback is not a Phase 3 nicety here — it is the mechanism the watch depends on.
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
 3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, RBAC (**tous faits et vérifiés**, voir plus haut). Teams/multi-tenancy — distinct from RBAC, see the known prerequisite above — remains open.
-4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
+4. **Phase 4** — registry-based builds (**fait et vérifié**, voir plus haut), preview environments per PR, audit log, CLI.
 
 **Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's
 correctness is what the entire product's trust rests on.
@@ -1170,7 +1294,7 @@ base image, or from a build stage Noddle controls — never from a nixpacks flag
 **Swarm gotchas that will silently break things:**
 - `HEALTHCHECK` needs a binary **inside** the image, and it runs under a **non-login `sh -c`**. Measured in `nixpacks:ubuntu-1745885067`: `curl` is present at `/bin/curl` and on `PATH`; `wget` is absent; `node` is **not** on `PATH` because it lives in the nix profile that only a *login* shell sources. So the healthcheck uses `curl`, and a `node -e` healthcheck would fail just as silently as `wget`. Either way it presents as a Traefik routing bug.
 - `docker service create/update --no-resolve-image` for locally-built images. Without it Swarm tries to resolve the digest against a registry, fails, warns, then falls back to the tag — slow and noisy on one node.
-- **Local builds pin a service to the node that built it.** The image exists nowhere else, so Swarm's scheduler cannot move it. Phase 2 multi-server means "each service is built and stays on its assigned node", not "Swarm places services freely". Free placement needs the registry work currently parked in Phase 4.
+- **Local builds pin a service to the node that built it.** The image exists nowhere else, so Swarm's scheduler cannot move it. **Plus vrai depuis la Phase 4 pour les SERVICES** : l'image est poussée au registre embarqué et le placement est libre — mais la contrainte demeure, conditionnelle, pour toute image non poussée (rollback vers une version d'avant le registre), et pour les piles Compose et les bases, qui portent des volumes. Voir `placementFor` dans `deploy.ts`.
 - Traefik reads labels on the **service**, not the container
 - `traefik.http.services.<name>.loadbalancer.server.port` is **required** — Traefik cannot infer the port in Swarm mode
 - Traefik v3 uses `--providers.swarm`; v2 used `--providers.docker.swarmMode`. Check against the pinned version.

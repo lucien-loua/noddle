@@ -125,6 +125,20 @@ EOF
   echo "générés dans $ENV_FILE (à sauvegarder)"
 fi
 
+# Les clés HTTPS, sur un .env écrit AVANT que le chantier TLS existe.
+#
+# Le bloc ci-dessus n'a lieu qu'à la première installation : une machine
+# installée avant la Phase 2 a un .env de trois lignes, sans ces clés-là. C'est
+# le fichier qui fait foi pour `CONFIGURED_DOMAIN` plus bas — donc régler
+# NODDLE_DOMAIN dans l'environnement resterait sans effet, en silence, et
+# l'installation continuerait de servir en clair sans dire pourquoi.
+#
+# Mesuré sur une VM installée en Phase 1, où ces trois clés manquaient
+# effectivement.
+ensure_env NODDLE_DOMAIN "${NODDLE_DOMAIN:-}"
+ensure_env ACME_EMAIL "${ACME_EMAIL:-}"
+ensure_env ACME_CASERVER "${ACME_CASERVER:-}"
+
 # ── 4. Clé SSH de la machine ─────────────────────────────────────────────────
 #
 # L'installateur enregistre sa propre machine comme serveur cible n°1, et elle
