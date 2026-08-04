@@ -13,9 +13,15 @@ import { Queue, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
 import { sweepBackups } from "#backup-sweep";
-import { type DeployContext, type DeployJobData, runJob } from "#deploy";
+import {
+  connectTo,
+  type DeployContext,
+  type DeployJobData,
+  runJob,
+} from "#deploy";
 import { createLogBus } from "#log-bus";
 import { collectMetrics } from "#metrics";
+import { loadRegistryConfig, sweepRegistryTrust } from "#registry";
 import { sweepWatch } from "#sweep";
 
 // Pas de « : » dans un nom de file : BullMQ 6 le refuse, il s'en sert comme
@@ -51,6 +57,10 @@ const ctx: DeployContext = {
   networkName: process.env.TRAEFIK_NETWORK ?? "noddle-public",
   onLog: (deploymentId, chunk) =>
     logBus.publish(deploymentId, { data: chunk, type: "chunk" }),
+  // Absent sur une installation dont la pile n'a pas encore le registre : le
+  // worker retombe alors exactement sur le comportement d'avant, build local
+  // et service épinglé. C'est ce qui rend une mise à jour sans danger.
+  registry: loadRegistryConfig(),
 };
 
 export const deployQueue = new Queue<DeployJobData>(DEPLOY_QUEUE, {
@@ -167,6 +177,39 @@ await backupSweepQueue.upsertJobScheduler(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Confiance au registre
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Chaque nœud doit porter l'AC du registre, sinon son démon refuse de tirer.
+// Les serveurs ajoutés passent par `provisionServer`, qui la dépose ; ce
+// passage-ci existe pour les DEUX cas que le provisionnement ne couvre pas :
+// les serveurs déjà en place avant que le registre existe, et ceux qui étaient
+// injoignables au moment où on a essayé.
+//
+// Cinq minutes : ça n'écrit un fichier de 2 Ko qu'une fois, et ne fait plus
+// rien ensuite.
+
+const TRUST_QUEUE = "noddle-registry-trust";
+
+const trustQueue = new Queue(TRUST_QUEUE, { connection });
+const trustWorker = new Worker(
+  TRUST_QUEUE,
+  () =>
+    sweepRegistryTrust({
+      connectTo: (server) => connectTo(ctx, server),
+      db: ctx.db,
+      registry: ctx.registry,
+    }),
+  { concurrency: 1, connection }
+);
+
+await trustQueue.upsertJobScheduler(
+  "registry-trust",
+  { every: 300_000 },
+  { name: "registry-trust" }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Collecte des ressources
 // ─────────────────────────────────────────────────────────────────────────────
 //
@@ -191,7 +234,13 @@ await metricsQueue.upsertJobScheduler(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-for (const w of [deployWorker, watchWorker, backupSweepWorker, metricsWorker]) {
+for (const w of [
+  deployWorker,
+  watchWorker,
+  backupSweepWorker,
+  metricsWorker,
+  trustWorker,
+]) {
   w.on("failed", (job, err) => {
     process.stderr.write(`job ${job?.id} échoué : ${err.message}\n`);
   });
@@ -205,6 +254,7 @@ async function shutdown(): Promise<void> {
     watchWorker.close(),
     backupSweepWorker.close(),
     metricsWorker.close(),
+    trustWorker.close(),
   ]);
   await logBus.close();
   await connection.quit();

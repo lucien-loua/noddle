@@ -11,12 +11,20 @@
 //   - dire si une référence d'image est portable ou locale à un nœud.
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
+import type { Database } from "@noddle/db";
+import { servers } from "@noddle/db/schema";
 import {
+  disconnect,
+  dockerClient,
   type ExecOptions,
   execArgv,
   type SshClient,
   writeRemoteFile,
 } from "@noddle/ssh-executor";
+import { eq } from "drizzle-orm";
+import { getSwarmNodeId } from "#swarm";
+
+type ServerRow = typeof servers.$inferSelect;
 
 /**
  * Le compte du registre. Constante et non réglage : l'installateur écrit ce
@@ -132,6 +140,77 @@ export async function ensureRegistryTrust(
     await execArgv(client, ["rm", "-f", staging]);
   }
   return true;
+}
+
+/**
+ * Passe sur chaque serveur `connected` et s'assure qu'il fait confiance au
+ * registre — et qu'on connaît son identifiant de nœud Swarm.
+ *
+ * UN PASSAGE, et pas une action unique au démarrage. Deux raisons :
+ *
+ *   - la MIGRATION. Les serveurs déjà provisionnés l'ont été avant que le
+ *     registre existe ; personne ne repassera par `provisionServer` pour eux.
+ *     Sans ce passage, ils resteraient incapables de tirer une image, et le
+ *     défaut ne se verrait qu'à la première task que Swarm y planifie.
+ *   - un serveur injoignable au démarrage du worker ne doit pas rester exclu
+ *     pour toujours. Il redevient joignable, le passage suivant le rattrape.
+ *
+ * Même forme que `sweepWatch`/`sweepBackups`/`collectMetrics`, et pour la même
+ * raison : l'état vit dans Postgres, un Redis vidé ne fait rien disparaître.
+ *
+ * Un serveur injoignable est SAUTÉ, jamais marqué en échec : ce passage n'est
+ * pas une sonde de disponibilité, et écraser `lastError` avec sa propre erreur
+ * masquerait la vraie cause déjà relevée par le provisionnement.
+ */
+export async function sweepRegistryTrust(opts: {
+  /**
+   * Injecté plutôt qu'importé de `#deploy` : ce module-là importe celui-ci
+   * pour pousser, et le cycle serait réel — les imports de TYPE s'effacent à
+   * la compilation, pas ceux de fonctions.
+   */
+  connectTo: (server: ServerRow) => Promise<SshClient>;
+  db: Database;
+  registry?: RegistryConfig;
+}): Promise<{ skipped: number; trusted: number }> {
+  const result = { skipped: 0, trusted: 0 };
+  const { registry } = opts;
+  if (!registry) {
+    return result;
+  }
+
+  const connected = await opts.db.query.servers.findMany({
+    where: eq(servers.status, "connected"),
+  });
+
+  for (const server of connected) {
+    let client: SshClient | undefined;
+    try {
+      // Une session SSH par machine, ouverte et refermée l'une après l'autre.
+      // Les paralléliser ouvrirait N connexions simultanées depuis une machine
+      // à 2 Go, pour un travail qui ne fait qu'écrire un fichier de 2 Ko.
+      // biome-ignore lint/performance/noAwaitInLoops: séquentiel volontaire
+      client = await opts.connectTo(server);
+      const written = await ensureRegistryTrust(client, registry);
+      if (written) {
+        result.trusted += 1;
+      }
+      if (!server.swarmNodeId) {
+        // Rattrape les serveurs provisionnés avant que la colonne existe.
+        const nodeId = await getSwarmNodeId(dockerClient(client));
+        await opts.db
+          .update(servers)
+          .set({ swarmNodeId: nodeId })
+          .where(eq(servers.id, server.id));
+      }
+    } catch {
+      result.skipped += 1;
+    } finally {
+      if (client) {
+        disconnect(client);
+      }
+    }
+  }
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

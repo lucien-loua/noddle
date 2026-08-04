@@ -20,6 +20,8 @@ import {
 } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, eq } from "drizzle-orm";
+import { ensureRegistryTrust, loadRegistryConfig } from "#registry";
+import { getSwarmNodeId } from "#swarm";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -36,6 +38,7 @@ const host = required("HOST_IP");
 const user = required("HOST_USER");
 const port = Number(process.env.HOST_SSH_PORT ?? 22);
 const privateKey = readFileSync(required("HOST_SSH_KEY"), "utf8");
+const registry = loadRegistryConfig();
 
 /** Relève les mêmes faits que `provisionServer` pour une machine ajoutée à la
  *  main, et par le MÊME chemin : une connexion SSH réelle, puis le socket
@@ -54,6 +57,17 @@ async function recordReachability(serverId: string): Promise<void> {
   let client: Awaited<ReturnType<typeof connect>> | undefined;
   try {
     client = await connect({ host, port, privateKey, user });
+
+    // La machine n°1 est un nœud comme un autre : elle doit faire confiance au
+    // registre pour tirer les images qu'elle a elle-même construites. Sur une
+    // installation mono-machine — le cas courant — c'est le SEUL endroit où
+    // cette confiance est posée, et le chemin de bouclage est donc exercé par
+    // tout le monde, comme le reste de l'adoption.
+    if (registry) {
+      await ensureRegistryTrust(client, registry);
+      process.stdout.write(`  AC du registre déposée (${registry.host})\n`);
+    }
+
     const docker = dockerClient(client);
     const info = (await docker.info()) as { MemTotal?: number };
     const version = (await docker.version()) as {
@@ -67,6 +81,7 @@ async function recordReachability(serverId: string): Promise<void> {
         dockerVersion: version.Version ?? null,
         lastError: null,
         status: "connected",
+        swarmNodeId: await getSwarmNodeId(docker),
         totalMemoryMb: info.MemTotal
           ? Math.round(info.MemTotal / 1024 / 1024)
           : null,

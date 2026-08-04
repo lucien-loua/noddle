@@ -78,6 +78,13 @@
       "when": 1785840593062,
       "tag": "0010_graceful_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785872531680,
+      "tag": "0011_white_nomad",
+      "breakpoints": true
     }
   ]
 }

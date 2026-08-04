@@ -39,6 +39,7 @@ import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
+import type { RegistryConfig } from "#registry";
 import {
   deployService,
   ensureOverlayNetwork,
@@ -62,6 +63,16 @@ export interface DeployContext {
   networkName: string;
   /** Alimente le flux SSE du dashboard. */
   onLog?: (deploymentId: string, chunk: string) => void;
+  /**
+   * Le registre d'images de cette installation, ou `undefined`.
+   *
+   * `undefined` n'est pas une panne : c'est le comportement d'avant le
+   * registre — build local, image qui n'existe que sur son nœud, service
+   * épinglé là par une contrainte de placement. Une installation mise à jour
+   * dont la pile n'a pas encore redémarré passe exactement par là, et se
+   * comporte comme avant.
+   */
+  registry?: RegistryConfig;
 }
 
 /**

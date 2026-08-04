@@ -20,6 +20,8 @@ import {
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import type { DeployContext } from "#deploy";
+import { ensureRegistryTrust } from "#registry";
+import { getSwarmNodeId } from "#swarm";
 
 async function connectAsRow(
   ctx: DeployContext,
@@ -156,6 +158,14 @@ export async function provisionServer(
       );
     }
 
+    // L'AC du registre, sans quoi ce nœud ne pourra TIRER aucune image — et
+    // l'échec arriverait bien plus tard, à la première task que Swarm y
+    // planifie, sous la forme d'un service qui ne converge pas. C'est ici, au
+    // provisionnement, que le nœud reçoit tout ce dont il a besoin.
+    if (ctx.registry) {
+      await ensureRegistryTrust(client, ctx.registry);
+    }
+
     // Les mêmes faits que la machine n°1, relevés en Phase 1.
     const docker = dockerClient(client);
     const info = (await docker.info()) as { MemTotal?: number };
@@ -171,6 +181,11 @@ export async function provisionServer(
         dockerVersion: version.Version ?? null,
         lastError: null,
         status: "connected",
+        // Relevé ICI plutôt qu'à chaque déploiement : c'est le moment où le
+        // nœud vient de rejoindre le cluster, donc le moment où ce fait
+        // naît. `deploy.ts` le lisait jusqu'à présent par un `docker info`
+        // supplémentaire à chaque bascule.
+        swarmNodeId: await getSwarmNodeId(docker),
         totalMemoryMb: info.MemTotal
           ? Math.round(info.MemTotal / 1024 / 1024)
           : null,

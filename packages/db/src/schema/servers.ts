@@ -69,6 +69,16 @@ export const servers = pgTable(
 
     status: serverStatus("status").notNull().default("pending"),
 
+    // L'identifiant de ce nœud DANS le cluster Swarm — celui que `docker info`
+    // rapporte localement, à distinguer de `id` qui est un identifiant de base.
+    // C'est lui que porte une contrainte `node.id==…`, et c'est lui que porte
+    // une task quand on veut savoir sur QUELLE machine elle tourne réellement.
+    //
+    // Relevé au provisionnement plutôt qu'à chaque déploiement : le fait ne
+    // change que si le nœud quitte puis rejoint le cluster, ce qui repasse
+    // justement par le provisionnement.
+    swarmNodeId: text("swarm_node_id"),
+
     // Mémoire totale relevée sur la machine. Le plafond de build s'en déduit,
     // en tenant compte de ce que consomme déjà le plan de contrôle.
     totalMemoryMb: integer("total_memory_mb"),
