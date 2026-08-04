@@ -14,9 +14,9 @@
 import { lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/react-charts";
 import { scaleLinear } from "d3-scale";
+import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { relativeTime } from "@/lib/format";
 import type { MetricPoint, ServerSeries } from "@/server/metrics";
 
 /** Au-delà, deux échantillons ne se suivent plus : la ligne doit se rompre. */
@@ -230,12 +230,14 @@ function ServerFreshness({ latest }: { latest: MetricPoint | null }) {
   const age = Date.now() - Date.parse(latest.sampledAt);
   if (age > GAP_MS) {
     return (
-      <Badge variant="destructive">figé {relativeTime(latest.sampledAt)}</Badge>
+      <Badge variant="destructive">
+        figé <RelativeTime iso={latest.sampledAt} />
+      </Badge>
     );
   }
   return (
     <span className="text-muted-foreground text-xs">
-      relevé {relativeTime(latest.sampledAt)}
+      relevé <RelativeTime iso={latest.sampledAt} />
     </span>
   );
 }

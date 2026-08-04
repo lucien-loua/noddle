@@ -8,6 +8,7 @@
 // juste avant, ce qui rend l'opération réversible pour de bon.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { RelativeTime } from "@/components/relative-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -318,7 +319,7 @@ function BackupLine({
         {duration(backup.createdAt, backup.finishedAt)}
       </TableCell>
       <TableCell className="text-muted-foreground text-xs">
-        {relativeTime(backup.createdAt)}
+        <RelativeTime iso={backup.createdAt} />
       </TableCell>
       <TableCell className="text-right">
         {/* Seule une sauvegarde complète est restaurable : une demi-sauvegarde

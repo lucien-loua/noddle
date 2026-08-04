@@ -7,6 +7,7 @@
 // vraie notification plutôt que de valider une URL.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { RelativeTime } from "@/components/relative-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { errorMessage, relativeTime } from "@/lib/format";
+import { errorMessage } from "@/lib/format";
 import {
   addChannel,
   type ChannelRow,
@@ -193,7 +194,7 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
   if (channel.lastSuccessAt) {
     return (
       <span className="text-muted-foreground text-xs">
-        Dernier envoi {relativeTime(channel.lastSuccessAt)}
+        Dernier envoi <RelativeTime iso={channel.lastSuccessAt} />
       </span>
     );
   }
