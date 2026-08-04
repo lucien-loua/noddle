@@ -1,15 +1,19 @@
 // Les ressources d'une machine : la valeur courante, et sa forme récente.
 //
-// Des sparklines SVG écrites à la main plutôt qu'une bibliothèque de
-// graphiques. Ce n'est pas de l'économie de dépendance pour le plaisir : la
-// question posée ici est « est-ce que la machine tient ? », qui se répond
-// d'un coup d'œil sur une courbe de trente pixels. Des axes, une légende et
-// des infobulles serviraient à explorer, ce qui n'est pas la question — et
-// contrediraient « ~4 tailles de texte, un accent ».
+// Tracées avec TanStack Charts, cohérent avec le reste de la pile (Router,
+// Query, Table, Form) et ouvrant la porte aux axes et à la lecture au survol
+// le jour où l'écran devra répondre à « que s'est-il passé mardi à 3 h ».
 //
-// **Un trou reste un trou.** La courbe est coupée là où la collecte a manqué,
-// jamais interpolée : un segment continu au-dessus d'une période où personne
-// ne regardait affirmerait que la machine allait bien.
+// **Un trou reste un trou**, et c'est la seule chose non négociable ici : une
+// courbe continue au-dessus d'une période où personne ne regardait affirme
+// que la machine allait bien. La bibliothèque traite `y = null` comme une
+// rupture — convention héritée d'Observable Plot, dont son API reprend les
+// idiomes (`lineY`, `Channel`, `curve`). On lui donne donc explicitement un
+// `null` à chaque interruption plutôt que de compter sur une interpolation
+// qu'on n'aurait pas demandée.
+import { lineY } from "@tanstack/charts";
+import { Chart } from "@tanstack/react-charts";
+import { scaleLinear } from "d3-scale";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { relativeTime } from "@/lib/format";
@@ -21,92 +25,105 @@ const GAP_MS = 3 * 60 * 1000;
 const WIDTH = 120;
 const HEIGHT = 28;
 
+export interface GappedPoint {
+  t: number;
+  v: number | null;
+}
+
 /**
- * Découpe la série en segments continus.
+ * La série, avec un `null` explicite à chaque interruption.
  *
- * Chaque interruption de plus de `GAP_MS` ouvre un nouveau segment, qui sera
- * tracé séparément. C'est tout le mécanisme qui rend un trou visible.
+ * C'est LE mécanisme qui rend un trou visible. On n'espère pas que la
+ * bibliothèque devine qu'il manque des points : dès que deux échantillons
+ * sont espacés de plus de `GAP_MS`, on insère une valeur nulle entre eux, et
+ * `lineY` rompt la ligne à cet endroit. Fonction pure et exportée, donc
+ * vérifiable sans monter un rendu.
  */
-export function segments(
+export function withGaps(
   points: MetricPoint[],
   value: (p: MetricPoint) => number
-): { t: number; v: number }[][] {
-  const out: { t: number; v: number }[][] = [];
-  let current: { t: number; v: number }[] = [];
+): GappedPoint[] {
+  const out: GappedPoint[] = [];
 
   for (const p of points) {
     const t = Date.parse(p.sampledAt);
-    const previous = current.at(-1);
-    if (previous && t - previous.t > GAP_MS) {
-      out.push(current);
-      current = [];
+    const previous = out.at(-1);
+    if (previous && previous.v !== null && t - previous.t > GAP_MS) {
+      // Posé au milieu de l'intervalle manquant : la rupture tombe là où la
+      // collecte s'est arrêtée, pas collée au point suivant.
+      out.push({ t: (previous.t + t) / 2, v: null });
     }
-    current.push({ t, v: value(p) });
-  }
-  if (current.length > 0) {
-    out.push(current);
+    out.push({ t, v: value(p) });
   }
   return out;
 }
 
+const readX = (d: GappedPoint) => d.t;
+const readY = (d: GappedPoint) => d.v;
+
 function Sparkline({
+  label,
   max,
   points,
   value,
 }: {
+  label: string;
   max: number;
   points: MetricPoint[];
   value: (p: MetricPoint) => number;
 }) {
-  const parts = segments(points, value);
-  if (parts.length === 0) {
+  const data = withGaps(points, value);
+  if (data.length === 0) {
     return <div className="h-7 w-30" />;
   }
 
-  const times = points.map((p) => Date.parse(p.sampledAt));
-  const first = Math.min(...times);
-  const last = Math.max(...times);
-  const span = last - first || 1;
-  const ceiling = max || 1;
-
-  const x = (t: number) => ((t - first) / span) * WIDTH;
-  const y = (v: number) => HEIGHT - Math.min(v / ceiling, 1) * (HEIGHT - 2) - 1;
-
   return (
-    <svg
-      aria-hidden="true"
+    <Chart
+      ariaLabel={label}
       className="text-muted-foreground"
+      definition={{
+        // Une sparkline : pas d'axes, pas de grille, une marge d'un pixel.
+        // Ce qu'on demande à cette courbe est sa FORME ; les valeurs lisibles
+        // sont écrites en chiffres juste à côté.
+        guides: false,
+        margin: 1,
+        marks: [
+          lineY(data, {
+            // `currentColor` plutôt que la palette catégorielle, même une
+            // fois celle-ci branchée sur les jetons shadcn : `--chart-1` vaut
+            // oklch(0.87 0 0), un gris très clair pensé pour des surfaces
+            // pleines — illisible en trait de 1,2 px sur une carte blanche.
+            // Une série UNIQUE n'est de toute façon pas catégorielle, donc
+            // elle suit la couleur du texte, ici `text-muted-foreground`.
+            stroke: "currentColor",
+            strokeWidth: 1.2,
+            x: readX,
+            y: readY,
+          }),
+        ],
+        // `x: null` est refusé — `lineY` matérialise son canal x, donc
+        // l'échelle doit exister même quand l'axe est masqué. Le domaine
+        // temporel, lui, est inféré des données : c'est la fenêtre affichée.
+        // La FABRIQUE, pas une instance : la bibliothèque n'infère le
+        // domaine que d'une fabrique, une instance gardant celui qu'elle a.
+        // Passer `scaleLinear()` laissait le domaine par défaut [0, 1], donc
+        // les x restaient des horodatages bruts et la courbe se traçait à
+        // 2×10^14 pixels hors écran — visible seulement à l'écran, le DOM
+        // ayant l'air correct.
+        x: { axis: false, scale: scaleLinear },
+        // Domaine FIXE, et ce n'est pas cosmétique : laissé inféré, une
+        // mémoire oscillant entre 20 et 22 % dessinerait la même vague qu'une
+        // machine qui sature. La forme doit rester comparable d'une ligne à
+        // l'autre. `axis: false` garde l'échelle et retire l'axe visible.
+        y: {
+          axis: false,
+          scale: scaleLinear().domain([0, max || 1]),
+        },
+      }}
       height={HEIGHT}
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      tabIndex={-1}
       width={WIDTH}
-    >
-      <title>Historique</title>
-      {parts.map((seg) => {
-        const d = seg
-          .map((p, i) => `${i === 0 ? "M" : "L"}${x(p.t)},${y(p.v)}`)
-          .join(" ");
-        // Un segment d'un seul point ne trace rien avec `path` : on pose un
-        // point, sinon un échantillon isolé disparaîtrait de l'écran.
-        const single = seg.length === 1 && seg[0];
-        return single ? (
-          <circle
-            cx={x(single.t)}
-            cy={y(single.v)}
-            fill="currentColor"
-            key={single.t}
-            r={1.2}
-          />
-        ) : (
-          <path
-            d={d}
-            fill="none"
-            key={seg[0]?.t}
-            stroke="currentColor"
-            strokeWidth={1.2}
-          />
-        );
-      })}
-    </svg>
+    />
   );
 }
 
@@ -127,7 +144,7 @@ function Row({
     <div className="flex items-center justify-between gap-4">
       <span className="text-muted-foreground text-xs">{label}</span>
       <span className="flex items-center gap-3">
-        <Sparkline max={max} points={points} value={value} />
+        <Sparkline label={label} max={max} points={points} value={value} />
         <span className="w-16 text-right text-xs tabular-nums">{reading}</span>
       </span>
     </div>
