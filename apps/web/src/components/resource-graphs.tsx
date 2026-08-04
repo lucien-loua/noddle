@@ -60,7 +60,7 @@ function Sparkline({
 }) {
   const parts = segments(points, value);
   if (parts.length === 0) {
-    return <div className="h-7 w-[120px]" />;
+    return <div className="h-7 w-30" />;
   }
 
   const times = points.map((p) => Date.parse(p.sampledAt));
