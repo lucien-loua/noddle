@@ -361,6 +361,23 @@ export type BackupRequest = z.infer<typeof backupRequestSchema>;
  * de la sauvegarde, mais le fournir permet de refuser une restauration croisée
  * plutôt que de la découvrir après coup.
  */
+export const backupScheduleSchema = z.enum(["off", "daily", "weekly"]);
+
+/**
+ * Le réglage automatique d'une base.
+ *
+ * La rétention est bornée en haut ET en bas : à 0 on effacerait la sauvegarde
+ * qu'on vient de prendre, et au-delà d'une centaine on ne garde plus une
+ * histoire mais une facture de stockage que personne ne relit.
+ */
+export const backupScheduleRequestSchema = z.object({
+  databaseId: z.uuid(),
+  retention: z.number().int().min(1).max(100),
+  schedule: backupScheduleSchema,
+});
+
+export type BackupScheduleRequest = z.infer<typeof backupScheduleRequestSchema>;
+
 export const restoreRequestSchema = z.object({
   backupId: z.uuid(),
   confirmName: z.string().min(1).max(48),
