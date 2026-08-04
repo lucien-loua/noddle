@@ -177,17 +177,23 @@ export async function deliver(
 }
 
 /**
- * Une cause lisible, SANS l'URL.
+ * Une cause lisible, SANS l'URL et SANS le message du runtime.
  *
- * Elle est porteuse — qui la détient peut écrire dans le salon — et ce message
- * finit dans une colonne que l'interface affiche.
+ * Deux raisons de ne pas rendre `err.message` tel quel :
+ *
+ *   · il est porteur du runtime. Node dit « fetch failed », Bun dit « Unable
+ *     to connect. Is the computer able to access the url? ». Or les deux
+ *     envoient : le web (Bun) éprouve les canaux, le worker (Node) émet les
+ *     événements. Le MÊME canal en panne s'afficherait donc différemment
+ *     selon qui a essayé — constaté à l'écran ;
+ *   · il est en anglais dans une interface française.
+ *
+ * On ne garde donc que la distinction qui change quelque chose pour qui lit :
+ * le destinataire a-t-il répondu trop tard, ou pas du tout.
  */
 function describeFailure(err: unknown): string {
-  if (!(err instanceof Error)) {
-    return String(err);
-  }
-  if (err.name === "TimeoutError") {
+  if (err instanceof Error && err.name === "TimeoutError") {
     return `pas de réponse en ${TIMEOUT_MS / 1000} s`;
   }
-  return err.message;
+  return "destinataire injoignable";
 }

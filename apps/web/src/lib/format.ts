@@ -152,3 +152,37 @@ export function duration(startIso: string, endIso: string | null): string {
   }
   return `${Math.floor(seconds / MINUTE)} min ${seconds % MINUTE} s`;
 }
+
+/**
+ * Le message lisible d'une erreur de server function.
+ *
+ * Quand un validateur Zod refuse une entrée, TanStack Start propage le
+ * tableau d'issues SÉRIALISÉ comme message d'erreur. Affiché tel quel, le
+ * formulaire montre du JSON à l'utilisateur — constaté dans un vrai
+ * navigateur sur « Discord et Slack n'acceptent que des URL https:// », qui
+ * sortait entouré de crochets, de guillemets et d'un champ `code`.
+ *
+ * On ne peut pas corriger ça côté serveur sans renoncer à la validation
+ * partagée : c'est la forme du transport. On le défait donc à l'affichage,
+ * au seul endroit où quelqu'un lit.
+ */
+export function errorMessage(err: unknown, fallback: string): string {
+  if (!(err instanceof Error)) {
+    return fallback;
+  }
+  const raw = err.message.trim();
+  if (!raw.startsWith("[")) {
+    return raw || fallback;
+  }
+  try {
+    const issues = JSON.parse(raw) as { message?: string }[];
+    const messages = issues
+      .map((i) => i.message)
+      .filter((m): m is string => Boolean(m));
+    return messages.length > 0 ? messages.join(" · ") : fallback;
+  } catch {
+    // Un message qui commence par `[` sans être du JSON : on le rend tel quel
+    // plutôt que d'avaler une cause potentiellement utile.
+    return raw;
+  }
+}
