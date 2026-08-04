@@ -17,6 +17,48 @@ import type { FocusEvent, ReactNode } from "react";
 import { useCallback } from "react";
 import { TabsList } from "@/components/ui/tabs";
 
+/**
+ * La pastille.
+ *
+ * `w-fit`, sinon elle s'étire sur toute la largeur : `TabsList` le porte
+ * d'origine, mais en l'enveloppant la largeur revient à ce div nu — et `Tabs`
+ * étant une colonne flex, un enfant sans largeur explicite hérite
+ * d'`align-self: stretch`. Le rail barrait donc l'écran entier derrière quatre
+ * onglets. `max-w-full` reste le plafond au-delà duquel il défile.
+ */
+const PILL = "w-fit max-w-full shrink-0 rounded-full bg-muted p-1";
+
+/**
+ * La zone défilante.
+ *
+ * `overflow-y` explicite, et ce n'est PAS redondant : dès qu'un axe passe en
+ * `auto`, CSS force l'autre de `visible` à `auto`. Avec le seul
+ * `overflow-x-auto`, le rail défilait aussi verticalement.
+ *
+ * Le `-m-1 p-1` rend au conteneur la place que l'anneau de focus d'un
+ * déclencheur déborde — 3 px d'anneau plus 1 px de contour, sur les QUATRE
+ * côtés : le premier déclencheur touche le bord de la zone défilante, donc un
+ * padding seulement vertical le rasait quand même à gauche. La marge négative
+ * reprend ce qu'ajoute le padding, donc la pastille mesure toujours 36 px.
+ *
+ * `scroll-px-10` vaut la largeur du fondu (`min(12%, 40px)`), et c'est
+ * `scrollIntoView` qui l'honore : sans lui l'onglet visé s'arrêterait pile
+ * sous le dégradé — focus posé sur un onglet à moitié effacé.
+ */
+const SCROLLER =
+  "scroll-fade-x no-scrollbar -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1";
+
+/**
+ * La liste.
+ *
+ * La hauteur se reprend AVEC son préfixe de variante. `tabsListVariants` la
+ * pose en `group-data-horizontal/tabs:h-9` : tailwind-merge ne déduplique pas
+ * deux portées différentes, et la version préfixée gagne en spécificité. Un
+ * `h-full` nu laissait donc une liste de 36 px dans une boîte de 28 — coupée
+ * par le bas.
+ */
+const LIST = "bg-transparent p-0 group-data-horizontal/tabs:h-7";
+
 export function TabRail({ children }: { children: ReactNode }) {
   /**
    * Ramène dans la vue le déclencheur qui vient de prendre le focus.
@@ -27,7 +69,7 @@ export function TabRail({ children }: { children: ReactNode }) {
    * restait à `scrollLeft` 0, et le focus se posait 23 px au-delà du bord
    * droit. C'est-à-dire invisible.
    *
-   * `nearest` sur les deux axes : le minimum qui rende l'onglet entier: on ne
+   * `nearest` sur les deux axes : le minimum qui rende l'onglet entier — on ne
    * veut ni recentrer le rail à chaque flèche, ni faire défiler la page
    * verticalement pour un mouvement horizontal.
    */
@@ -36,35 +78,9 @@ export function TabRail({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="max-w-full shrink-0 rounded-full bg-muted p-1">
-      {/*
-        `overflow-y` explicite, et ce n'est PAS redondant : dès qu'un axe passe
-        en `auto`, CSS force l'autre de `visible` à `auto`. Avec le seul
-        `overflow-x-auto`, le rail défilait aussi verticalement.
-
-        Le `-m-1 p-1` rend au conteneur la place que l'anneau de focus d'un
-        déclencheur déborde — 3 px d'anneau plus 1 px de contour, sur les
-        QUATRE côtés : le premier déclencheur touche le bord de la zone
-        défilante, donc un padding seulement vertical le rasait quand même à
-        gauche. La marge négative reprend ce qu'ajoute le padding, donc la
-        pastille mesure toujours 36 px.
-
-        `scroll-px-10` vaut la largeur du fondu (`min(12%, 40px)`), et c'est
-        `scrollIntoView` ci-dessus qui l'honore : sans lui l'onglet s'arrêterait
-        pile sous le dégradé — focus posé sur un onglet à moitié effacé.
-      */}
-      <div className="scroll-fade-x no-scrollbar -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1">
-        {/*
-          La hauteur se reprend AVEC son préfixe de variante. `tabsListVariants`
-          la pose en `group-data-horizontal/tabs:h-9` : tailwind-merge ne
-          déduplique pas deux portées différentes, et la version préfixée gagne
-          en spécificité. Un `h-full` nu laissait donc une liste de 36 px dans
-          une boîte de 28 — coupée par le bas.
-        */}
-        <TabsList
-          className="bg-transparent p-0 group-data-horizontal/tabs:h-7"
-          onFocus={keepInView}
-        >
+    <div className={PILL}>
+      <div className={SCROLLER}>
+        <TabsList className={LIST} onFocus={keepInView}>
           {children}
         </TabsList>
       </div>
