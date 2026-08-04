@@ -16,6 +16,7 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { AppShell, type ScopeLink } from "@/components/app-shell";
 import { AttachDatabaseDialog } from "@/components/attach-database-dialog";
+import { BackupPanel, RestoreDialog } from "@/components/backup-panel";
 import { ConnectDatabaseDialog } from "@/components/connect-database-dialog";
 import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
 import { ConnectStackDialog } from "@/components/connect-stack-dialog";
@@ -38,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { relativeTime, serviceLabel, shortSha } from "@/lib/format";
 import { getAuthState } from "@/server/auth";
+import { type BackupRow, triggerRestore } from "@/server/backups";
 import {
   getDashboard,
   getDeployments,
@@ -62,6 +64,9 @@ import {
 } from "@/server/webhooks";
 
 interface DashboardSearch {
+  /** La base dépliée. Même mécanique que `service`/`stack` : le détail vit
+   *  dans l'URL, donc il survit à un rechargement et se partage. */
+  database?: string;
   deployment?: string;
   service?: string;
   stack?: string;
@@ -84,6 +89,7 @@ export const Route = createFileRoute("/")({
     stacks: await getStackDashboard(),
   }),
   validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
+    database: typeof search.database === "string" ? search.database : undefined,
     deployment:
       typeof search.deployment === "string" ? search.deployment : undefined,
     service: typeof search.service === "string" ? search.service : undefined,
@@ -184,6 +190,7 @@ function Dashboard() {
     (serviceId: string) =>
       navigate({
         search: {
+          database: undefined,
           deployment: undefined,
           service: search.service === serviceId ? undefined : serviceId,
           stack: undefined,
@@ -192,10 +199,24 @@ function Dashboard() {
     [navigate, search.service]
   );
 
+  const handleToggleDatabase = useCallback(
+    (databaseId: string) =>
+      navigate({
+        search: {
+          database: search.database === databaseId ? undefined : databaseId,
+          deployment: undefined,
+          service: undefined,
+          stack: undefined,
+        },
+      }),
+    [navigate, search.database]
+  );
+
   const handleToggleStack = useCallback(
     (stackId: string) =>
       navigate({
         search: {
+          database: undefined,
           deployment: undefined,
           service: undefined,
           stack: search.stack === stackId ? undefined : stackId,
@@ -328,11 +349,17 @@ function Dashboard() {
               ))}
 
               {scope.databases.map((database) => (
-                <DatabaseCard
-                  database={database}
-                  key={database.id}
-                  services={services}
-                />
+                <div key={database.id}>
+                  <DatabaseCard
+                    database={database}
+                    onToggle={handleToggleDatabase}
+                    selected={search.database === database.id}
+                    services={services}
+                  />
+                  {search.database === database.id ? (
+                    <DatabasePanel database={database} />
+                  ) : null}
+                </div>
               ))}
             </RowGroup>
           ))}
@@ -801,12 +828,20 @@ const ENGINE_LABEL: Record<DatabaseRow["engine"], string> = {
 
 function DatabaseCard({
   database,
+  onToggle,
+  selected,
   services,
 }: {
   database: DatabaseRow;
+  onToggle: (databaseId: string) => void;
+  selected: boolean;
   services: ServiceRow[];
 }) {
   const status = serviceLabel(database.status);
+  const handleSelect = useCallback(
+    () => onToggle(database.id),
+    [database.id, onToggle]
+  );
 
   return (
     <ResourceRow
@@ -818,6 +853,7 @@ function DatabaseCard({
         />
       }
       name={database.name}
+      onToggle={handleSelect}
       secondary={
         <>
           <span className="text-muted-foreground/70">
@@ -826,8 +862,67 @@ function DatabaseCard({
           {database.serverName}
         </>
       }
+      selected={selected}
       tone={status.tone}
       toneLabel={status.label}
     />
+  );
+}
+
+/**
+ * Le détail d'une base : ses sauvegardes.
+ *
+ * Un seul onglet aujourd'hui, donc pas d'onglets — un `TabsList` d'un seul
+ * élément est du décor. Le jour où une base en aura un second, il ressemblera
+ * à celui d'un service.
+ */
+function DatabasePanel({ database }: { database: DatabaseRow }) {
+  const [target, setTarget] = useState<BackupRow | null>(null);
+  const restore = useMutation({
+    mutationFn: (confirmName: string) =>
+      triggerRestore({
+        data: {
+          backupId: target?.id ?? "",
+          confirmName,
+          databaseId: database.id,
+        },
+      }),
+    onSuccess: () => setTarget(null),
+  });
+
+  const handleClose = useCallback((open: boolean) => {
+    if (!open) {
+      setTarget(null);
+    }
+  }, []);
+  const handleConfirm = useCallback(
+    (confirmName: string) => restore.mutate(confirmName),
+    [restore]
+  );
+
+  return (
+    <div className="border-t bg-muted/20 px-3 py-3">
+      <BackupPanel
+        databaseId={database.id}
+        databaseName={database.name}
+        onRestore={setTarget}
+      />
+      {restore.isError ? (
+        <Alert className="mt-3" variant="destructive">
+          <AlertDescription>
+            {restore.error instanceof Error
+              ? restore.error.message
+              : "restauration refusée"}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      <RestoreDialog
+        backup={target}
+        databaseName={database.name}
+        onConfirm={handleConfirm}
+        onOpenChange={handleClose}
+        pending={restore.isPending}
+      />
+    </div>
   );
 }
