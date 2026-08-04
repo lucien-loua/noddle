@@ -21,7 +21,7 @@ import {
   dockerClient,
   exec,
 } from "@noddle/ssh-executor";
-import { and, eq, lt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { connectTo, type DeployContext } from "#deploy";
 
 /** Sept jours. Au-delà il faudrait agréger, donc une base temporelle. */
@@ -132,24 +132,41 @@ export function cpuPercent(stats: DockerStats): number | null {
   return (cpuDelta / systemDelta) * cores * 100;
 }
 
-/** Le conteneur qui exécute la task de ce service, sur CE nœud. */
-async function findContainer(
-  docker: DockerApi,
-  serviceName: string
-): Promise<{ id: string; name: string } | null> {
-  const list = await docker.listContainers({
-    filters: JSON.stringify({
-      label: [`com.docker.swarm.service.name=${serviceName}`],
-    }),
-  });
-  const [first] = list;
-  if (!first) {
-    return null;
+const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
+
+/**
+ * Les conteneurs de tasks Swarm présents sur CE nœud, indexés par nom de
+ * service.
+ *
+ * On part de ce qui TOURNE ICI, et non de ce que la base dit qui devrait y
+ * tourner. La nuance était sans effet tant qu'une image restait locale à son
+ * nœud : `services.server_id` désignait alors à la fois le lieu de build et le
+ * lieu d'exécution. Avec un registre, l'image est portable et c'est Swarm qui
+ * place — un service déplacé n'aurait plus produit aucune ligne, et le
+ * dashboard aurait affiché « aucun relevé » sur un service en parfaite santé.
+ *
+ * Exactement le contresens que la règle du trou existe pour éviter, sauf qu'il
+ * aurait été fabriqué par nous.
+ *
+ * Un seul `listContainers` par nœud, au lieu d'un par service : c'est aussi
+ * moins d'appels qu'avant.
+ */
+async function swarmContainersByService(
+  docker: DockerApi
+): Promise<Map<string, { id: string; name: string }>> {
+  const list = await docker.listContainers();
+  const byService = new Map<string, { id: string; name: string }>();
+  for (const c of list) {
+    const serviceName = c.Labels?.[SWARM_SERVICE_LABEL];
+    if (!serviceName || byService.has(serviceName)) {
+      continue;
+    }
+    byService.set(serviceName, {
+      id: c.Id,
+      name: c.Names?.[0]?.replace(LEADING_SLASH, "") ?? serviceName,
+    });
   }
-  return {
-    id: first.Id,
-    name: first.Names?.[0]?.replace(LEADING_SLASH, "") ?? serviceName,
-  };
+  return byService;
 }
 
 async function sampleServer(
@@ -172,23 +189,24 @@ async function sampleServer(
       result.skipped.push(server.id);
     }
 
-    const hosted = await ctx.db.query.services.findMany({
-      where: and(
-        eq(services.serverId, server.id),
-        eq(services.status, "running")
-      ),
+    // TOUS les services en marche, pas seulement ceux dont ce serveur est le
+    // serveur de BUILD : avec un registre, Swarm place où il veut. C'est la
+    // présence du conteneur sur ce nœud qui tranche, juste en dessous.
+    const running = await ctx.db.query.services.findMany({
+      where: eq(services.status, "running"),
     });
-    if (hosted.length === 0) {
+    if (running.length === 0) {
       return;
     }
 
     const docker = dockerClient(client);
-    for (const service of hosted) {
-      // biome-ignore lint/performance/noAwaitInLoops: un service à la fois, volontairement
-      const container = await findContainer(docker, service.name);
+    const present = await swarmContainersByService(docker);
+    for (const service of running) {
+      const container = present.get(service.name);
       if (!container) {
         continue;
       }
+      // biome-ignore lint/performance/noAwaitInLoops: un conteneur à la fois, volontairement
       const stats = (await docker
         .getContainer(container.id)
         .stats({ stream: false })) as DockerStats;
