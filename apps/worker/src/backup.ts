@@ -222,6 +222,18 @@ export async function runBackup(
       .update(backups)
       .set({ finishedAt: new Date(), sizeBytes, status: "completed" })
       .where(eq(backups.id, backupId));
+
+    // La purge vient APRÈS l'enregistrement du succès, jamais avant : purger
+    // d'abord réduirait la fenêtre pendant laquelle il reste quelque chose à
+    // restaurer si ce dump-ci échoue. Elle n'a pas non plus le droit de faire
+    // échouer une sauvegarde qui, elle, a réussi.
+    try {
+      const { pruneBackups } = await import("#backup-sweep");
+      await pruneBackups(ctx, database.id);
+    } catch {
+      // Une purge ratée laisse des objets en trop, ce qui coûte du stockage —
+      // pas de la donnée. Le prochain passage réessaiera.
+    }
   } catch (err) {
     await ctx.db
       .update(backups)
