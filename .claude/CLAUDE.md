@@ -517,6 +517,19 @@ précisément ce qu'il existe pour éviter.
 **Reste pour la Phase 3 :** notifications, graphiques de ressources,
 équipes/RBAC.
 
+**Préalable connu pour les équipes/RBAC.** Aujourd'hui `requireSession()` EST
+le contrôle d'autorisation complet, et c'est correct : il n'existe qu'un
+compte par installation (`needsSetup()` n'autorise la création que tant que
+`userCount() === 0`), aucune table ne porte de colonne de propriété, donc un
+seul principal possède tout. Toutes les server functions sont écrites ainsi —
+session vérifiée, puis un id libre.
+
+Le jour où les équipes arrivent, ce n'est donc PAS une fonction à corriger
+mais **toutes** : chacune devra porter un prédicat de tenancy, dans le `where`
+de la lecture ET dans celui de l'écriture. Le noter ici parce que c'est le
+genre de dette qu'un audit signale une fonction à la fois, ce qui donne
+l'illusion d'un correctif local alors que c'est une migration de modèle.
+
 **Dette repérée, hors chantier :** `ENGINE_SPECS` (`apps/worker/src/database.ts`)
 passe le mot de passe Redis dans `Command`, donc il est lisible en clair dans
 `docker service inspect` — antérieur à ce chantier, et en tension avec la
