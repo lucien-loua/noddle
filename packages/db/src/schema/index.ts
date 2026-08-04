@@ -13,6 +13,7 @@ export * from "#schema/backups";
 export * from "#schema/databases";
 export * from "#schema/deployments";
 export * from "#schema/env-vars";
+export * from "#schema/notifications";
 export * from "#schema/projects";
 export * from "#schema/relations";
 export * from "#schema/servers";

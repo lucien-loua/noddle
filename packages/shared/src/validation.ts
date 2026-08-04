@@ -361,6 +361,56 @@ export type BackupRequest = z.infer<typeof backupRequestSchema>;
  * de la sauvegarde, mais le fournir permet de refuser une restauration croisée
  * plutôt que de la découvrir après coup.
  */
+// ─────────────────────────────────────────────────────────────────────────────
+// notifications
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const notificationKindSchema = z.enum(["webhook", "discord", "slack"]);
+
+/**
+ * L'URL d'un canal.
+ *
+ * `https://` exigé, et pas seulement par principe : ces URL sont des secrets
+ * porteurs — qui les détient peut écrire dans le salon — donc les envoyer en
+ * clair sur le réseau les exposerait à quiconque écoute entre Noddle et le
+ * destinataire.
+ */
+export const notificationUrlSchema = z
+  .string()
+  .min(1)
+  .max(1024)
+  .refine((v) => HTTPS_URL.test(v), "URL https:// attendue");
+
+export const notificationChannelSchema = z.object({
+  kind: notificationKindSchema,
+  name: z.string().min(1).max(64),
+  notifySuccess: z.boolean().default(false),
+  url: notificationUrlSchema,
+});
+
+export type NotificationChannelInput = z.infer<
+  typeof notificationChannelSchema
+>;
+
+/**
+ * Modification d'un canal existant. L'URL est optionnelle : elle ne ressort
+ * jamais du serveur — même règle que la clé secrète S3 et le mot de passe
+ * d'une base — donc la laisser vide veut dire « garde celle d'avant ».
+ */
+export const notificationChannelUpdateSchema = z.object({
+  channelId: z.uuid(),
+  enabled: z.boolean(),
+  name: z.string().min(1).max(64),
+  notifySuccess: z.boolean(),
+  url: notificationUrlSchema.optional(),
+});
+
+export type NotificationChannelUpdate = z.infer<
+  typeof notificationChannelUpdateSchema
+>;
+
+export const notificationChannelIdSchema = z.object({ channelId: z.uuid() });
+
 export const backupScheduleSchema = z.enum(["off", "daily", "weekly"]);
 
 /**
