@@ -19,10 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -374,7 +376,7 @@ function CreateAccountDialog({
         {password ? (
           <PasswordReveal password={password} />
         ) : (
-          <form onSubmit={handleSubmit}>
+          <>
             <DialogHeader>
               <DialogTitle>New account</DialogTitle>
               <DialogDescription>
@@ -382,78 +384,87 @@ function CreateAccountDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <FieldGroup className="gap-5 py-5">
-              <Field>
-                <FieldLabel htmlFor="accountName">Name</FieldLabel>
-                <Input
-                  autoComplete="off"
-                  disabled={create.isPending}
-                  id="accountName"
-                  onChange={handleName}
-                  required
-                  value={name}
-                />
-              </Field>
+            <DialogForm onSubmit={handleSubmit}>
+              <DialogBody>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="accountName">Name</FieldLabel>
+                    <Input
+                      autoComplete="off"
+                      disabled={create.isPending}
+                      id="accountName"
+                      onChange={handleName}
+                      required
+                      value={name}
+                    />
+                  </Field>
 
-              <Field>
-                <FieldLabel htmlFor="accountEmail">Email address</FieldLabel>
-                <Input
-                  autoComplete="off"
-                  disabled={create.isPending}
-                  id="accountEmail"
-                  onChange={handleEmail}
-                  required
-                  type="email"
-                  value={email}
-                />
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="accountEmail">
+                      Email address
+                    </FieldLabel>
+                    <Input
+                      autoComplete="off"
+                      disabled={create.isPending}
+                      id="accountEmail"
+                      onChange={handleEmail}
+                      required
+                      type="email"
+                      value={email}
+                    />
+                  </Field>
 
-              {/* Un vrai groupe de radios : une seule tabulation, les flèches
+                  {/* Un vrai groupe de radios : une seule tabulation, les flèches
                   parcourent les options, et l'option cochée s'annonce comme
                   telle. Quatre boutons ne disaient rien de tout ça — ni
                   lequel était choisi, ni qu'ils s'excluaient. */}
-              <FieldSet disabled={create.isPending}>
-                <FieldLegend variant="label">Role</FieldLegend>
-                <RadioGroup onValueChange={handleRole} value={role}>
-                  {ROLE_ORDER.map((option) => (
-                    <FieldLabel htmlFor={`role-${option}`} key={option}>
-                      <Field orientation="horizontal">
-                        <RadioGroupItem id={`role-${option}`} value={option} />
-                        <FieldContent>
-                          <FieldTitle>{ROLE_LABELS[option]}</FieldTitle>
-                          <FieldDescription>
-                            {ROLE_DESCRIPTIONS[option]}
-                          </FieldDescription>
-                        </FieldContent>
-                      </Field>
-                    </FieldLabel>
-                  ))}
-                </RadioGroup>
-              </FieldSet>
+                  <FieldSet disabled={create.isPending}>
+                    <FieldLegend variant="label">Role</FieldLegend>
+                    <RadioGroup onValueChange={handleRole} value={role}>
+                      {ROLE_ORDER.map((option) => (
+                        <FieldLabel htmlFor={`role-${option}`} key={option}>
+                          <Field orientation="horizontal">
+                            <RadioGroupItem
+                              id={`role-${option}`}
+                              value={option}
+                            />
+                            <FieldContent>
+                              <FieldTitle>{ROLE_LABELS[option]}</FieldTitle>
+                              <FieldDescription>
+                                {ROLE_DESCRIPTIONS[option]}
+                              </FieldDescription>
+                            </FieldContent>
+                          </Field>
+                        </FieldLabel>
+                      ))}
+                    </RadioGroup>
+                  </FieldSet>
 
-              {create.isError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    {errorMessage(create.error, "creation refused")}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-            </FieldGroup>
+                  {create.isError ? (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        {errorMessage(create.error, "creation refused")}
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                </FieldGroup>
+              </DialogBody>
 
-            <DialogFooter>
-              <DialogClose
-                render={
-                  <Button type="button" variant="outline">
-                    Cancel
-                  </Button>
-                }
-              />
-              <Button disabled={create.isPending} type="submit">
-                {create.isPending ? <Spinner /> : null}
-                Create account
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <DialogClose
+                  render={
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  }
+                />
+                <Button disabled={create.isPending} type="submit">
+                  {create.isPending ? <Spinner /> : null}
+                  Create account
+                </Button>
+              </DialogFooter>
+            </DialogForm>
+          </>
         )}
       </DialogContent>
     </Dialog>
