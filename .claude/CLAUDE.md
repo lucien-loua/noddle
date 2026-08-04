@@ -843,6 +843,32 @@ clair ET en sombre :
   conteneurs de défilement imbriqués, dont l'extérieur gagnait, donc le
   `scroll-fade` posé sur le composant ne servait à rien.
 
+- **Trois pièges payés d'un coup en enveloppant `TabsList` pour ce masque**,
+  tous invisibles au typecheck et trouvés en MESURANT dans le navigateur, pas
+  en regardant :
+
+  - `overflow-x-auto` seul ne suffit pas : dès qu'un axe passe en `auto`, CSS
+    force l'autre de `visible` à `auto`. Le rail défilait verticalement.
+    `overflow-y-hidden` à côté n'est donc pas redondant. (`ui/table.tsx` a la
+    même forme — vérifié, sans conséquence : rien n'y contraint la hauteur.)
+  - **tailwind-merge ne déduplique pas deux portées de variante différentes**,
+    et la version préfixée gagne en spécificité. `tabsListVariants` pose sa
+    hauteur en `group-data-horizontal/tabs:h-9` : un `h-7` nu ne la bat pas,
+    il faut reprendre le MÊME préfixe. Vaut pour tout `cva` dont on rejoue une
+    propriété déjà posée sous variante.
+  - **Envelopper un composant lui fait perdre ses propres classes de boîte.**
+    `TabsList` porte `w-fit` ; le div ajouté autour ne l'avait pas, et comme
+    `Tabs` est une colonne flex, il a hérité d'`align-self: stretch` — le rail
+    barrait l'écran entier derrière quatre onglets.
+
+- **Base UI déplace le focus des onglets avec `preventScroll`** (sinon chaque
+  flèche ferait sauter la page), donc le navigateur n'amène PAS l'onglet visé
+  dans la vue. Mesuré : les flèches atteignaient le dernier onglet, la zone
+  restait à `scrollLeft` 0, le focus se posait 23 px hors du bord — invisible,
+  au clavier, là où l'on ne peut pas rattraper à la souris. Un
+  `scrollIntoView({ block: "nearest", inline: "nearest" })` sur `onFocus` le
+  répare, et c'est lui qui donne enfin un effet à `scroll-padding`.
+
 - **`$SUDO` vide dans un TABLEAU bash n'est pas ignoré, contrairement à `$SUDO`
   non quoté.** `install.sh` construisait `COMPOSE=("$SUDO" docker compose …)` :
   en root, `SUDO=""` et `"${COMPOSE[@]}"` passe une CHAÎNE VIDE comme nom de
