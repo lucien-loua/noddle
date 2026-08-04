@@ -23,10 +23,11 @@ import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
 import { ServiceResources } from "@/components/service-resources";
+import { TabRail } from "@/components/tab-rail";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
@@ -213,7 +214,7 @@ function ServiceDetail() {
         <Tabs className="min-h-0 flex-1" defaultValue="logs">
           {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
               de l'écran et devenait inatteignable — mesuré. */}
-          <TabsList className="scroll-fade-x no-scrollbar max-w-full shrink-0 overflow-x-auto">
+          <TabRail>
             <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             {canReadEnvVar ? (
@@ -221,7 +222,7 @@ function ServiceDetail() {
             ) : null}
             <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="webhook">Webhook</TabsTrigger>
-          </TabsList>
+          </TabRail>
 
           <TabsContent className={TAB_PANEL} value="logs">
             {shown ? (

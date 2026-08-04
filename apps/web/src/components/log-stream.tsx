@@ -181,42 +181,50 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
         </Badge>
       </div>
 
-      <div
-        // Hauteur PLAFONNÉE, pas fixe : un déploiement sans log affichait
-        // sinon 320 px de vide, et repoussait le reste du dashboard pour ne
-        // rien montrer.
-        className="scroll-fade no-scrollbar wrap-break-word max-h-80 min-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed"
-        onScroll={handleScroll}
-        ref={viewRef}
-      >
-        {text.length === 0 ? (
-          <span className="text-muted-foreground">
-            Waiting for the first line…
-          </span>
-        ) : null}
+      {/* Le CADRE et le CONTENU qui défile sont deux éléments, et ils
+          doivent le rester : `scroll-fade` est un `mask-image`, or un
+          masque s'applique à TOUT l'élément — bordure et fond compris. Posé
+          sur le même div que `border`, il rongeait le cadre en haut et en
+          bas dès qu'on faisait défiler. Le cadre ne défile pas, il n'a donc
+          rien à faire disparaître. */}
+      <div className="rounded-lg border bg-muted/40">
+        <div
+          // Hauteur PLAFONNÉE, pas fixe : un déploiement sans log affichait
+          // sinon 320 px de vide, et repoussait le reste du dashboard pour
+          // ne rien montrer.
+          className="scroll-fade no-scrollbar wrap-break-word max-h-80 min-h-24 overflow-y-auto whitespace-pre-wrap p-3 font-mono text-xs leading-relaxed"
+          onScroll={handleScroll}
+          ref={viewRef}
+        >
+          {text.length === 0 ? (
+            <span className="text-muted-foreground">
+              Waiting for the first line…
+            </span>
+          ) : null}
 
-        {blocks.map((block) =>
-          block.kind === "group" ? (
-            <details key={block.id}>
-              <summary className="cursor-pointer text-muted-foreground">
-                {block.lines.length} build lines
-              </summary>
-              {block.lines.map((line) => (
-                <div key={line.id}>{line.text}</div>
-              ))}
-            </details>
-          ) : (
-            <div
-              className={cn(
-                block.kind === "error" && "font-medium text-destructive",
-                block.kind === "step" && "text-foreground"
-              )}
-              key={block.id}
-            >
-              {block.text}
-            </div>
-          )
-        )}
+          {blocks.map((block) =>
+            block.kind === "group" ? (
+              <details key={block.id}>
+                <summary className="cursor-pointer text-muted-foreground">
+                  {block.lines.length} build lines
+                </summary>
+                {block.lines.map((line) => (
+                  <div key={line.id}>{line.text}</div>
+                ))}
+              </details>
+            ) : (
+              <div
+                className={cn(
+                  block.kind === "error" && "font-medium text-destructive",
+                  block.kind === "step" && "text-foreground"
+                )}
+                key={block.id}
+              >
+                {block.text}
+              </div>
+            )
+          )}
+        </div>
       </div>
     </>
   );

@@ -12,10 +12,11 @@ import { AppShell } from "@/components/app-shell";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { LogStream } from "@/components/log-stream";
+import { TabRail } from "@/components/tab-rail";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
@@ -153,11 +154,11 @@ function StackDetail() {
         </p>
 
         <Tabs className="min-h-0 flex-1" defaultValue="logs">
-          <TabsList className="scroll-fade-x no-scrollbar max-w-full shrink-0 overflow-x-auto">
+          <TabRail>
             <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="webhook">Webhook</TabsTrigger>
-          </TabsList>
+          </TabRail>
 
           <TabsContent className={TAB_PANEL} value="logs">
             {shown ? (
