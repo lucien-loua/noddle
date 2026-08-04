@@ -10,8 +10,14 @@ import { useCallback, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
@@ -97,104 +103,103 @@ export function BackupDestinationPanel({ initial, role }: Props) {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      {/* Six champs, six cellules égales : les `col-span-2` d'avant
-          rendaient « Point de terminaison » deux fois plus large que
-          « Compartiment » sur la même ligne, jusqu'à environ 1000px pour une
-          URL de vingt caractères — l'excès que le passage précédent
-          combattait, juste déplacé plutôt que résolu. `max-w-sm` sur chaque
-          CHAMP (pas sur le panneau) le referme : un panneau plein largeur
-          reste cohérent avec le reste du dashboard, mais un champ qui
-          contient une valeur courte n'a aucune raison d'en épouser toute la
-          largeur. */}
-      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="endpoint">Endpoint</Label>
-          <Input
-            disabled={!canEdit}
-            id="endpoint"
-            onChange={onEndpoint}
-            placeholder="https://s3.example.com"
-            required
-            value={endpoint}
-          />
+      {/* Deux groupes, deux questions : OÙ les sauvegardes partent, et avec
+          QUELLES clés. À plat, les six champs se lisaient comme une seule
+          liste indifférenciée alors que la moitié sont des secrets.
+
+          `max-w-sm` sur chaque CHAMP (pas sur le panneau) : un panneau plein
+          largeur reste cohérent avec le reste du dashboard, mais un champ
+          qui contient une valeur courte n'a aucune raison d'en épouser toute
+          la largeur — c'était le défaut d'avant, une URL de vingt caractères
+          étirée sur mille pixels. */}
+      <FieldSet disabled={!canEdit}>
+        <FieldLegend variant="label">Location</FieldLegend>
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="endpoint">Endpoint</FieldLabel>
+            <Input
+              id="endpoint"
+              onChange={onEndpoint}
+              placeholder="https://s3.example.com"
+              required
+              value={endpoint}
+            />
+          </Field>
+
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="bucket">Bucket</FieldLabel>
+            <Input
+              id="bucket"
+              onChange={onBucket}
+              placeholder="noddle-backups"
+              required
+              value={bucket}
+            />
+          </Field>
+
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="region">Region</FieldLabel>
+            <Input id="region" onChange={onRegion} required value={region} />
+          </Field>
+
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="prefix">Prefix (optional)</FieldLabel>
+            <Input
+              id="prefix"
+              onChange={onPrefix}
+              placeholder="backups"
+              value={prefix}
+            />
+          </Field>
+        </div>
+      </FieldSet>
+
+      <FieldSet disabled={!canEdit}>
+        <FieldLegend variant="label">Credentials</FieldLegend>
+        <FieldDescription>
+          Encrypted at rest and never sent back to the browser. Noddle&apos;s
+          own servers push the dumps, so these never travel to a target machine.
+        </FieldDescription>
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="accessKeyId">Access key ID</FieldLabel>
+            <Input
+              id="accessKeyId"
+              onChange={onAccessKey}
+              required
+              value={accessKeyId}
+            />
+          </Field>
+
+          <Field className="max-w-sm">
+            <FieldLabel htmlFor="secretAccessKey">Secret access key</FieldLabel>
+            <Input
+              id="secretAccessKey"
+              onChange={onSecret}
+              placeholder={initial ? "unchanged" : ""}
+              required={!initial}
+              type="password"
+              value={secretAccessKey}
+            />
+            {initial ? (
+              <FieldDescription>
+                Leave empty to keep the stored key.
+              </FieldDescription>
+            ) : null}
+          </Field>
         </div>
 
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="bucket">Bucket</Label>
-          <Input
-            disabled={!canEdit}
-            id="bucket"
-            onChange={onBucket}
-            placeholder="noddle-backups"
-            required
-            value={bucket}
+        <Field orientation="horizontal">
+          <Checkbox
+            checked={forcePathStyle}
+            id="pathStyle"
+            onCheckedChange={onPathStyle}
           />
-        </div>
-
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="region">Region</Label>
-          <Input
-            disabled={!canEdit}
-            id="region"
-            onChange={onRegion}
-            required
-            value={region}
-          />
-        </div>
-
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="prefix">Prefix (optional)</Label>
-          <Input
-            disabled={!canEdit}
-            id="prefix"
-            onChange={onPrefix}
-            placeholder="backups"
-            value={prefix}
-          />
-        </div>
-
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="accessKeyId">Access key ID</Label>
-          <Input
-            disabled={!canEdit}
-            id="accessKeyId"
-            onChange={onAccessKey}
-            required
-            value={accessKeyId}
-          />
-        </div>
-
-        <div className="max-w-sm space-y-2">
-          <Label htmlFor="secretAccessKey">Secret access key</Label>
-          <Input
-            disabled={!canEdit}
-            id="secretAccessKey"
-            onChange={onSecret}
-            placeholder={initial ? "unchanged" : ""}
-            required={!initial}
-            type="password"
-            value={secretAccessKey}
-          />
-          {initial ? (
-            <p className="text-muted-foreground text-xs">
-              Leave empty to keep the stored key — it is never sent back to the
-              browser.
-            </p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={forcePathStyle}
-          disabled={!canEdit}
-          id="pathStyle"
-          onCheckedChange={onPathStyle}
-        />
-        <Label className="font-normal text-sm" htmlFor="pathStyle">
-          Path-style addressing (required outside Amazon S3)
-        </Label>
-      </div>
+          <FieldLabel className="font-normal" htmlFor="pathStyle">
+            Path-style addressing (required outside Amazon S3)
+          </FieldLabel>
+        </Field>
+      </FieldSet>
 
       {save.isError ? (
         <Alert variant="destructive">

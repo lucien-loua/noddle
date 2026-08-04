@@ -15,6 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 
 export function DetailBreadcrumb({
   environment,
@@ -30,13 +31,15 @@ export function DetailBreadcrumb({
       {/* La flèche double le premier maillon plutôt que de le remplacer :
           le fil dit OÙ l'on est, la flèche donne une cible large pour
           remonter sans viser un mot de huit caractères. */}
-      <Link
+      <Button
         aria-label="Back to deployments"
-        className="-ms-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-        to="/"
+        className="-ms-1 shrink-0"
+        render={<Link to="/" />}
+        size="icon-sm"
+        variant="ghost"
       >
         <ArrowLeftIcon />
-      </Link>
+      </Button>
 
       <Breadcrumb className="min-w-0">
         <BreadcrumbList className="flex-nowrap">
