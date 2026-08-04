@@ -75,6 +75,46 @@ services:
     networks:
       - noddle-public
 
+  # ── registre d'images ────────────────────────────────────────────────────
+  #
+  # Il rend une image portable entre les nœuds. Sans lui, une image construite
+  # n'existe que sur SON nœud, et chaque service doit y rester épinglé.
+  #
+  # Il ne passe PAS par Traefik : son certificat vient de l'AC générée par
+  # l'installateur, pas d'ACME. Un registre derrière Traefik n'aurait de TLS
+  # qu'avec un domaine — or les nœuds doivent pouvoir tirer une image sur une
+  # installation qu'on atteint par son IP, et deux chemins de code dont un seul
+  # est exercé finissent toujours par diverger. Bénéfice annexe : rien à
+  # recopier dans docker-compose.tls.yml, le seul endroit du dépôt où deux
+  # copies doivent déjà bouger ensemble.
+  registry:
+    image: registry:3.1.1
+    # Épinglé au patch exact, comme Traefik. Le chemin de la configuration a
+    # changé entre la v2 et la v3 (/etc/docker/registry → /etc/distribution),
+    # et le passage de rétention appelle `registry garbage-collect` avec ce
+    # chemin.
+    restart: unless-stopped
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5000
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/registry.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/registry.key
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: noddle
+      REGISTRY_AUTH_HTPASSWD_PATH: /certs/htpasswd
+      # Sans ça, aucune suppression n'est possible et le registre grossit sans
+      # fin. Supprimer un manifeste ne libère RIEN à soi seul — mesuré : le tag
+      # disparaît, le volume ne bouge pas d'un octet. C'est
+      # `registry garbage-collect` qui rend les octets, et il lui faut d'abord
+      # des manifestes supprimés à collecter.
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    ports:
+      - "5000:5000"
+    volumes:
+      - /etc/noddle/registry:/certs:ro
+      - registry-data:/var/lib/registry
+    networks:
+      - noddle-public
+
   # ── plan de contrôle ─────────────────────────────────────────────────────
   web:
     build:
@@ -122,11 +162,29 @@ services:
       REDIS_URL: redis://redis:6379
       LOG_ROOT: /var/lib/noddle/logs
       TRAEFIK_NETWORK: noddle-public
+      # L'adresse que TOUS les nœuds emploient pour tirer, inscrite dans chaque
+      # tag d'image. Absente, le worker retombe sur le comportement d'avant le
+      # registre : build local et service épinglé à son nœud. C'est ce qui rend
+      # la mise à jour d'une installation existante sans danger — le code
+      # nouveau sur une pile pas encore redémarrée se comporte comme l'ancien.
+      REGISTRY_HOST: ${REGISTRY_HOST:-}
+      REGISTRY_PASSWORD: ${REGISTRY_PASSWORD:-}
+      # Le worker interroge l'API du registre pour la rétention. Le certificat
+      # vient d'une AC privée : sans ça, chaque appel échouerait en
+      # `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. La variable AJOUTE cette AC aux
+      # racines par défaut, elle ne les remplace pas — les notifications et S3
+      # continuent de valider normalement.
+      NODE_EXTRA_CA_CERTS: /etc/noddle/registry/ca.crt
     volumes:
       - noddle-logs:/var/lib/noddle/logs
       # La clé de l'hôte, pour l'adoption initiale uniquement. Ensuite elle vit
       # CHIFFRÉE en base, et c'est cette copie-là que le worker déchiffre.
       - /etc/noddle/ssh:/etc/noddle/ssh:ro
+      # L'AC SEULE, jamais le répertoire : il contient aussi la clé privée de
+      # l'AC et celle du registre, dont le worker n'a aucun usage. Il lui faut
+      # le certificat public pour deux choses — vérifier le registre qu'il
+      # interroge, et déposer cette même AC sur chaque nœud.
+      - /etc/noddle/registry/ca.crt:/etc/noddle/registry/ca.crt:ro
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -137,6 +195,7 @@ volumes:
   postgres-data:
   redis-data:
   noddle-logs:
+  registry-data:
 
 networks:
   # Créé par install.sh en overlay attachable, PAS par compose : c'est le même

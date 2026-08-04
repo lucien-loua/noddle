@@ -9,8 +9,9 @@
 #   2. le réseau overlay que partagent le proxy et les applications
 #   3. les secrets — APP_KEY et mot de passe Postgres, générés ici
 #   4. une paire de clés SSH, autorisée sur CETTE machine
-#   5. la pile du plan de contrôle
-#   6. les migrations, puis l'adoption de cette machine comme serveur n°1
+#   5. l'AC et les identifiants du registre d'images
+#   6. la pile du plan de contrôle
+#   7. les migrations, puis l'adoption de cette machine comme serveur n°1
 #
 # Idempotent : le relancer sur une installation existante ne casse rien et ne
 # régénère aucun secret.
@@ -22,6 +23,7 @@ NODDLE_REPO="${NODDLE_REPO:-https://github.com/lucien-loua/noddle.git}"
 NODDLE_REF="${NODDLE_REF:-main}"
 SSH_DIR="/etc/noddle/ssh"
 SSH_KEY="$SSH_DIR/id_ed25519"
+REGISTRY_DIR="/etc/noddle/registry"
 NETWORK="noddle-public"
 
 say() { printf '\n\033[1m▸ %s\033[0m\n' "$1"; }
@@ -86,6 +88,20 @@ fi
 # ── 3. Secrets ───────────────────────────────────────────────────────────────
 say "Secrets"
 ENV_FILE="$NODDLE_DIR/installer/.env"
+
+# Ajoute une clé au .env si elle n'y est pas encore, sans jamais réécrire celles
+# qui s'y trouvent. Le bloc ci-dessous n'est écrit qu'à la PREMIÈRE installation
+# — donc une clé introduite par une version ultérieure de Noddle n'y serait
+# jamais ajoutée sans ça, et la mise à jour d'une installation existante
+# démarrerait avec une variable vide.
+ensure_env() {
+  if $SUDO grep -qE "^$1=" "$ENV_FILE" 2>/dev/null; then
+    return 0
+  fi
+  printf '%s=%s\n' "$1" "$2" | $SUDO tee -a "$ENV_FILE" >/dev/null
+}
+read_env() { $SUDO grep -E "^$1=" "$ENV_FILE" | cut -d= -f2-; }
+
 if $SUDO test -f "$ENV_FILE"; then
   echo "conservés : $ENV_FILE existe déjà"
 else
@@ -150,7 +166,99 @@ if ! command -v nixpacks >/dev/null 2>&1; then
   curl -sSL https://nixpacks.com/install.sh | $SUDO bash
 fi
 
-# ── 5. La pile ───────────────────────────────────────────────────────────────
+# ── 5. Registre d'images ─────────────────────────────────────────────────────
+#
+# Sans registre, une image construite n'existe QUE sur le nœud qui l'a
+# construite. Swarm ne peut alors ni la replanifier ailleurs, ni la retrouver
+# si la machine meurt — d'où la contrainte de placement que chaque service
+# portait jusqu'ici. Le registre est EMBARQUÉ, comme Postgres et Redis : un
+# registre externe demanderait un compte tiers et des identifiants collés
+# AVANT le premier déploiement, ce qui casse « une commande sur n'importe quel
+# VPS ».
+#
+# Il porte son propre TLS, signé par une AC générée ici — ni Traefik, ni ACME.
+# Deux raisons : un certificat public est impossible sur une installation
+# qu'on atteint par son IP, et faire dépendre le registre d'un domaine
+# donnerait deux chemins de code dont un seul serait jamais exercé.
+#
+# L'AC est ensuite déposée sur chaque nœud dans /etc/docker/certs.d/, que le
+# démon relit à CHAQUE requête. Mesuré sur un démon en place depuis trois
+# jours : le push passe de « x509: certificate signed by unknown authority » à
+# réussi sans qu'aucun service Docker ne redémarre. C'est ce qui permet de
+# migrer une installation qui tourne sans couper une seule application —
+# `insecure-registries` dans daemon.json, lui, aurait exigé un redémarrage du
+# démon, donc une coupure de toutes les tasks du nœud.
+say "Registre d'images"
+$SUDO mkdir -p "$REGISTRY_DIR"
+$SUDO chmod 700 "$REGISTRY_DIR"
+
+# L'adresse est figée ICI, une fois pour toutes, et relue du .env aux
+# exécutions suivantes : c'est elle qui est inscrite dans chaque `image_tag`
+# de l'historique des déploiements. La recalculer à chaque fois ferait mentir
+# tous les déploiements passés le jour où `hostname -I` répond autre chose.
+#
+# Le port 5000 est publié comme 2377 l'est déjà pour Swarm : les nœuds
+# joignent le manager par CETTE adresse, c'est ainsi qu'ils ont rejoint le
+# cluster. Contrairement à 2377, celui-ci demande un mot de passe.
+ensure_env REGISTRY_HOST "$HOST_IP:5000"
+ensure_env REGISTRY_PASSWORD "$(openssl rand -hex 24)"
+REGISTRY_HOST="$(read_env REGISTRY_HOST)"
+REGISTRY_ADDR="${REGISTRY_HOST%:*}"
+
+if $SUDO test -f "$REGISTRY_DIR/ca.crt" && $SUDO test -f "$REGISTRY_DIR/htpasswd"; then
+  echo "AC et identifiants déjà en place"
+else
+  # On ne passe ici que si l'AC n'existe pas : la régénérer invaliderait la
+  # confiance déjà déposée sur tous les nœuds provisionnés, qui portent la
+  # PRÉCÉDENTE. Ils cesseraient de pouvoir tirer, sans rien pour l'expliquer.
+
+  # Un `subjectAltName` a un type. Sur `HOST_IP` réglé à la main sur un nom,
+  # `IP:` produirait un certificat qu'aucun client n'accepte. Pas de
+  # `… | grep` ici pour trancher : sous `pipefail` c'est la course au SIGPIPE
+  # déjà payée en Phase 0.
+  case "$REGISTRY_ADDR" in
+    *[!0-9.]*) SAN="DNS:$REGISTRY_ADDR" ;;
+    *) SAN="IP:$REGISTRY_ADDR" ;;
+  esac
+
+  $SUDO openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+    -keyout "$REGISTRY_DIR/ca.key" -out "$REGISTRY_DIR/ca.crt" \
+    -subj "/CN=Noddle Registry CA" \
+    -addext "basicConstraints=critical,CA:TRUE" \
+    -addext "keyUsage=critical,keyCertSign,cRLSign" 2>/dev/null
+
+  printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n' \
+    "$SAN" | $SUDO tee "$REGISTRY_DIR/ext.cnf" >/dev/null
+  $SUDO openssl req -newkey rsa:2048 -nodes \
+    -keyout "$REGISTRY_DIR/registry.key" -out "$REGISTRY_DIR/registry.csr" \
+    -subj "/CN=$REGISTRY_ADDR" 2>/dev/null
+  $SUDO openssl x509 -req -in "$REGISTRY_DIR/registry.csr" \
+    -CA "$REGISTRY_DIR/ca.crt" -CAkey "$REGISTRY_DIR/ca.key" -CAcreateserial \
+    -out "$REGISTRY_DIR/registry.crt" -days 3650 -sha256 \
+    -extfile "$REGISTRY_DIR/ext.cnf" 2>/dev/null
+  $SUDO rm -f "$REGISTRY_DIR/registry.csr" "$REGISTRY_DIR/ext.cnf"
+
+  # Le registre n'accepte QUE du bcrypt, et rien de ce qui est présent sur une
+  # machine nue n'en produit : `htpasswd` n'est pas installé sur une Ubuntu
+  # 24.04 nue, `openssl passwd -5` rend du SHA-256 crypt, et registry:3
+  # n'embarque pas htpasswd non plus. Les trois ont été essayés. Docker, lui,
+  # est garanti présent à ce stade du script.
+  #
+  # `-i` (mot de passe sur l'entrée standard) et jamais `-b` : les arguments
+  # d'un `docker run` sont lisibles dans `ps` le temps de l'exécution. Le tube
+  # vient de `printf`, pas de l'entrée du script — `curl | bash` n'est donc pas
+  # en cause ici.
+  printf '%s' "$(read_env REGISTRY_PASSWORD)" \
+    | $SUDO docker run --rm -i httpd:2-alpine htpasswd -Bin noddle 2>/dev/null \
+    | $SUDO tee "$REGISTRY_DIR/htpasswd" >/dev/null
+  $SUDO docker rmi httpd:2-alpine >/dev/null 2>&1 || true
+
+  $SUDO chmod 600 "$REGISTRY_DIR"/*
+  $SUDO chmod 644 "$REGISTRY_DIR/ca.crt"
+  echo "AC générée pour $REGISTRY_HOST (valable 10 ans)"
+fi
+
+# ── 6. La pile ───────────────────────────────────────────────────────────────
 say "Construction et démarrage du plan de contrôle"
 
 # Le domaine est lu depuis le .env, pas depuis l'environnement : sur une
@@ -178,7 +286,7 @@ COMPOSE=(docker compose --project-directory "$NODDLE_DIR/installer" --env-file "
 "${COMPOSE[@]}" build </dev/null
 "${COMPOSE[@]}" up -d </dev/null
 
-# ── 6. Base et adoption ──────────────────────────────────────────────────────
+# ── 7. Base et adoption ──────────────────────────────────────────────────────
 #
 # `</dev/null` sur chaque `docker compose run` n'est pas cosmétique : la
 # méthode d'installation documentée est `curl | bash`, qui alimente CE script
