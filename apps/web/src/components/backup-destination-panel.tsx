@@ -154,14 +154,16 @@ export function BackupDestinationPanel({ initial }: Props) {
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm" htmlFor="pathStyle">
+      <div className="flex items-center gap-2">
         <Checkbox
           checked={forcePathStyle}
           id="pathStyle"
           onCheckedChange={onPathStyle}
         />
-        Style chemin (requis hors du S3 d'Amazon)
-      </label>
+        <Label className="font-normal text-sm" htmlFor="pathStyle">
+          Style chemin (requis hors du S3 d'Amazon)
+        </Label>
+      </div>
 
       {save.isError ? (
         <Alert variant="destructive">

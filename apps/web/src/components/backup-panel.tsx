@@ -222,7 +222,7 @@ export function RestoreDialog({
             Les données actuelles de cette base seront{" "}
             <strong>définitivement remplacées</strong> par celles de la
             sauvegarde
-            {backup ? ` du ${relativeTime(backup.createdAt)}` : ""}. Noddle
+            {backup ? ` prise ${relativeTime(backup.createdAt)}` : ""}. Noddle
             prend automatiquement une sauvegarde de sûreté juste avant, pour que
             l'opération reste réversible.
           </DialogDescription>

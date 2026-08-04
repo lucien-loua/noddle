@@ -105,6 +105,24 @@ export async function checkDestination(
   try {
     await client.send(new HeadBucketCommand({ Bucket: destination.bucket }));
   } catch (err) {
+    // HeadBucket répond SANS corps : le SDK n'a alors ni code ni message S3 à
+    // exposer et rend un « UnknownError ». Tel quel, une clé secrète fausse
+    // s'affichait comme « compartiment injoignable : Unknown: UnknownError »,
+    // qui accuse le mauvais champ ET n'apprend rien. Le statut HTTP, lui, est
+    // toujours là. Constaté dans un vrai navigateur, pas au curl.
+    const status = httpStatus(err);
+    if (status === 403) {
+      throw new BackupStoreError(
+        "identifiants refusés : vérifiez la clé d'accès et la clé secrète",
+        { cause: err }
+      );
+    }
+    if (status === 404) {
+      throw new BackupStoreError(
+        `compartiment « ${destination.bucket} » introuvable sur ${destination.endpoint}`,
+        { cause: err }
+      );
+    }
     throw new BackupStoreError(
       `compartiment « ${destination.bucket} » injoignable : ${describe(err)}`,
       { cause: err }
@@ -238,6 +256,18 @@ export async function deleteObject(
  * Les erreurs du SDK portent la requête signée dans leurs métadonnées ; les
  * journaliser telles quelles écrirait des identifiants dans les logs.
  */
+/**
+ * Le statut HTTP porté par une erreur du SDK.
+ *
+ * C'est souvent la SEULE information exploitable : plusieurs réponses S3
+ * (HeadBucket, HeadObject) n'ont pas de corps, donc pas de code d'erreur S3 à
+ * lire, et le SDK se rabat sur « UnknownError ».
+ */
+function httpStatus(err: unknown): number | undefined {
+  return (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+    ?.httpStatusCode;
+}
+
 function describe(err: unknown): string {
   if (err instanceof Error) {
     return `${err.name}: ${err.message}`;
