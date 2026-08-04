@@ -81,6 +81,13 @@ function RollbackCell({
   if (!deployment.imageTag) {
     return <span className="text-muted-foreground">—</span>;
   }
+  // L'image a existé, puis la rétention du registre l'a retirée. Même règle :
+  // ne pas proposer une action dont on sait déjà qu'elle échouerait. Le mot
+  // dit POURQUOI, sans quoi un tiret ici et un tiret plus haut voudraient dire
+  // deux choses différentes sans que rien ne les distingue.
+  if (deployment.imagePurged) {
+    return <span className="text-muted-foreground">expired</span>;
+  }
   if (deployment.id === currentDeploymentId) {
     return <span className="text-muted-foreground">live</span>;
   }

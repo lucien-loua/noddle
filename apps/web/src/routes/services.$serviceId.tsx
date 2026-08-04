@@ -102,6 +102,11 @@ function ServiceDetail() {
     queryKey: ["deployments", service.id],
   });
 
+  // `null` sur un déploiement que Swarm a annulé — `nodeId` n'est écrit que
+  // sur une bascule acceptée. L'écran retombe alors sur le seul serveur qu'il
+  // sait vrai, celui du build, plutôt que d'affirmer un lieu d'exécution.
+  const runningOn = service.lastDeployment?.nodeName ?? null;
+
   const envVars = useQuery({
     enabled: canReadEnvVar,
     queryFn: () => getEnvVars({ data: { serviceId: service.id } }),
@@ -206,8 +211,16 @@ function ServiceDetail() {
       title={service.name}
     >
       <div className="flex h-full min-h-0 flex-col">
+        {/* Deux serveurs, pas un — et seulement quand ils diffèrent.
+            `serverName` est là où le service se CONSTRUIT ; avec un registre,
+            l'image est portable et c'est Swarm qui décide où elle TOURNE. Les
+            confondre ferait affirmer à l'écran une machine qui n'exécute rien.
+            Sur une installation mono-machine, les deux coïncident et la
+            distinction n'a pas à encombrer. */}
         <p className="mb-3 truncate text-muted-foreground text-sm">
-          {service.serverName}
+          {runningOn && runningOn !== service.serverName
+            ? `built on ${service.serverName} · running on ${runningOn}`
+            : service.serverName}
           {service.domain ? ` · ${service.domain}` : ""}
         </p>
 

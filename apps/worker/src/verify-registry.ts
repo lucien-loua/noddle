@@ -395,18 +395,32 @@ try {
     ko(`dépôt absent du catalogue : ${catalog.stdout.trim()}`);
   }
 
-  // `removeLocal` : le nœud de build ne doit plus l'avoir.
-  const localAfter = await execArgv(workerSsh, [
+  // `removeLocal` se vérifie ISOLÉMENT, sur une image que rien ne déploie.
+  //
+  // L'asserter sur l'image du service donnerait un faux négatif : elle est
+  // bien retirée après le push, puis Swarm place la task sur ce même nœud et
+  // le démon la RE-TIRE du registre. Elle est donc présente à l'arrivée, pour
+  // une raison qui est le fonctionnement voulu. Mesuré — c'est ce qu'a montré
+  // la première exécution de ce fichier.
+  await exec(
+    managerSsh,
+    `sudo docker tag alpine:3 ${registry.host}/rm-probe:v1`
+  );
+  await pushImage(managerSsh, registry, {
+    imageTag: `${registry.host}/rm-probe:v1`,
+    removeLocal: true,
+  });
+  const localAfter = await execArgv(managerSsh, [
     "sudo",
     "docker",
     "images",
     "-q",
-    final.imageTag ?? "",
+    `${registry.host}/rm-probe:v1`,
   ]);
   if (localAfter.stdout.trim() === "") {
-    ok("la copie locale a été retirée du nœud de build");
+    ok("`removeLocal` retire bien la copie locale après un push réussi");
   } else {
-    ko("l'image traîne encore sur le nœud de build");
+    ko("la copie locale traîne après un push avec removeLocal");
   }
 
   // ── LE test : aucune contrainte de placement ──────────────────────────────

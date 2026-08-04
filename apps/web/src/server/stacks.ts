@@ -129,10 +129,15 @@ function toSummary(
     createdAt: row.createdAt.toISOString(),
     finishedAt: row.finishedAt?.toISOString() ?? null,
     id: row.id,
+    // La rétention du registre ne touche pas aux piles : elles restent
+    // épinglées à leur serveur, et leur rejeu part du TEXTE compose enregistré,
+    // pas d'une image conservée.
+    imagePurged: false,
     // `DeploymentHistory` ne s'en sert que pour décider si un « Rejouer » a un
     // sens : une pile s'y prête dès qu'un texte compose a été enregistré,
     // qu'elle ait construit une image ou seulement pointé vers `image:`.
     imageTag: row.composeSource ? row.id : null,
+    nodeName: null,
     status: row.status,
     trigger: row.trigger,
   };
