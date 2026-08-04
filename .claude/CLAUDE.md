@@ -746,6 +746,31 @@ montrés**, tous les trois invisibles en local et invisibles au curl :
   et c'est ici que le chemin de bouclage doit être exercé pour la première
   fois.
 
+**Mise à jour testée en direct, le 2026-08-04 : le VPS public tournait un
+commit d'avant la Phase 3 (HTTPS seulement), cinq migrations en retard.**
+La reconstruction a d'abord échoué : `apps/web/Dockerfile` et
+`apps/worker/Dockerfile` ne copiaient jamais `packages/backup-store` ni
+`packages/notifier` — ajoutés en Phase 3, jamais reportés dans l'étape
+manifeste (`COPY .../package.json`) que `bun install --frozen-lockfile`
+exige pour résoudre le workspace ENTIER. Invisible en local et en CI,
+puisque ni l'un ni l'autre ne reconstruit cette image à chaque changement
+— seule une reconstruction sur un checkout postérieur à leur ajout le
+révèle. `apps/web/Dockerfile` manquait aussi leur SOURCE complète, requise
+par `vite build` qui les importe réellement ; `apps/worker/Dockerfile` copie
+tout `packages/` en vrac donc n'avait que le trou du manifeste. Corrigé
+dans les deux fichiers.
+
+**Le dépôt étant privé, le VPS ne clone pas depuis GitHub** — son remote
+`origin` pointait déjà vers un bundle git local (`/root/noddle.bundle`),
+posé lors de la course HTTPS plutôt que de donner un jeton GitHub à la
+machine cible. Mise à jour reproduite à l'identique : `git bundle create`
+en local, `scp`, puis `git fetch`/`reset --hard` sur le bundle côté VPS.
+Trois modifications non commitées trouvées sur place avant de toucher à
+quoi que ce soit (`styles.css`, `adopt-host.ts`, `docker-compose.tls.yml`)
+— confirmées identiques à ce que `main` contient déjà avant de les
+écraser, pour ne pas perdre un correctif appliqué à la main et jamais
+repoussé.
+
 **Pièges déjà payés, à ne pas repayer :**
 
 - **`$SUDO` vide dans un TABLEAU bash n'est pas ignoré, contrairement à `$SUDO`
