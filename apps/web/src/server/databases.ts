@@ -21,6 +21,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -65,7 +66,7 @@ export const getDatabaseDashboard = createServerFn({ method: "GET" }).handler(
 export const connectDatabase = createServerFn({ method: "POST" })
   .validator(connectDatabaseSchema)
   .handler(async ({ data }): Promise<{ databaseId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "database" });
 
     let project = await db.query.projects.findFirst({
       where: eq(projects.name, data.projectName),
@@ -157,7 +158,7 @@ function connectionString(
 export const attachDatabase = createServerFn({ method: "POST" })
   .validator(attachDatabaseSchema)
   .handler(async ({ data }): Promise<{ key: string }> => {
-    await requireSession();
+    await requirePermission({ action: "attach", resource: "database" });
 
     const database = await db.query.databases.findFirst({
       where: eq(databases.id, data.databaseId),

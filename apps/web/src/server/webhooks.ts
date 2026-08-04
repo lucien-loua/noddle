@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 const SECRET_BYTES = 32;
@@ -41,7 +42,7 @@ export const getServiceWebhook = createServerFn({ method: "GET" })
 export const generateServiceWebhook = createServerFn({ method: "POST" })
   .validator(serviceIdSchema)
   .handler(async ({ data }): Promise<{ path: string; secret: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "service" });
     const secret = newSecret();
     await db
       .update(services)
@@ -72,7 +73,7 @@ export const getStackWebhook = createServerFn({ method: "GET" })
 export const generateStackWebhook = createServerFn({ method: "POST" })
   .validator(stackIdSchema)
   .handler(async ({ data }): Promise<{ path: string; secret: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "service" });
     const secret = newSecret();
     await db
       .update(stacks)

@@ -13,12 +13,12 @@ import { connectRepoSchema } from "@noddle/shared/validation";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
-import { requireSession } from "@/lib/session.server";
+import { requirePermission } from "@/lib/permission.server";
 
 export const connectRepo = createServerFn({ method: "POST" })
   .validator(connectRepoSchema)
   .handler(async ({ data }): Promise<{ serviceId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "service" });
 
     // Retrouve-ou-crée par NOM : un administrateur seul devant son dashboard
     // tape le même nom de projet pour y ranger un second service, il n'a pas

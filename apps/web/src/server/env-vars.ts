@@ -20,6 +20,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface EnvVarView {
@@ -79,7 +80,7 @@ export interface EnvVarSaveResult {
 export const saveEnvVars = createServerFn({ method: "POST" })
   .validator(saveEnvVarsSchema)
   .handler(async ({ data }): Promise<EnvVarSaveResult> => {
-    await requireSession();
+    await requirePermission({ action: "write", resource: "envVar" });
 
     const seen = new Set<string>();
     for (const v of data.vars) {

@@ -22,6 +22,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 /**
@@ -66,7 +67,7 @@ export const getChannels = createServerFn({ method: "GET" }).handler(
 export const addChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelSchema)
   .handler(async ({ data }): Promise<{ id: string }> => {
-    await requireSession();
+    await requirePermission({ action: "manage", resource: "notification" });
 
     // Le chiffrement est lié à l'id de la ligne (AAD) : insertion puis mise à
     // jour, comme pour une clé SSH de serveur ou une destination S3.
@@ -98,7 +99,7 @@ export const addChannel = createServerFn({ method: "POST" })
 export const updateChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelUpdateSchema)
   .handler(async ({ data }): Promise<{ saved: true }> => {
-    await requireSession();
+    await requirePermission({ action: "manage", resource: "notification" });
 
     const existing = await db.query.notificationChannels.findFirst({
       where: eq(notificationChannels.id, data.channelId),
@@ -133,7 +134,7 @@ export const updateChannel = createServerFn({ method: "POST" })
 export const deleteChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelIdSchema)
   .handler(async ({ data }): Promise<{ deleted: true }> => {
-    await requireSession();
+    await requirePermission({ action: "manage", resource: "notification" });
     await db
       .delete(notificationChannels)
       .where(eq(notificationChannels.id, data.channelId));
@@ -151,7 +152,7 @@ export const deleteChannel = createServerFn({ method: "POST" })
 export const testChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelIdSchema)
   .handler(async ({ data }): Promise<{ error?: string; ok: boolean }> => {
-    await requireSession();
+    await requirePermission({ action: "manage", resource: "notification" });
 
     const channel = await db.query.notificationChannels.findFirst({
       where: eq(notificationChannels.id, data.channelId),
