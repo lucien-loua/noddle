@@ -211,7 +211,7 @@ function CreateAccountDialog({
   });
 
   const handleSubmit = useCallback(
-    (event: React.FormEvent) => {
+    (event: React.SubmitEvent) => {
       event.preventDefault();
       create.mutate();
     },
