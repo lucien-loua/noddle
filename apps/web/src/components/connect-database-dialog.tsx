@@ -1,21 +1,39 @@
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { ServerSelect } from "@/components/server-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { connectDatabase } from "@/server/databases";
 import type { ServerView } from "@/server/servers";
+
+/** `items` : sans lui, Base UI afficherait la valeur brute (« postgres »)
+ *  au lieu du nom du produit. */
+const ENGINE_LABELS: Record<string, string> = {
+  postgres: "PostgreSQL",
+  redis: "Redis",
+};
 
 interface Props {
   onOpenChange: (open: boolean) => void;
@@ -43,17 +61,17 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
     (e: ChangeEvent<HTMLInputElement>) => setEnvironmentName(e.target.value),
     []
   );
-  const handleEngineChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) =>
-      setEngine(e.target.value as "postgres" | "redis"),
-    []
-  );
+  const handleEngineChange = useCallback((next: unknown) => {
+    if (next === "postgres" || next === "redis") {
+      setEngine(next);
+    }
+  }, []);
   const handleNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setName(e.target.value),
     []
   );
   const handleServerChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => setServerId(e.target.value),
+    (next: string) => setServerId(next),
     []
   );
 
@@ -116,85 +134,86 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="db-project">Projet</FieldLabel>
-                  <Input
-                    id="db-project"
-                    onChange={handleProjectChange}
-                    required
-                    value={projectName}
+          <DialogForm onSubmit={handleSubmit}>
+            <DialogBody>
+              <FieldGroup>
+                <Field orientation="horizontal">
+                  <Field className="flex-1">
+                    <FieldLabel htmlFor="db-project">Projet</FieldLabel>
+                    <Input
+                      id="db-project"
+                      onChange={handleProjectChange}
+                      required
+                      value={projectName}
+                    />
+                  </Field>
+                  <Field className="flex-1">
+                    <FieldLabel htmlFor="db-env">Environnement</FieldLabel>
+                    <Input
+                      id="db-env"
+                      onChange={handleEnvChange}
+                      required
+                      value={environmentName}
+                    />
+                  </Field>
+                </Field>
+
+                <Field orientation="horizontal">
+                  <Field className="flex-1">
+                    <FieldLabel htmlFor="db-engine">Moteur</FieldLabel>
+                    <Select
+                      items={ENGINE_LABELS}
+                      onValueChange={handleEngineChange}
+                      value={engine}
+                    >
+                      <SelectTrigger className="w-full" id="db-engine">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="postgres">PostgreSQL</SelectItem>
+                          <SelectItem value="redis">Redis</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field className="flex-1">
+                    <FieldLabel htmlFor="db-name">Nom</FieldLabel>
+                    <Input
+                      id="db-name"
+                      onChange={handleNameChange}
+                      placeholder="ma-base"
+                      required
+                      value={name}
+                    />
+                  </Field>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="db-server">Serveur</FieldLabel>
+                  <ServerSelect
+                    id="db-server"
+                    onChange={handleServerChange}
+                    servers={servers}
+                    value={serverId}
                   />
-                </div>
-                <div className="flex-1">
-                  <FieldLabel htmlFor="db-env">Environnement</FieldLabel>
-                  <Input
-                    id="db-env"
-                    onChange={handleEnvChange}
-                    required
-                    value={environmentName}
-                  />
-                </div>
-              </Field>
+                </Field>
 
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="db-engine">Moteur</FieldLabel>
-                  <select
-                    className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                    id="db-engine"
-                    onChange={handleEngineChange}
-                    value={engine}
-                  >
-                    <option value="postgres">PostgreSQL</option>
-                    <option value="redis">Redis</option>
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <FieldLabel htmlFor="db-name">Nom</FieldLabel>
-                  <Input
-                    id="db-name"
-                    onChange={handleNameChange}
-                    placeholder="ma-base"
-                    required
-                    value={name}
-                  />
-                </div>
-              </Field>
+                {error ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </FieldGroup>
+            </DialogBody>
 
-              <Field>
-                <FieldLabel htmlFor="db-server">Serveur</FieldLabel>
-                <select
-                  className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                  id="db-server"
-                  onChange={handleServerChange}
-                  required
-                  value={serverId}
-                >
-                  {servers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.host})
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-            </FieldGroup>
-
-            <DialogFooter className="mt-6">
+            <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
                 Connecter
               </Button>
             </DialogFooter>
-          </form>
+          </DialogForm>
         )}
       </DialogContent>
     </Dialog>

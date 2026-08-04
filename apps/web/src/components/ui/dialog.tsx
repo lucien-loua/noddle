@@ -113,7 +113,12 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "scroll-fade no-scrollbar -mx-6 min-h-0 flex-1 overflow-y-auto px-6",
+        // `overflow-y-auto` COUPE ce qui dépasse, et l'anneau de focus d'un
+        // champ dépasse de son cadre : sans marge, il était rogné au ras du
+        // premier et du dernier champ. Les marges négatives rendent au
+        // conteneur la place que le padding lui reprend — l'anneau respire
+        // sur les quatre côtés, sans décaler le contenu d'un pixel.
+        "scroll-fade no-scrollbar -mx-6 -my-2 min-h-0 flex-1 overflow-y-auto px-6 py-2",
         className
       )}
       {...props}

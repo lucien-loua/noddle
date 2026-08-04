@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { ServerSelect } from "@/components/server-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +65,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
     []
   );
   const handleServerChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => setServerId(e.target.value),
+    (next: string) => setServerId(next),
     []
   );
   const handleUrlChange = useCallback(
@@ -114,7 +115,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
   }, [open, reset]);
 
   const handleSubmit = useCallback(
-    async (event: FormEvent) => {
+    async (event: React.SubmitEvent) => {
       event.preventDefault();
       setPending(true);
       setError(null);
@@ -192,7 +193,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                 <FieldSet>
                   <FieldLegend variant="label">Emplacement</FieldLegend>
                   <Field orientation="horizontal">
-                    <div className="flex-1">
+                    <Field className="flex-1">
                       <FieldLabel htmlFor="stack-project">Projet</FieldLabel>
                       <Input
                         id="stack-project"
@@ -200,8 +201,8 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                         required
                         value={projectName}
                       />
-                    </div>
-                    <div className="flex-1">
+                    </Field>
+                    <Field className="flex-1">
                       <FieldLabel htmlFor="stack-env">Environnement</FieldLabel>
                       <Input
                         id="stack-env"
@@ -209,7 +210,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                         required
                         value={environmentName}
                       />
-                    </div>
+                    </Field>
                   </Field>
 
                   <Field>
@@ -225,19 +226,12 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
 
                   <Field>
                     <FieldLabel htmlFor="stack-server">Serveur</FieldLabel>
-                    <select
-                      className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                    <ServerSelect
                       id="stack-server"
                       onChange={handleServerChange}
-                      required
+                      servers={servers}
                       value={serverId}
-                    >
-                      {servers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.host})
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </Field>
                 </FieldSet>
 
@@ -257,15 +251,15 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                   </Field>
 
                   <Field orientation="horizontal">
-                    <div className="flex-1">
+                    <Field className="flex-1">
                       <FieldLabel htmlFor="stack-branch">Branche</FieldLabel>
                       <Input
                         id="stack-branch"
                         onChange={handleBranchChange}
                         value={gitBranch}
                       />
-                    </div>
-                    <div className="flex-2">
+                    </Field>
+                    <Field className="flex-2">
                       <FieldLabel htmlFor="stack-compose-path">
                         Fichier compose
                       </FieldLabel>
@@ -274,7 +268,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                         onChange={handleComposePathChange}
                         value={composeFilePath}
                       />
-                    </div>
+                    </Field>
                   </Field>
                 </FieldSet>
 
@@ -298,7 +292,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                   </Field>
 
                   <Field orientation="horizontal">
-                    <div className="flex-1">
+                    <Field className="flex-1">
                       <FieldLabel htmlFor="stack-port">Port</FieldLabel>
                       <Input
                         id="stack-port"
@@ -307,8 +301,8 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                         placeholder="3000"
                         value={port}
                       />
-                    </div>
-                    <div className="flex-2">
+                    </Field>
+                    <Field className="flex-2">
                       <FieldLabel htmlFor="stack-domain">Domaine</FieldLabel>
                       <Input
                         id="stack-domain"
@@ -316,7 +310,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                         placeholder="mon-app.exemple.com"
                         value={domain}
                       />
-                    </div>
+                    </Field>
                   </Field>
                 </FieldSet>
 

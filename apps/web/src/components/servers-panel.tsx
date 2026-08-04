@@ -11,13 +11,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -194,78 +203,99 @@ export function AddServerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="server-name">Nom</FieldLabel>
-              <Input
-                id="server-name"
-                onChange={handleNameChange}
-                placeholder="vps-lyon"
-                required
-                value={name}
-              />
-            </Field>
+        <DialogForm onSubmit={handleSubmit}>
+          <DialogBody>
+            <FieldGroup>
+              <FieldSet>
+                <FieldLegend variant="label">Machine</FieldLegend>
+                <Field>
+                  <FieldLabel htmlFor="server-name">Nom</FieldLabel>
+                  <Input
+                    id="server-name"
+                    onChange={handleNameChange}
+                    placeholder="vps-lyon"
+                    required
+                    value={name}
+                  />
+                </Field>
 
-            <Field>
-              <FieldLabel htmlFor="server-host">Hôte</FieldLabel>
-              <Input
-                id="server-host"
-                onChange={handleHostChange}
-                placeholder="203.0.113.7"
-                required
-                value={host}
-              />
-            </Field>
+                <Field>
+                  <FieldLabel htmlFor="server-host">Hôte</FieldLabel>
+                  <Input
+                    id="server-host"
+                    onChange={handleHostChange}
+                    placeholder="203.0.113.7"
+                    required
+                    value={host}
+                  />
+                </Field>
 
-            <Field orientation="horizontal">
-              <div className="flex-3">
-                <FieldLabel htmlFor="server-user">Utilisateur SSH</FieldLabel>
-                <Input
-                  id="server-user"
-                  onChange={handleUserChange}
-                  required
-                  value={sshUser}
-                />
-              </div>
-              <div className="flex-1">
-                <FieldLabel htmlFor="server-port">Port</FieldLabel>
-                <Input
-                  id="server-port"
-                  inputMode="numeric"
-                  onChange={handlePortChange}
-                  value={sshPort}
-                />
-              </div>
-            </Field>
+                <Field orientation="horizontal">
+                  <Field className="flex-3">
+                    <FieldLabel htmlFor="server-user">
+                      Utilisateur SSH
+                    </FieldLabel>
+                    <Input
+                      id="server-user"
+                      onChange={handleUserChange}
+                      required
+                      value={sshUser}
+                    />
+                  </Field>
+                  <Field className="flex-1">
+                    <FieldLabel htmlFor="server-port">Port</FieldLabel>
+                    <Input
+                      id="server-port"
+                      inputMode="numeric"
+                      onChange={handlePortChange}
+                      value={sshPort}
+                    />
+                  </Field>
+                </Field>
+              </FieldSet>
 
-            <Field>
-              <FieldLabel htmlFor="server-key">Clé privée SSH (PEM)</FieldLabel>
-              <Textarea
-                className="min-h-32 font-mono text-xs"
-                id="server-key"
-                onChange={handleKeyChange}
-                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-                required
-                spellCheck={false}
-                value={privateKey}
-              />
-            </Field>
+              {/* La clé a son propre groupe : c'est le seul champ qui pèse
+                  plusieurs lignes, et le seul qui soit un secret. Le noyer
+                  entre l'hôte et le port le faisait passer pour un réglage
+                  de plus. */}
+              <FieldSet>
+                <FieldLegend variant="label">Clé privée SSH</FieldLegend>
+                <FieldDescription>
+                  Chiffrée au repos, elle ne ressort jamais du serveur — pas
+                  même chiffrée. Noddle s'en sert pour se connecter à cette
+                  machine, rien d'autre.
+                </FieldDescription>
+                <Field>
+                  <FieldLabel className="sr-only" htmlFor="server-key">
+                    Clé privée SSH au format PEM
+                  </FieldLabel>
+                  <Textarea
+                    className="min-h-32 font-mono text-xs"
+                    id="server-key"
+                    onChange={handleKeyChange}
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                    required
+                    spellCheck={false}
+                    value={privateKey}
+                  />
+                </Field>
+              </FieldSet>
 
-            {formError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            ) : null}
-          </FieldGroup>
+              {formError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              ) : null}
+            </FieldGroup>
+          </DialogBody>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter>
             <Button disabled={add.isPending} type="submit">
               {add.isPending ? <Spinner data-icon="inline-start" /> : null}
               Ajouter
             </Button>
           </DialogFooter>
-        </form>
+        </DialogForm>
       </DialogContent>
     </Dialog>
   );

@@ -2,17 +2,27 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { ServerSelect } from "@/components/server-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { ServerView } from "@/server/servers";
@@ -56,7 +66,7 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
     []
   );
   const handleServerChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => setServerId(e.target.value),
+    (next: string) => setServerId(next),
     []
   );
   const handleUrlChange = useCallback(
@@ -160,114 +170,120 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="repo-project">Projet</FieldLabel>
-                  <Input
-                    id="repo-project"
-                    onChange={handleProjectChange}
-                    required
-                    value={projectName}
-                  />
-                </div>
-                <div className="flex-1">
-                  <FieldLabel htmlFor="repo-env">Environnement</FieldLabel>
-                  <Input
-                    id="repo-env"
-                    onChange={handleEnvChange}
-                    required
-                    value={environmentName}
-                  />
-                </div>
-              </Field>
+          <DialogForm onSubmit={handleSubmit}>
+            <DialogBody>
+              <FieldGroup>
+                <FieldSet>
+                  <FieldLegend variant="label">Emplacement</FieldLegend>
+                  <Field orientation="horizontal">
+                    <Field className="flex-1">
+                      <FieldLabel htmlFor="repo-project">Projet</FieldLabel>
+                      <Input
+                        id="repo-project"
+                        onChange={handleProjectChange}
+                        required
+                        value={projectName}
+                      />
+                    </Field>
+                    <Field className="flex-1">
+                      <FieldLabel htmlFor="repo-env">Environnement</FieldLabel>
+                      <Input
+                        id="repo-env"
+                        onChange={handleEnvChange}
+                        required
+                        value={environmentName}
+                      />
+                    </Field>
+                  </Field>
 
-              <Field>
-                <FieldLabel htmlFor="repo-name">Nom du service</FieldLabel>
-                <Input
-                  id="repo-name"
-                  onChange={handleNameChange}
-                  placeholder="mon-app"
-                  required
-                  value={name}
-                />
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="repo-name">Nom du service</FieldLabel>
+                    <Input
+                      id="repo-name"
+                      onChange={handleNameChange}
+                      placeholder="mon-app"
+                      required
+                      value={name}
+                    />
+                  </Field>
 
-              <Field>
-                <FieldLabel htmlFor="repo-server">Serveur</FieldLabel>
-                <select
-                  className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                  id="repo-server"
-                  onChange={handleServerChange}
-                  required
-                  value={serverId}
-                >
-                  {servers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.host})
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="repo-server">Serveur</FieldLabel>
+                    <ServerSelect
+                      id="repo-server"
+                      onChange={handleServerChange}
+                      servers={servers}
+                      value={serverId}
+                    />
+                  </Field>
+                </FieldSet>
 
-              <Field>
-                <FieldLabel htmlFor="repo-url">URL du dépôt Git</FieldLabel>
-                <Input
-                  id="repo-url"
-                  onChange={handleUrlChange}
-                  placeholder="https://github.com/moi/mon-app.git"
-                  required
-                  value={gitRepoUrl}
-                />
-              </Field>
+                <FieldSet>
+                  <FieldLegend variant="label">Source</FieldLegend>
+                  <Field>
+                    <FieldLabel htmlFor="repo-url">URL du dépôt Git</FieldLabel>
+                    <Input
+                      id="repo-url"
+                      onChange={handleUrlChange}
+                      placeholder="https://github.com/moi/mon-app.git"
+                      required
+                      value={gitRepoUrl}
+                    />
+                  </Field>
 
-              <Field orientation="horizontal">
-                <div className="flex-[2]">
-                  <FieldLabel htmlFor="repo-branch">Branche</FieldLabel>
-                  <Input
-                    id="repo-branch"
-                    onChange={handleBranchChange}
-                    value={gitBranch}
-                  />
-                </div>
-                <div className="flex-1">
-                  <FieldLabel htmlFor="repo-port">Port</FieldLabel>
-                  <Input
-                    id="repo-port"
-                    inputMode="numeric"
-                    onChange={handlePortChange}
-                    value={port}
-                  />
-                </div>
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="repo-branch">Branche</FieldLabel>
+                    <Input
+                      id="repo-branch"
+                      onChange={handleBranchChange}
+                      value={gitBranch}
+                    />
+                  </Field>
+                </FieldSet>
 
-              <Field>
-                <FieldLabel htmlFor="repo-domain">
-                  Domaine (optionnel)
-                </FieldLabel>
-                <Input
-                  id="repo-domain"
-                  onChange={handleDomainChange}
-                  placeholder="mon-app.exemple.com"
-                  value={domain}
-                />
-              </Field>
+                <FieldSet>
+                  <FieldLegend variant="label">Service exposé</FieldLegend>
+                  <FieldDescription>
+                    Le port sur lequel votre application écoute. Sans domaine,
+                    le service tourne sans être joignable de l'extérieur.
+                  </FieldDescription>
+                  <Field orientation="horizontal">
+                    <Field className="flex-1">
+                      <FieldLabel htmlFor="repo-port">Port</FieldLabel>
+                      <Input
+                        id="repo-port"
+                        inputMode="numeric"
+                        onChange={handlePortChange}
+                        value={port}
+                      />
+                    </Field>
+                    <Field className="flex-2">
+                      <FieldLabel htmlFor="repo-domain">Domaine</FieldLabel>
+                      <Input
+                        id="repo-domain"
+                        onChange={handleDomainChange}
+                        placeholder="mon-app.exemple.com"
+                        value={domain}
+                      />
+                    </Field>
+                  </Field>
+                </FieldSet>
 
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-            </FieldGroup>
+                {error ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </FieldGroup>
+            </DialogBody>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
                 Connecter
               </Button>
             </DialogFooter>
-          </form>
+          </DialogForm>
         )}
       </DialogContent>
     </Dialog>
