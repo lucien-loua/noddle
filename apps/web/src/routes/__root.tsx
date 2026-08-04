@@ -46,7 +46,7 @@ function RootDocument({ children }: { children: ReactNode }) {
   );
 
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: script anti-flash, doit s'exécuter avant la peinture */}
