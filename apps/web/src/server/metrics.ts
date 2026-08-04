@@ -5,7 +5,8 @@
 // à la couche données d'inventer une valeur. Un point interpolé serait
 // indiscernable d'une mesure, et c'est précisément ce qu'on refuse depuis le
 // début de ce chantier.
-import { serverMetrics, servers } from "@noddle/db/schema";
+import { serverMetrics, servers, serviceMetrics } from "@noddle/db/schema";
+import { serviceMetricsRequestSchema } from "@noddle/shared/validation";
 import { createServerFn } from "@tanstack/react-start";
 import { and, asc, eq, gte } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -73,3 +74,61 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
     return out;
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// par service
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ServicePoint {
+  cpuPercent: number;
+  memoryUsedBytes: number;
+  /** `null` quand aucune limite n'est déclarée : le conteneur est borné par
+   *  la machine. Distinct de 0, qui voudrait dire « limite nulle ». */
+  memoryUsedRatio: number | null;
+  sampledAt: string;
+  /** Change à chaque redéploiement. Voir `ServiceSeries.restarts`. */
+  taskName: string;
+}
+
+export interface ServiceSeries {
+  latest: ServicePoint | null;
+  points: ServicePoint[];
+  /**
+   * Nombre de tasks distinctes sur la fenêtre.
+   *
+   * Au-delà de 1, la série couvre plusieurs conteneurs successifs : une chute
+   * brutale de mémoire s'y lit comme une fuite corrigée alors que c'est une
+   * nouvelle task qui démarre. L'écran le dit plutôt que de laisser conclure.
+   */
+  restarts: number;
+}
+
+export const getServiceMetrics = createServerFn({ method: "GET" })
+  .validator(serviceMetricsRequestSchema)
+  .handler(async ({ data }): Promise<ServiceSeries> => {
+    await requireSession();
+    const since = new Date(Date.now() - WINDOW_MS);
+
+    const rows = await db.query.serviceMetrics.findMany({
+      orderBy: asc(serviceMetrics.sampledAt),
+      where: and(
+        eq(serviceMetrics.serviceId, data.serviceId),
+        gte(serviceMetrics.sampledAt, since)
+      ),
+    });
+
+    const points: ServicePoint[] = rows.map((r) => ({
+      cpuPercent: r.cpuPercent,
+      memoryUsedBytes: r.memoryUsedBytes,
+      memoryUsedRatio:
+        r.memoryLimitBytes > 0 ? r.memoryUsedBytes / r.memoryLimitBytes : null,
+      sampledAt: r.sampledAt.toISOString(),
+      taskName: r.taskName,
+    }));
+
+    return {
+      latest: points.at(-1) ?? null,
+      points,
+      restarts: new Set(rows.map((r) => r.taskName)).size,
+    };
+  });

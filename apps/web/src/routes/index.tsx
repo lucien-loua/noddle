@@ -24,6 +24,7 @@ import { DeploymentHistory } from "@/components/deployment-history";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { LogStream } from "@/components/log-stream";
 import { ResourceRow, RowGroup } from "@/components/resource-row";
+import { ServiceResources } from "@/components/service-resources";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -555,6 +556,7 @@ function ServicePanel({
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="env">Variables</TabsTrigger>
+          <TabsTrigger value="ressources">Ressources</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
         </TabsList>
 
@@ -611,6 +613,10 @@ function ServicePanel({
               <AlertDescription>{saveError}</AlertDescription>
             </Alert>
           ) : null}
+        </TabsContent>
+
+        <TabsContent className="pt-3" value="ressources">
+          <ServiceResources serviceId={service.id} />
         </TabsContent>
 
         <TabsContent className="pt-3" value="webhook">

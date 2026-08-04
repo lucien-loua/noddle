@@ -39,9 +39,9 @@ export interface GappedPoint {
  * `lineY` rompt la ligne à cet endroit. Fonction pure et exportée, donc
  * vérifiable sans monter un rendu.
  */
-export function withGaps(
-  points: MetricPoint[],
-  value: (p: MetricPoint) => number
+export function withGaps<T extends { sampledAt: string }>(
+  points: T[],
+  value: (p: T) => number
 ): GappedPoint[] {
   const out: GappedPoint[] = [];
 
@@ -61,7 +61,7 @@ export function withGaps(
 const readX = (d: GappedPoint) => d.t;
 const readY = (d: GappedPoint) => d.v;
 
-function Sparkline({
+export function Sparkline<T extends { sampledAt: string }>({
   label,
   max,
   points,
@@ -69,8 +69,8 @@ function Sparkline({
 }: {
   label: string;
   max: number;
-  points: MetricPoint[];
-  value: (p: MetricPoint) => number;
+  points: T[];
+  value: (p: T) => number;
 }) {
   const data = withGaps(points, value);
   if (data.length === 0) {
@@ -127,7 +127,7 @@ function Sparkline({
   );
 }
 
-function Row({
+export function MetricRow<T extends { sampledAt: string }>({
   label,
   max,
   points,
@@ -136,9 +136,9 @@ function Row({
 }: {
   label: string;
   max: number;
-  points: MetricPoint[];
+  points: T[];
   reading: string;
-  value: (p: MetricPoint) => number;
+  value: (p: T) => number;
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -182,21 +182,21 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
 
           {s.latest ? (
             <div className="space-y-2">
-              <Row
+              <MetricRow
                 label="Charge"
                 max={s.cpuCount}
                 points={s.points}
                 reading={s.latest.cpuLoad1.toFixed(2)}
                 value={readLoad}
               />
-              <Row
+              <MetricRow
                 label="Mémoire"
                 max={1}
                 points={s.points}
                 reading={pct(s.latest.memoryUsedRatio)}
                 value={readMemory}
               />
-              <Row
+              <MetricRow
                 label="Disque"
                 max={1}
                 points={s.points}
