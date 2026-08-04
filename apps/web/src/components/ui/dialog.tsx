@@ -51,7 +51,11 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 start-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // `flex-col` et non `grid` : le corps doit pouvoir prendre la
+          // hauteur restante et défiler, ce qu'une grille sans lignes
+          // nommées ne sait pas faire. `dvh` et non `vh` — sur mobile la
+          // barre d'URL fausse `vh` et le pied passe sous l'écran.
+          "fixed top-1/2 inset-s-1/2 z-50 flex max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-6 rounded-4xl bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md rtl:translate-x-1/2 dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -63,7 +67,7 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-4 end-4 bg-secondary"
+                className="absolute top-4 inset-e-4 bg-secondary"
                 size="icon-sm"
               />
             }
@@ -82,7 +86,53 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5", className)}
+      className={cn("flex shrink-0 flex-col gap-1.5", className)}
+      {...props}
+    />
+  )
+}
+
+/**
+ * Le corps défilant d'un dialogue.
+ *
+ * Sans lui, un formulaire long poussait l'en-tête et le pied HORS de
+ * l'écran : le titre devenait illisible et le bouton de soumission
+ * inatteignable. Le dialogue est plafonné à 85dvh, l'en-tête et le pied
+ * gardent leur place, et seul ce conteneur défile.
+ *
+ * `min-h-0` est ce qui rend le défilement possible : un enfant de flex
+ * refuse par défaut de rétrécir sous la hauteur de son contenu, et
+ * déborderait au lieu de défiler — même piège que dans `app-shell.tsx`.
+ *
+ * `scroll-fade` (utilitaire du préréglage shadcn) remplace la barre que
+ * `no-scrollbar` retire : sans lui, plus rien n'indiquerait qu'il reste
+ * du contenu au-delà du bord.
+ */
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn(
+        "scroll-fade no-scrollbar -mx-6 min-h-0 flex-1 overflow-y-auto px-6",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+/**
+ * Un `<form>` qui laisse passer la chaîne de flex du dialogue.
+ *
+ * Le formulaire s'intercale entre `DialogContent` et son corps ; s'il
+ * reste un bloc ordinaire, il casse la colonne et `DialogBody` ne reçoit
+ * jamais de hauteur à contraindre.
+ */
+function DialogForm({ className, ...props }: React.ComponentProps<"form">) {
+  return (
+    <form
+      data-slot="dialog-form"
+      className={cn("flex min-h-0 flex-1 flex-col gap-6", className)}
       {...props}
     />
   )
@@ -100,7 +150,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -146,10 +196,12 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogOverlay,
   DialogPortal,

@@ -6,13 +6,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogForm,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { ServerView } from "@/server/servers";
@@ -173,141 +182,159 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
             </AlertDescription>
           </Alert>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="stack-project">Projet</FieldLabel>
-                  <Input
-                    id="stack-project"
-                    onChange={handleProjectChange}
-                    required
-                    value={projectName}
-                  />
-                </div>
-                <div className="flex-1">
-                  <FieldLabel htmlFor="stack-env">Environnement</FieldLabel>
-                  <Input
-                    id="stack-env"
-                    onChange={handleEnvChange}
-                    required
-                    value={environmentName}
-                  />
-                </div>
-              </Field>
+          <DialogForm onSubmit={handleSubmit}>
+            <DialogBody>
+              {/* Dix champs à plat obligeaient à lire chaque libellé pour
+                  savoir de quoi on parle. Trois groupes répondent chacun à
+                  une question : où ça vit, d'où vient le code, qu'est-ce
+                  qu'on expose. */}
+              <FieldGroup>
+                <FieldSet>
+                  <FieldLegend variant="label">Emplacement</FieldLegend>
+                  <Field orientation="horizontal">
+                    <div className="flex-1">
+                      <FieldLabel htmlFor="stack-project">Projet</FieldLabel>
+                      <Input
+                        id="stack-project"
+                        onChange={handleProjectChange}
+                        required
+                        value={projectName}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <FieldLabel htmlFor="stack-env">Environnement</FieldLabel>
+                      <Input
+                        id="stack-env"
+                        onChange={handleEnvChange}
+                        required
+                        value={environmentName}
+                      />
+                    </div>
+                  </Field>
 
-              <Field>
-                <FieldLabel htmlFor="stack-name">Nom de la pile</FieldLabel>
-                <Input
-                  id="stack-name"
-                  onChange={handleNameChange}
-                  placeholder="mon-app"
-                  required
-                  value={name}
-                />
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="stack-name">Nom de la pile</FieldLabel>
+                    <Input
+                      id="stack-name"
+                      onChange={handleNameChange}
+                      placeholder="mon-app"
+                      required
+                      value={name}
+                    />
+                  </Field>
 
-              <Field>
-                <FieldLabel htmlFor="stack-server">Serveur</FieldLabel>
-                <select
-                  className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                  id="stack-server"
-                  onChange={handleServerChange}
-                  required
-                  value={serverId}
-                >
-                  {servers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.host})
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                  <Field>
+                    <FieldLabel htmlFor="stack-server">Serveur</FieldLabel>
+                    <select
+                      className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                      id="stack-server"
+                      onChange={handleServerChange}
+                      required
+                      value={serverId}
+                    >
+                      {servers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.host})
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </FieldSet>
 
-              <Field>
-                <FieldLabel htmlFor="stack-url">URL du dépôt Git</FieldLabel>
-                <Input
-                  id="stack-url"
-                  onChange={handleUrlChange}
-                  placeholder="https://github.com/moi/mon-app.git"
-                  required
-                  value={gitRepoUrl}
-                />
-              </Field>
+                <FieldSet>
+                  <FieldLegend variant="label">Source</FieldLegend>
+                  <Field>
+                    <FieldLabel htmlFor="stack-url">
+                      URL du dépôt Git
+                    </FieldLabel>
+                    <Input
+                      id="stack-url"
+                      onChange={handleUrlChange}
+                      placeholder="https://github.com/moi/mon-app.git"
+                      required
+                      value={gitRepoUrl}
+                    />
+                  </Field>
 
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="stack-branch">Branche</FieldLabel>
-                  <Input
-                    id="stack-branch"
-                    onChange={handleBranchChange}
-                    value={gitBranch}
-                  />
-                </div>
-                <div className="flex-2">
-                  <FieldLabel htmlFor="stack-compose-path">
-                    Fichier compose
-                  </FieldLabel>
-                  <Input
-                    id="stack-compose-path"
-                    onChange={handleComposePathChange}
-                    value={composeFilePath}
-                  />
-                </div>
-              </Field>
+                  <Field orientation="horizontal">
+                    <div className="flex-1">
+                      <FieldLabel htmlFor="stack-branch">Branche</FieldLabel>
+                      <Input
+                        id="stack-branch"
+                        onChange={handleBranchChange}
+                        value={gitBranch}
+                      />
+                    </div>
+                    <div className="flex-2">
+                      <FieldLabel htmlFor="stack-compose-path">
+                        Fichier compose
+                      </FieldLabel>
+                      <Input
+                        id="stack-compose-path"
+                        onChange={handleComposePathChange}
+                        value={composeFilePath}
+                      />
+                    </div>
+                  </Field>
+                </FieldSet>
 
-              <Field>
-                <FieldLabel htmlFor="stack-public-service">
-                  Service public (optionnel)
-                </FieldLabel>
-                <Input
-                  id="stack-public-service"
-                  onChange={handlePublicServiceChange}
-                  placeholder="web"
-                  value={publicService}
-                />
-              </Field>
+                <FieldSet>
+                  <FieldLegend variant="label">Service exposé</FieldLegend>
+                  <FieldDescription>
+                    Une pile expose au plus un service sur le web. Laissé vide,
+                    rien n'est publié — la pile tourne sans être joignable de
+                    l'extérieur.
+                  </FieldDescription>
+                  <Field>
+                    <FieldLabel htmlFor="stack-public-service">
+                      Service à exposer
+                    </FieldLabel>
+                    <Input
+                      id="stack-public-service"
+                      onChange={handlePublicServiceChange}
+                      placeholder="web"
+                      value={publicService}
+                    />
+                  </Field>
 
-              <Field orientation="horizontal">
-                <div className="flex-1">
-                  <FieldLabel htmlFor="stack-port">
-                    Port du service public
-                  </FieldLabel>
-                  <Input
-                    id="stack-port"
-                    inputMode="numeric"
-                    onChange={handlePortChange}
-                    placeholder="3000"
-                    value={port}
-                  />
-                </div>
-                <div className="flex-2">
-                  <FieldLabel htmlFor="stack-domain">
-                    Domaine (optionnel)
-                  </FieldLabel>
-                  <Input
-                    id="stack-domain"
-                    onChange={handleDomainChange}
-                    placeholder="mon-app.exemple.com"
-                    value={domain}
-                  />
-                </div>
-              </Field>
+                  <Field orientation="horizontal">
+                    <div className="flex-1">
+                      <FieldLabel htmlFor="stack-port">Port</FieldLabel>
+                      <Input
+                        id="stack-port"
+                        inputMode="numeric"
+                        onChange={handlePortChange}
+                        placeholder="3000"
+                        value={port}
+                      />
+                    </div>
+                    <div className="flex-2">
+                      <FieldLabel htmlFor="stack-domain">Domaine</FieldLabel>
+                      <Input
+                        id="stack-domain"
+                        onChange={handleDomainChange}
+                        placeholder="mon-app.exemple.com"
+                        value={domain}
+                      />
+                    </div>
+                  </Field>
+                </FieldSet>
 
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-            </FieldGroup>
+                {error ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </FieldGroup>
+            </DialogBody>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
                 Connecter
               </Button>
             </DialogFooter>
-          </form>
+          </DialogForm>
         )}
       </DialogContent>
     </Dialog>
