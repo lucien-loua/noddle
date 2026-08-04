@@ -88,8 +88,17 @@ export function BackupDestinationPanel({ initial }: Props) {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="space-y-2 sm:col-span-2">
+      {/* Six champs, six cellules égales : les `col-span-2` d'avant
+          rendaient « Point de terminaison » deux fois plus large que
+          « Compartiment » sur la même ligne, jusqu'à environ 1000px pour une
+          URL de vingt caractères — l'excès que le passage précédent
+          combattait, juste déplacé plutôt que résolu. `max-w-sm` sur chaque
+          CHAMP (pas sur le panneau) le referme : un panneau plein largeur
+          reste cohérent avec le reste du dashboard, mais un champ qui
+          contient une valeur courte n'a aucune raison d'en épouser toute la
+          largeur. */}
+      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="endpoint">Point de terminaison</Label>
           <Input
             id="endpoint"
@@ -100,7 +109,7 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="bucket">Compartiment</Label>
           <Input
             id="bucket"
@@ -111,12 +120,12 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="region">Région</Label>
           <Input id="region" onChange={onRegion} required value={region} />
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="prefix">Préfixe (optionnel)</Label>
           <Input
             id="prefix"
@@ -126,7 +135,7 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="accessKeyId">Clé d'accès</Label>
           <Input
             id="accessKeyId"
@@ -136,7 +145,7 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="secretAccessKey">Clé secrète</Label>
           <Input
             id="secretAccessKey"

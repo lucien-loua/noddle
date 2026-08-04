@@ -273,8 +273,17 @@ function AddChannelDialog({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="kind">Type</Label>
-              <div className="flex gap-1" id="kind">
+              {/* `role="radiogroup"` : trois boutons sans plus ne disaient à
+                  personne qu'ils s'excluaient ni lequel était choisi — un
+                  lecteur d'écran entendait trois boutons identiques. Le
+                  style reste des pastilles, la sémantique devient un vrai
+                  groupe de radios. */}
+              <Label id="kindLabel">Type</Label>
+              <div
+                aria-labelledby="kindLabel"
+                className="flex gap-1"
+                role="radiogroup"
+              >
                 {KINDS.map((option) => (
                   <KindButton
                     active={kind === option.value}
@@ -356,7 +365,9 @@ function KindButton({
   const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
   return (
     <Button
+      aria-checked={active}
       onClick={handleClick}
+      role="radio"
       size="sm"
       type="button"
       variant={active ? "secondary" : "ghost"}
