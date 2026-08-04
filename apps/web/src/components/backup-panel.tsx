@@ -6,8 +6,10 @@
 // ne ramène. Donc « Restaurer » passe par une confirmation qui demande le nom
 // de la base à la main, et Noddle prend de lui-même une sauvegarde de sûreté
 // juste avant, ce qui rend l'opération réversible pour de bon.
+import { ArchiveIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { RelativeTime } from "@/components/relative-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -192,6 +200,13 @@ function ScheduleButton({
 }
 
 interface Props {
+  /** `backup:create` — couvre aussi la planification : régler un rythme
+   *  automatique sans pouvoir déclencher une sauvegarde manuelle n'aurait pas
+   *  de sens. */
+  canCreate: boolean;
+  /** `backup:restore` — distinct de `canCreate` : un opérateur sauvegarde
+   *  mais ne restaure pas, seule opération irréversible du produit. */
+  canRestore: boolean;
   databaseId: string;
   databaseName: string;
   onRestore: (backup: BackupRow) => void;
@@ -200,6 +215,8 @@ interface Props {
 }
 
 export function BackupPanel({
+  canCreate,
+  canRestore,
   databaseId,
   databaseName,
   onRestore,
@@ -235,10 +252,12 @@ export function BackupPanel({
         <p className="text-muted-foreground text-xs">
           Vers le stockage S3 de l'installation.
         </p>
-        <Button disabled={run.isPending} onClick={handleBackup} size="sm">
-          {run.isPending ? <Spinner /> : null}
-          Sauvegarder
-        </Button>
+        {canCreate ? (
+          <Button disabled={run.isPending} onClick={handleBackup} size="sm">
+            {run.isPending ? <Spinner /> : null}
+            Sauvegarder
+          </Button>
+        ) : null}
       </div>
 
       {run.isError ? (
@@ -251,11 +270,16 @@ export function BackupPanel({
 
       {rows.length === 0 ? (
         <Empty>
-          <EmptyTitle>Aucune sauvegarde</EmptyTitle>
-          <EmptyDescription>
-            La première sauvegarde de {databaseName} sera restaurable depuis
-            cette liste.
-          </EmptyDescription>
+          <EmptyMedia variant="icon">
+            <ArchiveIcon />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>Aucune sauvegarde</EmptyTitle>
+            <EmptyDescription>
+              La première sauvegarde de {databaseName} sera restaurable depuis
+              cette liste.
+            </EmptyDescription>
+          </EmptyHeader>
         </Empty>
       ) : (
         <Table>
@@ -273,6 +297,7 @@ export function BackupPanel({
             {rows.map((backup) => (
               <BackupLine
                 backup={backup}
+                canRestore={canRestore}
                 key={backup.id}
                 onRestore={onRestore}
               />
@@ -281,20 +306,24 @@ export function BackupPanel({
         </Table>
       )}
 
-      <ScheduleControl
-        databaseId={databaseId}
-        retention={retention}
-        schedule={schedule}
-      />
+      {canCreate ? (
+        <ScheduleControl
+          databaseId={databaseId}
+          retention={retention}
+          schedule={schedule}
+        />
+      ) : null}
     </div>
   );
 }
 
 function BackupLine({
   backup,
+  canRestore,
   onRestore,
 }: {
   backup: BackupRow;
+  canRestore: boolean;
   onRestore: (backup: BackupRow) => void;
 }) {
   const status = backupLabel(backup.status);
@@ -318,12 +347,12 @@ function BackupLine({
         {duration(backup.createdAt, backup.finishedAt)}
       </TableCell>
       <TableCell className="text-muted-foreground text-xs">
-        {relativeTime(backup.createdAt)}
+        <RelativeTime iso={backup.createdAt} />
       </TableCell>
       <TableCell className="text-right">
         {/* Seule une sauvegarde complète est restaurable : une demi-sauvegarde
             n'est pas une option qu'on propose. Le serveur le revérifie. */}
-        {backup.status === "completed" ? (
+        {backup.status === "completed" && canRestore ? (
           <Button onClick={handleRestore} size="sm" variant="outline">
             Restaurer
           </Button>

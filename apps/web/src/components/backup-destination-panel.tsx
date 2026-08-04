@@ -14,13 +14,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
+import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import { type DestinationRow, saveDestination } from "@/server/backups";
 
 interface Props {
   initial: DestinationRow | null;
+  role: string | null;
 }
 
-export function BackupDestinationPanel({ initial }: Props) {
+export function BackupDestinationPanel({ initial, role }: Props) {
+  const known = role && role in roles ? (role as RoleName) : null;
+  // `backup:create` — la même permission que déclencher une sauvegarde
+  // manuelle, côté serveur. La destination est de la configuration, pas un
+  // secret qu'on cache : `getDestination` reste lisible par tous, seule
+  // l'écriture est gardée.
+  const canEdit = useCan(known, "backup", "create");
   const [endpoint, setEndpoint] = useState(initial ? initial.endpoint : "");
   const [bucket, setBucket] = useState(initial ? initial.bucket : "");
   const [region, setRegion] = useState(initial ? initial.region : "us-east-1");
@@ -88,10 +97,20 @@ export function BackupDestinationPanel({ initial }: Props) {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="space-y-2 sm:col-span-2">
+      {/* Six champs, six cellules égales : les `col-span-2` d'avant
+          rendaient « Point de terminaison » deux fois plus large que
+          « Compartiment » sur la même ligne, jusqu'à environ 1000px pour une
+          URL de vingt caractères — l'excès que le passage précédent
+          combattait, juste déplacé plutôt que résolu. `max-w-sm` sur chaque
+          CHAMP (pas sur le panneau) le referme : un panneau plein largeur
+          reste cohérent avec le reste du dashboard, mais un champ qui
+          contient une valeur courte n'a aucune raison d'en épouser toute la
+          largeur. */}
+      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="endpoint">Point de terminaison</Label>
           <Input
+            disabled={!canEdit}
             id="endpoint"
             onChange={onEndpoint}
             placeholder="https://s3.example.com"
@@ -100,9 +119,10 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="bucket">Compartiment</Label>
           <Input
+            disabled={!canEdit}
             id="bucket"
             onChange={onBucket}
             placeholder="noddle-sauvegardes"
@@ -111,14 +131,21 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="region">Région</Label>
-          <Input id="region" onChange={onRegion} required value={region} />
+          <Input
+            disabled={!canEdit}
+            id="region"
+            onChange={onRegion}
+            required
+            value={region}
+          />
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="prefix">Préfixe (optionnel)</Label>
           <Input
+            disabled={!canEdit}
             id="prefix"
             onChange={onPrefix}
             placeholder="sauvegardes"
@@ -126,9 +153,10 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="accessKeyId">Clé d'accès</Label>
           <Input
+            disabled={!canEdit}
             id="accessKeyId"
             onChange={onAccessKey}
             required
@@ -136,9 +164,10 @@ export function BackupDestinationPanel({ initial }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="max-w-sm space-y-2">
           <Label htmlFor="secretAccessKey">Clé secrète</Label>
           <Input
+            disabled={!canEdit}
             id="secretAccessKey"
             onChange={onSecret}
             placeholder={initial ? "inchangée" : ""}
@@ -158,6 +187,7 @@ export function BackupDestinationPanel({ initial }: Props) {
       <div className="flex items-center gap-2">
         <Checkbox
           checked={forcePathStyle}
+          disabled={!canEdit}
           id="pathStyle"
           onCheckedChange={onPathStyle}
         />
@@ -183,10 +213,12 @@ export function BackupDestinationPanel({ initial }: Props) {
         </Alert>
       ) : null}
 
-      <Button disabled={save.isPending} type="submit">
-        {save.isPending ? <Spinner /> : null}
-        Tester et enregistrer
-      </Button>
+      {canEdit ? (
+        <Button disabled={save.isPending} type="submit">
+          {save.isPending ? <Spinner /> : null}
+          Tester et enregistrer
+        </Button>
+      ) : null}
     </form>
   );
 }

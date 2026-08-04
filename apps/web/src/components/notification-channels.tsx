@@ -1,12 +1,7 @@
-// Les canaux de notification.
-//
-// La colonne qui compte n'est pas le nom, c'est l'ÉTAT du dernier envoi. Un
-// canal qu'on croit branché et qui ne l'est pas fait croire à une
-// surveillance qui n'existe pas — c'est pire que pas de canal du tout. D'où
-// une ligne qui dit « en panne » avec sa cause, et un bouton qui envoie une
-// vraie notification plutôt que de valider une URL.
+import { BellIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { RelativeTime } from "@/components/relative-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,11 +14,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { errorMessage, relativeTime } from "@/lib/format";
+import { errorMessage } from "@/lib/format";
+import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import {
   addChannel,
   type ChannelRow,
@@ -45,7 +48,15 @@ const KIND_LABEL: Record<ChannelRow["kind"], string> = {
   webhook: "Webhook",
 };
 
-export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
+export function NotificationChannels({
+  initial,
+  role,
+}: {
+  initial: ChannelRow[];
+  role: string | null;
+}) {
+  const known = role && role in roles ? (role as RoleName) : null;
+  const canManage = useCan(known, "notification", "manage");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -64,31 +75,50 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
   const rows = channels.data ?? [];
 
   return (
-    <div className="space-y-4">
+    // `/notifications` est un écran à un seul panneau : quand il est vide,
+    // le rendre plein hauteur (`h-full`, hérité de `.scroll-fade` qui a une
+    // hauteur réelle) évite qu'« Aucun canal » flotte en haut d'une page
+    // sinon nue. Un tableau plein, lui, n'a pas besoin de la hauteur — il
+    // s'arrête où finit sa dernière ligne.
+    <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           Noddle prévient quand un déploiement échoue, quand la surveillance
           reprend la main, ou quand une sauvegarde casse.
         </p>
-        <Button onClick={handleOpen} size="sm">
-          Ajouter
-        </Button>
+        {canManage ? (
+          <Button onClick={handleOpen} size="sm">
+            Ajouter
+          </Button>
+        ) : null}
       </div>
 
-      <AddChannelDialog onDone={refresh} onOpenChange={setOpen} open={open} />
+      {canManage ? (
+        <AddChannelDialog onDone={refresh} onOpenChange={setOpen} open={open} />
+      ) : null}
 
       {rows.length === 0 ? (
         <Empty>
-          <EmptyTitle>Aucun canal</EmptyTitle>
-          <EmptyDescription>
-            Sans canal, un déploiement repris par la surveillance ne se voit que
-            si quelqu'un ouvre le dashboard.
-          </EmptyDescription>
+          <EmptyMedia variant="icon">
+            <BellIcon />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>Aucun canal</EmptyTitle>
+            <EmptyDescription>
+              Sans canal, un déploiement repris par la surveillance ne se voit
+              que si quelqu'un ouvre le dashboard.
+            </EmptyDescription>
+          </EmptyHeader>
         </Empty>
       ) : (
         <div className="divide-y rounded-md border">
           {rows.map((channel) => (
-            <ChannelLine channel={channel} key={channel.id} onDone={refresh} />
+            <ChannelLine
+              canManage={canManage}
+              channel={channel}
+              key={channel.id}
+              onDone={refresh}
+            />
           ))}
         </div>
       )}
@@ -97,9 +127,11 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
 }
 
 function ChannelLine({
+  canManage,
   channel,
   onDone,
 }: {
+  canManage: boolean;
   channel: ChannelRow;
   onDone: () => void;
 }) {
@@ -145,31 +177,35 @@ function ChannelLine({
         <ChannelState channel={channel} />
       </span>
 
-      <Button
-        disabled={test.isPending}
-        onClick={handleTest}
-        size="sm"
-        variant="outline"
-      >
-        {test.isPending ? <Spinner /> : null}
-        Éprouver
-      </Button>
-      <Button
-        disabled={toggle.isPending}
-        onClick={handleToggle}
-        size="sm"
-        variant="outline"
-      >
-        {channel.enabled ? "Couper" : "Réactiver"}
-      </Button>
-      <Button
-        disabled={remove.isPending}
-        onClick={handleRemove}
-        size="sm"
-        variant="ghost"
-      >
-        Supprimer
-      </Button>
+      {canManage ? (
+        <>
+          <Button
+            disabled={test.isPending}
+            onClick={handleTest}
+            size="sm"
+            variant="outline"
+          >
+            {test.isPending ? <Spinner /> : null}
+            Éprouver
+          </Button>
+          <Button
+            disabled={toggle.isPending}
+            onClick={handleToggle}
+            size="sm"
+            variant="outline"
+          >
+            {channel.enabled ? "Couper" : "Réactiver"}
+          </Button>
+          <Button
+            disabled={remove.isPending}
+            onClick={handleRemove}
+            size="sm"
+            variant="ghost"
+          >
+            Supprimer
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -193,7 +229,7 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
   if (channel.lastSuccessAt) {
     return (
       <span className="text-muted-foreground text-xs">
-        Dernier envoi {relativeTime(channel.lastSuccessAt)}
+        Dernier envoi <RelativeTime iso={channel.lastSuccessAt} />
       </span>
     );
   }
@@ -262,8 +298,17 @@ function AddChannelDialog({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="kind">Type</Label>
-              <div className="flex gap-1" id="kind">
+              {/* `role="radiogroup"` : trois boutons sans plus ne disaient à
+                  personne qu'ils s'excluaient ni lequel était choisi — un
+                  lecteur d'écran entendait trois boutons identiques. Le
+                  style reste des pastilles, la sémantique devient un vrai
+                  groupe de radios. */}
+              <Label id="kindLabel">Type</Label>
+              <div
+                aria-labelledby="kindLabel"
+                className="flex gap-1"
+                role="radiogroup"
+              >
                 {KINDS.map((option) => (
                   <KindButton
                     active={kind === option.value}
@@ -345,7 +390,9 @@ function KindButton({
   const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
   return (
     <Button
+      aria-checked={active}
       onClick={handleClick}
+      role="radio"
       size="sm"
       type="button"
       variant={active ? "secondary" : "ghost"}

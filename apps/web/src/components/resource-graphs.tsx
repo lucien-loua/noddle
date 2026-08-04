@@ -11,12 +11,19 @@
 // idiomes (`lineY`, `Channel`, `curve`). On lui donne donc explicitement un
 // `null` à chaque interruption plutôt que de compter sur une interpolation
 // qu'on n'aurait pas demandée.
+import { ChartLineIcon } from "@phosphor-icons/react";
 import { lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/react-charts";
 import { scaleLinear } from "d3-scale";
+import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { relativeTime } from "@/lib/format";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import type { MetricPoint, ServerSeries } from "@/server/metrics";
 
 /** Au-delà, deux échantillons ne se suivent plus : la ligne doit se rompre. */
@@ -161,11 +168,16 @@ export function ResourceGraphs({ series }: { series: ServerSeries[] }) {
   if (series.length === 0) {
     return (
       <Empty>
-        <EmptyTitle>Aucune machine</EmptyTitle>
-        <EmptyDescription>
-          Les ressources sont relevées toutes les minutes sur chaque serveur
-          connecté.
-        </EmptyDescription>
+        <EmptyMedia variant="icon">
+          <ChartLineIcon />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>Aucune machine</EmptyTitle>
+          <EmptyDescription>
+            Les ressources sont relevées toutes les minutes sur chaque serveur
+            connecté.
+          </EmptyDescription>
+        </EmptyHeader>
       </Empty>
     );
   }
@@ -230,12 +242,14 @@ function ServerFreshness({ latest }: { latest: MetricPoint | null }) {
   const age = Date.now() - Date.parse(latest.sampledAt);
   if (age > GAP_MS) {
     return (
-      <Badge variant="destructive">figé {relativeTime(latest.sampledAt)}</Badge>
+      <Badge variant="destructive">
+        figé <RelativeTime iso={latest.sampledAt} />
+      </Badge>
     );
   }
   return (
     <span className="text-muted-foreground text-xs">
-      relevé {relativeTime(latest.sampledAt)}
+      relevé <RelativeTime iso={latest.sampledAt} />
     </span>
   );
 }

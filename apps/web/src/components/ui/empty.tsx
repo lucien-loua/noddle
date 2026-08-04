@@ -6,7 +6,10 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 text-balance rounded-2xl border-dashed p-12 text-center",
+        // `border-dashed` seul ne trace rien : c'est un style de trait, pas
+        // une épaisseur. Sans `border`, les trois écrans qui utilisaient ce
+        // composant affichaient un titre flottant sans cadre.
+        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-12 text-center text-balance",
         className
       )}
       data-slot="empty"

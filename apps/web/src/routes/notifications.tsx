@@ -15,21 +15,22 @@ export const Route = createFileRoute("/notifications")({
     if (!state.signedIn) {
       throw redirect({ to: "/login" });
     }
-    return { email: state.email };
+    return { email: state.email, role: state.role };
   },
   component: NotificationsPage,
   loader: async ({ context }) => ({
     channels: await getChannels(),
     email: context.email,
+    role: context.role,
   }),
 });
 
 function NotificationsPage() {
-  const { channels, email } = Route.useLoaderData();
+  const { channels, email, role } = Route.useLoaderData();
 
   return (
     <AppShell email={email} title="Notifications">
-      <NotificationChannels initial={channels} />
+      <NotificationChannels initial={channels} role={role} />
     </AppShell>
   );
 }

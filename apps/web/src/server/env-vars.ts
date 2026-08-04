@@ -21,7 +21,6 @@ import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { requirePermission } from "@/lib/permission.server";
-import { requireSession } from "@/lib/session.server";
 
 export interface EnvVarView {
   id: string;
@@ -34,7 +33,13 @@ export interface EnvVarView {
 export const getEnvVars = createServerFn({ method: "GET" })
   .validator((data: { serviceId: string }) => data)
   .handler(async ({ data }): Promise<EnvVarView[]> => {
-    await requireSession();
+    // GET, donc hors de portée de verify-permissions.ts (qui n'énumère que
+    // les fonctions mutantes) — c'était le vrai trou : n'importe quel compte
+    // connecté, opérateur compris, pouvait lire les variables NON secrètes en
+    // clair. `isSecret` ne protège que les valeurs, pas la LISTE, et
+    // permissions.ts est explicite sur ce point : « quelqu'un qui doit
+    // pouvoir livrer n'a pas à les voir ».
+    await requirePermission({ action: "read", resource: "envVar" });
 
     const rows = await db.query.envVars.findMany({
       orderBy: envVars.key,

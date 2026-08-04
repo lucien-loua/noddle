@@ -21,6 +21,10 @@ interface Revealed {
 }
 
 interface Props {
+  /** `service:create` — le serveur exige la même permission qu'un dépôt
+   *  connecté, un secret de webhook étant un moyen de déclencher un
+   *  déploiement au même titre. */
+  canManage: boolean;
   generateWebhook: () => Promise<Revealed>;
   getWebhook: () => Promise<WebhookStatus>;
   queryKey: readonly unknown[];
@@ -29,7 +33,12 @@ interface Props {
 // SSR n'a pas d'origine à offrir ; le client la complète après hydratation.
 const origin = typeof window === "undefined" ? "" : window.location.origin;
 
-export function WebhookPanel({ generateWebhook, getWebhook, queryKey }: Props) {
+export function WebhookPanel({
+  canManage,
+  generateWebhook,
+  getWebhook,
+  queryKey,
+}: Props) {
   const queryClient = useQueryClient();
   const [revealed, setRevealed] = useState<Revealed | null>(null);
 
@@ -49,15 +58,17 @@ export function WebhookPanel({ generateWebhook, getWebhook, queryKey }: Props) {
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="font-medium text-sm">Webhook</h2>
-        <Button
-          disabled={generate.isPending}
-          onClick={handleGenerate}
-          size="sm"
-          variant="outline"
-        >
-          {generate.isPending ? <Spinner data-icon="inline-start" /> : null}
-          {status.data?.configured ? "Régénérer" : "Générer"}
-        </Button>
+        {canManage ? (
+          <Button
+            disabled={generate.isPending}
+            onClick={handleGenerate}
+            size="sm"
+            variant="outline"
+          >
+            {generate.isPending ? <Spinner data-icon="inline-start" /> : null}
+            {status.data?.configured ? "Régénérer" : "Générer"}
+          </Button>
+        ) : null}
       </div>
 
       {revealed ? (

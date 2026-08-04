@@ -103,3 +103,21 @@ export const ROLE_LABELS: Record<RoleName, string> = {
   owner: "Propriétaire",
   viewer: "Lecteur",
 };
+
+/**
+ * Ce que le rôle DONNE, en une phrase.
+ *
+ * Écrites ici et pas dans le composant, juste sous les tables de permissions
+ * qu'elles résument : accorder un rôle sans savoir ce qu'il ouvre est le seul
+ * vrai risque de cet écran, et une description qui vit loin de la règle qu'elle
+ * décrit finit toujours par mentir. Modifier un `newRole` ci-dessus sans
+ * toucher la ligne correspondante ici doit se voir à la relecture.
+ */
+export const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
+  admin: "Tout sur l'infrastructure, les secrets et les comptes.",
+  deployer:
+    "Déploie, revient en arrière, lance des sauvegardes. Ni secrets, ni suppression, ni restauration.",
+  owner:
+    "Comme administrateur, et ne peut pas être retiré par un administrateur.",
+  viewer: "Lit tout — services, journaux, sauvegardes. Ne change rien.",
+};

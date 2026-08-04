@@ -39,6 +39,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { relativeTime, serviceLabel, shortSha } from "@/lib/format";
+import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { type BackupRow, triggerRestore } from "@/server/backups";
 import {
@@ -79,12 +81,13 @@ export const Route = createFileRoute("/")({
     if (!state.signedIn) {
       throw redirect({ to: "/login" });
     }
-    return { email: state.email };
+    return { email: state.email, role: state.role };
   },
   component: Dashboard,
   loader: async ({ context }) => ({
     databases: await getDatabaseDashboard(),
     email: context.email,
+    role: context.role,
     servers: await getServers(),
     services: await getDashboard(),
     stacks: await getStackDashboard(),
@@ -153,9 +156,18 @@ function buildScopes(
 }
 
 function Dashboard() {
-  const { databases, email, servers, services, stacks } = Route.useLoaderData();
+  const { databases, email, role, servers, services, stacks } =
+    Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+
+  // Résolu UNE fois ici, transmis tel quel : chaque bouton du dashboard
+  // appelle `useCan` avec la MÊME valeur plutôt que de refaire ce calcul,
+  // pour qu'aucune ligne n'évalue un rôle différent des autres.
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
+  const canCreateService = useCan(known, "service", "create");
+  const canCreateDatabase = useCan(known, "database", "create");
 
   const [dialog, setDialog] = useState<"database" | "repo" | "stack" | null>(
     null
@@ -252,25 +264,37 @@ function Dashboard() {
 
   const empty = scopes.length === 0;
 
+  const canCreateAnything = canCreateService || canCreateDatabase;
+
   return (
     <AppShell
       actions={
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button size="sm" />}>
-            <PlusIcon data-icon="inline-start" />
-            Nouveau
-            <CaretDownIcon data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={openRepo}>Dépôt Git</DropdownMenuItem>
-            <DropdownMenuItem onClick={openStack}>
-              Pile Compose
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={openDatabase}>
-              Base de données
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        canCreateAnything ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button size="sm" />}>
+              <PlusIcon data-icon="inline-start" />
+              Nouveau
+              <CaretDownIcon data-icon="inline-end" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canCreateService ? (
+                <DropdownMenuItem onClick={openRepo}>
+                  Dépôt Git
+                </DropdownMenuItem>
+              ) : null}
+              {canCreateService ? (
+                <DropdownMenuItem onClick={openStack}>
+                  Pile Compose
+                </DropdownMenuItem>
+              ) : null}
+              {canCreateDatabase ? (
+                <DropdownMenuItem onClick={openDatabase}>
+                  Base de données
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null
       }
       email={email}
       scopes={scopeLinks}
@@ -319,6 +343,7 @@ function Dashboard() {
                 <div key={service.id}>
                   <ServiceCard
                     onToggle={handleToggleService}
+                    role={known}
                     selected={search.service === service.id}
                     service={service}
                   />
@@ -326,6 +351,7 @@ function Dashboard() {
                     <ServicePanel
                       focusedDeploymentId={search.deployment ?? null}
                       onFocusDeployment={handleFocusDeployment}
+                      role={known}
                       service={selectedService}
                     />
                   ) : null}
@@ -336,6 +362,7 @@ function Dashboard() {
                 <div key={stack.id}>
                   <StackCard
                     onToggle={handleToggleStack}
+                    role={known}
                     selected={search.stack === stack.id}
                     stack={stack}
                   />
@@ -343,6 +370,7 @@ function Dashboard() {
                     <StackPanel
                       focusedDeploymentId={search.deployment ?? null}
                       onFocusDeployment={handleFocusStackDeployment}
+                      role={known}
                       stack={selectedStack}
                     />
                   ) : null}
@@ -354,11 +382,12 @@ function Dashboard() {
                   <DatabaseCard
                     database={database}
                     onToggle={handleToggleDatabase}
+                    role={known}
                     selected={search.database === database.id}
                     services={services}
                   />
                   {search.database === database.id ? (
-                    <DatabasePanel database={database} />
+                    <DatabasePanel database={database} role={known} />
                   ) : null}
                 </div>
               ))}
@@ -378,16 +407,19 @@ function DetailPanel({ children }: { children: React.ReactNode }) {
 
 function ServiceCard({
   onToggle,
+  role,
   selected,
   service,
 }: {
   onToggle: (serviceId: string) => void;
+  role: RoleName | null;
   selected: boolean;
   service: ServiceRow;
 }) {
   const router = useRouter();
   const navigate = Route.useNavigate();
   const status = serviceLabel(service.status);
+  const canDeploy = useCan(role, "service", "deploy");
 
   const handleSelect = useCallback(
     () => onToggle(service.id),
@@ -416,10 +448,12 @@ function ServiceCard({
   return (
     <ResourceRow
       action={
-        <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
-          {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-          Déployer
-        </Button>
+        canDeploy ? (
+          <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
+            {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
+            Déployer
+          </Button>
+        ) : null
       }
       meta={
         service.lastDeployment
@@ -454,15 +488,24 @@ function ServiceCard({
 function ServicePanel({
   focusedDeploymentId,
   onFocusDeployment,
+  role,
   service,
 }: {
   focusedDeploymentId: string | null;
   onFocusDeployment: (serviceId: string, deploymentId: string) => void;
+  role: RoleName | null;
   service: ServiceRow;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const canRollback = useCan(role, "service", "rollback");
+  const canManageWebhook = useCan(role, "service", "create");
+  // `envVar` n'est PAS dans le rôle opérateur : « quelqu'un qui doit pouvoir
+  // livrer n'a pas à voir les secrets » (permissions.ts). `enabled` évite un
+  // appel qui échouerait de toute façon depuis un onglet jamais affiché.
+  const canReadEnvVar = useCan(role, "envVar", "read");
 
   const deployments = useQuery({
     queryFn: () => getDeployments({ data: { serviceId: service.id } }),
@@ -470,6 +513,7 @@ function ServicePanel({
   });
 
   const envVars = useQuery({
+    enabled: canReadEnvVar,
     queryFn: () => getEnvVars({ data: { serviceId: service.id } }),
     queryKey: ["env-vars", service.id],
   });
@@ -549,13 +593,12 @@ function ServicePanel({
       <Tabs defaultValue="logs">
         {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
             de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList
-          className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto"
-          variant="line"
-        >
+        <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
-          <TabsTrigger value="env">Variables</TabsTrigger>
+          {canReadEnvVar ? (
+            <TabsTrigger value="env">Variables</TabsTrigger>
+          ) : null}
           <TabsTrigger value="ressources">Ressources</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
         </TabsList>
@@ -577,6 +620,7 @@ function ServicePanel({
           </p>
           {deployments.data ? (
             <DeploymentHistory
+              canRollback={canRollback}
               currentDeploymentId={currentDeploymentId}
               deployments={deployments.data}
               onRollback={handleRollback}
@@ -594,26 +638,28 @@ function ServicePanel({
           ) : null}
         </TabsContent>
 
-        <TabsContent className="pt-3" value="env">
-          {envVars.data ? (
-            <EnvVarTable
-              // Remonte le tableau quand le serveur a confirmé : le brouillon
-              // repart de l'état réellement enregistré, jamais de ce qu'on
-              // croyait avoir envoyé.
-              key={envVars.data.map((v) => `${v.id}:${v.key}`).join(",")}
-              onSave={handleSave}
-              pending={save.isPending}
-              saved={envVars.data}
-            />
-          ) : (
-            <Spinner />
-          )}
-          {saveError ? (
-            <Alert className="mt-3" variant="destructive">
-              <AlertDescription>{saveError}</AlertDescription>
-            </Alert>
-          ) : null}
-        </TabsContent>
+        {canReadEnvVar ? (
+          <TabsContent className="pt-3" value="env">
+            {envVars.data ? (
+              <EnvVarTable
+                // Remonte le tableau quand le serveur a confirmé : le brouillon
+                // repart de l'état réellement enregistré, jamais de ce qu'on
+                // croyait avoir envoyé.
+                key={envVars.data.map((v) => `${v.id}:${v.key}`).join(",")}
+                onSave={handleSave}
+                pending={save.isPending}
+                saved={envVars.data}
+              />
+            ) : (
+              <Spinner />
+            )}
+            {saveError ? (
+              <Alert className="mt-3" variant="destructive">
+                <AlertDescription>{saveError}</AlertDescription>
+              </Alert>
+            ) : null}
+          </TabsContent>
+        ) : null}
 
         <TabsContent className="pt-3" value="ressources">
           <ServiceResources serviceId={service.id} />
@@ -621,6 +667,7 @@ function ServicePanel({
 
         <TabsContent className="pt-3" value="webhook">
           <WebhookPanel
+            canManage={canManageWebhook}
             generateWebhook={handleGenerateWebhook}
             getWebhook={handleGetWebhook}
             queryKey={["webhook", "service", service.id]}
@@ -633,16 +680,19 @@ function ServicePanel({
 
 function StackCard({
   onToggle,
+  role,
   selected,
   stack,
 }: {
   onToggle: (stackId: string) => void;
+  role: RoleName | null;
   selected: boolean;
   stack: StackRow;
 }) {
   const router = useRouter();
   const navigate = Route.useNavigate();
   const status = serviceLabel(stack.status);
+  const canDeploy = useCan(role, "service", "deploy");
 
   const handleSelect = useCallback(
     () => onToggle(stack.id),
@@ -668,10 +718,12 @@ function StackCard({
   return (
     <ResourceRow
       action={
-        <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
-          {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-          Déployer
-        </Button>
+        canDeploy ? (
+          <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
+            {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
+            Déployer
+          </Button>
+        ) : null
       }
       meta={
         stack.lastDeployment
@@ -707,14 +759,18 @@ function StackCard({
 function StackPanel({
   focusedDeploymentId,
   onFocusDeployment,
+  role,
   stack,
 }: {
   focusedDeploymentId: string | null;
   onFocusDeployment: (stackId: string, deploymentId: string) => void;
+  role: RoleName | null;
   stack: StackRow;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const canRollback = useCan(role, "service", "rollback");
+  const canManageWebhook = useCan(role, "service", "create");
 
   const deployments = useQuery({
     queryFn: () => getStackDeployments({ data: { stackId: stack.id } }),
@@ -768,10 +824,7 @@ function StackPanel({
       <Tabs defaultValue="logs">
         {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
             de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList
-          className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto"
-          variant="line"
-        >
+        <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
@@ -793,6 +846,7 @@ function StackPanel({
           </p>
           {deployments.data ? (
             <DeploymentHistory
+              canRollback={canRollback}
               currentDeploymentId={currentDeploymentId}
               deployments={deployments.data}
               onRollback={handleRollback}
@@ -812,6 +866,7 @@ function StackPanel({
 
         <TabsContent className="pt-3" value="webhook">
           <WebhookPanel
+            canManage={canManageWebhook}
             generateWebhook={handleGenerateWebhook}
             getWebhook={handleGetWebhook}
             queryKey={["webhook", "stack", stack.id]}
@@ -835,15 +890,18 @@ const ENGINE_LABEL: Record<DatabaseRow["engine"], string> = {
 function DatabaseCard({
   database,
   onToggle,
+  role,
   selected,
   services,
 }: {
   database: DatabaseRow;
   onToggle: (databaseId: string) => void;
+  role: RoleName | null;
   selected: boolean;
   services: ServiceRow[];
 }) {
   const status = serviceLabel(database.status);
+  const canAttach = useCan(role, "database", "attach");
   const handleSelect = useCallback(
     () => onToggle(database.id),
     [database.id, onToggle]
@@ -852,11 +910,13 @@ function DatabaseCard({
   return (
     <ResourceRow
       action={
-        <AttachDatabaseDialog
-          databaseId={database.id}
-          defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
-          services={services}
-        />
+        canAttach ? (
+          <AttachDatabaseDialog
+            databaseId={database.id}
+            defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
+            services={services}
+          />
+        ) : null
       }
       name={database.name}
       onToggle={handleSelect}
@@ -882,7 +942,15 @@ function DatabaseCard({
  * élément est du décor. Le jour où une base en aura un second, il ressemblera
  * à celui d'un service.
  */
-function DatabasePanel({ database }: { database: DatabaseRow }) {
+function DatabasePanel({
+  database,
+  role,
+}: {
+  database: DatabaseRow;
+  role: RoleName | null;
+}) {
+  const canCreateBackup = useCan(role, "backup", "create");
+  const canRestoreBackup = useCan(role, "backup", "restore");
   const [target, setTarget] = useState<BackupRow | null>(null);
   const restore = useMutation({
     mutationFn: (confirmName: string) =>
@@ -909,6 +977,8 @@ function DatabasePanel({ database }: { database: DatabaseRow }) {
   return (
     <div className="border-t bg-muted/20 px-3 py-3">
       <BackupPanel
+        canCreate={canCreateBackup}
+        canRestore={canRestoreBackup}
         databaseId={database.id}
         databaseName={database.name}
         onRestore={setTarget}
