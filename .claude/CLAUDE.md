@@ -891,6 +891,17 @@ par `install.sh`**, qui est idempotent. Un `docker compose up` seul trouverait
 `/etc/noddle/registry` vide, et Docker fabriquerait un répertoire à la place du
 certificat attendu.
 
+**Piège d'ESSAI, payé une fois : `install.sh` refait lui-même
+`git fetch origin "$NODDLE_REF"` puis `checkout`, et `NODDLE_REF` vaut `main`
+par défaut.** Poser une branche dans `$NODDLE_DIR` avant de lancer le script ne
+suffit donc pas — il la remplace par `main`. Et l'échec est trompeur :
+`git checkout` écrit un NOUVEL inode, alors que bash garde son descripteur
+ouvert sur l'ancien. **Le script qui s'exécute est celui de la branche, le
+compose sur disque celui de `main`.** Constaté exactement ainsi — la section
+registre tournait (l'AC était générée), et `docker compose up -d` ne créait
+aucun conteneur de registre, sans la moindre erreur et avec un code de sortie
+0. Pour éprouver une branche : `NODDLE_REF=<branche> bash install.sh`.
+
 **Piles Compose et bases de données restent ÉPINGLÉES**, et c'est délibéré :
 un fichier compose peut déclarer des volumes, et un volume ne se déplace pas.
 Elles poussent quand même au registre.
