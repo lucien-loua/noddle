@@ -16,7 +16,7 @@ import { getAuthState } from "@/server/auth";
 import { getServerMetrics } from "@/server/metrics";
 import { getServers } from "@/server/servers";
 
-export const Route = createFileRoute("/serveurs")({
+export const Route = createFileRoute("/servers")({
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {

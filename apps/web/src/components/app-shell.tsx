@@ -34,13 +34,25 @@ export interface ScopeLink {
 
 interface Props {
   actions?: ReactNode;
+  /** Le chemin qui mène à cet écran, quand il est imbriqué. Rendu À LA PLACE
+   *  du titre : sur une page de détail, « où suis-je » et « comment je
+   *  remonte » sont la même question, et deux en-têtes concurrents y
+   *  répondraient deux fois. */
+  breadcrumb?: ReactNode;
   children: ReactNode;
   email?: string | null;
   scopes?: ScopeLink[];
   title: string;
 }
 
-export function AppShell({ actions, children, email, scopes, title }: Props) {
+export function AppShell({
+  actions,
+  breadcrumb,
+  children,
+  email,
+  scopes,
+  title,
+}: Props) {
   const router = useRouter();
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
@@ -94,13 +106,13 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={pathname.startsWith("/serveurs")}
-                    render={<Link to="/serveurs" />}
+                    isActive={pathname.startsWith("/servers")}
+                    render={<Link to="/servers" />}
                     tooltip="Servers"
                   >
                     <HardDrivesIcon
                       weight={
-                        pathname.startsWith("/serveurs") ? "fill" : "regular"
+                        pathname.startsWith("/servers") ? "fill" : "regular"
                       }
                     />
                     <span>Servers</span>
@@ -108,13 +120,13 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={pathname.startsWith("/sauvegardes")}
-                    render={<Link to="/sauvegardes" />}
+                    isActive={pathname.startsWith("/backups")}
+                    render={<Link to="/backups" />}
                     tooltip="Backups"
                   >
                     <ArchiveIcon
                       weight={
-                        pathname.startsWith("/sauvegardes") ? "fill" : "regular"
+                        pathname.startsWith("/backups") ? "fill" : "regular"
                       }
                     />
                     <span>Backups</span>
@@ -138,13 +150,13 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    isActive={pathname.startsWith("/comptes")}
-                    render={<Link to="/comptes" />}
+                    isActive={pathname.startsWith("/accounts")}
+                    render={<Link to="/accounts" />}
                     tooltip="Accounts"
                   >
                     <UsersIcon
                       weight={
-                        pathname.startsWith("/comptes") ? "fill" : "regular"
+                        pathname.startsWith("/accounts") ? "fill" : "regular"
                       }
                     />
                     <span>Accounts</span>
@@ -212,7 +224,9 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
             dessous. */}
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ms-1" />
-          <h1 className="font-medium text-sm tracking-tight">{title}</h1>
+          {breadcrumb ?? (
+            <h1 className="font-medium text-sm tracking-tight">{title}</h1>
+          )}
           <div className="ms-auto flex min-w-0 items-center gap-2">
             {actions}
           </div>

@@ -9,7 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { getAccounts } from "@/server/accounts";
 import { getAuthState } from "@/server/auth";
 
-export const Route = createFileRoute("/comptes")({
+export const Route = createFileRoute("/accounts")({
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {

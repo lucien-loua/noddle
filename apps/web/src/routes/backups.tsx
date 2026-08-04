@@ -11,7 +11,7 @@ import { BackupDestinationPanel } from "@/components/backup-destination-panel";
 import { getAuthState } from "@/server/auth";
 import { getDestination } from "@/server/backups";
 
-export const Route = createFileRoute("/sauvegardes")({
+export const Route = createFileRoute("/backups")({
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {

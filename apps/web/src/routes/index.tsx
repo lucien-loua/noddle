@@ -6,26 +6,21 @@
 // vit dans le titre du groupe, pas répété sur chaque ligne : ce qui se répète
 // n'informe plus.
 //
-// Le détail s'ouvre SOUS la ligne, dans le même conteneur, en onglets. Empilé,
-// il faisait mille pixels et repoussait tous les autres services hors de
-// l'écran — c'est-à-dire qu'il cassait la seule chose que ce dashboard doit
-// faire.
+// Le détail vit sur SA page (`/services/$id` et compagnie), pas déplié sous
+// la ligne. Le dépliage faisait mille pixels et repoussait tous les autres
+// services hors de l'écran — c'est-à-dire qu'il cassait la seule chose que
+// ce dashboard doit faire. Ici, cliquer ne déplace jamais rien : on change
+// de page, et la position de chaque ligne reste la même au retour.
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { AppShell, type ScopeLink } from "@/components/app-shell";
 import { AttachDatabaseDialog } from "@/components/attach-database-dialog";
-import { BackupPanel, RestoreDialog } from "@/components/backup-panel";
 import { ConnectDatabaseDialog } from "@/components/connect-database-dialog";
 import { ConnectRepoDialog } from "@/components/connect-repo-dialog";
 import { ConnectStackDialog } from "@/components/connect-stack-dialog";
-import { DeploymentHistory } from "@/components/deployment-history";
-import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
-import { LogStream } from "@/components/log-stream";
 import { ResourceRow, RowGroup } from "@/components/resource-row";
-import { ServiceResources } from "@/components/service-resources";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,45 +31,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WebhookPanel } from "@/components/webhook-panel";
 import { relativeTime, serviceLabel, shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import { type BackupRow, triggerRestore } from "@/server/backups";
 import {
   getDashboard,
-  getDeployments,
   getStackDashboard,
   type ServiceRow,
   type StackRow,
 } from "@/server/dashboard";
 import { type DatabaseRow, getDatabaseDashboard } from "@/server/databases";
-import { triggerDeploy, triggerRollback } from "@/server/deployments";
-import { getEnvVars, saveEnvVars } from "@/server/env-vars";
+import { triggerDeploy } from "@/server/deployments";
 import { getServers } from "@/server/servers";
-import {
-  getStackDeployments,
-  triggerStackDeploy,
-  triggerStackRollback,
-} from "@/server/stacks";
-import {
-  generateServiceWebhook,
-  generateStackWebhook,
-  getServiceWebhook,
-  getStackWebhook,
-} from "@/server/webhooks";
+import { triggerStackDeploy } from "@/server/stacks";
 
-interface DashboardSearch {
-  /** La base dépliée. Même mécanique que `service`/`stack` : le détail vit
-   *  dans l'URL, donc il survit à un rechargement et se partage. */
-  database?: string;
-  deployment?: string;
-  service?: string;
-  stack?: string;
-}
-
+// Plus aucun paramètre de recherche ici : ce que l'on regarde vit
+// désormais dans le CHEMIN d'une page de détail, pas dans la requête du
+// dashboard.
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     const state = await getAuthState();
@@ -91,13 +65,6 @@ export const Route = createFileRoute("/")({
     servers: await getServers(),
     services: await getDashboard(),
     stacks: await getStackDashboard(),
-  }),
-  validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
-    database: typeof search.database === "string" ? search.database : undefined,
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    service: typeof search.service === "string" ? search.service : undefined,
-    stack: typeof search.stack === "string" ? search.stack : undefined,
   }),
 });
 
@@ -158,7 +125,6 @@ function buildScopes(
 function Dashboard() {
   const { databases, email, role, servers, services, stacks } =
     Route.useLoaderData();
-  const search = Route.useSearch();
   const navigate = Route.useNavigate();
 
   // Résolu UNE fois ici, transmis tel quel : chaque bouton du dashboard
@@ -196,69 +162,23 @@ function Dashboard() {
     [scopes]
   );
 
-  const selectedService = services.find((s) => s.id === search.service) ?? null;
-  const selectedStack = stacks.find((s) => s.id === search.stack) ?? null;
-
-  const handleToggleService = useCallback(
+  // Ouvrir un détail est une NAVIGATION, pas un dépliage : la liste
+  // derrière ne bouge pas, et l'URL dit ce qu'on regarde.
+  const openService = useCallback(
     (serviceId: string) =>
-      navigate({
-        search: {
-          database: undefined,
-          deployment: undefined,
-          service: search.service === serviceId ? undefined : serviceId,
-          stack: undefined,
-        },
-      }),
-    [navigate, search.service]
-  );
-
-  const handleToggleDatabase = useCallback(
-    (databaseId: string) =>
-      navigate({
-        search: {
-          database: search.database === databaseId ? undefined : databaseId,
-          deployment: undefined,
-          service: undefined,
-          stack: undefined,
-        },
-      }),
-    [navigate, search.database]
-  );
-
-  const handleToggleStack = useCallback(
-    (stackId: string) =>
-      navigate({
-        search: {
-          database: undefined,
-          deployment: undefined,
-          service: undefined,
-          stack: search.stack === stackId ? undefined : stackId,
-        },
-      }),
-    [navigate, search.stack]
-  );
-
-  const handleFocusDeployment = useCallback(
-    (serviceId: string, deploymentId: string) =>
-      navigate({
-        search: {
-          deployment: deploymentId,
-          service: serviceId,
-          stack: undefined,
-        },
-      }),
+      navigate({ params: { serviceId }, to: "/services/$serviceId" }),
     [navigate]
   );
 
-  const handleFocusStackDeployment = useCallback(
-    (stackId: string, deploymentId: string) =>
-      navigate({
-        search: {
-          deployment: deploymentId,
-          service: undefined,
-          stack: stackId,
-        },
-      }),
+  const openStackDetail = useCallback(
+    (stackId: string) =>
+      navigate({ params: { stackId }, to: "/stacks/$stackId" }),
+    [navigate]
+  );
+
+  const openDatabaseDetail = useCallback(
+    (databaseId: string) =>
+      navigate({ params: { databaseId }, to: "/databases/$databaseId" }),
     [navigate]
   );
 
@@ -340,56 +260,31 @@ function Dashboard() {
               }
             >
               {scope.services.map((service) => (
-                <div key={service.id}>
-                  <ServiceCard
-                    onToggle={handleToggleService}
-                    role={known}
-                    selected={search.service === service.id}
-                    service={service}
-                  />
-                  {search.service === service.id && selectedService ? (
-                    <ServicePanel
-                      focusedDeploymentId={search.deployment ?? null}
-                      onFocusDeployment={handleFocusDeployment}
-                      role={known}
-                      service={selectedService}
-                    />
-                  ) : null}
-                </div>
+                <ServiceCard
+                  key={service.id}
+                  onOpen={openService}
+                  role={known}
+                  service={service}
+                />
               ))}
 
               {scope.stacks.map((stack) => (
-                <div key={stack.id}>
-                  <StackCard
-                    onToggle={handleToggleStack}
-                    role={known}
-                    selected={search.stack === stack.id}
-                    stack={stack}
-                  />
-                  {search.stack === stack.id && selectedStack ? (
-                    <StackPanel
-                      focusedDeploymentId={search.deployment ?? null}
-                      onFocusDeployment={handleFocusStackDeployment}
-                      role={known}
-                      stack={selectedStack}
-                    />
-                  ) : null}
-                </div>
+                <StackCard
+                  key={stack.id}
+                  onOpen={openStackDetail}
+                  role={known}
+                  stack={stack}
+                />
               ))}
 
               {scope.databases.map((database) => (
-                <div key={database.id}>
-                  <DatabaseCard
-                    database={database}
-                    onToggle={handleToggleDatabase}
-                    role={known}
-                    selected={search.database === database.id}
-                    services={services}
-                  />
-                  {search.database === database.id ? (
-                    <DatabasePanel database={database} role={known} />
-                  ) : null}
-                </div>
+                <DatabaseCard
+                  database={database}
+                  key={database.id}
+                  onOpen={openDatabaseDetail}
+                  role={known}
+                  services={services}
+                />
               ))}
             </RowGroup>
           ))}
@@ -401,45 +296,36 @@ function Dashboard() {
 
 /** Le panneau de détail, dans le MÊME conteneur que sa ligne : un panneau
  *  flottant à côté ne dirait pas à quoi il appartient. */
-function DetailPanel({ children }: { children: React.ReactNode }) {
-  return <div className="border-t bg-muted/20 px-3 py-3">{children}</div>;
-}
-
 function ServiceCard({
-  onToggle,
+  onOpen,
   role,
-  selected,
   service,
 }: {
-  onToggle: (serviceId: string) => void;
+  onOpen: (serviceId: string) => void;
   role: RoleName | null;
-  selected: boolean;
   service: ServiceRow;
 }) {
-  const router = useRouter();
   const navigate = Route.useNavigate();
   const status = serviceLabel(service.status);
   const canDeploy = useCan(role, "service", "deploy");
 
   const handleSelect = useCallback(
-    () => onToggle(service.id),
-    [onToggle, service.id]
+    () => onOpen(service.id),
+    [onOpen, service.id]
   );
 
   const deploy = useMutation({
     mutationFn: () => triggerDeploy({ data: { serviceId: service.id } }),
     onSuccess: async (result) => {
-      // On ouvre le flux de logs immédiatement. Le job vient d'être déposé ;
-      // le worker n'a probablement pas encore écrit une ligne, et c'est
-      // exactement pour ça que le flux commence par le tampon de rattrapage.
+      // On part sur la page du service, flux de logs ouvert. Le job vient
+      // d'être déposé ; le worker n'a probablement pas encore écrit une
+      // ligne, et c'est exactement pour ça que le flux commence par le
+      // tampon de rattrapage.
       await navigate({
-        search: {
-          deployment: result.deploymentId,
-          service: service.id,
-          stack: undefined,
-        },
+        params: { serviceId: service.id },
+        search: { deployment: result.deploymentId },
+        to: "/services/$serviceId",
       });
-      await router.invalidate();
     },
   });
 
@@ -468,7 +354,6 @@ function ServiceCard({
           {service.domain ? ` · ${service.domain}` : ""}
         </>
       }
-      selected={selected}
       tag={
         service.watching ? (
           <Badge
@@ -485,231 +370,29 @@ function ServiceCard({
   );
 }
 
-function ServicePanel({
-  focusedDeploymentId,
-  onFocusDeployment,
-  role,
-  service,
-}: {
-  focusedDeploymentId: string | null;
-  onFocusDeployment: (serviceId: string, deploymentId: string) => void;
-  role: RoleName | null;
-  service: ServiceRow;
-}) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const canRollback = useCan(role, "service", "rollback");
-  const canManageWebhook = useCan(role, "service", "create");
-  // `envVar` n'est PAS dans le rôle opérateur : « quelqu'un qui doit pouvoir
-  // livrer n'a pas à voir les secrets » (permissions.ts). `enabled` évite un
-  // appel qui échouerait de toute façon depuis un onglet jamais affiché.
-  const canReadEnvVar = useCan(role, "envVar", "read");
-
-  const deployments = useQuery({
-    queryFn: () => getDeployments({ data: { serviceId: service.id } }),
-    queryKey: ["deployments", service.id],
-  });
-
-  const envVars = useQuery({
-    enabled: canReadEnvVar,
-    queryFn: () => getEnvVars({ data: { serviceId: service.id } }),
-    queryKey: ["env-vars", service.id],
-  });
-
-  const rollback = useMutation({
-    mutationFn: (deploymentId: string) =>
-      triggerRollback({ data: { deploymentId, serviceId: service.id } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["deployments", service.id],
-      });
-      await router.invalidate();
-    },
-  });
-
-  const save = useMutation({
-    mutationFn: (vars: DraftVar[]) =>
-      saveEnvVars({
-        data: {
-          serviceId: service.id,
-          vars: vars.map((v) => ({
-            isSecret: v.isSecret,
-            key: v.key,
-            value: v.value,
-          })),
-        },
-      }),
-    onError: (error: Error) => setSaveError(error.message),
-    onSuccess: async () => {
-      setSaveError(null);
-      await queryClient.invalidateQueries({
-        queryKey: ["env-vars", service.id],
-      });
-    },
-  });
-
-  // Le flux se ferme, la vue se rafraîchit : le statut du service et son
-  // dernier déploiement viennent du chargeur de route, pas du flux.
-  const handleEnd = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["deployments", service.id],
-    });
-    await router.invalidate();
-  }, [queryClient, router, service.id]);
-
-  const handleFocus = useCallback(
-    (deploymentId: string) => onFocusDeployment(service.id, deploymentId),
-    [onFocusDeployment, service.id]
-  );
-
-  const handleRollback = useCallback(
-    (deploymentId: string) => rollback.mutate(deploymentId),
-    [rollback]
-  );
-
-  const handleSave = useCallback(
-    (vars: DraftVar[]) => save.mutate(vars),
-    [save]
-  );
-
-  const handleGetWebhook = useCallback(
-    () => getServiceWebhook({ data: { serviceId: service.id } }),
-    [service.id]
-  );
-  const handleGenerateWebhook = useCallback(
-    () => generateServiceWebhook({ data: { serviceId: service.id } }),
-    [service.id]
-  );
-
-  const currentDeploymentId = service.lastDeployment
-    ? service.lastDeployment.id
-    : null;
-  const shown = focusedDeploymentId ?? currentDeploymentId;
-
-  return (
-    <DetailPanel>
-      <Tabs defaultValue="logs">
-        {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
-            de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          {canReadEnvVar ? (
-            <TabsTrigger value="env">Variables</TabsTrigger>
-          ) : null}
-          <TabsTrigger value="ressources">Resources</TabsTrigger>
-          <TabsTrigger value="webhook">Webhook</TabsTrigger>
-        </TabsList>
-
-        <TabsContent className="pt-3" value="logs">
-          {shown ? (
-            <LogStream deploymentId={shown} onEnd={handleEnd} />
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              No deploys yet — logs will appear on the first build.
-            </p>
-          )}
-        </TabsContent>
-
-        <TabsContent className="pt-3" value="history">
-          <p className="mb-2 truncate text-muted-foreground text-xs">
-            {service.gitRepoUrl ?? "—"}
-            {service.gitBranch ? ` · ${service.gitBranch}` : ""}
-          </p>
-          {deployments.data ? (
-            <DeploymentHistory
-              canRollback={canRollback}
-              currentDeploymentId={currentDeploymentId}
-              deployments={deployments.data}
-              onRollback={handleRollback}
-              onSelect={handleFocus}
-              pending={rollback.isPending}
-              selectedId={shown}
-            />
-          ) : (
-            <Spinner />
-          )}
-          {rollback.error ? (
-            <Alert className="mt-3" variant="destructive">
-              <AlertDescription>{rollback.error.message}</AlertDescription>
-            </Alert>
-          ) : null}
-        </TabsContent>
-
-        {canReadEnvVar ? (
-          <TabsContent className="pt-3" value="env">
-            {envVars.data ? (
-              <EnvVarTable
-                // Remonte le tableau quand le serveur a confirmé : le brouillon
-                // repart de l'état réellement enregistré, jamais de ce qu'on
-                // croyait avoir envoyé.
-                key={envVars.data.map((v) => `${v.id}:${v.key}`).join(",")}
-                onSave={handleSave}
-                pending={save.isPending}
-                saved={envVars.data}
-              />
-            ) : (
-              <Spinner />
-            )}
-            {saveError ? (
-              <Alert className="mt-3" variant="destructive">
-                <AlertDescription>{saveError}</AlertDescription>
-              </Alert>
-            ) : null}
-          </TabsContent>
-        ) : null}
-
-        <TabsContent className="pt-3" value="ressources">
-          <ServiceResources serviceId={service.id} />
-        </TabsContent>
-
-        <TabsContent className="pt-3" value="webhook">
-          <WebhookPanel
-            canManage={canManageWebhook}
-            generateWebhook={handleGenerateWebhook}
-            getWebhook={handleGetWebhook}
-            queryKey={["webhook", "service", service.id]}
-          />
-        </TabsContent>
-      </Tabs>
-    </DetailPanel>
-  );
-}
-
 function StackCard({
-  onToggle,
+  onOpen,
   role,
-  selected,
   stack,
 }: {
-  onToggle: (stackId: string) => void;
+  onOpen: (stackId: string) => void;
   role: RoleName | null;
-  selected: boolean;
   stack: StackRow;
 }) {
-  const router = useRouter();
   const navigate = Route.useNavigate();
   const status = serviceLabel(stack.status);
   const canDeploy = useCan(role, "service", "deploy");
 
-  const handleSelect = useCallback(
-    () => onToggle(stack.id),
-    [onToggle, stack.id]
-  );
+  const handleSelect = useCallback(() => onOpen(stack.id), [onOpen, stack.id]);
 
   const deploy = useMutation({
     mutationFn: () => triggerStackDeploy({ data: { stackId: stack.id } }),
     onSuccess: async (result) => {
       await navigate({
-        search: {
-          deployment: result.stackDeploymentId,
-          service: undefined,
-          stack: stack.id,
-        },
+        params: { stackId: stack.id },
+        search: { deployment: result.stackDeploymentId },
+        to: "/stacks/$stackId",
       });
-      await router.invalidate();
     },
   });
 
@@ -739,7 +422,6 @@ function StackCard({
           {stack.domain ? ` · ${stack.domain}` : ""}
         </>
       }
-      selected={selected}
       tag={
         stack.watching ? (
           <Badge
@@ -756,127 +438,6 @@ function StackCard({
   );
 }
 
-function StackPanel({
-  focusedDeploymentId,
-  onFocusDeployment,
-  role,
-  stack,
-}: {
-  focusedDeploymentId: string | null;
-  onFocusDeployment: (stackId: string, deploymentId: string) => void;
-  role: RoleName | null;
-  stack: StackRow;
-}) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const canRollback = useCan(role, "service", "rollback");
-  const canManageWebhook = useCan(role, "service", "create");
-
-  const deployments = useQuery({
-    queryFn: () => getStackDeployments({ data: { stackId: stack.id } }),
-    queryKey: ["stack-deployments", stack.id],
-  });
-
-  const rollback = useMutation({
-    mutationFn: (sourceDeploymentId: string) =>
-      triggerStackRollback({ data: { sourceDeploymentId, stackId: stack.id } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["stack-deployments", stack.id],
-      });
-      await router.invalidate();
-    },
-  });
-
-  const handleEnd = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["stack-deployments", stack.id],
-    });
-    await router.invalidate();
-  }, [queryClient, router, stack.id]);
-
-  const handleFocus = useCallback(
-    (deploymentId: string) => onFocusDeployment(stack.id, deploymentId),
-    [onFocusDeployment, stack.id]
-  );
-
-  const handleRollback = useCallback(
-    (deploymentId: string) => rollback.mutate(deploymentId),
-    [rollback]
-  );
-
-  const handleGetWebhook = useCallback(
-    () => getStackWebhook({ data: { stackId: stack.id } }),
-    [stack.id]
-  );
-  const handleGenerateWebhook = useCallback(
-    () => generateStackWebhook({ data: { stackId: stack.id } }),
-    [stack.id]
-  );
-
-  const currentDeploymentId = stack.lastDeployment
-    ? stack.lastDeployment.id
-    : null;
-  const shown = focusedDeploymentId ?? currentDeploymentId;
-
-  return (
-    <DetailPanel>
-      <Tabs defaultValue="logs">
-        {/* Le rail défile dans SON conteneur : à 320 px, « Webhook » sortait
-            de l'écran et devenait inatteignable — mesuré. */}
-        <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="webhook">Webhook</TabsTrigger>
-        </TabsList>
-
-        <TabsContent className="pt-3" value="logs">
-          {shown ? (
-            <LogStream deploymentId={shown} onEnd={handleEnd} />
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              No deploys yet — logs will appear on the first build.
-            </p>
-          )}
-        </TabsContent>
-
-        <TabsContent className="pt-3" value="history">
-          <p className="mb-2 truncate text-muted-foreground text-xs">
-            {stack.gitRepoUrl} · {stack.gitBranch}
-          </p>
-          {deployments.data ? (
-            <DeploymentHistory
-              canRollback={canRollback}
-              currentDeploymentId={currentDeploymentId}
-              deployments={deployments.data}
-              onRollback={handleRollback}
-              onSelect={handleFocus}
-              pending={rollback.isPending}
-              selectedId={shown}
-            />
-          ) : (
-            <Spinner />
-          )}
-          {rollback.error ? (
-            <Alert className="mt-3" variant="destructive">
-              <AlertDescription>{rollback.error.message}</AlertDescription>
-            </Alert>
-          ) : null}
-        </TabsContent>
-
-        <TabsContent className="pt-3" value="webhook">
-          <WebhookPanel
-            canManage={canManageWebhook}
-            generateWebhook={handleGenerateWebhook}
-            getWebhook={handleGetWebhook}
-            queryKey={["webhook", "stack", stack.id]}
-          />
-        </TabsContent>
-      </Tabs>
-    </DetailPanel>
-  );
-}
-
 const DEFAULT_ENV_VAR_KEY: Record<DatabaseRow["engine"], string> = {
   postgres: "DATABASE_URL",
   redis: "REDIS_URL",
@@ -889,22 +450,20 @@ const ENGINE_LABEL: Record<DatabaseRow["engine"], string> = {
 
 function DatabaseCard({
   database,
-  onToggle,
+  onOpen,
   role,
-  selected,
   services,
 }: {
   database: DatabaseRow;
-  onToggle: (databaseId: string) => void;
+  onOpen: (databaseId: string) => void;
   role: RoleName | null;
-  selected: boolean;
   services: ServiceRow[];
 }) {
   const status = serviceLabel(database.status);
   const canAttach = useCan(role, "database", "attach");
   const handleSelect = useCallback(
-    () => onToggle(database.id),
-    [database.id, onToggle]
+    () => onOpen(database.id),
+    [database.id, onOpen]
   );
 
   return (
@@ -928,7 +487,6 @@ function DatabaseCard({
           {database.serverName}
         </>
       }
-      selected={selected}
       tone={status.tone}
       toneLabel={status.label}
     />
@@ -942,65 +500,3 @@ function DatabaseCard({
  * élément est du décor. Le jour où une base en aura un second, il ressemblera
  * à celui d'un service.
  */
-function DatabasePanel({
-  database,
-  role,
-}: {
-  database: DatabaseRow;
-  role: RoleName | null;
-}) {
-  const canCreateBackup = useCan(role, "backup", "create");
-  const canRestoreBackup = useCan(role, "backup", "restore");
-  const [target, setTarget] = useState<BackupRow | null>(null);
-  const restore = useMutation({
-    mutationFn: (confirmName: string) =>
-      triggerRestore({
-        data: {
-          backupId: target?.id ?? "",
-          confirmName,
-          databaseId: database.id,
-        },
-      }),
-    onSuccess: () => setTarget(null),
-  });
-
-  const handleClose = useCallback((open: boolean) => {
-    if (!open) {
-      setTarget(null);
-    }
-  }, []);
-  const handleConfirm = useCallback(
-    (confirmName: string) => restore.mutate(confirmName),
-    [restore]
-  );
-
-  return (
-    <div className="border-t bg-muted/20 px-3 py-3">
-      <BackupPanel
-        canCreate={canCreateBackup}
-        canRestore={canRestoreBackup}
-        databaseId={database.id}
-        databaseName={database.name}
-        onRestore={setTarget}
-        retention={database.backupRetention}
-        schedule={database.backupSchedule}
-      />
-      {restore.isError ? (
-        <Alert className="mt-3" variant="destructive">
-          <AlertDescription>
-            {restore.error instanceof Error
-              ? restore.error.message
-              : "restore refused"}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      <RestoreDialog
-        backup={target}
-        databaseName={database.name}
-        onConfirm={handleConfirm}
-        onOpenChange={handleClose}
-        pending={restore.isPending}
-      />
-    </div>
-  );
-}
