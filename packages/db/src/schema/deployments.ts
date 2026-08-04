@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   index,
   pgEnum,
   pgTable,
@@ -42,6 +43,15 @@ export const deployments = pgTable(
     errorMessage: text("error_message"),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     id: uuid("id").primaryKey().defaultRandom(),
+
+    // L'image de ce déploiement a été retirée du registre par la rétention.
+    //
+    // La ligne d'historique RESTE — savoir quel commit a tourné quand n'a pas
+    // à disparaître parce qu'on a récupéré du disque. Mais son image, elle,
+    // n'existe plus, et proposer « Rejouer cette version » enverrait
+    // l'utilisateur vers un échec certain. Sans cette colonne, le dashboard
+    // offrirait une action dont il sait déjà qu'elle est impossible.
+    imagePurged: boolean("image_purged").notNull().default(false),
 
     // Le tag exact construit et déployé. C'est LA colonne qui rend le rollback
     // possible vers n'importe quelle version, pas seulement la précédente.

@@ -327,6 +327,117 @@ export function registryImageTag(
   return `${registry.host}/${name}:${version}`;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Rétention
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Combien de versions par service le registre conserve.
+ *
+ * Il faut le dire franchement : ceci ROGNE le « revenir à n'importe quelle
+ * version antérieure » qui distingue Noddle de Swarm — ça devient « n'importe
+ * laquelle des dix dernières ». Mais l'alternative n'est pas « toutes » : sans
+ * rétention la limite existe quand même, c'est « jusqu'à ce que le disque soit
+ * plein », et celle-là n'est annoncée nulle part et arrive sans prévenir.
+ *
+ * Dix, parce que la couche de base nixpacks est PARTAGÉE entre toutes les
+ * versions d'un service : mesuré, une seconde image ne coûte que sa propre
+ * couche applicative. Le coût de dix versions est donc proche de celui d'une.
+ */
+export const KEEP_PER_SERVICE = 10;
+
+/** Découpe `hôte:port/dépôt:tag` en ses deux moitiés utiles. */
+export function parseRegistryRef(
+  image: string,
+  registry: RegistryConfig
+): { repository: string; tag: string } | null {
+  const prefix = `${registry.host}/`;
+  if (!image.startsWith(prefix)) {
+    return null;
+  }
+  const rest = image.slice(prefix.length);
+  const colon = rest.lastIndexOf(":");
+  if (colon <= 0) {
+    return null;
+  }
+  return { repository: rest.slice(0, colon), tag: rest.slice(colon + 1) };
+}
+
+/**
+ * Supprime le manifeste d'un tag. Rend `true` s'il n'est plus là après coup.
+ *
+ * Ceci ne libère AUCUN octet à soi seul — mesuré : le tag disparaît de
+ * `tags/list` et le volume ne bouge pas. Les couches restent, référencées par
+ * rien. C'est `garbageCollect` qui les rend, et il ne peut collecter que des
+ * manifestes déjà supprimés. Les deux vont ensemble ou ne servent à rien : le
+ * même piège que « supprimer la ligne sans supprimer l'objet » déjà payé sur
+ * les sauvegardes.
+ */
+export async function deleteManifest(
+  registry: RegistryConfig,
+  ref: { repository: string; tag: string }
+): Promise<boolean> {
+  const base = `https://${registry.host}/v2/${ref.repository}`;
+  const auth = `Basic ${Buffer.from(`${REGISTRY_USER}:${registry.password}`).toString("base64")}`;
+  // Le digest ne se lit que si l'on ANNONCE les types de manifeste acceptés :
+  // sans cet en-tête, le registre répond dans un format ancien et le
+  // `Docker-Content-Digest` ne désigne pas le manifeste qu'on veut effacer.
+  const accept = [
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.oci.image.manifest.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+    "application/vnd.docker.distribution.manifest.v2+json",
+  ].join(", ");
+
+  const head = await fetch(`${base}/manifests/${ref.tag}`, {
+    headers: { accept, authorization: auth },
+    method: "HEAD",
+  });
+  const digest = head.headers.get("docker-content-digest");
+  if (!(head.ok && digest)) {
+    return false;
+  }
+  const del = await fetch(`${base}/manifests/${digest}`, {
+    headers: { authorization: auth },
+    method: "DELETE",
+  });
+  // 202 = accepté, 404 = déjà parti. Les deux valent « il n'est plus là ».
+  return del.status === 202 || del.status === 404;
+}
+
+/**
+ * Rend les octets des couches que plus aucun manifeste ne référence.
+ *
+ * Tourne DANS le conteneur du registre, sur le manager : c'est un travail sur
+ * le système de fichiers du registre, pas un appel d'API.
+ *
+ * ⚠ à ne jamais faire tourner pendant un push. Une couche en cours d'envoi
+ * n'est référencée par aucun manifeste — donc collectable — et le push
+ * réussirait en laissant une image incomplète. C'est pourquoi la rétention
+ * passe par la MÊME file que les déploiements, en concurrence 1.
+ */
+export async function garbageCollect(
+  managerClient: SshClient,
+  containerName: string
+): Promise<void> {
+  const res = await execArgv(managerClient, [
+    "sudo",
+    "docker",
+    "exec",
+    containerName,
+    "registry",
+    "garbage-collect",
+    "--delete-untagged",
+    // registry 3 a déplacé ce chemin depuis /etc/docker/registry de la v2.
+    "/etc/distribution/config.yml",
+  ]);
+  if (res.code !== 0) {
+    throw new Error(
+      `garbage-collect a échoué (code ${res.code}) : ${res.stderr.trim().split("\n").slice(-3).join(" ")}`
+    );
+  }
+}
+
 /**
  * Une image est-elle joignable depuis N'IMPORTE QUEL nœud ?
  *

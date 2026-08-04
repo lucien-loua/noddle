@@ -205,16 +205,33 @@ export async function deployService(
   spec: DeploySpec
 ): Promise<DeployOutcome> {
   const existing = await findService(docker, spec.serviceName);
-  // dockerode transforme `authconfig` en en-tête X-Registry-Auth. Sur une mise
-  // à jour, l'API prend par défaut l'authentification de la spec ENVOYÉE — donc
-  // celle-ci — ce qui est le comportement voulu : les identifiants suivent la
-  // nouvelle image.
-  const auth = spec.registryAuth
-    ? { authconfig: spec.registryAuth }
-    : undefined;
+
+  // L'authentification passe en PREMIER ARGUMENT POSITIONNEL, jamais dans les
+  // options. Mesuré contre une vraie VM, et c'est une chausse-trappe de
+  // dockerode :
+  //
+  //   Docker.prototype.createService = function (auth, opts, callback) {
+  //     if (!callback && typeof opts === 'function') { … auth = opts.authconfig }
+  //     else if (!opts && !callback) { opts = auth }   ← auth reste la SPEC
+  //
+  // Appelé avec un seul argument — la forme promesse — `auth` demeure la spec
+  // entière, que docker-modem encode en base64 dans `X-Registry-Auth`. Le
+  // démon n'y trouve aucun identifiant, et l'agent qui tire répond « no basic
+  // auth credentials » : un déploiement qui ne converge pas, dont le message
+  // ne désigne pas la cause.
+  //
+  // `Service.prototype.update`, lui, extrait bien `opts.authconfig` dans ce
+  // cas. L'asymétrie fait que seule une CRÉATION de service déclenche le
+  // défaut — donc le premier déploiement d'un service, jamais les suivants.
+  // Passer les deux arguments explicitement supprime la question.
+  const auth = spec.registryAuth;
 
   if (!existing) {
-    await docker.createService({ ...serviceSpec(spec), ...auth });
+    if (auth) {
+      await docker.createService(auth, serviceSpec(spec));
+    } else {
+      await docker.createService(serviceSpec(spec));
+    }
     // Une création n'a PAS d'UpdateStatus — il n'y a pas eu de mise à jour.
     // readUpdateState rendrait donc la main immédiatement et on annoncerait un
     // déploiement réussi alors que le conteneur démarre encore : le service
@@ -226,9 +243,17 @@ export async function deployService(
   }
 
   const service = docker.getService(existing.ID);
+  // Même forme à deux arguments qu'à la création, bien qu'`update` sache
+  // extraire `opts.authconfig` : dépendre de cette différence-là, c'est
+  // reproduire le défaut au prochain refactor.
+  // `update` SAIT extraire `opts.authconfig` quand on l'appelle avec un seul
+  // argument (c'est la branche `typeof opts === 'undefined'` de dockerode) —
+  // contrairement à `createService`, qui laisse alors `auth` valoir la spec.
+  // D'où les deux formes différentes ci-dessus et ici : chacune est celle qui
+  // marche pour SA méthode, plutôt qu'une seule qui marcherait à moitié.
   await service.update({
     ...serviceSpec(spec),
-    ...auth,
+    ...(auth ? { authconfig: auth } : {}),
     version: existing.Version?.Index,
   });
 
