@@ -10,6 +10,8 @@ import { AppShell } from "@/components/app-shell";
 import { ResourceGraphs } from "@/components/resource-graphs";
 import { AddServerDialog, ServersList } from "@/components/servers-panel";
 import { Button } from "@/components/ui/button";
+import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServerMetrics } from "@/server/metrics";
 import { getServers } from "@/server/servers";
@@ -20,33 +22,38 @@ export const Route = createFileRoute("/serveurs")({
     if (!state.signedIn) {
       throw redirect({ to: "/login" });
     }
-    return { email: state.email };
+    return { email: state.email, role: state.role };
   },
   component: ServersPage,
   loader: async ({ context }) => ({
     email: context.email,
     metrics: await getServerMetrics(),
+    role: context.role,
     servers: await getServers(),
   }),
 });
 
 function ServersPage() {
-  const { email, metrics, servers } = Route.useLoaderData();
+  const { email, metrics, role, servers } = Route.useLoaderData();
+  const known = role && role in roles ? (role as RoleName) : null;
+  const canAdd = useCan(known, "server", "create");
   const [open, setOpen] = useState(false);
   const handleOpen = useCallback(() => setOpen(true), []);
 
   return (
     <AppShell
       actions={
-        <Button onClick={handleOpen} size="sm">
-          <PlusIcon data-icon="inline-start" />
-          Ajouter un serveur
-        </Button>
+        canAdd ? (
+          <Button onClick={handleOpen} size="sm">
+            <PlusIcon data-icon="inline-start" />
+            Ajouter un serveur
+          </Button>
+        ) : null
       }
       email={email}
       title="Serveurs"
     >
-      <AddServerDialog onOpenChange={setOpen} open={open} />
+      {canAdd ? <AddServerDialog onOpenChange={setOpen} open={open} /> : null}
       <ServersList initial={servers} />
 
       {/* Sous la liste : « quelles machines ai-je » vient avant « comment

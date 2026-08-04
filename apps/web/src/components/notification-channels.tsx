@@ -25,6 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
+import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import {
   addChannel,
   type ChannelRow,
@@ -46,7 +48,15 @@ const KIND_LABEL: Record<ChannelRow["kind"], string> = {
   webhook: "Webhook",
 };
 
-export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
+export function NotificationChannels({
+  initial,
+  role,
+}: {
+  initial: ChannelRow[];
+  role: string | null;
+}) {
+  const known = role && role in roles ? (role as RoleName) : null;
+  const canManage = useCan(known, "notification", "manage");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -76,12 +86,16 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
           Noddle prévient quand un déploiement échoue, quand la surveillance
           reprend la main, ou quand une sauvegarde casse.
         </p>
-        <Button onClick={handleOpen} size="sm">
-          Ajouter
-        </Button>
+        {canManage ? (
+          <Button onClick={handleOpen} size="sm">
+            Ajouter
+          </Button>
+        ) : null}
       </div>
 
-      <AddChannelDialog onDone={refresh} onOpenChange={setOpen} open={open} />
+      {canManage ? (
+        <AddChannelDialog onDone={refresh} onOpenChange={setOpen} open={open} />
+      ) : null}
 
       {rows.length === 0 ? (
         <Empty>
@@ -99,7 +113,12 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
       ) : (
         <div className="divide-y rounded-md border">
           {rows.map((channel) => (
-            <ChannelLine channel={channel} key={channel.id} onDone={refresh} />
+            <ChannelLine
+              canManage={canManage}
+              channel={channel}
+              key={channel.id}
+              onDone={refresh}
+            />
           ))}
         </div>
       )}
@@ -108,9 +127,11 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
 }
 
 function ChannelLine({
+  canManage,
   channel,
   onDone,
 }: {
+  canManage: boolean;
   channel: ChannelRow;
   onDone: () => void;
 }) {
@@ -156,31 +177,35 @@ function ChannelLine({
         <ChannelState channel={channel} />
       </span>
 
-      <Button
-        disabled={test.isPending}
-        onClick={handleTest}
-        size="sm"
-        variant="outline"
-      >
-        {test.isPending ? <Spinner /> : null}
-        Éprouver
-      </Button>
-      <Button
-        disabled={toggle.isPending}
-        onClick={handleToggle}
-        size="sm"
-        variant="outline"
-      >
-        {channel.enabled ? "Couper" : "Réactiver"}
-      </Button>
-      <Button
-        disabled={remove.isPending}
-        onClick={handleRemove}
-        size="sm"
-        variant="ghost"
-      >
-        Supprimer
-      </Button>
+      {canManage ? (
+        <>
+          <Button
+            disabled={test.isPending}
+            onClick={handleTest}
+            size="sm"
+            variant="outline"
+          >
+            {test.isPending ? <Spinner /> : null}
+            Éprouver
+          </Button>
+          <Button
+            disabled={toggle.isPending}
+            onClick={handleToggle}
+            size="sm"
+            variant="outline"
+          >
+            {channel.enabled ? "Couper" : "Réactiver"}
+          </Button>
+          <Button
+            disabled={remove.isPending}
+            onClick={handleRemove}
+            size="sm"
+            variant="ghost"
+          >
+            Supprimer
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 }

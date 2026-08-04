@@ -200,6 +200,13 @@ function ScheduleButton({
 }
 
 interface Props {
+  /** `backup:create` — couvre aussi la planification : régler un rythme
+   *  automatique sans pouvoir déclencher une sauvegarde manuelle n'aurait pas
+   *  de sens. */
+  canCreate: boolean;
+  /** `backup:restore` — distinct de `canCreate` : un opérateur sauvegarde
+   *  mais ne restaure pas, seule opération irréversible du produit. */
+  canRestore: boolean;
   databaseId: string;
   databaseName: string;
   onRestore: (backup: BackupRow) => void;
@@ -208,6 +215,8 @@ interface Props {
 }
 
 export function BackupPanel({
+  canCreate,
+  canRestore,
   databaseId,
   databaseName,
   onRestore,
@@ -243,10 +252,12 @@ export function BackupPanel({
         <p className="text-muted-foreground text-xs">
           Vers le stockage S3 de l'installation.
         </p>
-        <Button disabled={run.isPending} onClick={handleBackup} size="sm">
-          {run.isPending ? <Spinner /> : null}
-          Sauvegarder
-        </Button>
+        {canCreate ? (
+          <Button disabled={run.isPending} onClick={handleBackup} size="sm">
+            {run.isPending ? <Spinner /> : null}
+            Sauvegarder
+          </Button>
+        ) : null}
       </div>
 
       {run.isError ? (
@@ -286,6 +297,7 @@ export function BackupPanel({
             {rows.map((backup) => (
               <BackupLine
                 backup={backup}
+                canRestore={canRestore}
                 key={backup.id}
                 onRestore={onRestore}
               />
@@ -294,20 +306,24 @@ export function BackupPanel({
         </Table>
       )}
 
-      <ScheduleControl
-        databaseId={databaseId}
-        retention={retention}
-        schedule={schedule}
-      />
+      {canCreate ? (
+        <ScheduleControl
+          databaseId={databaseId}
+          retention={retention}
+          schedule={schedule}
+        />
+      ) : null}
     </div>
   );
 }
 
 function BackupLine({
   backup,
+  canRestore,
   onRestore,
 }: {
   backup: BackupRow;
+  canRestore: boolean;
   onRestore: (backup: BackupRow) => void;
 }) {
   const status = backupLabel(backup.status);
@@ -336,7 +352,7 @@ function BackupLine({
       <TableCell className="text-right">
         {/* Seule une sauvegarde complète est restaurable : une demi-sauvegarde
             n'est pas une option qu'on propose. Le serveur le revérifie. */}
-        {backup.status === "completed" ? (
+        {backup.status === "completed" && canRestore ? (
           <Button onClick={handleRestore} size="sm" variant="outline">
             Restaurer
           </Button>

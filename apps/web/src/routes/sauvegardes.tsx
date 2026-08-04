@@ -17,17 +17,18 @@ export const Route = createFileRoute("/sauvegardes")({
     if (!state.signedIn) {
       throw redirect({ to: "/login" });
     }
-    return { email: state.email };
+    return { email: state.email, role: state.role };
   },
   component: BackupsPage,
   loader: async ({ context }) => ({
     destination: await getDestination(),
     email: context.email,
+    role: context.role,
   }),
 });
 
 function BackupsPage() {
-  const { destination, email } = Route.useLoaderData();
+  const { destination, email, role } = Route.useLoaderData();
 
   return (
     <AppShell email={email} title="Sauvegardes">
@@ -37,7 +38,7 @@ function BackupsPage() {
         sont les serveurs de Noddle qui poussent les dumps, jamais vos machines
         cibles.
       </p>
-      <BackupDestinationPanel initial={destination} />
+      <BackupDestinationPanel initial={destination} role={role} />
     </AppShell>
   );
 }

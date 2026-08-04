@@ -35,6 +35,10 @@ import { cn } from "@/lib/utils";
 import type { DeploymentSummary } from "@/server/dashboard";
 
 interface Props {
+  /** `service:rollback` — politesse, pas la permission : le serveur la
+   *  revérifie de toute façon. Sans elle, la colonne reste vide plutôt que de
+   *  proposer un bouton que la mutation refuserait. */
+  canRollback: boolean;
   currentDeploymentId: string | null;
   deployments: DeploymentSummary[];
   onRollback: (deploymentId: string) => void;
@@ -49,11 +53,13 @@ interface Props {
  * ligne.
  */
 function RollbackCell({
+  canRollback,
   currentDeploymentId,
   deployment,
   onRollback,
   pending,
 }: {
+  canRollback: boolean;
   currentDeploymentId: string | null;
   deployment: DeploymentSummary;
   onRollback: (deploymentId: string) => void;
@@ -77,6 +83,9 @@ function RollbackCell({
   }
   if (deployment.id === currentDeploymentId) {
     return <span className="text-muted-foreground">en service</span>;
+  }
+  if (!canRollback) {
+    return null;
   }
   return (
     <Button
@@ -122,6 +131,7 @@ const columnHelper = createColumnHelper<DeploymentSummary>();
 
 export function DeploymentHistory(props: Props) {
   const {
+    canRollback,
     currentDeploymentId,
     deployments,
     onRollback,
@@ -176,6 +186,7 @@ export function DeploymentHistory(props: Props) {
       columnHelper.display({
         cell: (info) => (
           <RollbackCell
+            canRollback={canRollback}
             currentDeploymentId={currentDeploymentId}
             deployment={info.row.original}
             onRollback={onRollback}
@@ -186,7 +197,7 @@ export function DeploymentHistory(props: Props) {
         id: "actions",
       }),
     ],
-    [currentDeploymentId, onRollback, pending]
+    [canRollback, currentDeploymentId, onRollback, pending]
   );
 
   const table = useReactTable({
