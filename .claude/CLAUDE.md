@@ -771,7 +771,63 @@ quoi que ce soit (`styles.css`, `adopt-host.ts`, `docker-compose.tls.yml`)
 écraser, pour ne pas perdre un correctif appliqué à la main et jamais
 repoussé.
 
+**Passe UI, le 2026-08-04.** L'interface était « trop basique », ne
+respectait pas les principes de regroupement, et des dialogues débordaient
+du viewport. Trois défauts structurels, tous vérifiés au navigateur en
+clair ET en sombre :
+
+- **`DialogContent` n'avait AUCUNE contrainte de hauteur ni de
+  défilement.** Un formulaire long poussait l'en-tête ET le pied hors de
+  l'écran : titre illisible, bouton de soumission inatteignable. Mesuré
+  sur « Connect a Compose stack » (dix champs) à 1280×760. Corrigé au
+  point de passage unique — `max-h-[85dvh]`, colonne flex, `DialogBody`
+  qui porte le défilement — donc pour TOUS les dialogues d'un coup.
+  `dvh` et non `vh` : sur mobile la barre d'URL fausse `vh`.
+
+- **Le détail se dépliait SOUS sa ligne** et repoussait tous les autres
+  services hors de l'écran — il cassait la seule chose que le dashboard
+  doit faire. Passé sur des routes dédiées (`/services/$id`,
+  `/stacks/$id`, `/databases/$id`) : cliquer NAVIGUE, la liste ne bouge
+  jamais, et on la retrouve à l'identique au retour. Les chargeurs
+  réutilisent les lectures du dashboard plutôt que d'ajouter des server
+  functions par id — même requête, mêmes gardes, rien de plus à inscrire
+  dans `verify-permissions.ts`.
+
+- **Le masquage RBAC de la veille ne couvrait que /comptes** (déjà noté
+  plus haut) ; cette passe a aussi révélé que `getEnvVars`, un GET, n'avait
+  aucune garde. Voir la section correspondante.
+
 **Pièges déjà payés, à ne pas repayer :**
+
+- **`overflow-y-auto` ROGNE l'anneau de focus** des premier et dernier
+  champs : l'anneau déborde du cadre du champ, et le conteneur le coupe au
+  ras. Marges négatives + padding équivalent (`-mx-6 px-6 -my-2 py-2`)
+  rendent la place sans décaler le contenu d'un pixel. Vaut pour tout
+  conteneur défilant qui contient des champs.
+
+- **Base UI garde le panneau d'onglet SORTANT monté** le temps de sa
+  transition de fermeture (`data-ending-style`, plus `inert`). Tant que le
+  panneau n'a pas de hauteur propre, ça ne se voit pas ; dès qu'il porte
+  `flex-1`, l'ancien contenu GARDE sa place et le nouveau s'affiche
+  dessous, poussé hors de l'écran. `data-ending-style:hidden` le
+  neutralise. Le défaut n'existait pas avant que les onglets défilent
+  chacun pour eux-mêmes — c'est le genre de régression qu'un changement de
+  mise en page révèle dans un composant qu'on n'a pas touché.
+
+- **`Button` de Base UI suppose un `<button>` NATIF.** Lui passer un lien
+  par `render` fait lever un avertissement en console — à raison, la
+  sémantique de bouton se perd. `nativeButton={false}` déclare l'intention
+  (« un lien habillé en bouton ») au lieu de la subir.
+
+- **`scroll-fade` / `scroll-fade-x` / `no-scrollbar` viennent de
+  `shadcn/tailwind.css`**, déjà importé par `styles.css` — ils sont
+  disponibles partout, il n'y a rien à définir. Cherché à tort dans
+  `styles.css`, où ils n'apparaissent pas.
+
+- **Deux tableaux enveloppaient `Table` dans leur PROPRE
+  `overflow-x-auto`** alors que le composant en porte déjà un : deux
+  conteneurs de défilement imbriqués, dont l'extérieur gagnait, donc le
+  `scroll-fade` posé sur le composant ne servait à rien.
 
 - **`$SUDO` vide dans un TABLEAU bash n'est pas ignoré, contrairement à `$SUDO`
   non quoté.** `install.sh` construisait `COMPOSE=("$SUDO" docker compose …)` :
@@ -1097,12 +1153,16 @@ write one Postgres row per log line.
 
 The design system is deliberately constrained. Treat these as limits, not defaults:
 
-- ~4 type sizes, 1 accent color plus neutrals, 2 elevation levels max
-- One project dashboard: every service's status visible at a glance, no drilling in
+- ~4 type sizes, 2 elevation levels max
+- **Monochrome, préréglage shadcn TEL QUEL.** La règle disait « 1 accent color plus neutrals » ; l'accent n'a jamais été posé, et la question a été tranchée le 2026-08-04 : on garde le gris. Un accent a été proposé, calculé en oklch et vérifié en contraste — puis écarté. Ne pas le reproposer sans demander.
+- **Le texte visible est en ANGLAIS**, URLs comprises. Les commentaires de code et ce fichier restent en français.
+- One project dashboard: every service's status visible at a glance. Le DÉTAIL (logs, historique, variables, ressources, webhook) vit sur sa propre page ; c'est le tableau de bord qui ne doit rien cacher, pas le détail qui doit tenir dedans — voir la passe du 2026-08-04.
 - Deploy is one button, always visible — never nested in a dropdown
 - Env vars are an inline-editable table with a visible diff before save, not a raw textarea
 - Logs live-tail by default, errors highlighted, build noise collapsed into expandable groups
 - Advanced Docker/Traefik knobs are **not** exposed as UI fields. One raw config override textarea per service is the escape hatch.
+- **Rien qui existe dans le préréglage ne se réécrit à la main.** Un `<select>` natif habillé d'une classe, un fil d'Ariane en `<nav>`, un lien stylé en bouton : à chaque fois le résultat divergeait du reste (hauteur, rayon, mode sombre, anneau de focus). `bunx shadcn add <composant>` d'abord, on compose ensuite.
+- **L'espacement libellé/champ appartient à `Field`**, pas à l'appelant. Quinze champs utilisaient un `<div>` nu et se retrouvaient sans le `gap-3` du composant — libellé collé à son input, différemment selon l'écran.
 
 ---
 
