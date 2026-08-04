@@ -477,11 +477,45 @@ n'affiche pas la valeur d'un input qui a un `placeholder`**, ce qui donne
 l'impression qu'un formulaire se vide après un échec. Les valeurs sont
 intactes — vérifier dans le DOM avant de « corriger ».
 
-**Reste pour la Phase 3 :** planification des sauvegardes (BullMQ
-`upsertJobScheduler`, le même mécanisme que le sweep) + rétention, puis
-notifications, graphiques de ressources, équipes/RBAC. Un bouton sans
-planification n'est pas encore un système de sauvegarde : personne ne clique
-tous les jours.
+**Planification et rétention faites et vérifiées, 11/11
+(`verify-backup-schedule.ts`).** Trois rythmes (`off`/`daily`/`weekly`), pas
+d'expression cron : les boutons Docker et Traefik ne sont pas exposés comme
+champs d'interface, et un cron est un langage à part entière dans un
+formulaire.
+
+**UN passage qui interroge Postgres, PAS un planificateur BullMQ par base.**
+Un planificateur par base devrait être créé, modifié et supprimé à chaque
+changement de réglage, et le jour où Redis est vidé — ce qui arrive, c'est un
+cache — toutes les planifications disparaîtraient en silence. L'état vit dans
+la base ; un passage qui redémarre reprend où il en était. Même forme que
+`sweepWatch`, même raison.
+
+Une base est due si sa dernière sauvegarde **réussie** remonte à plus que son
+intervalle. « Réussie » et pas « tentée » : sinon une base cassée cesserait
+d'être sauvegardée dès le premier échec, exactement quand on en a le plus
+besoin.
+
+La purge tourne APRÈS l'enregistrement du succès, jamais avant — purger
+d'abord réduirait la fenêtre pendant laquelle il reste quelque chose à
+restaurer si le dump en cours échoue — et elle n'a pas le droit de faire
+échouer une sauvegarde qui, elle, a réussi. Les deux tests qui comptent ne
+sont pas « le passage s'exécute » mais : **une base PAS due est-elle
+épargnée** (un planificateur qui déclenche tout le temps est aussi faux qu'un
+qui ne déclenche jamais) et **la rétention supprime-t-elle l'OBJET** et pas
+seulement la ligne — une ligne effacée sans son objet donne un compartiment
+qui grossit sans fin, invisible depuis le dashboard.
+
+**Un quatrième défaut vu seulement au navigateur**, de la même classe que les
+trois précédents : la bascule de rythme était optimiste mais n'était pas
+annulée sur refus du serveur. Activer « Chaque jour » sans destination
+configurée laissait le bouton sélectionné alors que la base gardait son ancien
+rythme — **l'écran affirmait une protection qui n'existait pas.** Corrigé par
+`onMutate`/`onError`. La règle générale : toute bascule optimiste doit être
+annulée sur échec, sinon le dashboard ment sur l'état réel, ce qui est
+précisément ce qu'il existe pour éviter.
+
+**Reste pour la Phase 3 :** notifications, graphiques de ressources,
+équipes/RBAC.
 
 **Dette repérée, hors chantier :** `ENGINE_SPECS` (`apps/worker/src/database.ts`)
 passe le mot de passe Redis dans `Command`, donc il est lisible en clair dans
