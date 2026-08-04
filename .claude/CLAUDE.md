@@ -824,6 +824,20 @@ clair ET en sombre :
   disponibles partout, il n'y a rien à définir. Cherché à tort dans
   `styles.css`, où ils n'apparaissent pas.
 
+- **`scroll-fade` est un `mask-image`, donc il ronge le DÉCOR de l'élément
+  sur lequel on le pose** — bordure, fond et rayon compris, pas seulement
+  le texte. Sur le même div qu'une `border`, le cadre se rongeait en haut
+  et en bas dès qu'on faisait défiler ; sur `TabsList`, la pastille grise
+  se dissolvait sur les côtés et les onglets flottaient. **Règle : le
+  décor et ce qui défile sont deux éléments.** Un cadre statique n'a rien
+  à faire disparaître.
+
+  Quand le décor EST ce qui défile (la pastille d'un rail d'onglets),
+  deux niveaux ne suffisent pas, il en faut trois — décor → conteneur
+  masqué → contenu transparent. C'est ce que fait `TabRail`
+  (`components/tab-rail.tsx`) ; passer par lui plutôt que de poser
+  `scroll-fade-x` sur un `TabsList`.
+
 - **Deux tableaux enveloppaient `Table` dans leur PROPRE
   `overflow-x-auto`** alors que le composant en porte déjà un : deux
   conteneurs de défilement imbriqués, dont l'extérieur gagnait, donc le
