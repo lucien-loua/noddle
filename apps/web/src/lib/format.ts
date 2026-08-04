@@ -31,6 +31,49 @@ const SERVICE_LABELS: Record<string, { label: string; tone: Tone }> = {
   stopped: { label: "Arrêté", tone: "neutral" },
 };
 
+const BACKUP_LABELS: Record<string, { label: string; tone: Tone }> = {
+  completed: { label: "Sauvegardée", tone: "ok" },
+  failed: { label: "Échec", tone: "danger" },
+  queued: { label: "En attente", tone: "neutral" },
+  running: { label: "En cours", tone: "busy" },
+};
+
+/**
+ * D'où vient une sauvegarde.
+ *
+ * « Avant restauration » mérite son propre libellé : c'est le filet pris
+ * automatiquement juste avant la seule opération irréversible du produit, et
+ * la retrouver dans la liste sans savoir d'où elle sort serait déroutant au
+ * moment précis où l'on cherche à se rassurer.
+ */
+const BACKUP_KIND_LABELS: Record<string, string> = {
+  manual: "Manuelle",
+  pre_restore: "Avant restauration",
+  scheduled: "Planifiée",
+};
+
+export function backupLabel(status: string): { label: string; tone: Tone } {
+  return BACKUP_LABELS[status] ?? { label: status, tone: "neutral" };
+}
+
+export function backupKindLabel(kind: string): string {
+  return BACKUP_KIND_LABELS[kind] ?? kind;
+}
+
+/** Taille d'objet, en unités que l'œil lit sans compter les chiffres. */
+export function byteSize(bytes: number): string {
+  if (bytes === 0) {
+    return "—";
+  }
+  const units = ["o", "Ko", "Mo", "Go", "To"];
+  const exp = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / 1024 ** exp;
+  return `${value.toFixed(exp === 0 ? 0 : 1)} ${units[exp]}`;
+}
+
 export function deploymentLabel(status: string): { label: string; tone: Tone } {
   return DEPLOYMENT_LABELS[status] ?? { label: status, tone: "neutral" };
 }
