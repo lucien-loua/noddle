@@ -625,6 +625,53 @@ try {
     ko(`rollback hérité : ${legacyDep?.status} — ${legacyDep?.errorMessage}`);
   }
 
+  // ── le cas que `verify-multi.ts` n'exerce jamais ─────────────────────────
+  //
+  // Un service hébergé sur le MANAGER, dans un cluster à plusieurs nœuds, avec
+  // une image locale. Le code d'avant sautait la contrainte dès que le serveur
+  // du service était le manager — en la croyant no-op, ce qui n'est vrai que
+  // sur un cluster à UN nœud. Le planificateur pouvait alors poser la task sur
+  // le worker, où l'image n'existe pas. Trou antérieur à ce chantier, invisible
+  // parce que `verify-multi.ts` construit toujours sur le WORKER.
+  step("Image locale sur un service hébergé par le manager");
+  const managerNodeId = (
+    await exec(managerSsh, "sudo docker info --format '{{.Swarm.NodeID}}'")
+  ).stdout.trim();
+
+  await exec(
+    managerSsh,
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+      `cd ${quoteArg(ORIGIN)} && ` +
+      `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
+      'printf \'FROM node:24-slim\\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\\nWORKDIR /app\\nCOPY . .\\nCMD ["node","s.js"]\\n\' > Dockerfile && ' +
+      `sudo docker build -q -t ${quoteArg(`${SERVICE_NAME}:mgr-local`)} .`
+  );
+  await db
+    .update(services)
+    .set({ serverId: managerRow.id })
+    .where(eq(services.id, svc.id));
+
+  await redeployImage(ctx, {
+    imageTag: `${SERVICE_NAME}:mgr-local`,
+    serviceId: svc.id,
+    trigger: "rollback",
+  });
+
+  const mgrSpec = await specOf();
+  if (mgrSpec.constraints.includes(`node.id==${managerNodeId}`)) {
+    ok("épinglée au manager, alors que le cluster a deux nœuds");
+  } else {
+    ko(
+      `aucune contrainte : [${mgrSpec.constraints.join(", ")}] — Swarm pourrait la poser sur le worker, sans l'image`
+    );
+  }
+
+  // Remis sur le worker : la rétention qui suit compte les versions du service.
+  await db
+    .update(services)
+    .set({ serverId: workerRow.id })
+    .where(eq(services.id, svc.id));
+
   // ── rétention : supprimer l'OBJET, pas seulement la ligne ────────────────
   step("Rétention");
   const volumeMb = async (): Promise<number> => {

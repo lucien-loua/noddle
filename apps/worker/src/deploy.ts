@@ -278,22 +278,28 @@ async function placementFor(opts: {
   buildDocker: ReturnType<typeof dockerClient>;
   image: string;
   registry: RegistryConfig | undefined;
-  sameConnection: boolean;
   server: ServerRow;
 }): Promise<string | undefined> {
   if (isPortableImage(opts.image, opts.registry)) {
     return;
   }
-  // Sur un cluster à un seul nœud, la contrainte serait un no-op : `manager`
-  // et le serveur du service sont la même machine. Comportement inchangé
-  // depuis la Phase 2.
-  if (opts.sameConnection) {
-    return;
-  }
-  // Relevé au provisionnement depuis la Phase 4. Le `docker info` de secours
-  // couvre les serveurs enregistrés avant que la colonne existe — c'est une
-  // lecture LOCALE, à laquelle un nœud worker répond correctement sur
-  // lui-même.
+  // Toute image NON portable est épinglée, sans exception.
+  //
+  // Le code d'avant sautait la contrainte quand le serveur du service ÉTAIT le
+  // manager (`sameConnection`), en la traitant comme un no-op — ce qui n'est
+  // vrai que sur un cluster à UN seul nœud. Dès qu'un worker a rejoint, un
+  // service hébergé sur le manager se retrouvait sans contrainte alors que son
+  // image n'existe que là : le planificateur pouvait le poser sur le worker, où
+  // la task ne démarrerait jamais. Trou antérieur à ce chantier — `verify-
+  // multi.ts` construit sur le WORKER, donc ce cas-là n'était jamais exercé.
+  //
+  // Sur un cluster à un seul nœud, la contrainte désigne ce nœud : elle est
+  // sans effet, et c'est le prix honnête d'une règle sans exception.
+  //
+  // `swarmNodeId` est relevé au provisionnement depuis la Phase 4 ; le
+  // `docker info` de secours couvre les serveurs enregistrés avant que la
+  // colonne existe. C'est une lecture LOCALE, à laquelle un nœud worker répond
+  // correctement sur lui-même.
   return opts.server.swarmNodeId ?? (await getSwarmNodeId(opts.buildDocker));
 }
 
@@ -421,7 +427,6 @@ export async function runDeploy(
       buildDocker,
       image: imageTag,
       registry: ctx.registry,
-      sameConnection,
       server,
     });
 
@@ -611,7 +616,6 @@ export async function redeployImage(
       buildDocker,
       image: opts.imageTag,
       registry: ctx.registry,
-      sameConnection,
       server: service.server,
     });
     const managerDocker = sameConnection
