@@ -6,6 +6,7 @@
 // ne ramène. Donc « Restaurer » passe par une confirmation qui demande le nom
 // de la base à la main, et Noddle prend de lui-même une sauvegarde de sûreté
 // juste avant, ce qui rend l'opération réversible pour de bon.
+import { ArchiveIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { RelativeTime } from "@/components/relative-time";
@@ -21,7 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -252,11 +259,16 @@ export function BackupPanel({
 
       {rows.length === 0 ? (
         <Empty>
-          <EmptyTitle>Aucune sauvegarde</EmptyTitle>
-          <EmptyDescription>
-            La première sauvegarde de {databaseName} sera restaurable depuis
-            cette liste.
-          </EmptyDescription>
+          <EmptyMedia variant="icon">
+            <ArchiveIcon />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>Aucune sauvegarde</EmptyTitle>
+            <EmptyDescription>
+              La première sauvegarde de {databaseName} sera restaurable depuis
+              cette liste.
+            </EmptyDescription>
+          </EmptyHeader>
         </Empty>
       ) : (
         <Table>

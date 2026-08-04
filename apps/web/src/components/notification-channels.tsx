@@ -1,10 +1,4 @@
-// Les canaux de notification.
-//
-// La colonne qui compte n'est pas le nom, c'est l'ÉTAT du dernier envoi. Un
-// canal qu'on croit branché et qui ne l'est pas fait croire à une
-// surveillance qui n'existe pas — c'est pire que pas de canal du tout. D'où
-// une ligne qui dit « en panne » avec sa cause, et un bouton qui envoie une
-// vraie notification plutôt que de valider une URL.
+import { BellIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { RelativeTime } from "@/components/relative-time";
@@ -20,7 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -65,7 +65,12 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
   const rows = channels.data ?? [];
 
   return (
-    <div className="space-y-4">
+    // `/notifications` est un écran à un seul panneau : quand il est vide,
+    // le rendre plein hauteur (`h-full`, hérité de `.scroll-fade` qui a une
+    // hauteur réelle) évite qu'« Aucun canal » flotte en haut d'une page
+    // sinon nue. Un tableau plein, lui, n'a pas besoin de la hauteur — il
+    // s'arrête où finit sa dernière ligne.
+    <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           Noddle prévient quand un déploiement échoue, quand la surveillance
@@ -80,11 +85,16 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
 
       {rows.length === 0 ? (
         <Empty>
-          <EmptyTitle>Aucun canal</EmptyTitle>
-          <EmptyDescription>
-            Sans canal, un déploiement repris par la surveillance ne se voit que
-            si quelqu'un ouvre le dashboard.
-          </EmptyDescription>
+          <EmptyMedia variant="icon">
+            <BellIcon />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>Aucun canal</EmptyTitle>
+            <EmptyDescription>
+              Sans canal, un déploiement repris par la surveillance ne se voit
+              que si quelqu'un ouvre le dashboard.
+            </EmptyDescription>
+          </EmptyHeader>
         </Empty>
       ) : (
         <div className="divide-y rounded-md border">
