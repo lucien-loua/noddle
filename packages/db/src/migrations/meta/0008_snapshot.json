@@ -110,12 +110,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -202,12 +198,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -217,9 +209,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -283,9 +273,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -566,12 +554,8 @@
           "name": "backups_database_id_databases_id_fk",
           "tableFrom": "backups",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -696,12 +680,8 @@
           "name": "databases_environment_id_environments_id_fk",
           "tableFrom": "databases",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -709,12 +689,8 @@
           "name": "databases_server_id_servers_id_fk",
           "tableFrom": "databases",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -785,12 +761,8 @@
           "name": "deployment_logs_deployment_id_deployments_id_fk",
           "tableFrom": "deployment_logs",
           "tableTo": "deployments",
-          "columnsFrom": [
-            "deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deployment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -912,12 +884,8 @@
           "name": "deployments_service_id_services_id_fk",
           "tableFrom": "deployments",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1007,12 +975,8 @@
           "name": "env_vars_service_id_services_id_fk",
           "tableFrom": "env_vars",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1168,12 +1132,8 @@
           "name": "environments_project_id_projects_id_fk",
           "tableFrom": "environments",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1511,12 +1471,8 @@
           "name": "services_environment_id_environments_id_fk",
           "tableFrom": "services",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1524,12 +1480,8 @@
           "name": "services_server_id_servers_id_fk",
           "tableFrom": "services",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1600,12 +1552,8 @@
           "name": "stack_deployment_logs_stack_deployment_id_stack_deployments_id_fk",
           "tableFrom": "stack_deployment_logs",
           "tableTo": "stack_deployments",
-          "columnsFrom": [
-            "stack_deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stack_deployment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1733,12 +1681,8 @@
           "name": "stack_deployments_stack_id_stacks_id_fk",
           "tableFrom": "stack_deployments",
           "tableTo": "stacks",
-          "columnsFrom": [
-            "stack_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stack_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1894,12 +1838,8 @@
           "name": "stacks_environment_id_environments_id_fk",
           "tableFrom": "stacks",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1907,12 +1847,8 @@
           "name": "stacks_server_id_servers_id_fk",
           "tableFrom": "stacks",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1928,38 +1864,22 @@
     "public.backup_kind": {
       "name": "backup_kind",
       "schema": "public",
-      "values": [
-        "manual",
-        "scheduled",
-        "pre_restore"
-      ]
+      "values": ["manual", "scheduled", "pre_restore"]
     },
     "public.backup_status": {
       "name": "backup_status",
       "schema": "public",
-      "values": [
-        "queued",
-        "running",
-        "completed",
-        "failed"
-      ]
+      "values": ["queued", "running", "completed", "failed"]
     },
     "public.backup_schedule": {
       "name": "backup_schedule",
       "schema": "public",
-      "values": [
-        "off",
-        "daily",
-        "weekly"
-      ]
+      "values": ["off", "daily", "weekly"]
     },
     "public.database_engine": {
       "name": "database_engine",
       "schema": "public",
-      "values": [
-        "postgres",
-        "redis"
-      ]
+      "values": ["postgres", "redis"]
     },
     "public.deployment_status": {
       "name": "deployment_status",
@@ -1977,67 +1897,37 @@
     "public.deployment_trigger": {
       "name": "deployment_trigger",
       "schema": "public",
-      "values": [
-        "manual",
-        "webhook",
-        "rollback",
-        "watch_revert"
-      ]
+      "values": ["manual", "webhook", "rollback", "watch_revert"]
     },
     "public.notification_kind": {
       "name": "notification_kind",
       "schema": "public",
-      "values": [
-        "webhook",
-        "discord",
-        "slack"
-      ]
+      "values": ["webhook", "discord", "slack"]
     },
     "public.server_role": {
       "name": "server_role",
       "schema": "public",
-      "values": [
-        "manager",
-        "worker"
-      ]
+      "values": ["manager", "worker"]
     },
     "public.server_status": {
       "name": "server_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "connected",
-        "unreachable"
-      ]
+      "values": ["pending", "connected", "unreachable"]
     },
     "public.build_method": {
       "name": "build_method",
       "schema": "public",
-      "values": [
-        "nixpacks",
-        "dockerfile",
-        "image"
-      ]
+      "values": ["nixpacks", "dockerfile", "image"]
     },
     "public.service_status": {
       "name": "service_status",
       "schema": "public",
-      "values": [
-        "created",
-        "deploying",
-        "running",
-        "stopped",
-        "crashed"
-      ]
+      "values": ["created", "deploying", "running", "stopped", "crashed"]
     },
     "public.source_type": {
       "name": "source_type",
       "schema": "public",
-      "values": [
-        "git",
-        "docker_image",
-        "compose"
-      ]
+      "values": ["git", "docker_image", "compose"]
     }
   },
   "schemas": {},
