@@ -571,14 +571,111 @@ webhook réelle, qui est un secret porteur. Les formes sont asserties contre ce
 que leurs API documentent et le transport est réel, mais personne n'a vu le
 message s'afficher dans un salon.
 
-**Reste pour la Phase 3 :** graphiques de ressources, équipes/RBAC.
+**Graphiques de ressources faits et vérifiés, le 2026-08-04**
+(`apps/worker/src/verify-metrics.ts`, 9/9 contre une vraie VM + un vrai
+Postgres). Deux nouvelles tables, `server_metrics` et `service_metrics` :
+UN passage qui interroge chaque serveur `connected` toutes les minutes,
+même forme que `sweepWatch`/`sweepBackups` et pour la même raison — l'état
+vit dans Postgres, un Redis vidé ne fait pas disparaître la collecte.
 
-**Préalable connu pour les équipes/RBAC.** Aujourd'hui `requireSession()` EST
-le contrôle d'autorisation complet, et c'est correct : il n'existe qu'un
-compte par installation (`needsSetup()` n'autorise la création que tant que
-`userCount() === 0`), aucune table ne porte de colonne de propriété, donc un
-seul principal possède tout. Toutes les server functions sont écrites ainsi —
-session vérifiée, puis un id libre.
+**Un trou reste un trou, ici aussi.** Un serveur injoignable n'écrit
+AUCUNE ligne plutôt qu'un zéro : un zéro se lirait « la machine était
+calme », le contresens exact que ce principe — déjà posé pour les
+sauvegardes et les notifications — existe pour éviter. Mesuré : un serveur
+mort au milieu de la collecte ne produit pas de ligne, et n'empêche pas
+l'échantillonnage des autres. Côté service, le CPU vient de `docker stats
+--stream=false` : `precpu_stats` est déjà peuplée par Docker en un seul
+appel (mesuré, pas supposé), et un delta système nul — un conteneur qui
+vient de démarrer — ne produit pas 0 % mais rien du tout, même règle.
+
+**TanStack Charts**, cohérent avec le reste de la pile (Router, Query,
+Table, Form) plutôt qu'une bibliothèque de graphes de plus. Les
+sparklines (`resource-graphs.tsx`, réutilisées telles quelles par
+`service-resources.tsx` dans le détail d'un service) donnent un `null`
+explicite à chaque interruption plutôt que de compter sur une
+interpolation — `lineY` traite `y = null` comme une rupture, convention
+héritée d'Observable Plot. La palette catégorielle (`--chart-1`, gris
+clair pensé pour des surfaces pleines) était illisible en trait de 1,2 px
+sur une carte blanche ; une série UNIQUE suit donc `currentColor` /
+`text-muted-foreground`.
+
+**RBAC fait et vérifié, le 2026-08-04**
+(`apps/web/src/verify-permissions.ts`, 9/9). Construit sur
+`createAccessControl` du plugin `admin` de better-auth plutôt que sur une
+table de rôles maison — le plugin apporte le modèle ressource × action, la
+création de comptes, `setRole`, `removeUser` et surtout
+`checkRolePermission`, SYNCHRONE côté client, donc un bouton interdit se
+masque sans aller-retour serveur. Quatre rôles (`viewer`, `deployer`,
+`admin`, `owner` — `owner` identique à `admin` aujourd'hui, mais protégé
+contre sa propre suppression, voir plus haut) sur sept ressources
+(`service`, `database`, `backup`, `envVar`, `server`, `notification`,
+`user`). `envVar` isolé des services bien qu'il en dépende : les valeurs y
+sont chiffrées, et « quelqu'un qui doit pouvoir livrer n'a pas à voir les
+secrets » — `deployer` a `service:deploy` mais pas `envVar:read`.
+
+**Deux points, pas un.** `requirePermission` côté serveur EST la
+permission ; `useCan`/`checkRolePermission` côté client n'est qu'une
+politesse — ne pas proposer un bouton dont on sait qu'il sera refusé. Les
+deux évaluent la MÊME table de permissions, importée du même fichier pur
+(`lib/permissions.ts`, aucun accès base, chargé des deux côtés), donc
+l'interface ne peut pas diverger de ce que le serveur autorise réellement.
+`verify-permissions.ts` lit les FICHIERS de `server/` plutôt qu'une liste
+tenue à la main : il énumère chaque `createServerFn({ method: "POST" })`
+et échoue si son corps n'appelle pas `requirePermission`. Un contrôle
+absent est sinon invisible — la fonction ne lève rien, ne casse rien.
+
+**Passe de finition, le 2026-08-04.** Trois défauts trouvés en vérifiant
+le masquage contre un vrai navigateur, aucun visible au typecheck :
+
+- **Le dialogue « Créer un compte » de /comptes ne s'ouvrait pas** —
+  intermittent par construction, donc invisible en test rapide. Cause :
+  `relativeTime()` lit `Date.now()` au rendu ; le serveur écrit « il y a
+  9 min », le client réhydrate une seconde plus tard avec « il y a
+  10 min ». React ne voit pas un horodatage, il voit un désaccord entre
+  les deux rendus et rejette l'arbre entier pour le reconstruire — un
+  clic tombé pendant cette reconstruction s'enfonce (l'état `:active` est
+  du CSS) sans qu'aucun gestionnaire soit attaché. `resource-row.tsx`
+  portait déjà l'échappatoire (`suppressHydrationWarning`) sur ce cas
+  précis, mais elle n'avait pas suivi jusqu'aux cinq écrans ajoutés en
+  Phase 3. Centralisé dans un composant `RelativeTime` unique plutôt que
+  reposé site par site — c'est exactement l'oubli qui a coûté ce bug.
+
+- **`getEnvVars` n'exigeait AUCUNE permission.** Un `GET`, donc hors de
+  portée de `verify-permissions.ts`, qui n'énumère que les fonctions
+  mutantes (`POST`) — le trou invisible que ce script existe pour éviter,
+  juste hors de son rayon. N'importe quel compte connecté, `deployer`
+  compris, pouvait lire les variables NON secrètes en clair : `isSecret`
+  protège les valeurs, pas la LISTE. Corrigé par
+  `requirePermission({ action: "read", resource: "envVar" })`. Trouvé en
+  vérifiant le masquage client, pas en le construisant — le bouton n'était
+  qu'une politesse, le vrai trou était côté serveur.
+
+- **Le premier passage de masquage (4c85149) n'avait couvert que
+  /comptes.** Le dashboard (`/`) ne recevait même pas `role` depuis
+  `beforeLoad` — rien n'y pouvait appeler `useCan`. Un lecteur voyait
+  « Nouveau », « Attacher », « Déployer », « Rejouer », l'onglet Variables,
+  le bouton webhook et les actions de sauvegarde, tous refusés côté
+  serveur mais jamais retirés de l'écran. Même trou sur /notifications,
+  /sauvegardes et /serveurs. Fermé en filant `role` jusqu'à chaque
+  composant qui porte une action, même mécanisme que /comptes — vérifié en
+  changeant de compte dans le même navigateur : un lecteur créé pour
+  l'occasion ne voit plus aucune des actions ci-dessus, sans régression
+  côté owner.
+
+**Non vérifié : le vrai Discord et le vrai Slack.** Toujours en attente
+d'une URL de webhook jetable — elle ne se fabrique pas.
+
+**Reste pour la Phase 3 :** rien d'autre. Graphiques de ressources et RBAC
+sont faits et vérifiés contre du réel ; seule la vérification Discord/Slack
+en direct reste ouverte, faute d'URL jetable.
+
+**Préalable connu pour les ÉQUIPES (multi-tenancy), distinct du RBAC ci-dessus
+et toujours ouvert.** Le RBAC répond à « qui a le droit de faire quoi » —
+fait. Il ne répond pas à « qui voit les ressources de QUI », parce que la
+question ne se pose pas encore : une installation Noddle reste UNE
+organisation, tout le monde voit tout, aucune table ne porte de colonne de
+propriété. `requirePermission` tranche une action contre un rôle, jamais
+contre un propriétaire.
 
 Le jour où les équipes arrivent, ce n'est donc PAS une fonction à corriger
 mais **toutes** : chacune devra porter un prédicat de tenancy, dans le `where`
@@ -797,7 +894,7 @@ Then, in order:
 
 1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, rollback, and the **post-deploy watch** (see Hard rules: Swarm's guarantee expires with the monitor window, so the worker keeps observing and rolls back from Noddle's own history). Rollback is not a Phase 3 nicety here — it is the mechanism the watch depends on.
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
-3. **Phase 3** — backups to S3-compatible storage (**faits et vérifiés**, voir plus haut ; reste la planification), notifications, resource graphs, teams/RBAC.
+3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, RBAC (**tous faits et vérifiés**, voir plus haut). Teams/multi-tenancy — distinct from RBAC, see the known prerequisite above — remains open.
 4. **Phase 4** — registry-based builds, preview environments per PR, audit log, CLI.
 
 **Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's
