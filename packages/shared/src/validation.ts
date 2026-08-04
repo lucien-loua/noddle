@@ -461,3 +461,5 @@ export const restoreRequestSchema = z.object({
 });
 
 export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
+
+export const serviceMetricsRequestSchema = z.object({ serviceId: z.uuid() });
