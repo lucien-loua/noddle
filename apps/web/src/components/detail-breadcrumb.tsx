@@ -31,9 +31,14 @@ export function DetailBreadcrumb({
       {/* La flèche double le premier maillon plutôt que de le remplacer :
           le fil dit OÙ l'on est, la flèche donne une cible large pour
           remonter sans viser un mot de huit caractères. */}
+      {/* `nativeButton={false}` : c'est un LIEN rendu avec l'habillage d'un
+          bouton. Sans ça, Base UI suppose un <button> natif et prévient —
+          à raison — qu'il perd sa sémantique. Ici la sémantique voulue est
+          bien celle d'un lien : ça navigue. */}
       <Button
         aria-label="Back to deployments"
         className="-ms-1 shrink-0"
+        nativeButton={false}
         render={<Link to="/" />}
         size="icon-sm"
         variant="ghost"

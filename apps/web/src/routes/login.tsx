@@ -99,7 +99,7 @@ function LoginPage() {
           <form onSubmit={submit}>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="email">Adresse e-mail</FieldLabel>
+                <FieldLabel htmlFor="email">Email address</FieldLabel>
                 <Input
                   autoComplete="username"
                   id="email"
@@ -111,7 +111,7 @@ function LoginPage() {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input
                   autoComplete={
                     needsSetup ? "new-password" : "current-password"
