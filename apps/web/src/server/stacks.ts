@@ -39,7 +39,7 @@ export const connectStack = createServerFn({ method: "POST" })
         .values({ name: data.projectName })
         .returning();
       if (!created) {
-        throw new Error("création du projet impossible");
+        throw new Error("could not create project");
       }
       project = created;
     }
@@ -56,7 +56,7 @@ export const connectStack = createServerFn({ method: "POST" })
         .values({ name: data.environmentName, projectId: project.id })
         .returning();
       if (!created) {
-        throw new Error("création de l'environnement impossible");
+        throw new Error("could not create environment");
       }
       environment = created;
     }
@@ -76,7 +76,7 @@ export const connectStack = createServerFn({ method: "POST" })
       })
       .returning();
     if (!stack) {
-      throw new Error("création de la pile impossible");
+      throw new Error("could not create stack");
     }
 
     return { stackId: stack.id };
@@ -105,11 +105,11 @@ export const triggerStackRollback = createServerFn({ method: "POST" })
       ),
     });
     if (!target) {
-      throw new Error("déploiement introuvable pour cette pile");
+      throw new Error("deployment not found for this stack");
     }
     if (!target.composeSource) {
       throw new Error(
-        "ce déploiement n'a rien produit : il n'y a rien à rejouer"
+        "this deployment produced nothing — there is nothing to redeploy"
       );
     }
 

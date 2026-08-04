@@ -65,7 +65,7 @@ export const auth = betterAuth({
           if ((await userCount()) > 0) {
             throw new APIError("FORBIDDEN", {
               message:
-                "L'inscription est réservée au premier compte. Demandez à un administrateur de vous en créer un.",
+                "Sign-up is reserved for the first account. Ask an admin to create one for you.",
             });
           }
           // Le premier compte est `owner`, et c'est ce qui rend une

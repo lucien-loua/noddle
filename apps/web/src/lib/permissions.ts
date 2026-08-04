@@ -98,10 +98,10 @@ export type RoleName = keyof typeof roles;
 export const ROLE_ORDER: RoleName[] = ["viewer", "deployer", "admin", "owner"];
 
 export const ROLE_LABELS: Record<RoleName, string> = {
-  admin: "Administrateur",
-  deployer: "Opérateur",
-  owner: "Propriétaire",
-  viewer: "Lecteur",
+  admin: "Admin",
+  deployer: "Operator",
+  owner: "Owner",
+  viewer: "Viewer",
 };
 
 /**
@@ -114,10 +114,9 @@ export const ROLE_LABELS: Record<RoleName, string> = {
  * toucher la ligne correspondante ici doit se voir à la relecture.
  */
 export const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
-  admin: "Tout sur l'infrastructure, les secrets et les comptes.",
+  admin: "Full access to infrastructure, secrets and accounts.",
   deployer:
-    "Déploie, revient en arrière, lance des sauvegardes. Ni secrets, ni suppression, ni restauration.",
-  owner:
-    "Comme administrateur, et ne peut pas être retiré par un administrateur.",
-  viewer: "Lit tout — services, journaux, sauvegardes. Ne change rien.",
+    "Deploy, roll back, run backups. No secrets, no deletion, no restore.",
+  owner: "Same as admin, and cannot be removed by an admin.",
+  viewer: "Reads everything, services, logs, backups. Changes nothing.",
 };

@@ -40,7 +40,7 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [projectName, setProjectName] = useState("défaut");
+  const [projectName, setProjectName] = useState("default");
   const [environmentName, setEnvironmentName] = useState("production");
   const [name, setName] = useState("");
   // Biome n'applique pas `noUncheckedIndexedAccess` du tsconfig et croit
@@ -87,7 +87,7 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
   );
 
   const reset = useCallback(() => {
-    setProjectName("défaut");
+    setProjectName("default");
     setEnvironmentName("production");
     setName("");
     // biome-ignore lint/suspicious/noUnnecessaryConditions: faux positif, servers peut être vide
@@ -154,19 +154,18 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connecter un dépôt</DialogTitle>
+          <DialogTitle>Connect a repository</DialogTitle>
           <DialogDescription>
-            Noddle clone le dépôt, détecte la stack avec nixpacks, et construit
-            l'image sur le serveur choisi.
+            Noddle clones the repository, detects the stack with nixpacks, and
+            builds the image on the chosen server.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun serveur enregistré. Ajoutez-en un ci-dessous avant de
-              connecter un dépôt : un service a besoin d'une machine où
-              construire et tourner.
+              No servers registered. Add one before connecting a repository — a
+              service needs a machine to build and run on.
             </AlertDescription>
           </Alert>
         ) : (
@@ -174,10 +173,10 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
             <DialogBody>
               <FieldGroup>
                 <FieldSet>
-                  <FieldLegend variant="label">Emplacement</FieldLegend>
+                  <FieldLegend variant="label">Location</FieldLegend>
                   <Field orientation="horizontal">
                     <Field className="flex-1">
-                      <FieldLabel htmlFor="repo-project">Projet</FieldLabel>
+                      <FieldLabel htmlFor="repo-project">Project</FieldLabel>
                       <Input
                         id="repo-project"
                         onChange={handleProjectChange}
@@ -186,7 +185,7 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
                       />
                     </Field>
                     <Field className="flex-1">
-                      <FieldLabel htmlFor="repo-env">Environnement</FieldLabel>
+                      <FieldLabel htmlFor="repo-env">Environment</FieldLabel>
                       <Input
                         id="repo-env"
                         onChange={handleEnvChange}
@@ -197,18 +196,18 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="repo-name">Nom du service</FieldLabel>
+                    <FieldLabel htmlFor="repo-name">Service name</FieldLabel>
                     <Input
                       id="repo-name"
                       onChange={handleNameChange}
-                      placeholder="mon-app"
+                      placeholder="my-app"
                       required
                       value={name}
                     />
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="repo-server">Serveur</FieldLabel>
+                    <FieldLabel htmlFor="repo-server">Server</FieldLabel>
                     <ServerSelect
                       id="repo-server"
                       onChange={handleServerChange}
@@ -221,18 +220,20 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
                 <FieldSet>
                   <FieldLegend variant="label">Source</FieldLegend>
                   <Field>
-                    <FieldLabel htmlFor="repo-url">URL du dépôt Git</FieldLabel>
+                    <FieldLabel htmlFor="repo-url">
+                      Git repository URL
+                    </FieldLabel>
                     <Input
                       id="repo-url"
                       onChange={handleUrlChange}
-                      placeholder="https://github.com/moi/mon-app.git"
+                      placeholder="https://github.com/me/my-app.git"
                       required
                       value={gitRepoUrl}
                     />
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="repo-branch">Branche</FieldLabel>
+                    <FieldLabel htmlFor="repo-branch">Branch</FieldLabel>
                     <Input
                       id="repo-branch"
                       onChange={handleBranchChange}
@@ -242,10 +243,10 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
                 </FieldSet>
 
                 <FieldSet>
-                  <FieldLegend variant="label">Service exposé</FieldLegend>
+                  <FieldLegend variant="label">Public access</FieldLegend>
                   <FieldDescription>
-                    Le port sur lequel votre application écoute. Sans domaine,
-                    le service tourne sans être joignable de l'extérieur.
+                    The port your app listens on. Without a domain, the service
+                    runs without being reachable from outside.
                   </FieldDescription>
                   <Field orientation="horizontal">
                     <Field className="flex-1">
@@ -258,11 +259,11 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
                       />
                     </Field>
                     <Field className="flex-2">
-                      <FieldLabel htmlFor="repo-domain">Domaine</FieldLabel>
+                      <FieldLabel htmlFor="repo-domain">Domain</FieldLabel>
                       <Input
                         id="repo-domain"
                         onChange={handleDomainChange}
-                        placeholder="mon-app.exemple.com"
+                        placeholder="my-app.example.com"
                         value={domain}
                       />
                     </Field>
@@ -280,7 +281,7 @@ export function ConnectRepoDialog({ onOpenChange, open, servers }: Props) {
             <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
-                Connecter
+                Connect
               </Button>
             </DialogFooter>
           </DialogForm>

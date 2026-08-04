@@ -26,8 +26,8 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
   if (!series || series.points.length === 0) {
     return (
       <p className="text-muted-foreground text-xs">
-        Aucun relevé sur les six dernières heures. Les ressources sont
-        échantillonnées chaque minute sur les services en cours d'exécution.
+        No samples in the last six hours. Resources are sampled every minute on
+        running services.
       </p>
     );
   }
@@ -46,17 +46,15 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-xs">
-          Six dernières heures
-        </span>
+        <span className="text-muted-foreground text-xs">Last six hours</span>
         {restarts > 1 ? (
           // Sans ça, une chute brutale de mémoire se lirait comme une fuite
           // corrigée alors que c'est un nouveau conteneur qui démarre.
           <Badge
-            title="La série couvre plusieurs conteneurs successifs : une rupture peut être un redéploiement, pas un changement de comportement."
+            title="The series spans several successive containers: a break may be a redeploy, not a change in behaviour."
             variant="outline"
           >
-            {restarts} conteneurs sur la période
+            {restarts} containers over the period
           </Badge>
         ) : null}
       </div>
@@ -69,7 +67,7 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
         value={readCpu}
       />
       <MetricRow
-        label="Mémoire"
+        label="Memory"
         max={memMax}
         points={points}
         reading={
@@ -81,7 +79,7 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
       />
       {latest.memoryUsedRatio === null ? (
         <p className="text-muted-foreground text-xs">
-          Aucune limite mémoire déclarée : ce service est borné par la machine.
+          No memory limit declared — this service is bounded by the machine.
         </p>
       ) : null}
     </div>

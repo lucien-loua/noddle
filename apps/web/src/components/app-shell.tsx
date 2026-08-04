@@ -84,40 +84,40 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                   <SidebarMenuButton
                     isActive={onDashboard}
                     render={<Link to="/" />}
-                    tooltip="Déploiements"
+                    tooltip="Deployments"
                   >
                     <SquaresFourIcon
                       weight={onDashboard ? "fill" : "regular"}
                     />
-                    <span>Déploiements</span>
+                    <span>Deployments</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={pathname.startsWith("/serveurs")}
                     render={<Link to="/serveurs" />}
-                    tooltip="Serveurs"
+                    tooltip="Servers"
                   >
                     <HardDrivesIcon
                       weight={
                         pathname.startsWith("/serveurs") ? "fill" : "regular"
                       }
                     />
-                    <span>Serveurs</span>
+                    <span>Servers</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={pathname.startsWith("/sauvegardes")}
                     render={<Link to="/sauvegardes" />}
-                    tooltip="Sauvegardes"
+                    tooltip="Backups"
                   >
                     <ArchiveIcon
                       weight={
                         pathname.startsWith("/sauvegardes") ? "fill" : "regular"
                       }
                     />
-                    <span>Sauvegardes</span>
+                    <span>Backups</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -140,14 +140,14 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                   <SidebarMenuButton
                     isActive={pathname.startsWith("/comptes")}
                     render={<Link to="/comptes" />}
-                    tooltip="Comptes"
+                    tooltip="Accounts"
                   >
                     <UsersIcon
                       weight={
                         pathname.startsWith("/comptes") ? "fill" : "regular"
                       }
                     />
-                    <span>Comptes</span>
+                    <span>Accounts</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -156,7 +156,7 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
 
           {scopes && scopes.length > 0 ? (
             <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-              <SidebarGroupLabel>Environnements</SidebarGroupLabel>
+              <SidebarGroupLabel>Environments</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {scopes.map((scope) => (
@@ -193,12 +193,9 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
               </SidebarMenuItem>
             ) : null}
             <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleSignOut}
-                tooltip="Se déconnecter"
-              >
+              <SidebarMenuButton onClick={handleSignOut} tooltip="Sign out">
                 <SignOutIcon />
-                <span>Se déconnecter</span>
+                <span>Sign out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

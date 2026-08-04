@@ -46,9 +46,9 @@ function statusTone(status: ServerView["status"]) {
 }
 
 const STATUS_LABEL: Record<ServerView["status"], string> = {
-  connected: "Connecté",
-  pending: "Provisionnement…",
-  unreachable: "Injoignable",
+  connected: "Connected",
+  pending: "Provisioning…",
+  unreachable: "Unreachable",
 };
 
 /** Un serveur `pending` ne le reste que le temps du provisionnement — quelques
@@ -95,7 +95,7 @@ export function ServersList({ initial }: { initial: ServerView[] }) {
   if (servers.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        Aucun serveur. Ajoutez-en un pour pouvoir déployer quoi que ce soit.
+        No servers yet. Add one before you can deploy anything.
       </p>
     );
   }
@@ -195,11 +195,11 @@ export function AddServerDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajouter un serveur</DialogTitle>
+          <DialogTitle>Add a server</DialogTitle>
           <DialogDescription>
-            Un hôte et une clé SSH suffisent. Noddle installe Docker si besoin,
-            rejoint son cluster Swarm en tant que worker, et installe nixpacks —
-            sans rien d'autre à faire à la main sur cette machine.
+            A host and an SSH key are all it takes. Noddle installs Docker if
+            missing, joins its Swarm cluster as a worker, and installs nixpacks
+            — with nothing else to do by hand on that machine.
           </DialogDescription>
         </DialogHeader>
 
@@ -209,7 +209,7 @@ export function AddServerDialog({
               <FieldSet>
                 <FieldLegend variant="label">Machine</FieldLegend>
                 <Field>
-                  <FieldLabel htmlFor="server-name">Nom</FieldLabel>
+                  <FieldLabel htmlFor="server-name">Name</FieldLabel>
                   <Input
                     id="server-name"
                     onChange={handleNameChange}
@@ -220,7 +220,7 @@ export function AddServerDialog({
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="server-host">Hôte</FieldLabel>
+                  <FieldLabel htmlFor="server-host">Host</FieldLabel>
                   <Input
                     id="server-host"
                     onChange={handleHostChange}
@@ -232,9 +232,7 @@ export function AddServerDialog({
 
                 <Field orientation="horizontal">
                   <Field className="flex-3">
-                    <FieldLabel htmlFor="server-user">
-                      Utilisateur SSH
-                    </FieldLabel>
+                    <FieldLabel htmlFor="server-user">SSH user</FieldLabel>
                     <Input
                       id="server-user"
                       onChange={handleUserChange}
@@ -259,15 +257,14 @@ export function AddServerDialog({
                   entre l'hôte et le port le faisait passer pour un réglage
                   de plus. */}
               <FieldSet>
-                <FieldLegend variant="label">Clé privée SSH</FieldLegend>
+                <FieldLegend variant="label">SSH private key</FieldLegend>
                 <FieldDescription>
-                  Chiffrée au repos, elle ne ressort jamais du serveur — pas
-                  même chiffrée. Noddle s'en sert pour se connecter à cette
-                  machine, rien d'autre.
+                  Encrypted at rest, it never leaves the server — not even
+                  encrypted. Noddle uses it to reach this machine, nothing else.
                 </FieldDescription>
                 <Field>
                   <FieldLabel className="sr-only" htmlFor="server-key">
-                    Clé privée SSH au format PEM
+                    SSH private key, PEM format
                   </FieldLabel>
                   <Textarea
                     className="min-h-32 font-mono text-xs"
@@ -292,7 +289,7 @@ export function AddServerDialog({
           <DialogFooter>
             <Button disabled={add.isPending} type="submit">
               {add.isPending ? <Spinner data-icon="inline-start" /> : null}
-              Ajouter
+              Add server
             </Button>
           </DialogFooter>
         </DialogForm>

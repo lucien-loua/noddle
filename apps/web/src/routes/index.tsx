@@ -273,23 +273,23 @@ function Dashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="sm" />}>
               <PlusIcon data-icon="inline-start" />
-              Nouveau
+              New
               <CaretDownIcon data-icon="inline-end" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {canCreateService ? (
                 <DropdownMenuItem onClick={openRepo}>
-                  Dépôt Git
+                  Git repository
                 </DropdownMenuItem>
               ) : null}
               {canCreateService ? (
                 <DropdownMenuItem onClick={openStack}>
-                  Pile Compose
+                  Compose stack
                 </DropdownMenuItem>
               ) : null}
               {canCreateDatabase ? (
                 <DropdownMenuItem onClick={openDatabase}>
-                  Base de données
+                  Database
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
@@ -298,7 +298,7 @@ function Dashboard() {
       }
       email={email}
       scopes={scopeLinks}
-      title="Déploiements"
+      title="Deployments"
     >
       <ConnectRepoDialog
         onOpenChange={closeDialog}
@@ -318,11 +318,11 @@ function Dashboard() {
 
       {empty ? (
         <Empty>
-          <EmptyTitle>Rien de déployé</EmptyTitle>
+          <EmptyTitle>Nothing deployed yet</EmptyTitle>
           <EmptyDescription>
             {servers.length === 0
-              ? "Ajoutez d'abord un serveur, puis connectez un dépôt."
-              : "Connectez un dépôt, une pile Compose ou une base de données pour commencer."}
+              ? "Add a server first, then connect a repository."
+              : "Connect a repository, a Compose stack or a database to get started."}
           </EmptyDescription>
         </Empty>
       ) : (
@@ -451,7 +451,7 @@ function ServiceCard({
         canDeploy ? (
           <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
             {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-            Déployer
+            Deploy
           </Button>
         ) : null
       }
@@ -472,10 +472,10 @@ function ServiceCard({
       tag={
         service.watching ? (
           <Badge
-            title="Surveillance post-déploiement en cours : Noddle observe encore ce service et reviendra en arrière s'il se met à boucler."
+            title="Post-deploy watch running: Noddle is still observing this service and will roll it back if it starts crash-looping."
             variant="outline"
           >
-            sous surveillance
+            watching
           </Badge>
         ) : null
       }
@@ -595,11 +595,11 @@ function ServicePanel({
             de l'écran et devenait inatteignable — mesuré. */}
         <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
           <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="history">Historique</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           {canReadEnvVar ? (
             <TabsTrigger value="env">Variables</TabsTrigger>
           ) : null}
-          <TabsTrigger value="ressources">Ressources</TabsTrigger>
+          <TabsTrigger value="ressources">Resources</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
         </TabsList>
 
@@ -608,7 +608,7 @@ function ServicePanel({
             <LogStream deploymentId={shown} onEnd={handleEnd} />
           ) : (
             <p className="text-muted-foreground text-sm">
-              Aucun déploiement : les logs apparaîtront au premier build.
+              No deploys yet — logs will appear on the first build.
             </p>
           )}
         </TabsContent>
@@ -721,7 +721,7 @@ function StackCard({
         canDeploy ? (
           <Button disabled={deploy.isPending} onClick={handleDeploy} size="sm">
             {deploy.isPending ? <Spinner data-icon="inline-start" /> : null}
-            Déployer
+            Deploy
           </Button>
         ) : null
       }
@@ -734,7 +734,7 @@ function StackCard({
       onToggle={handleSelect}
       secondary={
         <>
-          <span className="text-muted-foreground/70">pile · </span>
+          <span className="text-muted-foreground/70">stack · </span>
           {stack.serverName}
           {stack.domain ? ` · ${stack.domain}` : ""}
         </>
@@ -743,10 +743,10 @@ function StackCard({
       tag={
         stack.watching ? (
           <Badge
-            title="Surveillance post-déploiement en cours : Noddle observe encore cette pile et reviendra en arrière si un de ses services se met à boucler."
+            title="Post-deploy watch running: Noddle is still observing this stack and will roll it back if any of its services starts crash-looping."
             variant="outline"
           >
-            sous surveillance
+            watching
           </Badge>
         ) : null
       }
@@ -826,7 +826,7 @@ function StackPanel({
             de l'écran et devenait inatteignable — mesuré. */}
         <TabsList className="scroll-fade-x no-scrollbar max-w-full overflow-x-auto">
           <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="history">Historique</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
         </TabsList>
 
@@ -835,7 +835,7 @@ function StackPanel({
             <LogStream deploymentId={shown} onEnd={handleEnd} />
           ) : (
             <p className="text-muted-foreground text-sm">
-              Aucun déploiement : les logs apparaîtront au premier build.
+              No deploys yet — logs will appear on the first build.
             </p>
           )}
         </TabsContent>
@@ -990,7 +990,7 @@ function DatabasePanel({
           <AlertDescription>
             {restore.error instanceof Error
               ? restore.error.message
-              : "restauration refusée"}
+              : "restore refused"}
           </AlertDescription>
         </Alert>
       ) : null}

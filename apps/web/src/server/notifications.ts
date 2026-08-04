@@ -81,7 +81,7 @@ export const addChannel = createServerFn({ method: "POST" })
       })
       .returning();
     if (!created) {
-      throw new Error("création du canal impossible");
+      throw new Error("could not create channel");
     }
     await db
       .update(notificationChannels)
@@ -105,7 +105,7 @@ export const updateChannel = createServerFn({ method: "POST" })
       where: eq(notificationChannels.id, data.channelId),
     });
     if (!existing) {
-      throw new Error("canal introuvable");
+      throw new Error("channel not found");
     }
 
     // URL absente = « garde celle d'avant » : le formulaire ne peut pas la
@@ -158,7 +158,7 @@ export const testChannel = createServerFn({ method: "POST" })
       where: eq(notificationChannels.id, data.channelId),
     });
     if (!channel) {
-      throw new Error("canal introuvable");
+      throw new Error("channel not found");
     }
 
     const url = decryptSecret(
@@ -169,7 +169,7 @@ export const testChannel = createServerFn({ method: "POST" })
     const result = await deliver(
       { kind: channel.kind, url },
       {
-        detail: "Si vous lisez ceci, le canal fonctionne.",
+        detail: "If you are reading this, the channel works.",
         resource: "test",
         type: "deploy_succeeded",
       }
@@ -180,7 +180,7 @@ export const testChannel = createServerFn({ method: "POST" })
       .set(
         result.ok
           ? { lastError: null, lastSuccessAt: new Date() }
-          : { lastError: result.error ?? "échec inconnu" }
+          : { lastError: result.error ?? "unknown failure" }
       )
       .where(eq(notificationChannels.id, channel.id));
 

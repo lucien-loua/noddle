@@ -157,10 +157,10 @@ function KeyCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Input
-      aria-label="Nom de la variable"
+      aria-label="Variable name"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
-      placeholder="NOM_DE_VARIABLE"
+      placeholder="VARIABLE_NAME"
       spellCheck={false}
       value={row.key}
     />
@@ -176,7 +176,7 @@ function ValueCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Input
-      aria-label="Valeur"
+      aria-label="Value"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
       // Un secret déjà enregistré arrive avec `value: null`. Le placeholder dit
@@ -199,7 +199,7 @@ function SecretCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
 
   return (
     <Checkbox
-      aria-label="Marquer comme secret"
+      aria-label="Mark as secret"
       checked={row.isSecret}
       onCheckedChange={handleChange}
     />
@@ -273,7 +273,7 @@ export function EnvVarTable({ onSave, pending, saved }: Props) {
       }),
       columnHelper.accessor("value", {
         cell: (info) => <ValueCell onUpdate={update} row={info.row.original} />,
-        header: "Valeur",
+        header: "Value",
       }),
       columnHelper.accessor("isSecret", {
         cell: (info) => (
@@ -393,7 +393,7 @@ export function EnvVarTable({ onSave, pending, saved }: Props) {
 
           <div className="mt-3 flex items-center gap-2">
             <Button disabled={pending} onClick={commit} size="sm">
-              {confirming ? "Confirmer l'enregistrement" : "Enregistrer"}
+              {confirming ? "Confirm save" : "Save"}
             </Button>
 
             <Button onClick={reset} size="sm" variant="ghost">

@@ -66,7 +66,7 @@ export function WebhookPanel({
             variant="outline"
           >
             {generate.isPending ? <Spinner data-icon="inline-start" /> : null}
-            {status.data?.configured ? "Régénérer" : "Générer"}
+            {status.data?.configured ? "Regenerate" : "Generate"}
           </Button>
         ) : null}
       </div>
@@ -75,7 +75,7 @@ export function WebhookPanel({
         <Alert>
           <AlertDescription className="flex flex-col gap-1">
             <span className="font-medium">
-              Copiez le secret maintenant : il ne sera plus jamais affiché.
+              Copy the secret now — it will never be shown again.
             </span>
             <span className="break-all font-mono text-xs">
               URL : {origin}
@@ -97,15 +97,15 @@ function WebhookStatusLine({ status }: { status: WebhookStatus | undefined }) {
   if (status?.configured) {
     return (
       <p className="break-all text-muted-foreground text-xs">
-        Configuré : {origin}
+        Configured: {origin}
         {status.path}
       </p>
     );
   }
   return (
     <p className="text-muted-foreground text-xs">
-      Aucun webhook. Générez-en un pour déclencher un déploiement à chaque push
-      GitHub ou GitLab.
+      No webhook yet. Generate one to trigger a deploy on every GitHub or GitLab
+      push.
     </p>
   );
 }

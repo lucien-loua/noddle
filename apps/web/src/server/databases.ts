@@ -77,7 +77,7 @@ export const connectDatabase = createServerFn({ method: "POST" })
         .values({ name: data.projectName })
         .returning();
       if (!created) {
-        throw new Error("création du projet impossible");
+        throw new Error("could not create project");
       }
       project = created;
     }
@@ -94,7 +94,7 @@ export const connectDatabase = createServerFn({ method: "POST" })
         .values({ name: data.environmentName, projectId: project.id })
         .returning();
       if (!created) {
-        throw new Error("création de l'environnement impossible");
+        throw new Error("could not create environment");
       }
       environment = created;
     }
@@ -116,7 +116,7 @@ export const connectDatabase = createServerFn({ method: "POST" })
       })
       .returning();
     if (!database) {
-      throw new Error("création de la base de données impossible");
+      throw new Error("could not create database");
     }
 
     // L'AAD lie le chiffré à la LIGNE : le mot de passe ne peut être chiffré
@@ -164,7 +164,7 @@ export const attachDatabase = createServerFn({ method: "POST" })
       where: eq(databases.id, data.databaseId),
     });
     if (!database) {
-      throw new Error("base de données introuvable");
+      throw new Error("database not found");
     }
 
     const password = decryptSecret(

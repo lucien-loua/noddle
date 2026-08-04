@@ -29,7 +29,7 @@ function AccountsPage() {
   const { accounts, email, role } = Route.useLoaderData();
 
   return (
-    <AppShell email={email} title="Comptes">
+    <AppShell email={email} title="Accounts">
       <AccountsPanel initial={accounts} role={role} />
     </AppShell>
   );

@@ -82,7 +82,7 @@ function RollbackCell({
     return <span className="text-muted-foreground">—</span>;
   }
   if (deployment.id === currentDeploymentId) {
-    return <span className="text-muted-foreground">en service</span>;
+    return <span className="text-muted-foreground">live</span>;
   }
   if (!canRollback) {
     return null;
@@ -94,7 +94,7 @@ function RollbackCell({
       size="xs"
       variant="outline"
     >
-      Rejouer
+      Redeploy
     </Button>
   );
 }
@@ -147,7 +147,7 @@ export function DeploymentHistory(props: Props) {
           const { label, tone } = deploymentLabel(info.getValue());
           return <Badge variant={badgeVariant(tone)}>{label}</Badge>;
         },
-        header: "Statut",
+        header: "Status",
       }),
       columnHelper.accessor("commitSha", {
         cell: (info) => (
@@ -161,7 +161,7 @@ export function DeploymentHistory(props: Props) {
             {triggerLabel(info.getValue())}
           </span>
         ),
-        header: "Origine",
+        header: "Trigger",
       }),
       columnHelper.accessor("createdAt", {
         cell: (info) => (
@@ -169,7 +169,7 @@ export function DeploymentHistory(props: Props) {
             {relativeTime(info.getValue())}
           </span>
         ),
-        header: "Quand",
+        header: "When",
       }),
       columnHelper.display({
         cell: (info) => (
@@ -180,7 +180,7 @@ export function DeploymentHistory(props: Props) {
             )}
           </span>
         ),
-        header: "Durée",
+        header: "Duration",
         id: "duration",
       }),
       columnHelper.display({
@@ -209,7 +209,7 @@ export function DeploymentHistory(props: Props) {
   if (deployments.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        Aucun déploiement pour ce service.
+        No deployments for this service yet.
       </p>
     );
   }

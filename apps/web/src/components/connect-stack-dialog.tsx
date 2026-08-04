@@ -40,7 +40,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [projectName, setProjectName] = useState("défaut");
+  const [projectName, setProjectName] = useState("default");
   const [environmentName, setEnvironmentName] = useState("production");
   const [name, setName] = useState("");
   // biome-ignore lint/suspicious/noUnnecessaryConditions: faux positif, servers peut être vide
@@ -94,7 +94,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
   );
 
   const reset = useCallback(() => {
-    setProjectName("défaut");
+    setProjectName("default");
     setEnvironmentName("production");
     setName("");
     // biome-ignore lint/suspicious/noUnnecessaryConditions: faux positif, servers peut être vide
@@ -167,19 +167,19 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connecter une pile Compose</DialogTitle>
+          <DialogTitle>Connect a Compose stack</DialogTitle>
           <DialogDescription>
-            Noddle clone le dépôt, construit chaque service avec un{" "}
-            <code>build:</code>, et pose l'ensemble avec{" "}
-            <code>docker stack deploy</code> sur le serveur choisi.
+            Noddle clones the repository, builds every service that has a{" "}
+            <code>build:</code>, and lays the whole thing down with{" "}
+            <code>docker stack deploy</code> on the chosen server.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun serveur enregistré. Ajoutez-en un avant de connecter une
-              pile : elle a besoin d'une machine où construire et tourner.
+              No servers registered. Add one before connecting a stack — it
+              needs a machine to build and run on.
             </AlertDescription>
           </Alert>
         ) : (
@@ -191,10 +191,10 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                   qu'on expose. */}
               <FieldGroup>
                 <FieldSet>
-                  <FieldLegend variant="label">Emplacement</FieldLegend>
+                  <FieldLegend variant="label">Location</FieldLegend>
                   <Field orientation="horizontal">
                     <Field className="flex-1">
-                      <FieldLabel htmlFor="stack-project">Projet</FieldLabel>
+                      <FieldLabel htmlFor="stack-project">Project</FieldLabel>
                       <Input
                         id="stack-project"
                         onChange={handleProjectChange}
@@ -203,7 +203,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                       />
                     </Field>
                     <Field className="flex-1">
-                      <FieldLabel htmlFor="stack-env">Environnement</FieldLabel>
+                      <FieldLabel htmlFor="stack-env">Environment</FieldLabel>
                       <Input
                         id="stack-env"
                         onChange={handleEnvChange}
@@ -214,18 +214,18 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="stack-name">Nom de la pile</FieldLabel>
+                    <FieldLabel htmlFor="stack-name">Stack name</FieldLabel>
                     <Input
                       id="stack-name"
                       onChange={handleNameChange}
-                      placeholder="mon-app"
+                      placeholder="my-app"
                       required
                       value={name}
                     />
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="stack-server">Serveur</FieldLabel>
+                    <FieldLabel htmlFor="stack-server">Server</FieldLabel>
                     <ServerSelect
                       id="stack-server"
                       onChange={handleServerChange}
@@ -239,12 +239,12 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                   <FieldLegend variant="label">Source</FieldLegend>
                   <Field>
                     <FieldLabel htmlFor="stack-url">
-                      URL du dépôt Git
+                      Git repository URL
                     </FieldLabel>
                     <Input
                       id="stack-url"
                       onChange={handleUrlChange}
-                      placeholder="https://github.com/moi/mon-app.git"
+                      placeholder="https://github.com/me/my-app.git"
                       required
                       value={gitRepoUrl}
                     />
@@ -252,7 +252,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
 
                   <Field orientation="horizontal">
                     <Field className="flex-1">
-                      <FieldLabel htmlFor="stack-branch">Branche</FieldLabel>
+                      <FieldLabel htmlFor="stack-branch">Branch</FieldLabel>
                       <Input
                         id="stack-branch"
                         onChange={handleBranchChange}
@@ -261,7 +261,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                     </Field>
                     <Field className="flex-2">
                       <FieldLabel htmlFor="stack-compose-path">
-                        Fichier compose
+                        Compose file
                       </FieldLabel>
                       <Input
                         id="stack-compose-path"
@@ -273,15 +273,15 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                 </FieldSet>
 
                 <FieldSet>
-                  <FieldLegend variant="label">Service exposé</FieldLegend>
+                  <FieldLegend variant="label">Public access</FieldLegend>
                   <FieldDescription>
-                    Une pile expose au plus un service sur le web. Laissé vide,
-                    rien n'est publié — la pile tourne sans être joignable de
-                    l'extérieur.
+                    A stack exposes at most one service to the web. Left empty,
+                    nothing is published — the stack runs without being
+                    reachable from outside.
                   </FieldDescription>
                   <Field>
                     <FieldLabel htmlFor="stack-public-service">
-                      Service à exposer
+                      Service to expose
                     </FieldLabel>
                     <Input
                       id="stack-public-service"
@@ -303,11 +303,11 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
                       />
                     </Field>
                     <Field className="flex-2">
-                      <FieldLabel htmlFor="stack-domain">Domaine</FieldLabel>
+                      <FieldLabel htmlFor="stack-domain">Domain</FieldLabel>
                       <Input
                         id="stack-domain"
                         onChange={handleDomainChange}
-                        placeholder="mon-app.exemple.com"
+                        placeholder="my-app.example.com"
                         value={domain}
                       />
                     </Field>
@@ -325,7 +325,7 @@ export function ConnectStackDialog({ onOpenChange, open, servers }: Props) {
             <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
-                Connecter
+                Connect
               </Button>
             </DialogFooter>
           </DialogForm>

@@ -108,7 +108,7 @@ export function BackupDestinationPanel({ initial, role }: Props) {
           largeur. */}
       <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="endpoint">Point de terminaison</Label>
+          <Label htmlFor="endpoint">Endpoint</Label>
           <Input
             disabled={!canEdit}
             id="endpoint"
@@ -120,19 +120,19 @@ export function BackupDestinationPanel({ initial, role }: Props) {
         </div>
 
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="bucket">Compartiment</Label>
+          <Label htmlFor="bucket">Bucket</Label>
           <Input
             disabled={!canEdit}
             id="bucket"
             onChange={onBucket}
-            placeholder="noddle-sauvegardes"
+            placeholder="noddle-backups"
             required
             value={bucket}
           />
         </div>
 
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="region">Région</Label>
+          <Label htmlFor="region">Region</Label>
           <Input
             disabled={!canEdit}
             id="region"
@@ -143,18 +143,18 @@ export function BackupDestinationPanel({ initial, role }: Props) {
         </div>
 
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="prefix">Préfixe (optionnel)</Label>
+          <Label htmlFor="prefix">Prefix (optional)</Label>
           <Input
             disabled={!canEdit}
             id="prefix"
             onChange={onPrefix}
-            placeholder="sauvegardes"
+            placeholder="backups"
             value={prefix}
           />
         </div>
 
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="accessKeyId">Clé d'accès</Label>
+          <Label htmlFor="accessKeyId">Access key ID</Label>
           <Input
             disabled={!canEdit}
             id="accessKeyId"
@@ -165,20 +165,20 @@ export function BackupDestinationPanel({ initial, role }: Props) {
         </div>
 
         <div className="max-w-sm space-y-2">
-          <Label htmlFor="secretAccessKey">Clé secrète</Label>
+          <Label htmlFor="secretAccessKey">Secret access key</Label>
           <Input
             disabled={!canEdit}
             id="secretAccessKey"
             onChange={onSecret}
-            placeholder={initial ? "inchangée" : ""}
+            placeholder={initial ? "unchanged" : ""}
             required={!initial}
             type="password"
             value={secretAccessKey}
           />
           {initial ? (
             <p className="text-muted-foreground text-xs">
-              Laisser vide conserve la clé enregistrée — elle n'est jamais
-              renvoyée au navigateur.
+              Leave empty to keep the stored key — it is never sent back to the
+              browser.
             </p>
           ) : null}
         </div>
@@ -192,14 +192,14 @@ export function BackupDestinationPanel({ initial, role }: Props) {
           onCheckedChange={onPathStyle}
         />
         <Label className="font-normal text-sm" htmlFor="pathStyle">
-          Style chemin (requis hors du S3 d'Amazon)
+          Path-style addressing (required outside Amazon S3)
         </Label>
       </div>
 
       {save.isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {errorMessage(save.error, "destination refusée")}
+            {errorMessage(save.error, "destination rejected")}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -207,8 +207,8 @@ export function BackupDestinationPanel({ initial, role }: Props) {
       {save.isSuccess ? (
         <Alert>
           <AlertDescription>
-            Destination éprouvée et enregistrée — écriture, lecture et
-            suppression vérifiées sur le compartiment.
+            Destination tested and saved — write, read and delete all verified
+            against the bucket.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -216,7 +216,7 @@ export function BackupDestinationPanel({ initial, role }: Props) {
       {canEdit ? (
         <Button disabled={save.isPending} type="submit">
           {save.isPending ? <Spinner /> : null}
-          Tester et enregistrer
+          Test and save
         </Button>
       ) : null}
     </form>

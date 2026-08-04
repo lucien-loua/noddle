@@ -46,7 +46,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [projectName, setProjectName] = useState("défaut");
+  const [projectName, setProjectName] = useState("default");
   const [environmentName, setEnvironmentName] = useState("production");
   const [engine, setEngine] = useState<"postgres" | "redis">("postgres");
   const [name, setName] = useState("");
@@ -76,7 +76,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
   );
 
   const reset = useCallback(() => {
-    setProjectName("défaut");
+    setProjectName("default");
     setEnvironmentName("production");
     setEngine("postgres");
     setName("");
@@ -118,19 +118,18 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connecter une base de données</DialogTitle>
+          <DialogTitle>Add a database</DialogTitle>
           <DialogDescription>
-            Noddle démarre un conteneur officiel avec un volume dédié sur le
-            serveur choisi. Le mot de passe est généré et ne s'affiche jamais :
-            attachez la base à un service pour lui donner accès.
+            Noddle starts an official container with a dedicated volume on the
+            chosen server. The password is generated and never shown — attach
+            the database to a service to grant it access.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun serveur enregistré. Ajoutez-en un avant de connecter une
-              base de données.
+              No servers registered. Add one before adding a database.
             </AlertDescription>
           </Alert>
         ) : (
@@ -139,7 +138,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
               <FieldGroup>
                 <Field orientation="horizontal">
                   <Field className="flex-1">
-                    <FieldLabel htmlFor="db-project">Projet</FieldLabel>
+                    <FieldLabel htmlFor="db-project">Project</FieldLabel>
                     <Input
                       id="db-project"
                       onChange={handleProjectChange}
@@ -148,7 +147,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
                     />
                   </Field>
                   <Field className="flex-1">
-                    <FieldLabel htmlFor="db-env">Environnement</FieldLabel>
+                    <FieldLabel htmlFor="db-env">Environment</FieldLabel>
                     <Input
                       id="db-env"
                       onChange={handleEnvChange}
@@ -160,7 +159,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
 
                 <Field orientation="horizontal">
                   <Field className="flex-1">
-                    <FieldLabel htmlFor="db-engine">Moteur</FieldLabel>
+                    <FieldLabel htmlFor="db-engine">Engine</FieldLabel>
                     <Select
                       items={ENGINE_LABELS}
                       onValueChange={handleEngineChange}
@@ -178,11 +177,11 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
                     </Select>
                   </Field>
                   <Field className="flex-1">
-                    <FieldLabel htmlFor="db-name">Nom</FieldLabel>
+                    <FieldLabel htmlFor="db-name">Name</FieldLabel>
                     <Input
                       id="db-name"
                       onChange={handleNameChange}
-                      placeholder="ma-base"
+                      placeholder="my-database"
                       required
                       value={name}
                     />
@@ -190,7 +189,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="db-server">Serveur</FieldLabel>
+                  <FieldLabel htmlFor="db-server">Server</FieldLabel>
                   <ServerSelect
                     id="db-server"
                     onChange={handleServerChange}
@@ -210,7 +209,7 @@ export function ConnectDatabaseDialog({ onOpenChange, open, servers }: Props) {
             <DialogFooter>
               <Button disabled={pending} type="submit">
                 {pending ? <Spinner data-icon="inline-start" /> : null}
-                Connecter
+                Add database
               </Button>
             </DialogFooter>
           </DialogForm>

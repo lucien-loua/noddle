@@ -105,21 +105,21 @@ export function AttachDatabaseDialog({
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger render={<Button size="xs" variant="outline" />}>
         <PlusIcon data-icon="inline-start" />
-        Attacher
+        Attach
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Attacher à un service</DialogTitle>
+          <DialogTitle>Attach to a service</DialogTitle>
           <DialogDescription>
-            La chaîne de connexion est écrite comme variable d'environnement du
-            service choisi — elle ne s'affiche jamais ici.
+            The connection string is written as an environment variable of the
+            chosen service — it is never shown here.
           </DialogDescription>
         </DialogHeader>
 
         {noServices ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun service à attacher. Connectez d'abord un dépôt.
+              No services to attach to. Connect a repository first.
             </AlertDescription>
           </Alert>
         ) : (
@@ -169,8 +169,8 @@ function AttachBody({
     return (
       <Alert>
         <AlertDescription>
-          Attaché : <code>{done}</code> est disponible dans les variables
-          d'environnement du service, prêt au prochain déploiement.
+          Attached: <code>{done}</code> is now in the service environment
+          variables, ready for the next deploy.
         </AlertDescription>
       </Alert>
     );
@@ -208,7 +208,7 @@ function AttachBody({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="attach-key">Nom de la variable</FieldLabel>
+            <FieldLabel htmlFor="attach-key">Variable name</FieldLabel>
             <Input
               id="attach-key"
               onChange={onKeyChange}
@@ -228,7 +228,7 @@ function AttachBody({
       <DialogFooter>
         <Button disabled={pending} type="submit">
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          Attacher
+          Attach
         </Button>
       </DialogFooter>
     </DialogForm>

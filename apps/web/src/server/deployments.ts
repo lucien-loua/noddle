@@ -46,11 +46,11 @@ export const triggerRollback = createServerFn({ method: "POST" })
       ),
     });
     if (!target) {
-      throw new Error("déploiement introuvable pour ce service");
+      throw new Error("deployment not found for this service");
     }
     if (!target.imageTag) {
       throw new Error(
-        "ce déploiement n'a produit aucune image : il n'y a rien à rejouer"
+        "this deployment produced no image — there is nothing to redeploy"
       );
     }
 

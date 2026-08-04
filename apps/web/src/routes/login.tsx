@@ -70,7 +70,7 @@ function LoginPage() {
         : await authClient.signIn.email({ email, password });
 
       if (authError) {
-        setError(authError.message ?? "Échec de l'authentification.");
+        setError(authError.message ?? "Authentication failed.");
         setBusy(false);
         return;
       }
@@ -86,12 +86,12 @@ function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>
-            {needsSetup ? "Créer l'administrateur" : "Noddle"}
+            {needsSetup ? "Create the admin account" : "Noddle"}
           </CardTitle>
           <CardDescription>
             {needsSetup
-              ? "Ce compte est le seul de cette installation."
-              : "Connectez-vous pour continuer."}
+              ? "This is the first account of this installation."
+              : "Sign in to continue."}
           </CardDescription>
         </CardHeader>
 
@@ -127,7 +127,7 @@ function LoginPage() {
 
               <Button className="w-full" disabled={busy} type="submit">
                 {busy ? <Spinner data-icon="inline-start" /> : null}
-                {needsSetup ? "Créer le compte" : "Se connecter"}
+                {needsSetup ? "Create account" : "Sign in"}
               </Button>
 
               {error ? (
