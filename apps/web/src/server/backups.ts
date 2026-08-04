@@ -24,6 +24,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -84,7 +85,7 @@ export const getDestination = createServerFn({ method: "GET" }).handler(
 export const saveDestination = createServerFn({ method: "POST" })
   .validator(backupDestinationSchema)
   .handler(async ({ data }): Promise<{ id: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "backup" });
 
     const existing = await db.query.backupDestinations.findFirst();
 
@@ -172,7 +173,7 @@ export const saveDestination = createServerFn({ method: "POST" })
 export const saveBackupSchedule = createServerFn({ method: "POST" })
   .validator(backupScheduleRequestSchema)
   .handler(async ({ data }): Promise<{ saved: true }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "backup" });
 
     // Une planification sans destination ne se déclencherait jamais et
     // l'utilisateur croirait être protégé — le pire état possible. On le dit
@@ -224,7 +225,7 @@ export const getBackups = createServerFn({ method: "GET" })
 export const triggerBackup = createServerFn({ method: "POST" })
   .validator(backupRequestSchema)
   .handler(async ({ data }): Promise<{ backupId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "backup" });
 
     const database = await db.query.databases.findFirst({
       where: eq(databases.id, data.databaseId),
@@ -272,7 +273,7 @@ export const triggerBackup = createServerFn({ method: "POST" })
 export const triggerRestore = createServerFn({ method: "POST" })
   .validator(restoreRequestSchema)
   .handler(async ({ data }): Promise<{ queued: true }> => {
-    await requireSession();
+    await requirePermission({ action: "restore", resource: "backup" });
 
     const database = await db.query.databases.findFirst({
       where: eq(databases.id, data.databaseId),

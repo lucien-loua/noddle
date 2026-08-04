@@ -13,12 +13,20 @@ import { relations } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
+  // ── plugin `admin` de better-auth ──────────────────────────────────────
+  // Ces quatre colonnes lui appartiennent. `role` porte le nom d'un rôle
+  // défini dans `apps/web/src/lib/permissions.ts` ; le plugin accepte
+  // plusieurs rôles séparés par des virgules, Noddle n'en met qu'un.
+  banExpires: timestamp("ban_expires"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   id: text("id").primaryKey(),
   image: text("image"),
   name: text("name").notNull(),
+  role: text("role"),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
@@ -31,6 +39,10 @@ export const session = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     expiresAt: timestamp("expires_at").notNull(),
     id: text("id").primaryKey(),
+    /** Plugin `admin` : l'administrateur qui usurpe cette session, le cas
+     *  échéant. Noddle n'expose pas l'usurpation, la colonne existe parce que
+     *  le plugin l'écrit. */
+    impersonatedBy: text("impersonated_by"),
     ipAddress: text("ip_address"),
     token: text("token").notNull().unique(),
     updatedAt: timestamp("updated_at")

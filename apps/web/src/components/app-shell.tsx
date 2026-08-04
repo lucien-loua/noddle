@@ -4,6 +4,7 @@ import {
   HardDrivesIcon,
   SignOutIcon,
   SquaresFourIcon,
+  UsersIcon,
 } from "@phosphor-icons/react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -133,6 +134,20 @@ export function AppShell({ actions, children, email, scopes, title }: Props) {
                       }
                     />
                     <span>Notifications</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith("/comptes")}
+                    render={<Link to="/comptes" />}
+                    tooltip="Comptes"
+                  >
+                    <UsersIcon
+                      weight={
+                        pathname.startsWith("/comptes") ? "fill" : "regular"
+                      }
+                    />
+                    <span>Comptes</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

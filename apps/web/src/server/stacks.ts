@@ -18,6 +18,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueStackDeploy } from "@/lib/deploy-queue.server";
+import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 import type { DeploymentSummary } from "@/server/dashboard";
@@ -25,7 +26,7 @@ import type { DeploymentSummary } from "@/server/dashboard";
 export const connectStack = createServerFn({ method: "POST" })
   .validator(connectStackSchema)
   .handler(async ({ data }): Promise<{ stackId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "service" });
 
     // Retrouve-ou-crée par nom, exactement comme `connectRepo` : un même
     // projet/environnement accueille plusieurs services ET plusieurs piles.
@@ -84,7 +85,7 @@ export const connectStack = createServerFn({ method: "POST" })
 export const triggerStackDeploy = createServerFn({ method: "POST" })
   .validator(stackDeployRequestSchema)
   .handler(async ({ data }): Promise<{ stackDeploymentId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "deploy", resource: "service" });
     // Même chemin que le webhook, qui dépose la même ligne sans session.
     return await queueStackDeploy(data.stackId, { trigger: "manual" });
   });
@@ -92,7 +93,7 @@ export const triggerStackDeploy = createServerFn({ method: "POST" })
 export const triggerStackRollback = createServerFn({ method: "POST" })
   .validator(stackRollbackRequestSchema)
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requireSession();
+    await requirePermission({ action: "rollback", resource: "service" });
 
     // Relu en base plutôt que cru sur parole : le client envoie un
     // identifiant de déploiement, pas un texte compose — même raison que

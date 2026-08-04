@@ -64,7 +64,7 @@ export function NotificationChannels({ initial }: { initial: ChannelRow[] }) {
   const rows = channels.data ?? [];
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           Noddle prévient quand un déploiement échoue, quand la surveillance

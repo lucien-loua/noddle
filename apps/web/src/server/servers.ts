@@ -12,6 +12,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -56,7 +57,7 @@ export const getServers = createServerFn({ method: "GET" }).handler(
 export const addServer = createServerFn({ method: "POST" })
   .validator(serverInputSchema)
   .handler(async ({ data }): Promise<{ serverId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "create", resource: "server" });
 
     // L'AAD lie le chiffré à la LIGNE : l'identifiant doit exister avant le
     // chiffrement, d'où l'insertion en deux temps — même schéma que

@@ -13,13 +13,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
+import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
-import { requireSession } from "@/lib/session.server";
 
 export const triggerDeploy = createServerFn({ method: "POST" })
   .validator(deployRequestSchema)
   .handler(async ({ data }): Promise<{ deploymentId: string }> => {
-    await requireSession();
+    await requirePermission({ action: "deploy", resource: "service" });
     // La ligne est créée ICI, pas dans le worker : le bouton doit rendre un
     // identifiant tout de suite pour que l'écran s'abonne au flux de logs
     // avant même que le build commence. Même chemin que le webhook, qui
@@ -33,7 +33,7 @@ export const triggerDeploy = createServerFn({ method: "POST" })
 export const triggerRollback = createServerFn({ method: "POST" })
   .validator(rollbackRequestSchema)
   .handler(async ({ data }): Promise<{ imageTag: string }> => {
-    await requireSession();
+    await requirePermission({ action: "rollback", resource: "service" });
 
     // La cible est relue en base plutôt que crue sur parole : le client envoie
     // un identifiant de déploiement, pas un tag d'image. Sans cette lecture,
