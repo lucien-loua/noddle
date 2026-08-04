@@ -36,6 +36,7 @@ import {
 import { eq } from "drizzle-orm";
 import { loadDestination } from "#backup-destination";
 import { connectTo, type DeployContext } from "#deploy";
+import { notify } from "#notify";
 
 type Engine = "postgres" | "redis";
 
@@ -235,14 +236,20 @@ export async function runBackup(
       // pas de la donnée. Le prochain passage réessaiera.
     }
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     await ctx.db
       .update(backups)
       .set({
-        errorMessage: err instanceof Error ? err.message : String(err),
+        errorMessage: message,
         finishedAt: new Date(),
         status: "failed",
       })
       .where(eq(backups.id, backupId));
+    await notify(ctx, {
+      detail: message,
+      resource: database.name,
+      type: "backup_failed",
+    });
     throw err;
   } finally {
     disconnect(client);

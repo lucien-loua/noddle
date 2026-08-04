@@ -38,6 +38,7 @@ import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
+import { notify } from "#notify";
 import {
   deployService,
   ensureOverlayNetwork,
@@ -357,6 +358,11 @@ export async function runDeploy(
         .update(services)
         .set({ status: "crashed" })
         .where(eq(services.id, service.id));
+      await notify(ctx, {
+        detail: outcome.updateMessage ?? undefined,
+        resource: service.name,
+        type: "deploy_reverted",
+      });
       return;
     }
 
@@ -378,6 +384,11 @@ export async function runDeploy(
       .set({ currentDeploymentId: deployment.id, status: "running" })
       .where(eq(services.id, service.id));
     await clearSupersededWatch(db, service.id, deployment.id);
+    await notify(ctx, {
+      detail: deployment.commitSha ?? undefined,
+      resource: service.name,
+      type: "deploy_succeeded",
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     sink.write(`✗ ${message}\n`);
@@ -389,6 +400,11 @@ export async function runDeploy(
         status: "failed",
       })
       .where(eq(deployments.id, deployment.id));
+    await notify(ctx, {
+      detail: message,
+      resource: service.name,
+      type: "deploy_failed",
+    });
     throw err;
   } finally {
     // Identité d'objet, pas `sameConnection` : cette variable est scopée au
