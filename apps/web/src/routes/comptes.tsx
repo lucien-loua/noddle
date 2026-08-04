@@ -15,21 +15,22 @@ export const Route = createFileRoute("/comptes")({
     if (!state.signedIn) {
       throw redirect({ to: "/login" });
     }
-    return { email: state.email };
+    return { email: state.email, role: state.role };
   },
   component: AccountsPage,
   loader: async ({ context }) => ({
     accounts: await getAccounts(),
     email: context.email,
+    role: context.role,
   }),
 });
 
 function AccountsPage() {
-  const { accounts, email } = Route.useLoaderData();
+  const { accounts, email, role } = Route.useLoaderData();
 
   return (
     <AppShell email={email} title="Comptes">
-      <AccountsPanel initial={accounts} />
+      <AccountsPanel initial={accounts} role={role} />
     </AppShell>
   );
 }

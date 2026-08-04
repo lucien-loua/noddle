@@ -21,7 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage, relativeTime } from "@/lib/format";
-import { ROLE_LABELS, ROLE_ORDER, type RoleName } from "@/lib/permissions";
+import {
+  ROLE_LABELS,
+  ROLE_ORDER,
+  type RoleName,
+  roles,
+} from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import {
   type AccountRow,
   createAccount,
@@ -30,7 +36,20 @@ import {
   setAccountRole,
 } from "@/server/accounts";
 
-export function AccountsPanel({ initial }: { initial: AccountRow[] }) {
+export function AccountsPanel({
+  initial,
+  role,
+}: {
+  initial: AccountRow[];
+  role: string | null;
+}) {
+  // La session rend un `string` : on le confronte aux rôles connus ici, une
+  // fois, plutôt que de le forcer à chaque appel.
+  const known = role && role in roles ? (role as RoleName) : null;
+  // Politesse, pas sécurité : le serveur refuse de toute façon. Ne pas
+  // proposer une action interdite évite surtout de faire cliquer quelqu'un
+  // vers un message d'erreur.
+  const canCreate = useCan(known, "user", "create");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -53,9 +72,11 @@ export function AccountsPanel({ initial }: { initial: AccountRow[] }) {
           Un rôle décide de ce qu'un compte peut faire, jamais de ce qu'il peut
           voir : tout le monde lit le même tableau de bord.
         </p>
-        <Button onClick={handleOpen} size="sm">
-          Créer un compte
-        </Button>
+        {canCreate ? (
+          <Button onClick={handleOpen} size="sm">
+            Créer un compte
+          </Button>
+        ) : null}
       </div>
 
       <CreateAccountDialog
@@ -66,7 +87,12 @@ export function AccountsPanel({ initial }: { initial: AccountRow[] }) {
 
       <div className="divide-y rounded-md border">
         {(accounts.data ?? []).map((account) => (
-          <AccountLine account={account} key={account.id} onDone={refresh} />
+          <AccountLine
+            account={account}
+            canManage={canCreate}
+            key={account.id}
+            onDone={refresh}
+          />
         ))}
       </div>
     </div>
@@ -75,9 +101,11 @@ export function AccountsPanel({ initial }: { initial: AccountRow[] }) {
 
 function AccountLine({
   account,
+  canManage,
   onDone,
 }: {
   account: AccountRow;
+  canManage: boolean;
   onDone: () => void;
 }) {
   const setRole = useMutation({
@@ -111,7 +139,7 @@ function AccountLine({
       </span>
 
       <div className="flex gap-1">
-        {ROLE_ORDER.map((role) => (
+        {(canManage ? ROLE_ORDER : []).map((role) => (
           <RoleButton
             active={account.role === role}
             key={role}
@@ -123,7 +151,7 @@ function AccountLine({
 
       {/* Se supprimer soi-même est refusé côté serveur ; le bouton disparaît
           pour que l'interface ne propose pas ce qu'elle sait impossible. */}
-      {account.isSelf ? null : (
+      {account.isSelf || !canManage ? null : (
         <Button
           disabled={remove.isPending}
           onClick={handleRemove}
