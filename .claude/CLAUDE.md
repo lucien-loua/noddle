@@ -566,10 +566,11 @@ l'interdire ne sécuriserait personne — ça pousserait à contourner Noddle.
   essayé, et en anglais. Ne reste que la distinction utile : trop tard, ou pas
   du tout.
 
-**Non vérifié : le vrai Discord et le vrai Slack.** Il faudrait une URL de
-webhook réelle, qui est un secret porteur. Les formes sont asserties contre ce
-que leurs API documentent et le transport est réel, mais personne n'a vu le
-message s'afficher dans un salon.
+**Discord et Slack réels : non poursuivi, par décision.** Il faudrait une URL
+de webhook réelle, qui est un secret porteur, et ce n'est pas la priorité
+actuelle. Les formes restent asserties contre ce que leurs API documentent et
+le transport est réel ; on part du principe que ça fonctionne plutôt que de
+garder ce point ouvert dans chaque passe de vérification.
 
 **Graphiques de ressources faits et vérifiés, le 2026-08-04**
 (`apps/worker/src/verify-metrics.ts`, 9/9 contre une vraie VM + un vrai
@@ -662,12 +663,35 @@ le masquage contre un vrai navigateur, aucun visible au typecheck :
   l'occasion ne voit plus aucune des actions ci-dessus, sans régression
   côté owner.
 
-**Non vérifié : le vrai Discord et le vrai Slack.** Toujours en attente
-d'une URL de webhook jetable — elle ne se fabrique pas.
+**Correction à la première rédaction de cette section : les graphiques de
+ressources n'étaient PAS encore vérifiés au navigateur avec des données
+peuplées** — seul le mécanisme worker (`verify-metrics.ts`, 9/9) l'était,
+et l'environnement de dev local montrait « aucun relevé » (badge rouge)
+partout, une collecte réellement bloquée plutôt qu'un simple manque de
+recul. Cause : **la clé SSH du serveur enregistrée en base était chiffrée
+sous un `APP_KEY` antérieur** — probablement une rotation de clé entre deux
+sessions — donc `decryptSecret` échouait à chaque passage de collecte.
+Corrigé en ré-chiffrant la clé déjà présente sur disque
+(`~/.ssh/id_ed25519`, celle que `verify-live.ts` utilise déjà par
+convention) sous l'`APP_KEY` courant, sans jamais faire transiter la clé en
+clair par un formulaire ni l'afficher — seul le fait de l'opération est
+journalisé.
 
-**Reste pour la Phase 3 :** rien d'autre. Graphiques de ressources et RBAC
-sont faits et vérifiés contre du réel ; seule la vérification Discord/Slack
-en direct reste ouverte, faute d'URL jetable.
+Vérifié ensuite en direct, jusqu'au bout : le graphique du SERVEUR se
+peuple (charge, mémoire, disque, tous non nuls, badge « relevé à
+l'instant ») ; un vrai service a été poussé sur la VM (dépôt `git init`
+minimal, même technique que `verify-live.ts`, sans passer par le
+formulaire dont le schéma Zod refuse `file://`) et déployé par le chemin
+réel (`queueServiceDeploy`, la même fonction que le bouton Déployer) —
+l'onglet Ressources du service affiche CPU et Mémoire réels, à la fois
+pour owner et pour un lecteur créé pour l'occasion, confirmant au passage
+que le masquage RBAC tient sur un service qui a de vraies données à
+montrer, pas seulement sur un écran vide.
+
+**Discord et Slack réels : non poursuivi, par décision** — voir plus haut.
+
+**Reste pour la Phase 3 :** rien. Graphiques de ressources et RBAC sont
+faits et vérifiés contre du réel, jusqu'au navigateur pour les deux.
 
 **Préalable connu pour les ÉQUIPES (multi-tenancy), distinct du RBAC ci-dessus
 et toujours ouvert.** Le RBAC répond à « qui a le droit de faire quoi » —
