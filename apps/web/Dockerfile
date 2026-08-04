@@ -12,8 +12,10 @@ COPY package.json bun.lock ./
 # échoue sur « lockfile had changes ».
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
+COPY packages/backup-store/package.json packages/backup-store/
 COPY packages/build-engine/package.json packages/build-engine/
 COPY packages/db/package.json packages/db/
+COPY packages/notifier/package.json packages/notifier/
 COPY packages/proxy-config/package.json packages/proxy-config/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ssh-executor/package.json packages/ssh-executor/
@@ -22,7 +24,9 @@ COPY packages/tsconfig/package.json packages/tsconfig/
 RUN bun install --frozen-lockfile
 
 COPY tsconfig.json ./
+COPY packages/backup-store/ packages/backup-store/
 COPY packages/db/ packages/db/
+COPY packages/notifier/ packages/notifier/
 COPY packages/shared/ packages/shared/
 COPY packages/tsconfig/ packages/tsconfig/
 COPY apps/web/ apps/web/

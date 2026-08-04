@@ -31,8 +31,10 @@ COPY package.json bun.lock ./
 # échoue sur « lockfile had changes ».
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
+COPY packages/backup-store/package.json packages/backup-store/
 COPY packages/build-engine/package.json packages/build-engine/
 COPY packages/db/package.json packages/db/
+COPY packages/notifier/package.json packages/notifier/
 COPY packages/proxy-config/package.json packages/proxy-config/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ssh-executor/package.json packages/ssh-executor/
