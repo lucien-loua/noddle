@@ -106,6 +106,13 @@
       "when": 1785901045153,
       "tag": "0014_spotty_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785911699059,
+      "tag": "0015_regular_eternals",
+      "breakpoints": true
     }
   ]
 }

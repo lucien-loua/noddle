@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   index,
   integer,
@@ -60,6 +62,25 @@ export const services = pgTable(
     name: text("name").notNull(),
     port: integer("port").notNull().default(3000),
 
+    /**
+     * Une prévisualisation de pull request est un service ORDINAIRE, pas une
+     * table à part : elle construit, déploie, a des logs, un historique, un
+     * rollback, des métriques et une surveillance post-déploiement. Tout ce
+     * que `services` porte déjà. Une table dédiée dupliquerait la moitié du
+     * worker.
+     *
+     * Ce qui la distingue tient en deux colonnes : de QUI elle est la
+     * prévisualisation, et de quelle PR. `null` sur un service ordinaire.
+     *
+     * La cascade est voulue : supprimer un service emporte ses
+     * prévisualisations, qui n'ont aucun sens sans lui.
+     */
+    previewOfServiceId: uuid("preview_of_service_id").references(
+      (): AnyPgColumn => services.id,
+      { onDelete: "cascade" }
+    ),
+    prNumber: integer("pr_number"),
+
     // Les images construites localement n'existent que sur la machine qui les a
     // produites : Swarm ne peut pas déplacer le service ailleurs. Le lien vers
     // le serveur est donc structurel, pas un simple placement.
@@ -78,5 +99,12 @@ export const services = pgTable(
   (t) => [
     uniqueIndex("services_env_name_idx").on(t.environmentId, t.name),
     index("services_server_idx").on(t.serverId),
+    // UNE prévisualisation par PR et par service parent. Un événement
+    // `synchronize` (une PR mise à jour) doit RETROUVER la prévisualisation
+    // existante et la redéployer, jamais en créer une seconde — sans quoi
+    // chaque push sur une branche de PR laisserait un service de plus.
+    uniqueIndex("services_preview_pr_idx")
+      .on(t.previewOfServiceId, t.prNumber)
+      .where(sql`${t.previewOfServiceId} is not null`),
   ]
 );
