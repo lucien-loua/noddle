@@ -462,6 +462,19 @@ export const restoreRequestSchema = z.object({
 
 export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
 
+/**
+ * Supprimer un service est irréversible : l'historique, les images et les
+ * variables partent avec lui. Même exigence qu'une restauration, donc —
+ * `confirmName` porte le nom saisi jusqu'au SERVEUR, qui le revérifie. Une
+ * boîte de dialogue ne protège que les clients qui l'affichent.
+ */
+export const deleteServiceSchema = z.object({
+  confirmName: z.string().min(1).max(48),
+  serviceId: z.uuid(),
+});
+
+export type DeleteServiceRequest = z.infer<typeof deleteServiceSchema>;
+
 export const serviceMetricsRequestSchema = z.object({ serviceId: z.uuid() });
 
 // ─────────────────────────────────────────────────────────────────────────────

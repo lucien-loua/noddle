@@ -18,6 +18,7 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { DeleteServiceAction } from "@/components/delete-service-action";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
@@ -106,6 +107,13 @@ function ServiceDetail() {
   // sur une bascule acceptée. L'écran retombe alors sur le seul serveur qu'il
   // sait vrai, celui du build, plutôt que d'affirmer un lieu d'exécution.
   const runningOn = service.lastDeployment?.nodeName ?? null;
+
+  // On QUITTE la page une fois le démontage lancé : le service est en train de
+  // disparaître, rester dessus afficherait un détail qui se vide.
+  const handleDeleted = useCallback(
+    () => navigate({ search: {}, to: "/" }),
+    [navigate]
+  );
 
   const envVars = useQuery({
     enabled: canReadEnvVar,
@@ -198,6 +206,13 @@ function ServiceDetail() {
             </Badge>
           ) : null}
           <Badge variant="outline">{status.label}</Badge>
+          <DeleteServiceAction
+            onDeleted={handleDeleted}
+            onError={setSaveError}
+            role={known}
+            serviceId={service.id}
+            serviceName={service.name}
+          />
         </>
       }
       breadcrumb={

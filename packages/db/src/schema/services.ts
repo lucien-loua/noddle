@@ -29,6 +29,14 @@ export const serviceStatus = pgEnum("service_status", [
   "running",
   "stopped",
   "crashed",
+  // Le démontage est en cours : le service Swarm doit disparaître AVANT la
+  // ligne, sinon Traefik continuerait de router vers une application que
+  // l'utilisateur croit supprimée — un mensonge plus grave que l'inverse.
+  //
+  // Un service qui reste ici est un démontage qui a échoué, pas un état
+  // stable. Le geste est rejouable : `removeService` et la purge du registre
+  // sont idempotents.
+  "deleting",
 ]);
 
 export const services = pgTable(

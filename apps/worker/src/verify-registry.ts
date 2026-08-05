@@ -50,6 +50,7 @@ import {
 } from "#registry";
 import { sweepRegistry } from "#registry-sweep";
 import { removeService } from "#swarm";
+import { runServiceTeardown } from "#teardown";
 
 const execFileAsync = promisify(execFile);
 
@@ -779,6 +780,72 @@ try {
       `${survivors.filter((d) => d.imagePurged).length} version(s) de la fenêtre ont été purgées`
     );
   }
+
+  // ── supprimer le service, pour de bon ────────────────────────────────────
+  //
+  // Le produit n'avait aucun chemin de suppression : `removeService` n'était
+  // appelé que par ces scripts. Ce qui compte ici n'est pas « la ligne
+  // disparaît » mais l'ORDRE — le service Swarm doit être parti AVANT, sinon
+  // Traefik router encore vers une application qu'on croit supprimée.
+  step("Suppression du service");
+  await runServiceTeardown(ctx, svc.id, {
+    containerName: REGISTRY_CONTAINER,
+  });
+
+  const swarmAfter = await managerDocker.listServices({
+    filters: JSON.stringify({ name: [SERVICE_NAME] }),
+  });
+  if (swarmAfter.every((s) => s.Spec?.Name !== SERVICE_NAME)) {
+    ok("le service Swarm a disparu");
+  } else {
+    ko("le service Swarm tourne encore — Traefik y route toujours");
+  }
+
+  const rowAfter = await db.query.services.findFirst({
+    where: eq(services.id, svc.id),
+  });
+  const depsAfter = await db.query.deployments.findMany({
+    where: eq(deployments.serviceId, svc.id),
+  });
+  if (!rowAfter && depsAfter.length === 0) {
+    ok("la ligne et tout son historique sont partis (cascade)");
+  } else {
+    ko(
+      `reste en base : service=${rowAfter ? "oui" : "non"}, déploiements=${depsAfter.length}`
+    );
+  }
+
+  const catalogAfter = await exec(
+    managerSsh,
+    `curl -sS --cacert /etc/docker/certs.d/${registry.host}/ca.crt ` +
+      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/${SERVICE_NAME}/tags/list`
+  );
+  // Un dépôt vidé répond `"tags":null` — la clé existe, la liste est nulle.
+  if (
+    catalogAfter.stdout.includes('"tags":null') ||
+    catalogAfter.stdout.includes("NAME_UNKNOWN")
+  ) {
+    ok("le dépôt du registre est vide");
+  } else {
+    ko(`des tags subsistent : ${catalogAfter.stdout.trim().slice(0, 120)}`);
+  }
+
+  const workdirAfter = await exec(
+    workerSsh,
+    `test -d ${quoteArg(`/var/lib/noddle/builds/${svc.id}`)} && echo présent || echo absent`
+  );
+  if (workdirAfter.stdout.includes("absent")) {
+    ok("le répertoire de build a été retiré du nœud");
+  } else {
+    ko("le répertoire de build traîne encore");
+  }
+
+  // Rejouable : un démontage interrompu se relance en recliquant, donc le
+  // second passage ne doit pas lever sur un service déjà parti.
+  await runServiceTeardown(ctx, svc.id, {
+    containerName: REGISTRY_CONTAINER,
+  });
+  ok("démontage rejouable sans erreur (idempotent)");
 } catch (err) {
   // SANS ce bloc, une exception traverse jusqu'au `finally`, qui sort en 0
   // parce qu'aucun `ko()` n'a été compté — un banc d'essai qui annonce « 7

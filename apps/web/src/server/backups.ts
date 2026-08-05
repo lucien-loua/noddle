@@ -267,8 +267,9 @@ export const triggerBackup = createServerFn({ method: "POST" })
  *
  * `confirmName` est vérifié ICI, pas seulement dans la boîte de dialogue. Un
  * garde-fou qui ne vit que dans le composant ne protège que les clients qui
- * l'affichent ; c'est la seule opération du produit qui détruit des données,
- * donc elle se refuse côté serveur.
+ * l'affichent ; l'opération détruit des données sans retour possible, donc
+ * elle se refuse côté serveur. (`deleteService` suit la même règle depuis
+ * qu'un service peut être supprimé.)
  */
 export const triggerRestore = createServerFn({ method: "POST" })
   .validator(restoreRequestSchema)
@@ -282,8 +283,10 @@ export const triggerRestore = createServerFn({ method: "POST" })
       throw new Error("database not found");
     }
     if (data.confirmName !== database.name) {
+      // En anglais : ce message atteint l'écran, et le texte visible est en
+      // anglais (règle d'interface). Les commentaires restent en français.
       throw new Error(
-        `le nom saisi ne correspond pas à « ${database.name} » — restauration annulée`
+        `the name you typed does not match "${database.name}" — restore cancelled`
       );
     }
 

@@ -97,6 +97,10 @@ export interface DeployContext {
  */
 export type DeployJobData =
   | { backupId: string; kind: "backup" }
+  // Sur cette file comme le reste : la suppression retire le service Swarm,
+  // et un déploiement du MÊME service qui la croiserait le recréerait aussitôt.
+  // La concurrence 1 l'interdit.
+  | { kind: "delete-service"; serviceId: string }
   | { kind: "deploy"; deploymentId: string }
   | { kind: "deploy-stack"; stackDeploymentId: string }
   | { kind: "provision-database"; databaseId: string }
@@ -127,6 +131,11 @@ export async function runJob(
   if (data.kind === "provision-server") {
     const { provisionServer } = await import("#provision");
     await provisionServer(ctx, data.serverId);
+    return;
+  }
+  if (data.kind === "delete-service") {
+    const { runServiceTeardown } = await import("#teardown");
+    await runServiceTeardown(ctx, data.serviceId);
     return;
   }
   if (data.kind === "prune-registry") {
