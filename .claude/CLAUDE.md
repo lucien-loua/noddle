@@ -941,6 +941,87 @@ survit à `removeService`, donc la seconde exécution provisionnait un mot de
 passe neuf sur des données existantes et échouait en accusant le code (même
 piège que celui déjà relevé pour `verify-backup.ts`).
 
+### Phase 4 — prévisualisations par PR, le 2026-08-05
+
+**Prérequis livrés d'abord, parce qu'ils manquaient au produit :**
+
+- **Supprimer un service** n'existait pas du tout. Ni service, ni pile, ni
+  base : `removeService` n'était appelé que par les scripts de vérification.
+  L'ORDRE est ce qui compte — le service Swarm doit disparaître AVANT la ligne,
+  sinon Traefik route encore vers une application qu'on croit supprimée. D'où
+  l'état `deleting`, qui porte cet intervalle. Le job passe par la MÊME file que
+  les déploiements : sans ça une suppression et un déploiement du même service
+  se croiseraient, et le second recréerait ce que la première vient de retirer.
+  `confirmName` est revérifié côté serveur, comme pour la restauration.
+
+- **Le nom Swarm ne pouvait pas être `services.name`.** L'unicité en base est
+  `(environment_id, name)`, celle de Swarm est GLOBALE : deux services `api`,
+  l'un en production et l'autre en staging, écrasaient le même service Swarm
+  sans erreur. Atteignable depuis le formulaire, `connectRepo` exposant déjà
+  `environmentName`. C'est désormais `<nom>-<8 hex de l'id>`.
+
+  **Pourquoi pas `projet-environnement-service`, qui se lirait mieux :** un nom
+  de service Swarm devient un nom DNS sur l'overlay, donc 63 octets au plus, et
+  projet comme environnement font jusqu'à 64 caractères CHACUN. Tronquer
+  rouvrirait la collision. **L'autre solution écartée** était l'unicité globale
+  en base — elle ne touchait aucune ligne du worker, mais retirait une promesse
+  que le schéma fait déjà.
+
+  **Piles et bases ont le MÊME défaut, sciemment laissé** : leurs noms se
+  construisent différemment (`noddle-db-<nom>` fait déjà 58 caractères sur 63,
+  et un nom de pile préfixe ses services enfants), donc pas un copier-coller.
+
+**Une prévisualisation est un `services` ORDINAIRE**, pas une table de plus :
+elle construit, déploie, a des logs, un historique, un rollback, des métriques
+et une surveillance post-déploiement. Deux colonnes la distinguent,
+`preview_of_service_id` et `pr_number`. Une table dédiée dupliquerait la moitié
+du worker.
+
+L'index unique est **PARTIEL** — un `synchronize` doit RETROUVER la ligne
+existante et la redéployer, sinon chaque push sur une branche de PR laisserait
+un service de plus ; partiel, sinon deux services ordinaires (parent nul)
+entreraient en collision entre eux.
+
+| Décision | Choix | Pourquoi |
+|---|---|---|
+| Déclencheur | **Le webhook existant**, étendu aux `pull_request` / `merge_request` | Une seule URL par service. Les deux charges utiles sont disjointes — un push n'a pas d'`action`, une PR pas de `ref` |
+| Environnement | **`preview`, un par projet** | Le regroupement du dashboard étant par (projet, environnement), les prévisualisations se rangent d'elles-mêmes à part, sans code d'affichage particulier |
+| Variables | **Héritées EN ENTIER, secrets compris** | Décision « comme Vercel ». Une prévisualisation sans `DATABASE_URL` ne démarre pas et ne sert à rien. Copiées et REchiffrées sous l'identifiant de leur nouvelle ligne — l'AAD lie le chiffré à la ligne — donc corriger une variable de prévisualisation ne touche pas la production |
+| PR de fork | **Aucune prévisualisation, réponse 200 ignorée** | LE garde-fou de la décision ci-dessus. Une prévisualisation exécute le code de la PR ; avec les secrets de production, une PR extérieure les exfiltre en trois lignes. GitHub applique la même règle à ses propres secrets |
+| Plafond | **5 vivantes, constante et non réglage** | Mesuré : une application déployée pèse ~51 Mio et le plan de contrôle ~388 Mio, mais une vraie application Next.js monte à 200-400 Mio, et la cible reste 2 Go |
+
+**GitHub ne fournit aucun drapeau de fork** : la comparaison porte sur
+`head.repo.full_name` contre `base.repo.full_name`. Un `full_name` MANQUANT —
+le cas d'un fork dont le dépôt a été supprimé — compte comme un fork. Se
+tromper dans ce sens coûte une prévisualisation en moins ; dans l'autre, ça
+coûte les secrets.
+
+**Mesuré, et à dire dans l'interface :** sur un vrai domaine, une
+prévisualisation exige un enregistrement DNS **joker** que Noddle ne peut pas
+poser — `pr-3-test.noddle.ouestlabs.xyz` ne résout pas aujourd'hui. En
+sslip.io n'importe quel sous-domaine résout déjà, donc le dev et le VPS actuel
+fonctionnent sans rien configurer. **Et le quota Let's Encrypt est un plafond
+inhérent :** 50 certificats par semaine et par domaine enregistré, un par PR.
+HTTP-01 ne sait pas faire de joker ; DNS-01 demanderait des identifiants de
+fournisseur DNS, surface de configuration que personne n'a demandée.
+
+**Le texte visible du worker est passé en anglais** — la règle existait depuis
+la Phase 1, tout le chemin d'erreur l'ignorait. Ce qui est visible et que
+personne n'avait relevé : les `sink.write(...)` partent dans le flux SSE et
+s'affichent dans l'onglet Logs à chaque déploiement, et les erreurs levées
+finissent dans `deployments.error_message`, affiché dans l'historique.
+`adopt-host.ts` reste en français : sa sortie va à l'INSTALLATEUR, comme
+`install.sh`, et trancher si celle-ci compte comme du texte visible reste
+ouvert.
+
+**Piège d'ESSAI payé cette session :** `install.sh` refait lui-même
+`git fetch origin "$NODDLE_REF"` (défaut `main`) puis `checkout`. Poser une
+branche dans `$NODDLE_DIR` avant de lancer le script ne suffit donc pas. Et
+l'échec est trompeur — `git checkout` écrit un NOUVEL inode alors que bash
+garde son descripteur sur l'ancien : **le script exécuté est celui de la
+branche, le compose sur disque celui de `main`**, sans erreur et avec un code
+de sortie 0. Pour éprouver une branche : `NODDLE_REF=<branche> bash install.sh`.
+
 **Passe UI, le 2026-08-04.** L'interface était « trop basique », ne
 respectait pas les principes de regroupement, et des dialogues débordaient
 du viewport. Trois défauts structurels, tous vérifiés au navigateur en
@@ -1210,7 +1291,7 @@ Then, in order:
 1. **Phase 1** — Drizzle schema + BullMQ, spike logic ported into a worker job. Auth, installer adopts its own host as server #1, connect a repo, deploy, live log stream, start/stop/restart, rollback, and the **post-deploy watch** (see Hard rules: Swarm's guarantee expires with the monitor window, so the worker keeps observing and rolls back from Noddle's own history). Rollback is not a Phase 3 nicety here — it is the mechanism the watch depends on.
 2. **Phase 2** — multi-server, Docker Compose deploys via `docker stack deploy`, env var UI, webhook deploys, one-click database services.
 3. **Phase 3** — backups to S3-compatible storage, notifications, resource graphs, RBAC (**tous faits et vérifiés**, voir plus haut). Teams/multi-tenancy — distinct from RBAC, see the known prerequisite above — remains open.
-4. **Phase 4** — registry-based builds (**fait et vérifié**, voir plus haut), preview environments per PR, audit log, CLI.
+4. **Phase 4** — registry-based builds et preview environments per PR (**faits et vérifiés**, voir plus haut), audit log, CLI.
 
 **Do not build Phase 2 features while Phase 1 is unreliable.** The deploy loop's
 correctness is what the entire product's trust rests on.

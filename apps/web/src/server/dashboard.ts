@@ -47,6 +47,16 @@ export interface ServiceRow {
   lastDeployment: DeploymentSummary | null;
   name: string;
   port: number;
+  /**
+   * Le numéro de pull request, quand ce service est une prévisualisation.
+   *
+   * Elles ne sont PAS masquées du tableau de bord : une prévisualisation
+   * tourne, peut être cassée, et le cacher serait exactement le mensonge que
+   * cet écran existe pour éviter. Elles vivent dans l'environnement `preview`,
+   * donc le regroupement par (projet, environnement) les range déjà à part —
+   * il ne manquait que de dire de quelle PR il s'agit.
+   */
+  prNumber: number | null;
   project: string;
   serverName: string;
   status: string;
@@ -184,6 +194,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
         lastDeployment: last ? toSummary(last, nodes) : null,
         name: service.name,
         port: service.port,
+        prNumber: service.prNumber,
         project: service.environment.project.name,
         serverName: service.server.name,
         status: service.status,

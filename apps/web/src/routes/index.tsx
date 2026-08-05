@@ -355,14 +355,26 @@ function ServiceCard({
         </>
       }
       tag={
-        service.watching ? (
-          <Badge
-            title="Post-deploy watch running: Noddle is still observing this service and will roll it back if it starts crash-looping."
-            variant="outline"
-          >
-            watching
-          </Badge>
-        ) : null
+        <>
+          {/* Le numéro de PR AVANT le badge de surveillance : c'est ce qui
+              identifie la ligne, l'autre n'est qu'un état passager. */}
+          {service.prNumber === null ? null : (
+            <Badge
+              title="Preview environment for a pull request. It is removed when the pull request is closed."
+              variant="outline"
+            >
+              PR #{service.prNumber}
+            </Badge>
+          )}
+          {service.watching ? (
+            <Badge
+              title="Post-deploy watch running: Noddle is still observing this service and will roll it back if it starts crash-looping."
+              variant="outline"
+            >
+              watching
+            </Badge>
+          ) : null}
+        </>
       }
       tone={status.tone}
       toneLabel={status.label}

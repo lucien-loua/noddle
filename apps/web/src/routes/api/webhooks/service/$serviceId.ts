@@ -11,7 +11,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
-import { parseWebhookPush, verifyWebhookSignature } from "@/lib/webhook.server";
+import { destroyPreview, ensurePreview } from "@/lib/preview.server";
+import {
+  parseWebhookPullRequest,
+  parseWebhookPush,
+  verifyWebhookSignature,
+} from "@/lib/webhook.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -42,6 +47,32 @@ export const Route = createFileRoute("/api/webhooks/service/$serviceId")({
 
         if (!verifyWebhookSignature(request.headers, rawBody, secret)) {
           return new Response("signature invalide", { status: 401 });
+        }
+
+        // Le MÊME webhook porte les deux événements : un push déploie la
+        // branche configurée, une pull request gère sa prévisualisation. Les
+        // deux charges utiles sont disjointes — un push n'a pas d'`action`,
+        // une PR n'a pas de `ref` — donc l'ordre de lecture est indifférent.
+        const pr = parseWebhookPullRequest(rawBody);
+        if (pr) {
+          // Une PR venue d'un FORK n'obtient AUCUNE prévisualisation. Une
+          // prévisualisation hérite des variables du parent, secrets compris ;
+          // exécuter du code extérieur avec eux les mettrait dehors.
+          if (pr.fromFork) {
+            return Response.json({ ignored: "pull request from a fork" });
+          }
+          const outcome = pr.closed
+            ? await destroyPreview({
+                parentServiceId: serviceId,
+                prNumber: pr.number,
+              })
+            : await ensurePreview({
+                commitSha: pr.commitSha,
+                headBranch: pr.headBranch,
+                parentServiceId: serviceId,
+                prNumber: pr.number,
+              });
+          return Response.json(outcome);
         }
 
         const push = parseWebhookPush(rawBody);
