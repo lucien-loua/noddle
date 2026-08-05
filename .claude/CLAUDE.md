@@ -906,6 +906,41 @@ aucun conteneur de registre, sans la moindre erreur et avec un code de sortie
 un fichier compose peut déclarer des volumes, et un volume ne se déplace pas.
 Elles poussent quand même au registre.
 
+**Le répertoire de build est `/var/lib/noddle/builds`, PAS `/opt/noddle`.**
+`fetchSource` commence par un `rm -rf` dessus ; tant qu'il vivait dans
+`/opt/noddle`, ce `rm -rf` visait l'intérieur de l'installation Noddle — sur la
+machine auto-hébergée, la seule chose qui ne se reconstruit pas.
+`assertWipableDir` (build-engine) refuse en plus tout chemin à moins de trois
+segments, à segment vide ou contenant `..` : même philosophie qu'`assertNotFlag`
+à côté, le moteur ne fait pas confiance à ses appelants.
+
+**Le trou de placement `sameConnection` était à QUATRE endroits, et je n'en ai
+corrigé qu'un au premier passage.** À noter parce que l'erreur n'est pas le bug
+mais la méthode : après avoir identifié un motif fautif, faire le `grep` avant
+de le déclarer réglé.
+
+Le motif `sameConnection ? undefined : nodeId` traitait la contrainte de
+placement comme un no-op quand le serveur de la ressource ÉTAIT le manager.
+Vrai sur un cluster à UN nœud, faux dès qu'un worker a rejoint : la ressource
+perdait sa contrainte alors que son image — ou son volume — n'existe que là.
+Présent dans `deploy.ts`, `compose.ts` (deux sites) et `database.ts`.
+
+**Il ne s'est révélé que parce que le cluster de dev est passé à deux nœuds.**
+`verify-stack.ts` passait 10/10 en Phase 2 sur une machine seule, où la
+contrainte manquante était sans conséquence ; il est tombé à 2/1 dès qu'un
+worker a rejoint, sur « pull access denied » — Swarm avait planifié la pile sur
+le nœud qui n'avait pas l'image. **Conséquence de méthode : un test
+mono-machine ne prouve rien sur le placement.**
+
+Le cas de `database.ts` est le plus grave et n'était couvert par AUCUN test :
+le volume nommé d'une base n'existe que sur son nœud, et Swarm ne résout pas le
+stockage distribué. Déplacée, la base démarrerait sur un volume VIDE — sans
+erreur, avec l'air de fonctionner. `verify-database.ts` assert désormais la
+contrainte, et retire les VOLUMES entre deux exécutions : un volume nommé
+survit à `removeService`, donc la seconde exécution provisionnait un mot de
+passe neuf sur des données existantes et échouait en accusant le code (même
+piège que celui déjà relevé pour `verify-backup.ts`).
+
 **Passe UI, le 2026-08-04.** L'interface était « trop basique », ne
 respectait pas les principes de regroupement, et des dialogues débordaient
 du viewport. Trois défauts structurels, tous vérifiés au navigateur en
