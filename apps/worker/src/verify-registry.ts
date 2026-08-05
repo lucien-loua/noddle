@@ -49,7 +49,7 @@ import {
   registryImageTag,
 } from "#registry";
 import { sweepRegistry } from "#registry-sweep";
-import { removeService } from "#swarm";
+import { removeService, swarmServiceName } from "#swarm";
 import { runServiceTeardown } from "#teardown";
 
 const execFileAsync = promisify(execFile);
@@ -339,7 +339,19 @@ try {
       "git add -A && git commit -q -m init"
   );
 
-  await removeService(managerDocker, SERVICE_NAME);
+  // Par PRÉFIXE, pas par nom exact : le nom Swarm porte désormais un suffixe
+  // tiré de l'identifiant du service, donc il change à chaque exécution. Une
+  // exécution interrompue laisserait sinon un orphelin par passage.
+  const leftovers = await managerDocker.listServices({
+    filters: JSON.stringify({ name: [SERVICE_NAME] }),
+  });
+  for (const old of leftovers) {
+    const name = old.Spec?.Name;
+    if (name?.startsWith(`${SERVICE_NAME}-`) || name === SERVICE_NAME) {
+      // biome-ignore lint/performance/noAwaitInLoops: nettoyage séquentiel, volontaire
+      await removeService(managerDocker, name);
+    }
+  }
 
   const [proj] = await db.insert(projects).values({ name: "reg" }).returning();
   const [env] = await db
@@ -363,6 +375,9 @@ try {
   if (!svc) {
     throw new Error("insertion service échouée");
   }
+  // Le nom Swarm n'est plus `services.name` : l'unicité en base est par
+  // environnement, celle de Swarm est globale. Le dépôt du registre suit.
+  const swarmName = swarmServiceName(svc);
 
   const [dep] = await db
     .insert(deployments)
@@ -398,7 +413,7 @@ try {
     `curl -sS --cacert /etc/docker/certs.d/${registry.host}/ca.crt ` +
       `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/_catalog`
   );
-  if (catalog.stdout.includes(SERVICE_NAME)) {
+  if (catalog.stdout.includes(swarmName)) {
     ok(`le registre expose le dépôt : ${catalog.stdout.trim()}`);
   } else {
     ko(`dépôt absent du catalogue : ${catalog.stdout.trim()}`);
@@ -438,7 +453,7 @@ try {
     image: string;
   }> => {
     const list = (await managerDocker.listServices({
-      filters: JSON.stringify({ name: [SERVICE_NAME] }),
+      filters: JSON.stringify({ name: [swarmName] }),
     })) as unknown as Array<{
       Spec?: {
         Name?: string;
@@ -448,7 +463,7 @@ try {
         };
       };
     }>;
-    const found = list.find((s) => s.Spec?.Name === SERVICE_NAME);
+    const found = list.find((s) => s.Spec?.Name === swarmName);
     return {
       constraints: found?.Spec?.TaskTemplate?.Placement?.Constraints ?? [],
       image: found?.Spec?.TaskTemplate?.ContainerSpec?.Image ?? "",
@@ -519,7 +534,7 @@ try {
   while (Date.now() < moveDeadline) {
     // biome-ignore lint/performance/noAwaitInLoops: sondage volontaire
     const tasks = (await managerDocker.listTasks({
-      filters: JSON.stringify({ service: [SERVICE_NAME] }),
+      filters: JSON.stringify({ service: [swarmName] }),
     })) as unknown as Array<{
       NodeID?: string;
       Status?: { State?: string };
@@ -687,7 +702,7 @@ try {
   // puisque toutes les couches restent référencées par les autres versions —
   // et « 0 Mo récupéré » serait alors indiscernable d'un GC cassé. Mesuré : la
   // première tentative de cette vérification est tombée exactement là-dessus.
-  const fatTag = registryImageTag(registry, SERVICE_NAME, `fat-${Date.now()}`);
+  const fatTag = registryImageTag(registry, swarmName, `fat-${Date.now()}`);
   await exec(
     managerSsh,
     "sudo rm -rf /tmp/fat && mkdir -p /tmp/fat && cd /tmp/fat && " +
@@ -716,7 +731,7 @@ try {
     const [pad] = await db
       .insert(deployments)
       .values({
-        imageTag: registryImageTag(registry, SERVICE_NAME, `pad-${i}`),
+        imageTag: registryImageTag(registry, swarmName, `pad-${i}`),
         serviceId: svc.id,
         status: "succeeded",
         trigger: "manual",
@@ -793,9 +808,9 @@ try {
   });
 
   const swarmAfter = await managerDocker.listServices({
-    filters: JSON.stringify({ name: [SERVICE_NAME] }),
+    filters: JSON.stringify({ name: [swarmName] }),
   });
-  if (swarmAfter.every((s) => s.Spec?.Name !== SERVICE_NAME)) {
+  if (swarmAfter.every((s) => s.Spec?.Name !== swarmName)) {
     ok("le service Swarm a disparu");
   } else {
     ko("le service Swarm tourne encore — Traefik y route toujours");
@@ -818,7 +833,7 @@ try {
   const catalogAfter = await exec(
     managerSsh,
     `curl -sS --cacert /etc/docker/certs.d/${registry.host}/ca.crt ` +
-      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/${SERVICE_NAME}/tags/list`
+      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/${swarmName}/tags/list`
   );
   // Un dépôt vidé répond `"tags":null` — la clé existe, la liste est nulle.
   if (

@@ -22,6 +22,32 @@ const SECOND_NS = 1_000_000_000;
  */
 export const UPDATE_MONITOR_SECONDS = 45;
 
+/**
+ * Le nom du service Swarm — et pourquoi ce n'est PAS `services.name`.
+ *
+ * L'unicité en base est `(environment_id, name)`. Celle de Swarm est GLOBALE.
+ * Deux services `api`, l'un en `production` et l'autre en `staging`, désignent
+ * donc le MÊME service Swarm : le second déploiement écrase le premier, sans
+ * la moindre erreur. Et ce n'est pas théorique — `connectRepo` expose déjà
+ * `environmentName`, donc le cas s'atteint depuis le formulaire aujourd'hui.
+ *
+ * Pourquoi un suffixe d'identifiant plutôt que `projet-environnement-service`,
+ * qui se lirait mieux : un nom de service Swarm devient un nom DNS sur le
+ * réseau overlay, donc 63 octets au plus. Projet et environnement font jusqu'à
+ * 64 caractères CHACUN — la forme lisible ne tient pas, et la tronquer
+ * rouvrirait la collision qu'elle est censée fermer.
+ *
+ * Huit hexadécimaux d'un UUID : 48 + 1 + 8 = 57 au pire, sous la limite. Le
+ * nom lisible reste en tête, donc `docker service ls | grep api` fonctionne
+ * toujours.
+ */
+export function swarmServiceName(service: {
+  id: string;
+  name: string;
+}): string {
+  return `${service.name}-${service.id.replaceAll("-", "").slice(0, 8)}`;
+}
+
 export interface DeploySpec {
   /** Déjà déchiffrées. Ne jamais journaliser ce tableau. */
   env: Record<string, string>;

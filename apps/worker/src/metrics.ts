@@ -23,6 +23,7 @@ import {
 } from "@noddle/ssh-executor";
 import { eq, lt } from "drizzle-orm";
 import { connectTo, type DeployContext } from "#deploy";
+import { swarmServiceName } from "#swarm";
 
 /** Sept jours. Au-delà il faudrait agréger, donc une base temporelle. */
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -202,7 +203,7 @@ async function sampleServer(
     const docker = dockerClient(client);
     const present = await swarmContainersByService(docker);
     for (const service of running) {
-      const container = present.get(service.name);
+      const container = present.get(swarmServiceName(service));
       if (!container) {
         continue;
       }

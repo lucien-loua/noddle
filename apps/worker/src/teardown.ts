@@ -22,7 +22,7 @@ import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { BUILD_ROOT, connectForDeploy, type DeployContext } from "#deploy";
 import { deleteManifest, garbageCollect, parseRegistryRef } from "#registry";
-import { removeService } from "#swarm";
+import { removeService, swarmServiceName } from "#swarm";
 
 /** Le conteneur du registre dans la pile Compose du plan de contrôle. */
 const REGISTRY_CONTAINER = "noddle-registry-1";
@@ -59,7 +59,7 @@ export async function runServiceTeardown(
     const managerDocker = sameConnection
       ? dockerClient(buildClient)
       : dockerClient(managerClient);
-    await removeService(managerDocker, service.name);
+    await removeService(managerDocker, swarmServiceName(service));
 
     // ── 2. la base — l'écran peut désormais dire la vérité ───────────────
     // `deployments`, `deployment_logs`, `env_vars` et `service_metrics`

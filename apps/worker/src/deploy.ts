@@ -59,6 +59,7 @@ import {
   isDeployAccepted,
   type RegistryAuth,
   readRunningNodeId,
+  swarmServiceName,
 } from "#swarm";
 import { watchUntilFor } from "#watch";
 
@@ -406,10 +407,14 @@ export async function runDeploy(
     // qui porte le fait « cette image est portable ». Il est écrit tel quel
     // dans l'historique, et c'est ce qui permettra plus tard de décider du
     // placement d'un rollback sans rien deviner.
+    // Le nom Swarm, pas `services.name` : l'unicité en base est par
+    // environnement, celle de Swarm est globale. Voir `swarmServiceName`.
+    // Le dépôt du registre suit le même nom, pour la même raison.
+    const swarmName = swarmServiceName(service);
     const version = `${sha.slice(0, 12)}-${Date.now()}`;
     const imageTag = ctx.registry
-      ? registryImageTag(ctx.registry, service.name, version)
-      : `${service.name}:${version}`;
+      ? registryImageTag(ctx.registry, swarmName, version)
+      : `${swarmName}:${version}`;
     await db
       .update(deployments)
       .set({ commitSha: sha, imageTag, status: "deploying" })
@@ -466,13 +471,13 @@ export async function runDeploy(
         certResolver: ctx.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
-        serviceName: service.name,
+        serviceName: swarmName,
       }),
       networkName: ctx.networkName,
       placementNodeId,
       port: service.port,
       registryAuth: authFor(ctx.registry),
-      serviceName: service.name,
+      serviceName: swarmName,
     });
 
     const finishedAt = new Date();
@@ -509,7 +514,7 @@ export async function runDeploy(
     // Où la task tourne VRAIMENT, et non où on l'avait demandée. Avec une
     // image portable, c'est Swarm qui a choisi : le tableau de bord doit
     // afficher son choix, pas notre intention.
-    const nodeId = await readRunningNodeId(managerDocker, service.name);
+    const nodeId = await readRunningNodeId(managerDocker, swarmName);
     await db
       .update(deployments)
       .set({
@@ -648,6 +653,7 @@ export async function redeployImage(
     // Pas de build : l'image existe déjà. C'est précisément ce qui rend le
     // retour arrière instantané, et possible vers N'IMPORTE QUELLE version de
     // l'historique — Swarm, lui, ne garde qu'une spec antérieure.
+    const swarmName = swarmServiceName(service);
     const outcome = await deployService(managerDocker, {
       env,
       image: opts.imageTag,
@@ -655,13 +661,13 @@ export async function redeployImage(
         certResolver: ctx.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
-        serviceName: service.name,
+        serviceName: swarmName,
       }),
       networkName: ctx.networkName,
       placementNodeId,
       port: service.port,
       registryAuth: authFor(ctx.registry),
-      serviceName: service.name,
+      serviceName: swarmName,
     });
 
     const accepted = isDeployAccepted(outcome.updateState);
@@ -670,7 +676,7 @@ export async function redeployImage(
       .set({
         finishedAt: new Date(),
         nodeId: accepted
-          ? await readRunningNodeId(managerDocker, service.name)
+          ? await readRunningNodeId(managerDocker, swarmName)
           : null,
         status: accepted ? "succeeded" : "rolled_back",
         swarmUpdateState: outcome.updateState,

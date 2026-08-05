@@ -21,6 +21,7 @@ import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import { listComposeServiceKeys, redeployStack } from "#compose";
 import { type DeployContext, redeployImage } from "#deploy";
 import { notify } from "#notify";
+import { swarmServiceName } from "#swarm";
 import { inspectServiceHealth } from "#watch";
 
 export interface SweepResult {
@@ -89,7 +90,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
 
         const verdict = await inspectServiceHealth(
           docker,
-          service.name,
+          swarmServiceName(service),
           dep.finishedAt ?? dep.createdAt
         );
         if (!verdict.crashLooping) {
