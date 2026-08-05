@@ -151,7 +151,7 @@ export async function provisionDatabase(
     with: { server: true },
   });
   if (!database) {
-    throw new Error(`base de données introuvable : ${databaseId}`);
+    throw new Error(`database not found: ${databaseId}`);
   }
 
   const spec = ENGINE_SPECS[database.engine];

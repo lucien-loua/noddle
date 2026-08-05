@@ -206,7 +206,7 @@ export async function waitForRunningTask(
   }
 
   throw new Error(
-    `le service ${serviceName} n'a pas convergé en ${timeoutMs / 1000}s${lastError ? ` — ${lastError}` : ""}`
+    `service ${serviceName} did not converge within ${timeoutMs / 1000}s${lastError ? ` — ${lastError}` : ""}`
   );
 }
 
@@ -426,9 +426,7 @@ export async function getSwarmNodeId(docker: DockerApi): Promise<string> {
   const info = (await docker.info()) as { Swarm?: { NodeID?: string } };
   const nodeId = info.Swarm?.NodeID;
   if (!nodeId) {
-    throw new Error(
-      "ce nœud n'a pas d'ID Swarm — a-t-il bien rejoint le cluster ?"
-    );
+    throw new Error("this node has no Swarm ID — did it join the cluster?");
   }
   return nodeId;
 }

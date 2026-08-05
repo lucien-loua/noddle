@@ -66,7 +66,7 @@ async function scaleService(
   });
   const existing = list.find((s) => s.Spec?.Name === serviceName);
   if (!existing) {
-    throw new Error(`service Swarm introuvable : ${serviceName}`);
+    throw new Error(`Swarm service not found: ${serviceName}`);
   }
 
   const spec = existing.Spec as Record<string, unknown>;
@@ -276,7 +276,7 @@ export async function runRestore(
     })
     .returning();
   if (!safety) {
-    throw new Error("création de la sauvegarde de sûreté échouée");
+    throw new Error("could not create the safety backup");
   }
   await runBackup(ctx, safety.id);
 

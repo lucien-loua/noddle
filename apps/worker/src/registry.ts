@@ -134,7 +134,7 @@ export async function ensureRegistryTrust(
     ]);
     if (res.code !== 0) {
       throw new Error(
-        `dépôt de l'AC du registre impossible : ${res.stderr.trim() || res.stdout.trim()}`
+        `could not install the registry CA: ${res.stderr.trim() || res.stdout.trim()}`
       );
     }
   } finally {
@@ -262,7 +262,7 @@ export async function pushImage(
 ): Promise<void> {
   if (!o.imageTag.startsWith(`${registry.host}/`)) {
     throw new Error(
-      `image à pousser non qualifiée par le registre : ${o.imageTag}`
+      `image to push is not qualified by the registry: ${o.imageTag}`
     );
   }
 
@@ -271,7 +271,7 @@ export async function pushImage(
   // fichier avec l'umask de la session, et c'est le répertoire qui le protège.
   const made = await execArgv(client, ["mkdir", "-p", "-m", "700", dir]);
   if (made.code !== 0) {
-    throw new Error(`répertoire d'identifiants impossible : ${made.stderr}`);
+    throw new Error(`could not create credentials directory: ${made.stderr}`);
   }
 
   try {
@@ -292,7 +292,7 @@ export async function pushImage(
         .slice(-6)
         .join("\n");
       throw new Error(
-        `push vers le registre échoué (code ${res.code})\n${tail}`
+        `push to the registry failed (code ${res.code})\n${tail}`
       );
     }
   } finally {
@@ -483,7 +483,7 @@ export async function garbageCollect(
   ]);
   if (res.code !== 0) {
     throw new Error(
-      `garbage-collect a échoué (code ${res.code}) : ${res.stderr.trim().split("\n").slice(-3).join(" ")}`
+      `garbage-collect failed (code ${res.code}): ${res.stderr.trim().split("\n").slice(-3).join(" ")}`
     );
   }
 }

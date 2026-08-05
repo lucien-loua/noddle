@@ -68,7 +68,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
     where: eq(servers.role, "manager"),
   });
   if (!manager) {
-    throw new Error("aucun manager Swarm enregistré");
+    throw new Error("no Swarm manager registered");
   }
   const privateKey = decryptSecret(
     manager.sshPrivateKeyEncrypted,

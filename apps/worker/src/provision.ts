@@ -59,7 +59,7 @@ export async function provisionServer(
     where: eq(servers.id, serverId),
   });
   if (!server) {
-    throw new Error(`serveur introuvable : ${serverId}`);
+    throw new Error(`server not found: ${serverId}`);
   }
 
   const manager = await ctx.db.query.servers.findFirst({
@@ -69,9 +69,9 @@ export async function provisionServer(
     await markFailed(
       ctx,
       serverId,
-      "aucun manager Swarm enregistré — l'installateur a-t-il tourné ?"
+      "no Swarm manager registered — has the installer run?"
     );
-    throw new Error("aucun manager Swarm enregistré");
+    throw new Error("no Swarm manager registered");
   }
 
   let client: Awaited<ReturnType<typeof connect>> | undefined;
@@ -129,7 +129,7 @@ export async function provisionServer(
       };
       const token = swarmInfo.JoinTokens?.Worker;
       if (!token) {
-        throw new Error("jeton de jonction Swarm introuvable sur le manager");
+        throw new Error("Swarm join token not found on the manager");
       }
 
       // `execArgv`, pas `exec` : `token` et l'hôte du manager ne sont pas des
@@ -145,7 +145,7 @@ export async function provisionServer(
       ]);
       if (join.code !== 0) {
         throw new Error(
-          `échec de la jonction au cluster Swarm : ${join.stderr.trim() || join.stdout.trim()}`
+          `could not join the Swarm cluster: ${join.stderr.trim() || join.stdout.trim()}`
         );
       }
     }

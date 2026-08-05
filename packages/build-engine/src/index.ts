@@ -32,7 +32,7 @@ function check(stage: string, res: ExecResult): ExecResult {
       .join("\n");
     throw new BuildError(
       stage,
-      `${stage} a échoué (code ${res.code})\n${tail}`,
+      `${stage} failed (code ${res.code})\n${tail}`,
       res.code
     );
   }
@@ -107,7 +107,7 @@ export async function ensureCappedBuilder(
     return;
   }
   check(
-    "création du builder",
+    "builder creation",
     await execArgv(
       client,
       [
@@ -156,7 +156,7 @@ function assertNotFlag(value: string, label: string): void {
   if (value.startsWith("-")) {
     throw new BuildError(
       "validation",
-      `${label} ne peut pas commencer par « - » : lu comme un drapeau par git`,
+      `${label} cannot start with "-": git would read it as a flag`,
       null
     );
   }
@@ -200,7 +200,7 @@ function assertWipableDir(dir: string): void {
   if (bad) {
     throw new BuildError(
       "validation",
-      `répertoire de travail refusé : « ${dir} » — trop proche de la racine ou mal formé, et il serait effacé`,
+      `working directory refused: "${dir}" — too close to the root or malformed, and it would be erased`,
       null
     );
   }
@@ -224,21 +224,21 @@ export async function fetchSource(
 ): Promise<string> {
   // Le moteur revalide ce que @noddle/shared a déjà validé côté API. Un jour
   // un appelant oubliera, et ce jour-là c'est une RCE sur le serveur du client.
-  assertNotFlag(o.repoUrl, "URL du dépôt");
-  assertNotFlag(o.branch, "nom de branche");
+  assertNotFlag(o.repoUrl, "repository URL");
+  assertNotFlag(o.branch, "branch name");
   assertWipableDir(o.dir);
   if (!SAFE_REPO_URL.test(o.repoUrl)) {
-    throw new BuildError("validation", "URL de dépôt refusée", null);
+    throw new BuildError("validation", "repository URL refused", null);
   }
   if (!SAFE_BRANCH.test(o.branch)) {
-    throw new BuildError("validation", "nom de branche refusé", null);
+    throw new BuildError("validation", "branch name refused", null);
   }
   if (o.commitSha && !SAFE_SHA.test(o.commitSha)) {
-    throw new BuildError("validation", "SHA de commit refusé", null);
+    throw new BuildError("validation", "commit SHA refused", null);
   }
 
   check(
-    "préparation du répertoire",
+    "directory preparation",
     await exec(
       client,
       `sudo rm -rf ${quoteArg(o.dir)} && sudo mkdir -p ${quoteArg(o.dir)} && sudo chown -R "$USER" ${quoteArg(o.dir)}`
@@ -338,7 +338,7 @@ export async function buildImage(
   );
 
   check(
-    "vérification du plan nixpacks",
+    "nixpacks plan check",
     await exec(client, `test -f ${quoteArg(`${o.dir}/.nixpacks/Dockerfile`)}`)
   );
 
@@ -386,9 +386,9 @@ export async function buildImageFromDockerfile(
   // `contextDir` et `dockerfilePath` viennent d'un fichier compose fourni par
   // l'utilisateur, jamais d'une constante du code — même prudence qu'à
   // l'entrée de `fetchSource`.
-  assertNotFlag(o.contextDir, "répertoire de contexte");
-  assertNotFlag(o.dockerfilePath, "chemin du Dockerfile");
-  assertNotFlag(o.imageTag, "tag d'image");
+  assertNotFlag(o.contextDir, "context directory");
+  assertNotFlag(o.dockerfilePath, "Dockerfile path");
+  assertNotFlag(o.imageTag, "image tag");
 
   check(
     "docker buildx build",

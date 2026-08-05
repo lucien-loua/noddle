@@ -270,7 +270,7 @@ export async function connectForDeploy(
   });
   if (!manager) {
     throw new Error(
-      "aucun manager Swarm enregistré — l'installateur devrait en avoir créé un"
+      "no Swarm manager registered — the installer should have created one"
     );
   }
 
@@ -352,7 +352,7 @@ export async function runDeploy(
     with: { service: { with: { envVars: true, server: true } } },
   });
   if (!deployment) {
-    throw new Error(`déploiement introuvable : ${data.deploymentId}`);
+    throw new Error(`deployment not found: ${data.deploymentId}`);
   }
 
   const { service } = deployment;
@@ -376,7 +376,9 @@ export async function runDeploy(
 
   try {
     if (!service.gitRepoUrl) {
-      throw new Error("service sans dépôt git : source_type non supporté ici");
+      throw new Error(
+        "service has no git repository: this source_type is not supported here"
+      );
     }
 
     let sameConnection: boolean;
@@ -390,7 +392,7 @@ export async function runDeploy(
     const cap = computeBuildCap({
       totalMemoryMb: server.totalMemoryMb ?? 2048,
     });
-    sink.write(`▸ build plafonné à ${cap.memory}\n`);
+    sink.write(`▸ build capped at ${cap.memory}\n`);
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
     const workDir = `${BUILD_ROOT}/${service.id}`;
@@ -428,7 +430,7 @@ export async function runDeploy(
     });
 
     if (ctx.registry) {
-      sink.write("▸ envoi vers le registre\n");
+      sink.write("▸ pushing image to the registry\n");
       // `removeLocal` : le nœud de build cesse d'accumuler. L'image vit
       // désormais dans le registre, et Swarm la tirera de là — y compris sur
       // ce nœud-ci s'il est celui qui l'exécute.
@@ -463,7 +465,7 @@ export async function runDeploy(
       : dockerClient(managerClient);
     await ensureOverlayNetwork(managerDocker, ctx.networkName);
 
-    sink.write("▸ bascule Swarm\n");
+    sink.write("▸ Swarm rollout\n");
     const outcome = await deployService(managerDocker, {
       env,
       image: imageTag,
@@ -487,7 +489,7 @@ export async function runDeploy(
     // pendant que l'ancienne version sert.
     if (!isDeployAccepted(outcome.updateState)) {
       sink.write(
-        `✗ Swarm a annulé la bascule (${outcome.updateState}) — l'ancienne version sert toujours\n`
+        `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`
       );
       await db
         .update(deployments)
@@ -510,7 +512,7 @@ export async function runDeploy(
       return;
     }
 
-    sink.write("✓ déploiement accepté\n");
+    sink.write("✓ deployment accepted\n");
     // Où la task tourne VRAIMENT, et non où on l'avait demandée. Avec une
     // image portable, c'est Swarm qui a choisi : le tableau de bord doit
     // afficher son choix, pas notre intention.
@@ -588,7 +590,7 @@ export async function redeployImage(
     with: { envVars: true, server: true },
   });
   if (!service) {
-    throw new Error(`service introuvable : ${opts.serviceId}`);
+    throw new Error(`service not found: ${opts.serviceId}`);
   }
 
   // Le commit que cette image porte, repris du déploiement qui l'a construite.

@@ -87,12 +87,12 @@ function parseCompose(text: string, path: string): ComposeFile {
     doc = parseYaml(text);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`fichier compose invalide (${path}) : ${message}`, {
+    throw new Error(`invalid compose file (${path}): ${message}`, {
       cause: err,
     });
   }
   if (typeof doc !== "object" || doc === null || !("services" in doc)) {
-    throw new Error(`fichier compose sans section "services" (${path})`);
+    throw new Error(`compose file has no "services" section (${path})`);
   }
   return doc as ComposeFile;
 }
@@ -355,7 +355,7 @@ async function buildComposeServices(opts: {
 
   for (const [key, svc] of Object.entries(opts.services)) {
     if (!SAFE_COMPOSE_KEY.test(key)) {
-      throw new Error(`nom de service compose refusé : ${JSON.stringify(key)}`);
+      throw new Error(`compose service name refused: ${JSON.stringify(key)}`);
     }
     if (!svc.build) {
       continue;
@@ -439,7 +439,7 @@ export async function runStackDeploy(
     const cap = computeBuildCap({
       totalMemoryMb: server.totalMemoryMb ?? 2048,
     });
-    sink.write(`▸ build plafonné à ${cap.memory}\n`);
+    sink.write(`▸ build capped at ${cap.memory}\n`);
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
     const workDir = `${BUILD_ROOT}/stacks/${stack.id}`;
@@ -458,7 +458,7 @@ export async function runStackDeploy(
     const composePath = `${workDir}/${stack.composeFilePath}`;
     const catResult = await execArgv(buildClient, ["cat", composePath]);
     if (catResult.code !== 0) {
-      throw new Error(`fichier compose introuvable : ${stack.composeFilePath}`);
+      throw new Error(`compose file not found: ${stack.composeFilePath}`);
     }
     const rawText = catResult.stdout;
     await db
@@ -469,7 +469,7 @@ export async function runStackDeploy(
     const doc = parseCompose(rawText, stack.composeFilePath);
     const services = doc.services ?? {};
 
-    sink.write("▸ construction des services\n");
+    sink.write("▸ building services\n");
     const serviceImages = await buildComposeServices({
       buildClient,
       onServiceStart: (key) => sink.write(`▸ ${key}\n`),
@@ -513,7 +513,7 @@ export async function runStackDeploy(
       stackName: stack.name,
     });
 
-    sink.write("▸ bascule Swarm (docker stack deploy)\n");
+    sink.write("▸ Swarm rollout (docker stack deploy)\n");
     const { accepted, swarmUpdateStates } = await writeAndDeployStack(ctx, {
       doc,
       managerClient,
@@ -538,7 +538,7 @@ export async function runStackDeploy(
       return;
     }
 
-    sink.write("✓ déploiement accepté\n");
+    sink.write("✓ deployment accepted\n");
     await db
       .update(stackDeployments)
       .set({
@@ -598,7 +598,7 @@ export async function redeployStack(
     with: { server: true },
   });
   if (!stack) {
-    throw new Error(`pile introuvable : ${opts.stackId}`);
+    throw new Error(`stack not found: ${opts.stackId}`);
   }
 
   const source = await ctx.db.query.stackDeployments.findFirst({
@@ -622,7 +622,7 @@ export async function redeployStack(
     })
     .returning();
   if (!created) {
-    throw new Error("création du déploiement de pile impossible");
+    throw new Error("could not create stack deployment");
   }
 
   const { buildClient, managerClient, sameConnection } = await connectForDeploy(

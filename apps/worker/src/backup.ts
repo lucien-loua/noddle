@@ -127,7 +127,7 @@ export async function findDatabaseContainer(
     }
   );
   if (code !== 0) {
-    throw new Error(`docker ps a échoué (code ${code}) : ${stderr}`);
+    throw new Error(`docker ps failed (code ${code}): ${stderr}`);
   }
   const id = value
     .split("\n")
@@ -135,7 +135,7 @@ export async function findDatabaseContainer(
     .find((l) => l !== "");
   if (!id) {
     throw new Error(
-      `aucun conteneur en cours pour ${serviceName} — la base tourne-t-elle ?`
+      `no running container for ${serviceName} — is the database up?`
     );
   }
   return id;
@@ -160,7 +160,7 @@ export async function runBackup(
     with: { database: { with: { server: true } } },
   });
   if (!backup) {
-    throw new Error(`sauvegarde introuvable : ${backupId}`);
+    throw new Error(`backup not found: ${backupId}`);
   }
   const { database } = backup;
   const destination = await loadDestination(ctx);
