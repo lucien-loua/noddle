@@ -18,6 +18,7 @@ import {
   connect,
   disconnect,
   dockerClient,
+  exec,
   execArgv,
 } from "@noddle/ssh-executor";
 import { eq, inArray } from "drizzle-orm";
@@ -91,6 +92,33 @@ try {
   managerSsh = await connect({ host: HOST, privateKey, user: USER });
   await removeService(dockerClient(managerSsh), "noddle-db-probe-postgres");
   await removeService(dockerClient(managerSsh), "noddle-db-probe-redis");
+
+  // Le VOLUME, pas seulement le service : un volume nommé SURVIT à
+  // `removeService`. Sans ça, la seconde exécution provisionne une base avec
+  // un mot de passe NEUF sur un répertoire de données EXISTANT — or Postgres
+  // n'applique `POSTGRES_PASSWORD` qu'à la première initialisation. Le test
+  // échouait alors sur « password authentication failed » en accusant le code,
+  // alors que la faute était à son propre décor. Même piège que celui déjà
+  // relevé pour `verify-backup.ts`.
+  //
+  // Une boucle de tentatives : le volume peut rester verrouillé quelques
+  // instants par le conteneur qu'on vient de retirer.
+  for (const name of ["noddle-db-probe-postgres", "noddle-db-probe-redis"]) {
+    for (let i = 0; i < 10; i += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: réessai volontaire
+      const res = await execArgv(managerSsh, [
+        "sudo",
+        "docker",
+        "volume",
+        "rm",
+        name,
+      ]);
+      if (res.code === 0 || res.stderr.includes("no such volume")) {
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
 
   const [proj] = await db
     .insert(projects)
@@ -250,6 +278,41 @@ try {
       again.id
     );
     ok("second provisionnement rejouable sans erreur (idempotent)");
+  }
+
+  // ── la contrainte de placement : le test qui manquait ────────────────
+  //
+  // Une base est le cas où elle compte le PLUS. Son volume nommé n'existe que
+  // sur SON nœud, et Swarm ne résout pas le stockage distribué : sans
+  // contrainte, un cluster à plusieurs nœuds peut la planifier ailleurs, où
+  // elle démarrerait sur un volume VIDE — sans erreur, avec l'air de marcher.
+  //
+  // Le code d'avant sautait la contrainte quand la base était hébergée par le
+  // manager, en la croyant sans effet : vrai sur un nœud, faux dès le second.
+  // Rien ici ne le voyait, puisque ce test n'inspectait que la santé.
+  const nodeId = (
+    await exec(managerSsh, "sudo docker info --format '{{.Swarm.NodeID}}'")
+  ).stdout.trim();
+  const managerDocker = dockerClient(managerSsh);
+  for (const name of ["noddle-db-probe-postgres", "noddle-db-probe-redis"]) {
+    // biome-ignore lint/performance/noAwaitInLoops: deux services, séquentiel volontaire
+    const list = (await managerDocker.listServices({
+      filters: JSON.stringify({ name: [name] }),
+    })) as unknown as {
+      Spec?: {
+        Name?: string;
+        TaskTemplate?: { Placement?: { Constraints?: string[] } };
+      };
+    }[];
+    const found = list.find((s) => s.Spec?.Name === name);
+    const constraints = found?.Spec?.TaskTemplate?.Placement?.Constraints ?? [];
+    if (constraints.includes(`node.id==${nodeId}`)) {
+      ok(`${name} est épinglée à son nœud — son volume ne voyage pas`);
+    } else {
+      ko(
+        `${name} sans contrainte : [${constraints.join(", ")}] — Swarm pourrait la déplacer sur un volume vide`
+      );
+    }
   }
 } catch (e) {
   ko(`exception : ${e instanceof Error ? e.message : String(e)}`);

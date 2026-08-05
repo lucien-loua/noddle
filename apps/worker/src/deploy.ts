@@ -176,6 +176,20 @@ export async function runJob(
 export type ServerRow = typeof servers.$inferSelect;
 
 /**
+ * Où les dépôts sont clonés et construits, sur le serveur CIBLE.
+ *
+ * Pas `/opt/noddle`, qui est l'installation de Noddle elle-même. La nuance
+ * n'existe que sur la machine auto-hébergée — c'est-à-dire le cas courant, et
+ * la machine qu'on peut le moins se permettre d'abîmer : `fetchSource`
+ * commence par un `rm -rf` de ce répertoire, et le faire vivre à l'intérieur du
+ * dépôt git du plan de contrôle mettait la seule chose qui ne se reconstruit
+ * pas à portée d'un identifiant mal formé.
+ *
+ * `/var/lib/noddle` suit la convention déjà posée par `LOG_ROOT`.
+ */
+export const BUILD_ROOT = "/var/lib/noddle/builds";
+
+/**
  * N'importe quel déploiement encore « sous surveillance » pour ce service
  * cesse de l'être dès qu'un AUTRE déploiement devient le courant : sa fenêtre
  * ne porte plus sur la version qui sert réellement. Le laisser actif fait
@@ -369,7 +383,7 @@ export async function runDeploy(
     sink.write(`▸ build plafonné à ${cap.memory}\n`);
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
-    const workDir = `/opt/noddle/${service.id}`;
+    const workDir = `${BUILD_ROOT}/${service.id}`;
     const sha = await fetchSource(buildClient, {
       branch: service.gitBranch ?? "main",
       commitSha: deployment.commitSha ?? undefined,

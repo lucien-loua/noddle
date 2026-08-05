@@ -174,9 +174,18 @@ export async function provisionDatabase(
     // jamais via le manager quand les deux diffèrent.
     await ensureVolume(buildDocker, name);
 
-    const placementNodeId = sameConnection
-      ? undefined
-      : await getSwarmNodeId(buildDocker);
+    // TOUJOURS épinglée, sans condition. Une base est le cas où la contrainte
+    // compte le PLUS : son volume nommé n'existe que sur ce nœud, et Swarm ne
+    // résout pas le stockage distribué. Sans contrainte, un cluster à
+    // plusieurs nœuds peut planifier la base ailleurs — où elle démarrerait
+    // sur un volume VIDE, sans erreur, avec l'air de fonctionner.
+    //
+    // Le code d'avant la sautait quand la base était hébergée par le manager
+    // (`sameConnection`), en la croyant sans effet : ce n'est vrai que sur un
+    // cluster à un seul nœud. Même trou que dans `deploy.ts` et `compose.ts`,
+    // et c'est ici qu'il coûterait le plus cher.
+    const placementNodeId =
+      database.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
     const managerDocker = sameConnection
       ? buildDocker
       : dockerClient(managerClient);

@@ -178,6 +178,34 @@ const SAFE_SHA = /^[0-9a-f]{7,40}$/;
  */
 const SAFE_REPO_URL = /^(https:\/\/|ssh:\/\/|file:\/\/|git@[\w.-]+:)/;
 
+/**
+ * Un répertoire de travail que l'on s'autorise à EFFACER.
+ *
+ * `fetchSource` commence par `rm -rf` sur ce chemin. Il est construit par
+ * l'appelant à partir d'un identifiant de base — donc jamais d'une saisie
+ * utilisateur — mais c'est précisément le genre de certitude qui ne survit pas
+ * à un refactor : un identifiant vide, et `/var/lib/noddle/builds/` disparaît
+ * en entier. Même philosophie qu'`assertNotFlag` juste au-dessus : le moteur
+ * ne fait pas confiance à ses appelants.
+ *
+ * Trois segments au minimum, aucun vide, aucun `..` — ce qui écarte la racine,
+ * `/opt`, un chemin à barre oblique finale, et toute remontée.
+ */
+function assertWipableDir(dir: string): void {
+  const segments = dir.split("/");
+  const bad =
+    !dir.startsWith("/") ||
+    segments.length < 4 ||
+    segments.slice(1).some((s) => s === "" || s === "." || s === "..");
+  if (bad) {
+    throw new BuildError(
+      "validation",
+      `répertoire de travail refusé : « ${dir} » — trop proche de la racine ou mal formé, et il serait effacé`,
+      null
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Récupération du code
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,6 +226,7 @@ export async function fetchSource(
   // un appelant oubliera, et ce jour-là c'est une RCE sur le serveur du client.
   assertNotFlag(o.repoUrl, "URL du dépôt");
   assertNotFlag(o.branch, "nom de branche");
+  assertWipableDir(o.dir);
   if (!SAFE_REPO_URL.test(o.repoUrl)) {
     throw new BuildError("validation", "URL de dépôt refusée", null);
   }

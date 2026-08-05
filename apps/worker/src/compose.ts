@@ -34,7 +34,7 @@ import {
 } from "@noddle/ssh-executor";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import { BUILD_ROOT, connectForDeploy, type DeployContext } from "#deploy";
 import { createLogSink } from "#log-sink";
 import {
   ensureOverlayNetwork,
@@ -434,11 +434,7 @@ export async function runStackDeploy(
   let managerClient: SshClient | undefined;
 
   try {
-    let sameConnection: boolean;
-    ({ buildClient, managerClient, sameConnection } = await connectForDeploy(
-      ctx,
-      server
-    ));
+    ({ buildClient, managerClient } = await connectForDeploy(ctx, server));
 
     const cap = computeBuildCap({
       totalMemoryMb: server.totalMemoryMb ?? 2048,
@@ -446,7 +442,7 @@ export async function runStackDeploy(
     sink.write(`▸ build plafonné à ${cap.memory}\n`);
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
-    const workDir = `/opt/noddle/stacks/${stack.id}`;
+    const workDir = `${BUILD_ROOT}/stacks/${stack.id}`;
     const sha = await fetchSource(buildClient, {
       branch: stack.gitBranch,
       commitSha: deployment.commitSha ?? undefined,
@@ -490,11 +486,21 @@ export async function runStackDeploy(
       .where(eq(stackDeployments.id, deployment.id));
 
     const buildDocker = dockerClient(buildClient);
+    // TOUJOURS épinglée, sans condition — voir `placementFor` dans deploy.ts
+    // pour le raisonnement complet. Une pile ne va PAS au registre : ses
+    // images restent locales au nœud qui les a construites, donc la contrainte
+    // n'est jamais un no-op dès qu'un second nœud a rejoint le cluster.
+    //
+    // Le code d'avant la sautait quand le serveur de la pile était le manager
+    // (`sameConnection`), en la croyant sans effet. Mesuré : le planificateur
+    // posait la task sur le worker, qui répondait « pull access denied » sur
+    // une image construite localement — un déploiement qui « n'a pas convergé
+    // en 180 s » sans que la cause apparaisse.
+    //
     // Fait sur la connexion de BUILD, jamais celle du manager : c'est un fait
-    // LOCAL à ce nœud, même raison que le chemin mono-service.
-    const placementNodeId = sameConnection
-      ? undefined
-      : await getSwarmNodeId(buildDocker);
+    // LOCAL à ce nœud.
+    const placementNodeId =
+      server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
@@ -643,9 +649,9 @@ export async function redeployStack(
     }
 
     const buildDocker = dockerClient(buildClient);
-    const placementNodeId = sameConnection
-      ? undefined
-      : await getSwarmNodeId(buildDocker);
+    // Inconditionnelle, même raison qu'au premier déploiement ci-dessus.
+    const placementNodeId =
+      stack.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
