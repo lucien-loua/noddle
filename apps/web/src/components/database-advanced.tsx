@@ -1,6 +1,8 @@
+import { DatabaseClusterSettings } from "@/components/database-cluster-settings";
 import { DatabaseConfiguration } from "@/components/database-configuration";
 import { DatabaseDangerZone } from "@/components/database-danger-zone";
 import { DatabaseResourceLimits } from "@/components/database-resource-limits";
+import { DatabaseVolumes } from "@/components/database-volumes";
 import type { DatabaseRow } from "@/server/databases";
 
 export function DatabaseAdvanced({
@@ -17,6 +19,20 @@ export function DatabaseAdvanced({
   return (
     <div className="flex flex-col gap-4">
       <DatabaseConfiguration canEdit={canEdit} database={database} />
+      <DatabaseClusterSettings
+        canEdit={canEdit}
+        databaseId={database.id}
+        replicas={database.replicas}
+        swarmSettings={database.swarmSettings}
+      />
+      <DatabaseVolumes
+        canEdit={canEdit}
+        databaseId={database.id}
+        engine={database.engine}
+        extraMounts={database.extraMounts}
+        swarmName={database.swarmName}
+        volumePath={database.volumePath}
+      />
       <DatabaseResourceLimits
         canEdit={canEdit}
         cpuLimitNanos={database.cpuLimitNanos}

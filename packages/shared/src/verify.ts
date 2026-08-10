@@ -12,8 +12,10 @@ import {
   secretContext,
 } from "#crypto";
 import {
+  addDatabaseMountSchema,
   bucketNameSchema,
   databaseConfigurationSchema,
+  databaseReplicasSchema,
   envVarKeySchema,
   gitBranchSchema,
   imageRefSchema,
@@ -21,6 +23,7 @@ import {
   s3DestinationCreateSchema,
   s3DestinationSchema,
   serviceNameSchema,
+  setDatabaseSwarmSettingsSchema,
 } from "#validation";
 
 const runtime =
@@ -202,6 +205,39 @@ if (
   ok("databaseConfigurationSchema accepts a valid image update");
 } else {
   ko("inconsistent databaseConfigurationSchema");
+}
+
+if (
+  databaseReplicasSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    replicas: 1,
+  }).success &&
+  !databaseReplicasSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    replicas: 0,
+  }).success &&
+  addDatabaseMountSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    source: "my-vol",
+    target: "/var/lib/extra",
+    type: "volume",
+  }).success &&
+  !addDatabaseMountSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    source: "my-vol",
+    target: "relative",
+    type: "volume",
+  }).success &&
+  setDatabaseSwarmSettingsSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    swarmSettings: {
+      restartPolicy: { Condition: "on-failure", MaxAttempts: 3 },
+    },
+  }).success
+) {
+  ok("database cluster/volume schemas accept and reject correctly");
+} else {
+  ko("inconsistent database cluster/volume schemas");
 }
 
 // ?????????????????????????????????????????????????????????????????????????????

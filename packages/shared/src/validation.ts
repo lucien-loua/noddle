@@ -427,6 +427,153 @@ export const databaseConfigurationSchema = z.object({
   image: imageRefSchema,
 });
 
+export const databaseReplicasSchema = z.object({
+  databaseId: z.uuid(),
+  replicas: z.number().int().min(1).max(50),
+});
+
+const absPathSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/^\/[\w.\-/]*$/, "must be an absolute path");
+
+export const databaseVolumePathSchema = z.object({
+  databaseId: z.uuid(),
+  volumePath: absPathSchema.nullable(),
+});
+
+export const databaseMountTypeSchema = z.enum(["bind", "volume"]);
+
+export const databaseExtraMountSchema = z.object({
+  id: z.uuid(),
+  source: z
+    .string()
+    .min(1)
+    .max(500)
+    .regex(/^[\w.\-/:@]+$/, "not a valid mount source"),
+  target: absPathSchema,
+  type: databaseMountTypeSchema,
+});
+
+export const addDatabaseMountSchema = z.object({
+  databaseId: z.uuid(),
+  source: databaseExtraMountSchema.shape.source,
+  target: databaseExtraMountSchema.shape.target,
+  type: databaseMountTypeSchema,
+});
+
+export const updateDatabaseMountSchema = z.object({
+  databaseId: z.uuid(),
+  mountId: z.uuid(),
+  source: databaseExtraMountSchema.shape.source,
+  target: databaseExtraMountSchema.shape.target,
+  type: databaseMountTypeSchema,
+});
+
+export const deleteDatabaseMountSchema = z.object({
+  databaseId: z.uuid(),
+  mountId: z.uuid(),
+});
+
+const healthCheckSwarmSchema = z
+  .object({
+    Interval: z.number().int().nullable().optional(),
+    Retries: z.number().int().nullable().optional(),
+    StartPeriod: z.number().int().nullable().optional(),
+    Test: z.array(z.string()).nullable().optional(),
+    Timeout: z.number().int().nullable().optional(),
+  })
+  .nullable();
+
+const restartPolicySwarmSchema = z
+  .object({
+    Condition: z.enum(["any", "none", "on-failure"]).optional(),
+    Delay: z.number().int().nullable().optional(),
+    MaxAttempts: z.number().int().nullable().optional(),
+    Window: z.number().int().nullable().optional(),
+  })
+  .nullable();
+
+const placementSwarmSchema = z
+  .object({
+    Constraints: z.array(z.string()).optional(),
+    MaxReplicas: z.number().int().optional(),
+    Preferences: z
+      .array(z.object({ Spread: z.object({ SpreadDescriptor: z.string() }) }))
+      .optional(),
+  })
+  .nullable();
+
+const updateConfigSwarmSchema = z
+  .object({
+    Delay: z.number().int().nullable().optional(),
+    FailureAction: z.enum(["continue", "pause", "rollback"]).optional(),
+    MaxFailureRatio: z.number().nullable().optional(),
+    Monitor: z.number().int().nullable().optional(),
+    Order: z.enum(["start-first", "stop-first"]).optional(),
+    Parallelism: z.number().int().nullable().optional(),
+  })
+  .nullable();
+
+const rollbackConfigSwarmSchema = z
+  .object({
+    Delay: z.number().int().nullable().optional(),
+    FailureAction: z.enum(["continue", "pause"]).optional(),
+    MaxFailureRatio: z.number().nullable().optional(),
+    Monitor: z.number().int().nullable().optional(),
+    Order: z.enum(["start-first", "stop-first"]).optional(),
+    Parallelism: z.number().int().nullable().optional(),
+  })
+  .nullable();
+
+const modeSwarmSchema = z
+  .object({
+    Global: z.object({}).optional(),
+    Replicated: z.object({ Replicas: z.number().int().optional() }).optional(),
+  })
+  .nullable();
+
+const labelsSwarmSchema = z.record(z.string(), z.string()).nullable();
+
+const networkSwarmSchema = z
+  .array(
+    z.object({
+      Aliases: z.array(z.string()).optional(),
+      Target: z.string().min(1),
+    })
+  )
+  .nullable();
+
+const endpointSpecSwarmSchema = z
+  .object({
+    Mode: z.enum(["dnsrr", "vip"]).optional(),
+  })
+  .nullable();
+
+export const databaseSwarmSettingsSchema = z.object({
+  endpointSpec: endpointSpecSwarmSchema.optional(),
+  healthCheck: healthCheckSwarmSchema.optional(),
+  labels: labelsSwarmSchema.optional(),
+  mode: modeSwarmSchema.optional(),
+  networks: networkSwarmSchema.optional(),
+  placement: placementSwarmSchema.optional(),
+  restartPolicy: restartPolicySwarmSchema.optional(),
+  rollbackConfig: rollbackConfigSwarmSchema.optional(),
+  stopGracePeriod: z.number().int().nullable().optional(),
+  updateConfig: updateConfigSwarmSchema.optional(),
+});
+
+export type DatabaseSwarmSettingsInput = z.infer<
+  typeof databaseSwarmSettingsSchema
+>;
+
+export const setDatabaseSwarmSettingsSchema = z.object({
+  databaseId: z.uuid(),
+  /** Partial merge into the stored object; explicit `null` clears a key. */
+  swarmSettings: databaseSwarmSettingsSchema,
+});
+
 /**
  * A database's new password.
  *

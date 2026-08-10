@@ -18,8 +18,14 @@ export {
   getDatabaseDashboard,
 } from "./read";
 export {
+  addDatabaseMount,
   changeDatabasePassword,
+  deleteDatabaseMount,
   setDatabaseConfiguration,
   setDatabaseExternalPort,
+  setDatabaseReplicas,
   setDatabaseResources,
+  setDatabaseSwarmSettings,
+  setDatabaseVolumePath,
+  updateDatabaseMount,
 } from "./settings";

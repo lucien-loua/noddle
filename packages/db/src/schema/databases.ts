@@ -1,6 +1,7 @@
 import {
   bigint,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -12,6 +13,68 @@ import { environments } from "#schema/projects";
 import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
 import { serviceStatus } from "#schema/services";
+
+/** Extra bind/volume mounts on a database service (not the primary data volume). */
+export interface DatabaseExtraMount {
+  id: string;
+  /** Host path (bind) or volume name (volume). */
+  source: string;
+  /** Absolute path inside the container. */
+  target: string;
+  type: "bind" | "volume";
+}
+
+/**
+ * Optional Swarm service overrides stored as one JSON object.
+ * `null` / missing keys = Noddle's built-in defaults (engine healthcheck,
+ * node placement, overlay network).
+ */
+export interface DatabaseSwarmSettings {
+  endpointSpec?: {
+    Mode?: "dnsrr" | "vip";
+  } | null;
+  healthCheck?: {
+    Interval?: number | null;
+    Retries?: number | null;
+    StartPeriod?: number | null;
+    Test?: string[] | null;
+    Timeout?: number | null;
+  } | null;
+  labels?: Record<string, string> | null;
+  mode?: {
+    Global?: Record<string, never>;
+    Replicated?: { Replicas?: number };
+  } | null;
+  networks?: Array<{ Aliases?: string[]; Target: string }> | null;
+  placement?: {
+    Constraints?: string[];
+    MaxReplicas?: number;
+    Preferences?: Array<{ Spread: { SpreadDescriptor: string } }>;
+  } | null;
+  restartPolicy?: {
+    Condition?: "any" | "none" | "on-failure";
+    Delay?: number | null;
+    MaxAttempts?: number | null;
+    Window?: number | null;
+  } | null;
+  rollbackConfig?: {
+    Delay?: number | null;
+    FailureAction?: "continue" | "pause";
+    MaxFailureRatio?: number | null;
+    Monitor?: number | null;
+    Order?: "start-first" | "stop-first";
+    Parallelism?: number | null;
+  } | null;
+  stopGracePeriod?: number | null;
+  updateConfig?: {
+    Delay?: number | null;
+    FailureAction?: "continue" | "pause" | "rollback";
+    MaxFailureRatio?: number | null;
+    Monitor?: number | null;
+    Order?: "start-first" | "stop-first";
+    Parallelism?: number | null;
+  } | null;
+}
 
 export const databaseEngine = pgEnum("database_engine", [
   "postgres",
@@ -98,6 +161,15 @@ export const databases = pgTable(
      * hence the screen copy, which says so rather than implying it.
      */
     externalPort: integer("external_port"),
+
+    /**
+     * User-added mounts (bind / named volume). The primary data volume is
+     * ALWAYS `swarmName` → `volumePath` and is never stored here.
+     */
+    extraMounts: jsonb("extra_mounts")
+      .$type<DatabaseExtraMount[]>()
+      .notNull()
+      .default([]),
     id: uuid("id").primaryKey().defaultRandom(),
 
     /**
@@ -132,6 +204,13 @@ export const databases = pgTable(
 
     name: text("name").notNull(),
 
+    /**
+     * Desired Swarm replicas. Default 1. Values > 1 with a local named
+     * volume are unsafe (corruption / empty second task) — the screen warns;
+     * the worker still applies what is stored.
+     */
+    replicas: integer("replicas").notNull().default(1),
+
     // Never returned to the browser, even encrypted, even once. Attaching a
     // database to a service writes an ENCRYPTED environment variable directly
     // server-side — the password never crosses the network to the client,
@@ -162,7 +241,21 @@ export const databases = pgTable(
     // this fix are therefore backfilled to `noddle-db-<name>` and never move.
     // See `@noddle/shared/swarm-names`.
     swarmName: text("swarm_name").notNull(),
+
+    /**
+     * Optional Swarm service overrides (healthcheck, placement, …). `null`
+     * = Noddle defaults. Exposed on Advanced → Cluster Settings.
+     */
+    swarmSettings: jsonb("swarm_settings").$type<DatabaseSwarmSettings>(),
+
     updatedAt,
+
+    /**
+     * Container path for the primary data volume. `null` = the engine's
+     * pinned default (`ENGINE_SPECS.volumePath`). Editable so a major
+     * Postgres bump (path layout change) can be matched without a rebuild.
+     */
+    volumePath: text("volume_path"),
   },
   (t) => [uniqueIndex("databases_env_name_idx").on(t.environmentId, t.name)]
 );

@@ -40,6 +40,20 @@ export const DATABASE_PORT: Record<DatabaseEngine, number> = {
 };
 
 /**
+ * Default container path for the primary named volume.
+ *
+ * Kept here (not only in the worker) so Advanced → Volumes can show and
+ * edit the path without importing worker code.
+ */
+export const DEFAULT_DATABASE_VOLUME_PATH: Record<DatabaseEngine, string> = {
+  mariadb: "/var/lib/mysql",
+  mongo: "/data/db",
+  mysql: "/var/lib/mysql",
+  postgres: "/var/lib/postgresql/data",
+  redis: "/data",
+};
+
+/**
  * The default admin user: the name of the ENGINE, never the product's.
  *
  * It used to be `noddle` for every database, which was a Noddle

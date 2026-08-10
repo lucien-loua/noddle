@@ -151,27 +151,36 @@ export async function runDatabaseTeardown(
     // Never via the manager when the two differ: a named volume is LOCAL
     // to the node, and that's the whole reason a database is pinned. A
     // retry loop because it stays locked for a few moments by the
-    // container we just removed.
-    let volumeGone = false;
-    for (let i = 0; i < 20; i += 1) {
-      // biome-ignore lint/performance/noAwaitInLoops: deliberate retry
-      const res = await execArgv(buildClient, [
-        "sudo",
-        "docker",
-        "volume",
-        "rm",
-        database.swarmName,
-      ]);
-      if (res.code === 0 || VOLUME_ALREADY_GONE.test(res.stderr)) {
-        volumeGone = true;
-        break;
+    // container we just removed. Extra named volumes from Advanced →
+    // Volumes go the same way.
+    const volumeNames = [
+      database.swarmName,
+      ...database.extraMounts
+        .filter((m) => m.type === "volume")
+        .map((m) => m.source),
+    ];
+    for (const volumeName of volumeNames) {
+      let volumeGone = false;
+      for (let i = 0; i < 20; i += 1) {
+        // biome-ignore lint/performance/noAwaitInLoops: deliberate retry
+        const res = await execArgv(buildClient, [
+          "sudo",
+          "docker",
+          "volume",
+          "rm",
+          volumeName,
+        ]);
+        if (res.code === 0 || VOLUME_ALREADY_GONE.test(res.stderr)) {
+          volumeGone = true;
+          break;
+        }
+        await sleep(1000);
       }
-      await sleep(1000);
-    }
-    if (!volumeGone) {
-      throw new Error(
-        `volume ${database.swarmName} could not be removed — the database row is kept so it stays visible`
-      );
+      if (!volumeGone) {
+        throw new Error(
+          `volume ${volumeName} could not be removed — the database row is kept so it stays visible`
+        );
+      }
     }
 
     // ── 3. the database ──────────────────────────────────────────────────

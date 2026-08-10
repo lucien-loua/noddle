@@ -1,4 +1,8 @@
-import { databases } from "@noddle/db/schema";
+import {
+  type DatabaseExtraMount,
+  type DatabaseSwarmSettings,
+  databases,
+} from "@noddle/db/schema";
 import type { DatabaseEngine } from "@noddle/shared/database-engines";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
@@ -14,6 +18,7 @@ export interface DatabaseRow {
   environment: string;
   environmentId: string;
   externalPort: number | null;
+  extraMounts: DatabaseExtraMount[];
   id: string;
   image: string | null;
   lastError: string | null;
@@ -22,11 +27,14 @@ export interface DatabaseRow {
   name: string;
   project: string;
   projectId: string;
+  replicas: number;
   s3DestinationId: string | null;
   serverHost: string;
   serverName: string;
   status: string;
   swarmName: string;
+  swarmSettings: DatabaseSwarmSettings | null;
+  volumePath: string | null;
 }
 
 interface DatabaseJoined {
@@ -38,16 +46,20 @@ interface DatabaseJoined {
   environment: { name: string; project: { name: string }; projectId: string };
   environmentId: string;
   externalPort: number | null;
+  extraMounts: DatabaseExtraMount[];
   id: string;
   image: string | null;
   lastError: string | null;
   memoryLimitBytes: number | null;
   memoryReservationBytes: number | null;
   name: string;
+  replicas: number;
   s3DestinationId: string | null;
   server: { host: string; name: string };
   status: string;
   swarmName: string;
+  swarmSettings: DatabaseSwarmSettings | null;
+  volumePath: string | null;
 }
 
 function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
@@ -60,6 +72,7 @@ function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
     environment: d.environment.name,
     environmentId: d.environmentId,
     externalPort: d.externalPort,
+    extraMounts: d.extraMounts,
     id: d.id,
     image: d.image,
     lastError: d.lastError,
@@ -68,11 +81,14 @@ function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
     name: d.name,
     project: d.environment.project.name,
     projectId: d.environment.projectId,
+    replicas: d.replicas,
     s3DestinationId: d.s3DestinationId,
     serverHost: d.server.host,
     serverName: d.server.name,
     status: d.status,
     swarmName: d.swarmName,
+    swarmSettings: d.swarmSettings,
+    volumePath: d.volumePath,
   };
 }
 

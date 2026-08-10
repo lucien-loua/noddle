@@ -467,7 +467,7 @@ export async function runRestore(
 
         await restoreRedis(buildClient, { body, volume: serviceName });
 
-        await scaleService(managerDocker, serviceName, 1);
+        await scaleService(managerDocker, serviceName, database.replicas);
         break;
       }
       default: {

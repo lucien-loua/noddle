@@ -5,7 +5,6 @@ import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
 import { useAppForm } from "@/components/fields/lib/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 import {
@@ -26,24 +25,6 @@ const configurationFormSchema = z.object({
 
 interface ConfigurationFormValues {
   image: string;
-}
-
-function ReadOnlyFact({
-  description,
-  label,
-  value,
-}: {
-  description: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="mb-1.5 font-medium text-sm leading-none">{label}</p>
-      <p className="truncate font-mono text-sm">{value}</p>
-      <p className="mt-1.5 text-muted-foreground text-xs">{description}</p>
-    </div>
-  );
 }
 
 export function DatabaseConfiguration({
@@ -98,17 +79,15 @@ export function DatabaseConfiguration({
       <FrameHeader>
         <FrameTitle>Configuration</FrameTitle>
         <FrameDescription>
-          Engine image applied on the next provision. Replicas stay at one and
-          the volume name is fixed — both are tied to the named volume on this
-          node.
+          Engine image applied on the next provision. A major version bump can
+          crash-loop or ignore the existing data directory.
         </FrameDescription>
       </FrameHeader>
       <FramePanel>
-        <FieldGroup className="grid gap-x-6 gap-y-7 sm:grid-cols-3">
+        <FieldGroup>
           <form.AppField name="image">
             {(f) => (
               <f.FieldText
-                description="A major version bump can crash-loop or ignore the existing data directory."
                 disabled={!canEdit}
                 label="Docker image"
                 placeholder={DEFAULT_DATABASE_IMAGE[database.engine]}
@@ -116,26 +95,12 @@ export function DatabaseConfiguration({
               />
             )}
           </form.AppField>
-
-          <ReadOnlyFact
-            description="Fixed — a named volume cannot be shared across replicas."
-            label="Replicas"
-            value="1"
-          />
-
-          <ReadOnlyFact
-            description="Written at creation and never renamed."
-            label="Volume"
-            value={database.swarmName}
-          />
         </FieldGroup>
 
         {save.isError ? (
-          <Alert className="mt-3" variant="destructive">
-            <AlertDescription>
-              {errorMessage(save.error, "could not save")}
-            </AlertDescription>
-          </Alert>
+          <p className="mt-3 text-destructive text-sm" role="alert">
+            {errorMessage(save.error, "could not save")}
+          </p>
         ) : null}
       </FramePanel>
 

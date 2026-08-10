@@ -119,7 +119,7 @@ export async function runDatabaseLifecycle(
       applied = await scaleService(
         managerDocker,
         name,
-        action === "stop" ? 0 : 1
+        action === "stop" ? 0 : database.replicas
       );
     }
 
