@@ -1,0 +1,70 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { type ReactNode, useState } from "react";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toast";
+import appCss from "../styles.css?url";
+
+/**
+ * shadcn's dark theme is a CLASS, not a media query. Without this script, a
+ * machine in dark mode first receives the light version and then switches —
+ * the classic white flash. It runs before rendering, so the class is already
+ * set by the time the first paint happens.
+ *
+ * Written by hand rather than imported from `lib/theme.ts`: it runs before
+ * the bundle. The two are kept in sync together.
+ */
+const THEME_SCRIPT = `try{var t=localStorage.getItem('noddle-theme');document.documentElement.classList.toggle('dark',t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))}catch(e){}`;
+
+export const Route = createRootRoute({
+  head: () => ({
+    links: [
+      { href: appCss, rel: "stylesheet" },
+      { href: "/favicon.svg", rel: "icon", type: "image/svg+xml" },
+    ],
+    meta: [
+      { charSet: "utf-8" },
+      { content: "width=device-width, initial-scale=1", name: "viewport" },
+      { title: "Noddle" },
+      {
+        content: "Deploy from a git repo to a server you own.",
+        name: "description",
+      },
+      { content: "noindex, nofollow", name: "robots" },
+    ],
+  }),
+  shellComponent: RootDocument,
+});
+
+function RootDocument({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: true,
+            staleTime: 5000,
+          },
+        },
+      })
+  );
+
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <HeadContent />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: anti-flash script, must run before paint */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </QueryClientProvider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}

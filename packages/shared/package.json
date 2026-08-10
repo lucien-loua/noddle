@@ -1,0 +1,22 @@
+{
+  "name": "@noddle/shared",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    "./crypto": "./src/crypto.ts",
+    "./database-engines": "./src/database-engines.ts",
+    "./logs": "./src/logs.ts",
+    "./password": "./src/password.ts",
+    "./swarm-names": "./src/swarm-names.ts",
+    "./validation": "./src/validation.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

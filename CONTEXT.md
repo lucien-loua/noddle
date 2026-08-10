@@ -1,0 +1,73 @@
+# Noddle
+
+Self-hosted deployment platform: point it at a git repo, it builds and runs the
+app on a VPS you own, with HTTPS and a domain, from a dashboard. Restraint over
+feature count — every screen answers "is it healthy" and "how do I ship".
+
+## Language
+
+### Platform
+
+**Target server**:
+A Linux host Noddle manages over SSH. The installer registers its own host as
+target server #1.
+_Avoid_: Node (ambiguous with Swarm/JS), machine, box, VPS (when meaning the
+managed record)
+
+**Self host**:
+The installer's own machine registered as the first target server (`isSelf`).
+Display fact only — deploy path is the same SSH executor as any other target.
+_Avoid_: Localhost special case, control plane host
+
+**Project**:
+A tenant-facing grouping of services the user deploys and operates together.
+
+**Service**:
+A deployable unit (image + Swarm service + Traefik route) belonging to a project.
+_Avoid_: App (when meaning the Swarm unit), container (the runtime instance)
+
+**Database**:
+A managed engine instance (Postgres, Redis, …) Noddle provisions as a stateful
+Swarm service with placement and volumes.
+_Avoid_: DB service (ambiguous with app Service)
+
+**Deployment**:
+One attempted (or completed) ship of a service to a target — recorded in Noddle's
+history so rollback can return to *any* previous image.
+_Avoid_: Release, ship (as nouns for the record)
+
+**Preview**:
+An ephemeral environment for a pull request, derived from the same deploy path as
+production services.
+
+### Access & build
+
+**SSH key library**:
+Vault of SSH keys (`ssh_keys`) from which target access keys are chosen —
+agentless; nothing installed on the target.
+_Avoid_: Agent, sidecar, daemon on target
+
+**Build**:
+Producing a Docker image on the **target server** (Nixpacks or Dockerfile), under
+a resource-capped buildx builder.
+_Avoid_: CI build (Noddle builds on the target, not in GitHub Actions)
+
+**Registry**:
+Image store used so a built image can leave the build node (embedded registry in
+Phase 4+). Without a push, a local image pins the service to that node.
+
+### Runtime
+
+**Swarm manager**:
+The single node allowed to run `docker service create/update`. Extra servers join
+as workers only.
+_Avoid_: Leader (Raft), control node
+
+**Post-deploy watch**:
+Noddle's continued observation after Swarm's `--update-monitor` window — late
+crashes trigger rollback from Noddle's deployment history.
+_Avoid_: Healthcheck (that's Swarm's), monitor window (Swarm's only)
+
+**Rollback**:
+Redeploying a previous image from Noddle's deployment history (not only Swarm's
+single previous spec).

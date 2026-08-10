@@ -1,0 +1,1 @@
+ALTER TABLE "servers" ADD COLUMN "prune_enabled" boolean DEFAULT true NOT NULL;

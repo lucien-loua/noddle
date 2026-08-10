@@ -1,0 +1,1 @@
+ALTER TABLE "servers" ADD COLUMN "swarm_node_id" text;

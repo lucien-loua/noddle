@@ -1,0 +1,2227 @@
+"use client";
+"use no memo";
+
+import { useRender } from "@base-ui/react/use-render";
+import {
+  CheckIcon,
+  PlusIcon,
+  WarningCircleIcon,
+  XIcon,
+} from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
+import type React from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
+import { Kbd } from "@/components/ui/kbd";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+// i18n Configuration Interface
+export interface FilterI18nConfig {
+  // UI Labels
+  addFilter: string;
+  addFilterTitle: string;
+  defaultColor: string;
+  defaultCurrency: string;
+  errorLoadingOptions?: string;
+  false: string;
+
+  // Helper functions
+  helpers: {
+    formatOperator: (operator: string) => string;
+  };
+  // Async option loading states (optional; fall back to sensible defaults)
+  loadingOptions?: string;
+  max: string;
+  min: string;
+  noFieldsFound: string;
+  noResultsFound: string;
+
+  // Operators
+  operators: {
+    is: string;
+    isNot: string;
+    isAnyOf: string;
+    isNotAnyOf: string;
+    includesAll: string;
+    excludesAll: string;
+    before: string;
+    after: string;
+    between: string;
+    notBetween: string;
+    contains: string;
+    notContains: string;
+    startsWith: string;
+    endsWith: string;
+    isExactly: string;
+    equals: string;
+    notEquals: string;
+    greaterThan: string;
+    lessThan: string;
+    overlaps: string;
+    includes: string;
+    excludes: string;
+    includesAllOf: string;
+    includesAnyOf: string;
+    empty: string;
+    notEmpty: string;
+  };
+  percent: string;
+
+  // Placeholders
+  placeholders: {
+    enterField: (fieldType: string) => string;
+    selectField: string;
+    searchField: (fieldName: string) => string;
+    enterKey: string;
+    enterValue: string;
+  };
+  searchFields: string;
+  select: string;
+  selected: string;
+  selectedCount: string;
+  to: string;
+  true: string;
+  typeAndPressEnter: string;
+
+  // Validation
+  validation: {
+    invalidEmail: string;
+    invalidUrl: string;
+    invalidTel: string;
+    invalid: string;
+  };
+}
+
+// Default English i18n configuration
+export const DEFAULT_I18N: FilterI18nConfig = {
+  // UI Labels
+  addFilter: "Filter",
+  addFilterTitle: "Add filter",
+  defaultColor: "#000000",
+  defaultCurrency: "$",
+  errorLoadingOptions: "Failed to load options.",
+  false: "False",
+
+  // Helper functions
+  helpers: {
+    formatOperator: (operator: string) => operator.replace(/_/g, " "),
+  },
+  loadingOptions: "Loading...",
+  max: "Max",
+  min: "Min",
+  noFieldsFound: "No filters found.",
+  noResultsFound: "No results found.",
+
+  // Operators
+  operators: {
+    after: "after",
+    before: "before",
+    between: "between",
+    contains: "contains",
+    empty: "is empty",
+    endsWith: "ends with",
+    equals: "equals",
+    excludes: "excludes",
+    excludesAll: "excludes all",
+    greaterThan: "greater than",
+    includes: "includes",
+    includesAll: "includes all",
+    includesAllOf: "includes all of",
+    includesAnyOf: "includes any of",
+    is: "is",
+    isAnyOf: "is any of",
+    isExactly: "is exactly",
+    isNot: "is not",
+    isNotAnyOf: "is not any of",
+    lessThan: "less than",
+    notBetween: "not between",
+    notContains: "does not contain",
+    notEmpty: "is not empty",
+    notEquals: "not equals",
+    overlaps: "overlaps",
+    startsWith: "starts with",
+  },
+  percent: "%",
+
+  // Placeholders
+  placeholders: {
+    enterField: (fieldType: string) => `Enter ${fieldType}...`,
+    enterKey: "Enter key...",
+    enterValue: "Enter value...",
+    searchField: (fieldName: string) => `Search ${fieldName.toLowerCase()}...`,
+    selectField: "Select...",
+  },
+  searchFields: "Filter...",
+  select: "Select...",
+  selected: "selected",
+  selectedCount: "selected",
+  to: "to",
+  true: "True",
+  typeAndPressEnter: "Type and press Enter to add tag",
+
+  // Validation
+  validation: {
+    invalid: "Invalid input format",
+    invalidEmail: "Invalid email format",
+    invalidTel: "Invalid phone format",
+    invalidUrl: "Invalid URL format",
+  },
+};
+
+// Context for all Filter component props
+interface FilterContextValue {
+  allowMultiple?: boolean;
+  className?: string;
+  i18n: FilterI18nConfig;
+  radius: "default" | "full";
+  showSearchInput?: boolean;
+  size: "sm" | "default" | "lg";
+  trigger?: React.ReactNode;
+  variant: "solid" | "default";
+}
+
+const FilterContext = createContext<FilterContextValue>({
+  allowMultiple: true,
+  className: undefined,
+  i18n: DEFAULT_I18N,
+  radius: "default",
+  showSearchInput: true,
+  size: "default",
+  trigger: undefined,
+  variant: "default",
+});
+
+const useFilterContext = () => useContext(FilterContext);
+
+// Container variant for filters wrapper
+const filtersContainerVariants = cva("flex flex-wrap items-center", {
+  defaultVariants: {
+    size: "default",
+    variant: "default",
+  },
+  variants: {
+    size: {
+      default: "gap-2.5",
+      lg: "gap-3.5",
+      sm: "gap-1.5",
+    },
+    variant: {
+      default: "",
+      solid: "gap-2",
+    },
+  },
+});
+
+function FilterInput<T = unknown>({
+  field,
+  onBlur,
+  onKeyDown,
+  className,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  className?: string;
+  field?: FilterFieldConfig<T>;
+}) {
+  const context = useFilterContext();
+  const [isValid, setIsValid] = useState(true);
+  const [validationMessage, setValidationMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (props.autoFocus) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [props.autoFocus]);
+
+  // Validation function to check if input matches pattern
+  const validateInput = (value: string, pattern?: string): boolean => {
+    if (!(pattern && value)) {
+      return true;
+    }
+    const regex = new RegExp(pattern);
+    return regex.test(value);
+  };
+
+  // Get validation message for field type
+  const getValidationMessage = (): string => context.i18n.validation.invalid;
+
+  // Handle blur event - validate when user leaves input
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const pattern = field?.pattern || props.pattern;
+
+    // Only validate if there's a value and (pattern or validation function)
+    if (value && (pattern || field?.validation)) {
+      let valid = true;
+      let customMessage = "";
+
+      // If there's a custom validation function, use it
+      if (field?.validation) {
+        const result = field.validation(value);
+        // Handle both boolean and object return types
+        if (typeof result === "boolean") {
+          valid = result;
+        } else {
+          valid = result.valid;
+          customMessage = result.message || "";
+        }
+      } else if (pattern) {
+        // Use pattern validation
+        valid = validateInput(value, pattern);
+      }
+
+      setIsValid(valid);
+      setValidationMessage(
+        valid ? "" : customMessage || getValidationMessage()
+      );
+    } else {
+      // Reset validation state for empty values or no validation
+      setIsValid(true);
+      setValidationMessage("");
+    }
+
+    // Call the original onBlur if provided
+    onBlur?.(e);
+  };
+
+  // Handle keydown event - hide validation error when user starts typing
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Hide validation error when user starts typing (any key except special keys)
+    if (
+      !(
+        isValid ||
+        [
+          "Tab",
+          "Escape",
+          "Enter",
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+        ].includes(e.key)
+      )
+    ) {
+      setIsValid(true);
+      setValidationMessage("");
+    }
+
+    // Call the original onKeyDown if provided
+    onKeyDown?.(e);
+  };
+
+  return (
+    <InputGroup
+      className={cn(
+        "w-36",
+        context.size === "sm" && "h-8!",
+        context.size === "lg" && "h-10!",
+        className
+      )}
+    >
+      {field?.prefix && (
+        <InputGroupAddon>
+          <InputGroupText>{field.prefix}</InputGroupText>
+        </InputGroupAddon>
+      )}
+      <InputGroupInput
+        aria-describedby={
+          !isValid && validationMessage
+            ? `${field?.key || "input"}-error`
+            : undefined
+        }
+        aria-invalid={!isValid}
+        className={cn(
+          context.size === "sm" && "h-8! text-xs",
+          context.size === "lg" && "h-10!"
+        )}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        ref={inputRef}
+        {...props}
+      />
+      {!isValid && validationMessage && (
+        <InputGroupAddon align="inline-end">
+          <Tooltip>
+            <TooltipTrigger render={<InputGroupButton size="icon-xs" />}>
+              <WarningCircleIcon className="size-3.5 text-destructive" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-sm">{validationMessage}</p>
+            </TooltipContent>
+          </Tooltip>
+        </InputGroupAddon>
+      )}
+
+      {field?.suffix && (
+        <InputGroupAddon align="inline-end">
+          <InputGroupText>{field.suffix}</InputGroupText>
+        </InputGroupAddon>
+      )}
+    </InputGroup>
+  );
+}
+
+interface FilterRemoveButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon?: React.ReactNode;
+}
+
+function FilterRemoveButton({
+  className,
+  icon = <XIcon />,
+  ...props
+}: FilterRemoveButtonProps) {
+  const context = useFilterContext();
+
+  return (
+    <Button
+      className={className}
+      size={
+        context.size === "sm"
+          ? "icon-sm"
+          : context.size === "lg"
+            ? "icon-lg"
+            : "icon"
+      }
+      variant="outline"
+      {...props}
+    >
+      {icon}
+    </Button>
+  );
+}
+
+// Generic types for flexible filter system
+export interface FilterOption<T = unknown> {
+  className?: string;
+  icon?: React.ReactNode;
+  label: string;
+  metadata?: Record<string, unknown>;
+  value: T;
+}
+
+export interface FilterOperator {
+  label: string;
+  supportsMultiple?: boolean;
+  value: string;
+}
+
+// Custom renderer props interface
+export interface CustomRendererProps<T = unknown> {
+  field: FilterFieldConfig<T>;
+  onChange: (values: T[]) => void;
+  operator: string;
+  values: T[];
+}
+
+// Props passed to a field's `renderOptionList` slot. Lets a consumer render the
+// options list however they like (e.g. windowing / virtualization with a
+// library of their choice) while staying bound to the primitive's selection and
+// keyboard behavior.
+export interface FilterOptionListRenderProps<T = unknown> {
+  // Index into `options` of the keyboard-highlighted row (-1 if none). A
+  // virtualized implementation should scroll this row into view and keep it
+  // mounted so the combobox's aria-activedescendant stays valid.
+  highlightedIndex: number;
+  // Options to render: already resolved, query-filtered, and selected-first.
+  options: FilterOption<T>[];
+  // Renders one option row with the correct id, selection state, highlight, and
+  // toggle handler wired to the primitive. Call it for each row you render.
+  renderOption: (option: FilterOption<T>, index: number) => React.ReactNode;
+}
+
+// Grouped field configuration interface
+export interface FilterFieldGroup<T = unknown> {
+  fields: FilterFieldConfig<T>[];
+  group?: string;
+}
+
+// Union type for both flat and grouped field configurations
+export type FilterFieldsConfig<T = unknown> =
+  | FilterFieldConfig<T>[]
+  | FilterFieldGroup<T>[];
+
+export interface FilterFieldConfig<T = unknown> {
+  allowCustomValues?: boolean;
+  className?: string;
+  customRenderer?: (props: CustomRendererProps<T>) => React.ReactNode;
+  customValueRenderer?: (
+    values: T[],
+    options: FilterOption<T>[]
+  ) => React.ReactNode;
+  // Default operator to use when creating a filter for this field
+  defaultOperator?: string;
+  fields?: FilterFieldConfig<T>[];
+  // Group-level configuration
+  group?: string;
+  // Grouping options (legacy support)
+  groupLabel?: string;
+  icon?: React.ReactNode;
+  key?: string;
+  label?: string;
+  // Async / large-list options loader. Receives the current search query and
+  // may return a Promise. Use it to prefetch a remote list once (ignore the
+  // query) or to run server-side search (filter by the query). When both
+  // `options` and `loadOptions` are provided, `options` seeds the initial view
+  // and the value->label cache while `loadOptions` supplies live results.
+  loadOptions?: (
+    query: string
+  ) => FilterOption<T>[] | Promise<FilterOption<T>[]>;
+  max?: number;
+  maxSelections?: number;
+  menuPopupClassName?: string;
+  min?: number;
+  offLabel?: string;
+  // Input event handlers
+  onInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  // Boolean field options
+  onLabel?: string;
+  onValueChange?: (values: T[]) => void;
+  operators?: FilterOperator[];
+  // Field-specific options
+  options?: FilterOption<T>[];
+  pattern?: string;
+  placeholder?: string;
+  prefix?: string | React.ReactNode;
+  // Bring-your-own rendering for the options list (e.g. virtualization with a
+  // windowing library of your choice). Return the full scrollable list, call
+  // `renderOption` for each row, and scroll `highlightedIndex` into view. When
+  // omitted, the options render as a plain scrollable list.
+  renderOptionList?: (props: FilterOptionListRenderProps<T>) => React.ReactNode;
+  searchable?: boolean;
+  step?: number;
+  suffix?: string | React.ReactNode;
+  type?: "select" | "multiselect" | "text" | "custom" | "separator";
+  validation?: (
+    value: unknown
+  ) => boolean | { valid: boolean; message?: string };
+  // Controlled values support for this field
+  value?: T[];
+}
+
+// Helper functions to handle both flat and grouped field configurations
+const isFieldGroup = <T = unknown>(
+  item: FilterFieldConfig<T> | FilterFieldGroup<T>
+): item is FilterFieldGroup<T> =>
+  "fields" in item && Array.isArray(item.fields);
+
+// Helper function to check if a FilterFieldConfig is a group-level configuration
+const isGroupLevelField = <T = unknown>(field: FilterFieldConfig<T>): boolean =>
+  Boolean(field.group && field.fields);
+
+const flattenFields = <T = unknown>(
+  fields: FilterFieldsConfig<T>
+): FilterFieldConfig<T>[] => {
+  return fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
+    if (isFieldGroup(item)) {
+      return [...acc, ...item.fields];
+    }
+    // Handle group-level fields (new structure)
+    if (isGroupLevelField(item)) {
+      return [...acc, ...item.fields!];
+    }
+    return [...acc, item];
+  }, []);
+};
+
+const getFieldsMap = <T = unknown>(
+  fields: FilterFieldsConfig<T>
+): Record<string, FilterFieldConfig<T>> => {
+  const flatFields = flattenFields(fields);
+  return flatFields.reduce(
+    (acc, field) => {
+      // Only add fields that have a key (skip group-level configurations)
+      if (field.key) {
+        acc[field.key] = field;
+      }
+      return acc;
+    },
+    {} as Record<string, FilterFieldConfig<T>>
+  );
+};
+
+// Whether a field exposes any option source (a static list or an async loader).
+// IMPORTANT: never gate on `field.options?.length` once `loadOptions` exists —
+// a function's `.length` is its arity, not an option count, which silently
+// breaks the submenu gate for async fields.
+const fieldHasOptions = <T = unknown>(field: FilterFieldConfig<T>): boolean =>
+  (field.options?.length ?? 0) > 0 || typeof field.loadOptions === "function";
+
+interface ResolvedFieldOptions<T = unknown> {
+  error: boolean;
+  isAsync: boolean;
+  loading: boolean;
+  options: FilterOption<T>[];
+  // Resolve selected values to full options using an accumulating value->option
+  // cache, so async/controlled selections keep their label and icon even when
+  // absent from the latest result page.
+  resolveSelected: (values: T[]) => FilterOption<T>[];
+}
+
+// Value->option cache shared across every component instance rendering the
+// SAME field object (the Add Filter submenu and the active-filter chip both
+// receive the same config reference from the fields map). Keyed by the field
+// object so it is shared when fields are memoized and garbage-collected
+// otherwise. This keeps a value selected in the submenu labelled in the chip.
+const fieldOptionCaches = new WeakMap<object, Map<unknown, FilterOption>>();
+
+const getFieldOptionCache = <T = unknown>(
+  field: FilterFieldConfig<T>
+): Map<T, FilterOption<T>> => {
+  let cache = fieldOptionCaches.get(field as object);
+  if (!cache) {
+    cache = new Map();
+    fieldOptionCaches.set(field as object, cache);
+  }
+  return cache as Map<T, FilterOption<T>>;
+};
+
+// Resolves a field's options for a popover/submenu. Static fields return their
+// list verbatim (unchanged legacy behavior). Async fields (`loadOptions`)
+// debounce the query, guard against out-of-order responses, and expose
+// loading/error state plus a value->label cache.
+function useFieldOptions<T = unknown>(
+  field: FilterFieldConfig<T>,
+  searchInput: string,
+  enabled: boolean
+): ResolvedFieldOptions<T> {
+  const isAsync = typeof field.loadOptions === "function";
+
+  // Seed the shared cache from any static options an async field also provides
+  // (static fields never read this cache, so skip the work for them).
+  if (isAsync && field.options) {
+    const cache = getFieldOptionCache(field);
+    for (const opt of field.options) {
+      cache.set(opt.value, opt);
+    }
+  }
+
+  const [state, setState] = useState<{
+    options: FilterOption<T>[];
+    loading: boolean;
+    error: boolean;
+  }>(() => ({ error: false, loading: false, options: field.options ?? [] }));
+
+  // Debounce the query for async fields to avoid a request per keystroke.
+  const [debouncedQuery, setDebouncedQuery] = useState(searchInput);
+  useEffect(() => {
+    if (!isAsync) {
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedQuery(searchInput), 250);
+    return () => clearTimeout(timer);
+  }, [searchInput, isAsync]);
+
+  const requestIdRef = useRef(0);
+  // Keep the latest loader in a ref so an unmemoized `loadOptions` identity does
+  // not cancel and refire the in-flight request on every parent re-render.
+  const loaderRef = useRef(field.loadOptions);
+  loaderRef.current = field.loadOptions;
+  useEffect(() => {
+    if (!(isAsync && enabled)) {
+      return;
+    }
+    const loader = loaderRef.current;
+    if (!loader) {
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
+    let cancelled = false;
+    setState((prev) => ({ ...prev, error: false, loading: true }));
+
+    Promise.resolve()
+      .then(() => loader(debouncedQuery))
+      .then((result) => {
+        // Ignore stale responses (out-of-order guard).
+        if (cancelled || requestId !== requestIdRef.current) {
+          return;
+        }
+        const cache = getFieldOptionCache(field);
+        for (const opt of result) {
+          cache.set(opt.value, opt);
+        }
+        setState({ error: false, loading: false, options: result });
+      })
+      .catch(() => {
+        if (cancelled || requestId !== requestIdRef.current) {
+          return;
+        }
+        setState((prev) => ({ ...prev, error: true, loading: false }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAsync, enabled, debouncedQuery, field]);
+
+  const resolveSelected = useCallback(
+    (values: T[]): FilterOption<T>[] => {
+      const cache = getFieldOptionCache(field);
+      return values.map(
+        (value) => cache.get(value) ?? { label: String(value), value }
+      );
+    },
+    [field]
+  );
+
+  if (!isAsync) {
+    return {
+      error: false,
+      isAsync: false,
+      loading: false,
+      options: field.options ?? [],
+      resolveSelected,
+    };
+  }
+
+  return {
+    error: state.error,
+    isAsync: true,
+    loading: state.loading,
+    options: state.options,
+    resolveSelected,
+  };
+}
+
+// Helper function to create operators from i18n config
+/**
+ * The four operator sets, NAMED.
+ *
+ * `Record<string, FilterOperator[]>` made every access possibly
+ * `undefined` under `noUncheckedIndexedAccess` — including `.select`, which
+ * nonetheless serves as the fallback. A precise type makes the four sets
+ * guaranteed, and leaves the uncertainty where it actually is: a field's
+ * type, which comes from the user.
+ */
+type OperatorSets = {
+  custom: FilterOperator[];
+  multiselect: FilterOperator[];
+  select: FilterOperator[];
+  text: FilterOperator[];
+};
+
+const createOperatorsFromI18n = (i18n: FilterI18nConfig): OperatorSets => ({
+  custom: [
+    { label: i18n.operators.is, value: "is" },
+    { label: i18n.operators.after, value: "after" },
+    { label: i18n.operators.between, value: "between" },
+    { label: i18n.operators.empty, value: "empty" },
+    { label: i18n.operators.notEmpty, value: "not_empty" },
+  ],
+  multiselect: [
+    { label: i18n.operators.isAnyOf, value: "is_any_of" },
+    { label: i18n.operators.isNotAnyOf, value: "is_not_any_of" },
+    { label: i18n.operators.includesAll, value: "includes_all" },
+    { label: i18n.operators.excludesAll, value: "excludes_all" },
+    { label: i18n.operators.empty, value: "empty" },
+    { label: i18n.operators.notEmpty, value: "not_empty" },
+  ],
+  select: [
+    { label: i18n.operators.is, value: "is" },
+    { label: i18n.operators.isNot, value: "is_not" },
+    { label: i18n.operators.empty, value: "empty" },
+    { label: i18n.operators.notEmpty, value: "not_empty" },
+  ],
+  text: [
+    { label: i18n.operators.contains, value: "contains" },
+    { label: i18n.operators.notContains, value: "not_contains" },
+    { label: i18n.operators.startsWith, value: "starts_with" },
+    { label: i18n.operators.endsWith, value: "ends_with" },
+    { label: i18n.operators.isExactly, value: "is" },
+    { label: i18n.operators.empty, value: "empty" },
+    { label: i18n.operators.notEmpty, value: "not_empty" },
+  ],
+});
+
+// Default operators for different field types (using default i18n)
+export const DEFAULT_OPERATORS: Record<string, FilterOperator[]> =
+  createOperatorsFromI18n(DEFAULT_I18N);
+
+// Helper function to get operators for a field
+const getOperatorsForField = <T = unknown>(
+  field: FilterFieldConfig<T>,
+  values: T[],
+  i18n: FilterI18nConfig
+): FilterOperator[] => {
+  if (field.operators) {
+    return field.operators;
+  }
+
+  const operators = createOperatorsFromI18n(i18n);
+
+  // Determine field type for operator selection
+  let fieldType = field.type || "select";
+
+  // If it's a select field but has multiple values, treat as multiselect
+  if (fieldType === "select" && values.length > 1) {
+    fieldType = "multiselect";
+  }
+
+  // If it's a multiselect field or has multiselect operators, use multiselect operators
+  if (fieldType === "multiselect" || field.type === "multiselect") {
+    return operators.multiselect;
+  }
+
+  // Enumerated rather than indexed by a string: `noUncheckedIndexedAccess`
+  // makes `operators[fieldType]` possibly `undefined`, and the `|| select`
+  // fallback was equally so. The only type without an operator set is
+  // `separator`, which is never a filterable field — it falls back to
+  // `select`, exactly as the indexing did.
+  if (fieldType === "text") {
+    return operators.text;
+  }
+  if (fieldType === "custom") {
+    return operators.custom;
+  }
+  return operators.select;
+};
+
+interface FilterOperatorDropdownProps<T = unknown> {
+  field: FilterFieldConfig<T>;
+  onChange: (operator: string) => void;
+  operator: string;
+  values: T[];
+}
+
+function FilterOperatorDropdown<T = unknown>({
+  field,
+  operator,
+  values,
+  onChange,
+}: FilterOperatorDropdownProps<T>) {
+  const context = useFilterContext();
+  const operators = useMemo(
+    () => getOperatorsForField(field, values, context.i18n),
+    [field, values, context.i18n]
+  );
+
+  // Find the operator label, with fallback to formatted operator name
+  const operatorLabel =
+    operators.find((op) => op.value === operator)?.label ||
+    context.i18n.helpers.formatOperator(operator);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            className="text-muted-foreground hover:text-foreground"
+            size={context.size}
+            variant="outline"
+          >
+            {operatorLabel}
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="start" className="w-fit min-w-fit">
+        {operators.map((op) => (
+          <DropdownMenuItem
+            className={cn(
+              "flex items-center justify-between data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+            )}
+            key={op.value}
+            onClick={() => onChange(op.value)}
+          >
+            <span>{op.label}</span>
+            <CheckIcon
+              className={cn(
+                "ms-auto text-primary",
+                op.value === operator ? "opacity-100" : "opacity-0"
+              )}
+            />
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+interface FilterValueSelectorProps<T = unknown> {
+  autoFocus?: boolean;
+  field: FilterFieldConfig<T>;
+  onChange: (values: T[]) => void;
+  operator: string;
+  values: T[];
+}
+
+interface SelectOptionsPopoverProps<T = unknown> {
+  field: FilterFieldConfig<T>;
+  inline?: boolean;
+  onChange: (values: T[]) => void;
+  onClose?: () => void;
+  values: T[];
+}
+
+function SelectOptionsPopover<T = unknown>({
+  field,
+  values,
+  onChange,
+  onClose,
+  inline = false,
+}: SelectOptionsPopoverProps<T>) {
+  const [open, setOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const context = useFilterContext();
+  const baseId = useId();
+
+  useEffect(() => {
+    if (open) {
+      inputRef.current?.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && open) {
+      const element = document.getElementById(
+        `${baseId}-item-${highlightedIndex}`
+      );
+      element?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex, open, baseId]);
+
+  const {
+    isAsync,
+    options: resolvedOptions,
+    loading,
+    error,
+    resolveSelected,
+  } = useFieldOptions(field, searchInput, inline || open);
+
+  const isMultiSelect = field.type === "multiselect" || values.length > 1;
+  const effectiveValues =
+    (field.value === undefined ? values : (field.value as T[])) || [];
+
+  // Static fields read their list verbatim (unchanged legacy behavior). Async
+  // fields resolve selected values from the value->label cache and take the
+  // loader's (already query-filtered) result as the unselected list.
+  const selectedOptions = isAsync
+    ? resolveSelected(effectiveValues)
+    : field.options?.filter((opt) => effectiveValues.includes(opt.value)) || [];
+  const unselectedOptions = isAsync
+    ? resolvedOptions.filter((opt) => !effectiveValues.includes(opt.value))
+    : field.options?.filter((opt) => !effectiveValues.includes(opt.value)) ||
+      [];
+
+  // Filter options based on search input (client-side for static lists; async
+  // loaders have already filtered by the query).
+  const filteredSelectedOptions = selectedOptions; // Keep all selected visible
+  const filteredUnselectedOptions = isAsync
+    ? unselectedOptions
+    : unselectedOptions.filter((opt) =>
+        opt.label.toLowerCase().includes(searchInput.toLowerCase())
+      );
+
+  const allFilteredOptions = useMemo(
+    () => [...filteredSelectedOptions, ...filteredUnselectedOptions],
+    [filteredSelectedOptions, filteredUnselectedOptions]
+  );
+
+  const handleClose = () => {
+    setOpen(false);
+    onClose?.();
+  };
+
+  // Toggle a single option, shared by the plain and custom (renderOptionList)
+  // renderers so both behave identically.
+  const toggleOption = (option: FilterOption<T>) => {
+    const isSelected = effectiveValues.includes(option.value);
+    const next = isSelected
+      ? (effectiveValues.filter((v) => v !== option.value) as T[])
+      : isMultiSelect
+        ? ([...effectiveValues, option.value] as T[])
+        : ([option.value] as T[]);
+
+    if (
+      !isSelected &&
+      isMultiSelect &&
+      field.maxSelections &&
+      next.length > field.maxSelections
+    ) {
+      return;
+    }
+
+    if (field.onValueChange) {
+      field.onValueChange(next);
+    } else {
+      onChange(next);
+    }
+    if (!isMultiSelect) {
+      handleClose();
+    }
+  };
+
+  const renderOptionItem = (option: FilterOption<T>, overallIndex: number) => {
+    const isSelected = effectiveValues.includes(option.value);
+    const isHighlighted = highlightedIndex === overallIndex;
+    const itemId = `${baseId}-item-${overallIndex}`;
+
+    return (
+      <DropdownMenuCheckboxItem
+        aria-selected={isHighlighted}
+        checked={isSelected}
+        className={cn(
+          "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
+          option.className
+        )}
+        data-highlighted={isHighlighted || undefined}
+        id={itemId}
+        key={String(option.value)}
+        onCheckedChange={() => toggleOption(option)}
+        onMouseEnter={() => setHighlightedIndex(overallIndex)}
+        onSelect={(e) => {
+          if (isMultiSelect) {
+            e.preventDefault();
+          }
+        }}
+        role="option"
+      >
+        {option.icon && option.icon}
+        <span className="truncate">{option.label}</span>
+      </DropdownMenuCheckboxItem>
+    );
+  };
+
+  const renderMenuContent = () => (
+    <>
+      {field.searchable !== false && (
+        <>
+          <Input
+            aria-activedescendant={
+              highlightedIndex >= 0
+                ? `${baseId}-item-${highlightedIndex}`
+                : undefined
+            }
+            aria-autocomplete="list"
+            aria-controls={`${baseId}-listbox`}
+            aria-expanded={true}
+            aria-haspopup="listbox"
+            className={cn(
+              "h-8 rounded-none border-0 border-input bg-transparent! px-2 text-sm shadow-none",
+              "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
+              open && "placeholder:text-foreground"
+            )}
+            onBlur={() => open && inputRef.current?.focus()}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (allFilteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev < allFilteredOptions.length - 1 ? prev + 1 : 0
+                  );
+                }
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (allFilteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : allFilteredOptions.length - 1
+                  );
+                }
+              } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                setOpen(false);
+              } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                e.preventDefault();
+                const option = allFilteredOptions[highlightedIndex];
+                if (option) {
+                  const isSelected = effectiveValues.includes(
+                    option.value as T
+                  );
+                  const next = isSelected
+                    ? (effectiveValues.filter((v) => v !== option.value) as T[])
+                    : isMultiSelect
+                      ? ([...effectiveValues, option.value] as T[])
+                      : ([option.value] as T[]);
+
+                  if (
+                    !isSelected &&
+                    isMultiSelect &&
+                    field.maxSelections &&
+                    next.length > field.maxSelections
+                  ) {
+                    return;
+                  }
+
+                  if (field.onValueChange) {
+                    field.onValueChange(next);
+                  } else {
+                    onChange(next);
+                  }
+                  if (!isMultiSelect) {
+                    handleClose();
+                  }
+                }
+              }
+              e.stopPropagation();
+            }}
+            placeholder={context.i18n.placeholders.searchField(
+              field.label || ""
+            )}
+            ref={inputRef}
+            role="combobox"
+            value={searchInput}
+          />
+          <DropdownMenuSeparator />
+        </>
+      )}
+      <div className="relative flex max-h-full">
+        <div
+          className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain"
+          id={`${baseId}-listbox`}
+          role="listbox"
+        >
+          {isAsync && loading && allFilteredOptions.length === 0 ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {context.i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
+            </div>
+          ) : isAsync && error ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {context.i18n.errorLoadingOptions ??
+                DEFAULT_I18N.errorLoadingOptions}
+            </div>
+          ) : allFilteredOptions.length === 0 ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {context.i18n.noResultsFound}
+            </div>
+          ) : field.renderOptionList ? (
+            field.renderOptionList({
+              highlightedIndex,
+              options: allFilteredOptions,
+              renderOption: renderOptionItem,
+            })
+          ) : (
+            <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
+              {/* Selected items */}
+              {filteredSelectedOptions.length > 0 && (
+                <DropdownMenuGroup className="px-1">
+                  {filteredSelectedOptions.map((option, index) =>
+                    renderOptionItem(option, index)
+                  )}
+                </DropdownMenuGroup>
+              )}
+
+              {/* Separator */}
+              {filteredSelectedOptions.length > 0 &&
+                filteredUnselectedOptions.length > 0 && (
+                  <DropdownMenuSeparator className="mx-0" />
+                )}
+
+              {/* Available items */}
+              {filteredUnselectedOptions.length > 0 && (
+                <DropdownMenuGroup className="px-1">
+                  {filteredUnselectedOptions.map((option, index) =>
+                    renderOptionItem(
+                      option,
+                      index + filteredSelectedOptions.length
+                    )
+                  )}
+                </DropdownMenuGroup>
+              )}
+            </ScrollArea>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  if (inline) {
+    return <div className="w-full">{renderMenuContent()}</div>;
+  }
+
+  return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        setOpen(open);
+        if (!open) {
+          setTimeout(() => setSearchInput(""), 200);
+        }
+      }}
+      open={open}
+    >
+      <DropdownMenuTrigger
+        render={
+          <Button size={context.size} variant="outline">
+            <div className="flex items-center gap-1.5">
+              {field.customValueRenderer ? (
+                field.customValueRenderer(
+                  values,
+                  isAsync ? resolveSelected(values) : field.options || []
+                )
+              ) : (
+                <>
+                  {selectedOptions.length > 0 && (
+                    <div className="flex items-center -space-x-1.5">
+                      {selectedOptions.slice(0, 3).map((option) => (
+                        <div key={String(option.value)}>{option.icon}</div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedOptions.length === 1
+                    ? selectedOptions[0]?.label
+                    : selectedOptions.length > 1
+                      ? `${selectedOptions.length} ${context.i18n.selectedCount}`
+                      : context.i18n.select}
+                </>
+              )}
+            </div>
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        align="start"
+        className={cn("w-50 px-0", field.className)}
+      >
+        {renderMenuContent()}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function FilterValueSelector<T = unknown>({
+  field,
+  values,
+  onChange,
+  operator,
+  autoFocus,
+}: FilterValueSelectorProps<T>) {
+  if (operator === "empty" || operator === "not_empty") {
+    return null;
+  }
+
+  if (field.customRenderer) {
+    return (
+      <ButtonGroupText className="whitespace-nowrap bg-background text-start outline-hidden hover:bg-accent aria-expanded:bg-accent dark:bg-input/30">
+        {field.customRenderer({ field, onChange, operator, values })}
+      </ButtonGroupText>
+    );
+  }
+
+  if (field.type === "text") {
+    return (
+      <FilterInput
+        autoFocus={autoFocus}
+        className={cn("w-36", field.className)}
+        field={field}
+        onChange={(e) => onChange([e.target.value] as T[])}
+        pattern={field.pattern}
+        placeholder={field.placeholder}
+        type="text"
+        value={(values[0] as string) || ""}
+      />
+    );
+  }
+
+  if (field.type === "select" || field.type === "multiselect") {
+    return (
+      <SelectOptionsPopover field={field} onChange={onChange} values={values} />
+    );
+  }
+
+  return (
+    <SelectOptionsPopover field={field} onChange={onChange} values={values} />
+  );
+}
+export interface Filter<T = unknown> {
+  field: string;
+  id: string;
+  operator: string;
+  values: T[];
+}
+
+export interface FilterGroup<T = unknown> {
+  fields: FilterFieldConfig<T>[];
+  filters: Filter<T>[];
+  id: string;
+  label?: string;
+}
+
+interface FiltersContentProps<T = unknown> {
+  fields: FilterFieldsConfig<T>;
+  filters: Filter<T>[];
+  onChange: (filters: Filter<T>[]) => void;
+}
+
+export const FiltersContent = <T = unknown>({
+  filters,
+  fields,
+  onChange,
+}: FiltersContentProps<T>) => {
+  const context = useFilterContext();
+  const fieldsMap = useMemo(() => getFieldsMap(fields), [fields]);
+
+  const updateFilter = useCallback(
+    (filterId: string, updates: Partial<Filter<T>>) => {
+      onChange(
+        filters.map((filter) => {
+          if (filter.id === filterId) {
+            const updatedFilter = { ...filter, ...updates };
+            if (
+              updates.operator === "empty" ||
+              updates.operator === "not_empty"
+            ) {
+              updatedFilter.values = [] as T[];
+            }
+            return updatedFilter;
+          }
+          return filter;
+        })
+      );
+    },
+    [filters, onChange]
+  );
+
+  const removeFilter = useCallback(
+    (filterId: string) => {
+      onChange(filters.filter((filter) => filter.id !== filterId));
+    },
+    [filters, onChange]
+  );
+
+  return (
+    <div
+      className={cn(
+        filtersContainerVariants({
+          size: context.size,
+          variant: context.variant,
+        }),
+        context.className
+      )}
+    >
+      {filters.map((filter) => {
+        const field = fieldsMap[filter.field];
+        if (!field) {
+          return null;
+        }
+
+        return (
+          <ButtonGroup
+            // Sera is an underline style: its group text and input group carry
+            // only a bottom border. Normalise the boxed segments (the operator,
+            // value and remove buttons) to the same treatment so the whole chip
+            // reads as one underlined group instead of mixing boxes and rules.
+            className=""
+            key={filter.id}
+          >
+            <ButtonGroupText>
+              {field.icon && field.icon}
+              {field.label}
+            </ButtonGroupText>
+
+            <FilterOperatorDropdown<T>
+              field={field}
+              onChange={(operator) => updateFilter(filter.id, { operator })}
+              operator={filter.operator}
+              values={filter.values}
+            />
+
+            <FilterValueSelector<T>
+              autoFocus={false}
+              field={field}
+              onChange={(values) => updateFilter(filter.id, { values })}
+              operator={filter.operator}
+              values={filter.values}
+            />
+
+            <FilterRemoveButton onClick={() => removeFilter(filter.id)} />
+          </ButtonGroup>
+        );
+      })}
+    </div>
+  );
+};
+
+interface FiltersProps<T = unknown> {
+  allowMultiple?: boolean;
+  className?: string;
+  collapseAddButton?: boolean;
+  enableShortcut?: boolean;
+  fields: FilterFieldsConfig<T>;
+  filters: Filter<T>[];
+  i18n?: Partial<FilterI18nConfig>;
+  menuPopupClassName?: string;
+  onChange: (filters: Filter<T>[]) => void;
+  radius?: "default" | "full";
+  shortcutKey?: string;
+  shortcutLabel?: string;
+  showSearchInput?: boolean;
+  size?: "sm" | "default" | "lg";
+  trigger?: React.ReactNode;
+  variant?: "solid" | "default";
+}
+
+interface FilterSubmenuContentProps<T = unknown> {
+  currentValues: T[];
+  field: FilterFieldConfig<T>;
+  i18n: FilterI18nConfig;
+  isActive?: boolean;
+  isMultiSelect: boolean;
+  onActive?: () => void;
+  onBack?: () => void;
+  onClose?: () => void;
+  onToggle: (value: T, isSelected: boolean) => void;
+}
+
+function FilterSubmenuContent<T = unknown>({
+  field,
+  currentValues,
+  isMultiSelect,
+  onToggle,
+  i18n,
+  isActive,
+  onActive,
+  onBack,
+  onClose,
+}: FilterSubmenuContentProps<T>) {
+  const [searchInput, setSearchInput] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const baseId = useId();
+
+  const {
+    isAsync,
+    options: resolvedOptions,
+    loading,
+    error,
+    resolveSelected,
+  } = useFieldOptions(field, searchInput, true);
+
+  useEffect(() => {
+    if (isActive) {
+      if (field.searchable === false) {
+        const listbox = document.getElementById(`${baseId}-listbox`);
+        listbox?.focus();
+      } else {
+        inputRef.current?.focus();
+      }
+    }
+  }, [isActive, field.searchable, baseId]);
+
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && isActive) {
+      const element = document.getElementById(
+        `${baseId}-item-${highlightedIndex}`
+      );
+      element?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex, isActive, baseId]);
+
+  const filteredOptions = useMemo(() => {
+    // Async fields: keep selected values first (resolved from cache so they
+    // stay labelled), then the loader's already-query-filtered results.
+    if (isAsync) {
+      const selectedSet = new Set(currentValues);
+      return [
+        ...resolveSelected(currentValues),
+        ...resolvedOptions.filter((option) => !selectedSet.has(option.value)),
+      ];
+    }
+    return (
+      field.options?.filter((option) => {
+        const isSelected = currentValues.includes(option.value);
+        if (isSelected) {
+          return true;
+        }
+        if (!searchInput) {
+          return true;
+        }
+        return option.label.toLowerCase().includes(searchInput.toLowerCase());
+      }) || []
+    );
+  }, [
+    isAsync,
+    resolvedOptions,
+    resolveSelected,
+    field.options,
+    searchInput,
+    currentValues,
+  ]);
+
+  const renderOptionItem = (option: FilterOption<T>, index: number) => {
+    const isSelected = currentValues.includes(option.value);
+    const isHighlighted = highlightedIndex === index;
+    const itemId = `${baseId}-item-${index}`;
+
+    return (
+      <DropdownMenuCheckboxItem
+        aria-selected={isHighlighted}
+        checked={isSelected}
+        className={cn(
+          "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
+          option.className
+        )}
+        data-highlighted={isHighlighted || undefined}
+        id={itemId}
+        key={String(option.value)}
+        onCheckedChange={() => onToggle(option.value as T, isSelected)}
+        onMouseEnter={() => setHighlightedIndex(index)}
+        onSelect={(e) => {
+          if (isMultiSelect) {
+            e.preventDefault();
+          }
+        }}
+        role="option"
+      >
+        {option.icon && option.icon}
+        <span className="truncate">{option.label}</span>
+      </DropdownMenuCheckboxItem>
+    );
+  };
+
+  useEffect(() => {
+    if (isActive && filteredOptions.length > 0) {
+      setHighlightedIndex(0);
+    }
+  }, [isActive, filteredOptions.length]);
+
+  return (
+    <div className="flex flex-col" onMouseEnter={onActive}>
+      {field.searchable !== false && (
+        <>
+          <Input
+            aria-activedescendant={
+              highlightedIndex >= 0
+                ? `${baseId}-item-${highlightedIndex}`
+                : undefined
+            }
+            aria-autocomplete="list"
+            aria-controls={`${baseId}-listbox`}
+            aria-expanded={true}
+            aria-haspopup="listbox"
+            className={cn(
+              "h-8 rounded-none border-0 bg-transparent! px-2 text-sm shadow-none",
+              "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
+              isActive && "placeholder:text-foreground"
+            )}
+            onBlur={() => isActive && inputRef.current?.focus()}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onFocus={() => onActive?.()}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (filteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev < filteredOptions.length - 1 ? prev + 1 : 0
+                  );
+                }
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (filteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : filteredOptions.length - 1
+                  );
+                }
+              } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                onBack?.();
+              } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                e.preventDefault();
+                const option = filteredOptions[highlightedIndex];
+                if (option) {
+                  onToggle(
+                    option.value as T,
+                    currentValues.includes(option.value)
+                  );
+                  if (!isMultiSelect) {
+                    onBack?.();
+                  }
+                }
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                onClose?.();
+              }
+              e.stopPropagation();
+            }}
+            onMouseEnter={(e) => {
+              onActive?.();
+              e.stopPropagation();
+            }}
+            placeholder={i18n.placeholders.searchField(field.label || "")}
+            ref={inputRef}
+            role="combobox"
+            value={searchInput}
+          />
+          <DropdownMenuSeparator />
+        </>
+      )}
+      <div className="relative flex max-h-full">
+        <div
+          className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain outline-hidden"
+          id={`${baseId}-listbox`}
+          onKeyDown={(e) => {
+            if (field.searchable === false) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (filteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev < filteredOptions.length - 1 ? prev + 1 : 0
+                  );
+                }
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (filteredOptions.length > 0) {
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : filteredOptions.length - 1
+                  );
+                }
+              } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                onBack?.();
+              } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                e.preventDefault();
+                const option = filteredOptions[highlightedIndex];
+                if (option) {
+                  onToggle(
+                    option.value as T,
+                    currentValues.includes(option.value)
+                  );
+                  if (!isMultiSelect) {
+                    onBack?.();
+                  }
+                }
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                onClose?.();
+              }
+              e.stopPropagation();
+            }
+          }}
+          role="listbox"
+          tabIndex={field.searchable === false ? 0 : -1}
+        >
+          {isAsync && loading && filteredOptions.length === 0 ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
+            </div>
+          ) : isAsync && error ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {i18n.errorLoadingOptions ?? DEFAULT_I18N.errorLoadingOptions}
+            </div>
+          ) : filteredOptions.length === 0 ? (
+            <div className="py-2 text-center text-muted-foreground text-sm">
+              {i18n.noResultsFound}
+            </div>
+          ) : field.renderOptionList ? (
+            field.renderOptionList({
+              highlightedIndex,
+              options: filteredOptions,
+              renderOption: renderOptionItem,
+            })
+          ) : (
+            <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
+              <DropdownMenuGroup>
+                {filteredOptions.map((option, index) =>
+                  renderOptionItem(option, index)
+                )}
+              </DropdownMenuGroup>
+            </ScrollArea>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Filters<T = unknown>({
+  filters,
+  fields,
+  onChange,
+  className,
+  variant = "default",
+  size = "default",
+  radius = "default",
+  i18n,
+  showSearchInput = true,
+  trigger,
+  allowMultiple = true,
+  menuPopupClassName,
+  enableShortcut = false,
+  shortcutKey = "f",
+  shortcutLabel = "F",
+}: FiltersProps<T>) {
+  const [addFilterOpen, setAddFilterOpen] = useState(false);
+  const [menuSearchInput, setMenuSearchInput] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string>("root");
+  const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [lastAddedFilterId, setLastAddedFilterId] = useState<string | null>(
+    null
+  );
+  const rootInputRef = useRef<HTMLInputElement>(null);
+  const rootId = useId();
+
+  useEffect(() => {
+    if (!enableShortcut) {
+      return;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key.toLowerCase() === shortcutKey.toLowerCase() &&
+        !addFilterOpen &&
+        !(
+          document.activeElement instanceof HTMLInputElement ||
+          document.activeElement instanceof HTMLTextAreaElement
+        )
+      ) {
+        e.preventDefault();
+        setAddFilterOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [enableShortcut, shortcutKey, addFilterOpen]);
+
+  useEffect(() => {
+    if (addFilterOpen && activeMenu === "root") {
+      rootInputRef.current?.focus();
+    }
+  }, [addFilterOpen, activeMenu]);
+
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && addFilterOpen) {
+      const element = document.getElementById(
+        `${rootId}-item-${highlightedIndex}`
+      );
+      element?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex, addFilterOpen, rootId]);
+
+  useEffect(() => {
+    if (!addFilterOpen) {
+      setOpenSubMenu(null);
+    }
+  }, [addFilterOpen]);
+
+  // Track which filter instance is being built in the current Add Filter menu session
+  // Maps fieldKey -> unique filterId created during this open session
+  const [sessionFilterIds, setSessionFilterIds] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    if (lastAddedFilterId) {
+      const timer = setTimeout(() => {
+        setLastAddedFilterId(null);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAddedFilterId]);
+
+  const mergedI18n: FilterI18nConfig = useMemo(
+    () => ({
+      ...DEFAULT_I18N,
+      ...i18n,
+      operators: { ...DEFAULT_I18N.operators, ...i18n?.operators },
+      placeholders: { ...DEFAULT_I18N.placeholders, ...i18n?.placeholders },
+      validation: { ...DEFAULT_I18N.validation, ...i18n?.validation },
+    }),
+    [i18n]
+  );
+
+  const fieldsMap = useMemo(() => getFieldsMap(fields), [fields]);
+
+  const updateFilter = useCallback(
+    (filterId: string, updates: Partial<Filter<T>>) => {
+      onChange(
+        filters.map((filter) => {
+          if (filter.id === filterId) {
+            const updatedFilter = { ...filter, ...updates };
+            if (
+              updates.operator === "empty" ||
+              updates.operator === "not_empty"
+            ) {
+              updatedFilter.values = [] as T[];
+            }
+            return updatedFilter;
+          }
+          return filter;
+        })
+      );
+    },
+    [filters, onChange]
+  );
+
+  const removeFilter = useCallback(
+    (filterId: string) => {
+      onChange(filters.filter((filter) => filter.id !== filterId));
+    },
+    [filters, onChange]
+  );
+
+  const addFilter = useCallback(
+    (fieldKey: string) => {
+      const field = fieldsMap[fieldKey];
+      if (field?.key) {
+        const defaultOperator =
+          field.defaultOperator ||
+          (field.type === "multiselect" ? "is_any_of" : "is");
+        const defaultValues: unknown[] = field.type === "text" ? [""] : [];
+        const newFilter = createFilter<T>(
+          fieldKey,
+          defaultOperator,
+          defaultValues as T[]
+        );
+        setLastAddedFilterId(newFilter.id);
+        onChange([...filters, newFilter]);
+        setAddFilterOpen(false);
+        setMenuSearchInput("");
+      }
+    },
+    [fieldsMap, filters, onChange]
+  );
+
+  const selectableFields = useMemo(() => {
+    const flatFields = flattenFields(fields);
+    return flatFields.filter((field) => {
+      if (!field.key || field.type === "separator") {
+        return false;
+      }
+      if (allowMultiple) {
+        return true;
+      }
+      return !filters.some((filter) => filter.field === field.key);
+    });
+  }, [fields, filters, allowMultiple]);
+
+  const filteredFields = useMemo(
+    () =>
+      selectableFields.filter(
+        (f) =>
+          !menuSearchInput ||
+          f.label?.toLowerCase().includes(menuSearchInput.toLowerCase())
+      ),
+    [selectableFields, menuSearchInput]
+  );
+
+  useEffect(() => {
+    if (addFilterOpen && filteredFields.length > 0) {
+      setHighlightedIndex(0);
+    }
+  }, [addFilterOpen, filteredFields.length]);
+
+  const triggerButton = useRender({
+    defaultTagName: "button",
+    render: (trigger as React.ReactElement) ?? (
+      <Button variant="outline">
+        <PlusIcon />
+        {mergedI18n.addFilter}
+      </Button>
+    ),
+  });
+
+  const contextValue = useMemo<FilterContextValue>(
+    () => ({
+      allowMultiple,
+      className,
+      i18n: mergedI18n,
+      radius,
+      size,
+      trigger,
+      variant,
+    }),
+    [variant, size, radius, mergedI18n, className, trigger, allowMultiple]
+  );
+
+  return (
+    <FilterContext.Provider value={contextValue}>
+      <div
+        className={cn(filtersContainerVariants({ size, variant }), className)}
+      >
+        {selectableFields.length > 0 && (
+          <DropdownMenu
+            onOpenChange={(open) => {
+              setAddFilterOpen(open);
+              if (open) {
+                setActiveMenu("root");
+              } else {
+                setMenuSearchInput("");
+                setSessionFilterIds({});
+              }
+            }}
+            open={addFilterOpen}
+          >
+            <DropdownMenuTrigger render={triggerButton} />
+            <DropdownMenuContent
+              align="start"
+              className={cn("w-55", menuPopupClassName)}
+            >
+              {showSearchInput && (
+                <>
+                  <div className="relative">
+                    <Input
+                      aria-activedescendant={
+                        highlightedIndex >= 0
+                          ? `${rootId}-item-${highlightedIndex}`
+                          : undefined
+                      }
+                      aria-controls={`${rootId}-listbox`}
+                      className={cn(
+                        "h-8 rounded-none border-0 bg-transparent! px-2 text-sm shadow-none",
+                        "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
+                        activeMenu === "root" && "placeholder:text-foreground"
+                      )}
+                      onBlur={() =>
+                        activeMenu === "root" && rootInputRef.current?.focus()
+                      }
+                      onChange={(e) => setMenuSearchInput(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={() => setActiveMenu("root")}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          if (filteredFields.length > 0) {
+                            setHighlightedIndex((prev) =>
+                              prev < filteredFields.length - 1 ? prev + 1 : 0
+                            );
+                          }
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          if (filteredFields.length > 0) {
+                            setHighlightedIndex((prev) =>
+                              prev > 0 ? prev - 1 : filteredFields.length - 1
+                            );
+                          }
+                        } else if (
+                          (e.key === "ArrowRight" || e.key === "ArrowLeft") &&
+                          highlightedIndex >= 0
+                        ) {
+                          const field = filteredFields[highlightedIndex];
+                          const hasSubMenu =
+                            field &&
+                            (field.type === "select" ||
+                              field.type === "multiselect") &&
+                            fieldHasOptions(field);
+
+                          if (e.key === "ArrowRight" && hasSubMenu) {
+                            e.preventDefault();
+                            setOpenSubMenu(field.key || null);
+                            setActiveMenu(field.key || "root");
+                          } else if (e.key === "ArrowLeft") {
+                            e.preventDefault();
+                            if (openSubMenu) {
+                              setOpenSubMenu(null);
+                              setActiveMenu("root");
+                            }
+                          }
+                        } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                          e.preventDefault();
+                          const field = filteredFields[highlightedIndex];
+                          if (field?.key) {
+                            const hasSubMenu =
+                              (field.type === "select" ||
+                                field.type === "multiselect") &&
+                              fieldHasOptions(field);
+                            if (hasSubMenu) {
+                              if (openSubMenu === field.key) {
+                                setOpenSubMenu(null);
+                                setActiveMenu("root");
+                              } else {
+                                setOpenSubMenu(field.key);
+                                setActiveMenu(field.key);
+                              }
+                            } else {
+                              addFilter(field.key);
+                            }
+                          }
+                        } else if (e.key === "Escape") {
+                          setAddFilterOpen(false);
+                        }
+                        e.stopPropagation();
+                      }}
+                      onMouseEnter={() => setActiveMenu("root")}
+                      placeholder={mergedI18n.searchFields}
+                      ref={rootInputRef}
+                      role="combobox"
+                      value={menuSearchInput}
+                    />
+                    {enableShortcut && shortcutLabel && (
+                      <Kbd className="absolute inset-e-2 top-1/2 -translate-y-1/2 border bg-background">
+                        {shortcutLabel}
+                      </Kbd>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              <div className="relative flex max-h-full">
+                <div
+                  className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain"
+                  id={`${rootId}-listbox`}
+                  onMouseEnter={() => setActiveMenu("root")}
+                  role="listbox"
+                >
+                  <ScrollArea className="**:data-[slot=scroll-area-scrollbar]:m-0">
+                    {(() => {
+                      if (filteredFields.length === 0) {
+                        return (
+                          <div className="py-2 text-center text-muted-foreground text-sm">
+                            {mergedI18n.noFieldsFound}
+                          </div>
+                        );
+                      }
+
+                      return filteredFields.map((field, index) => {
+                        const isHighlighted = highlightedIndex === index;
+                        const itemId = `${rootId}-item-${index}`;
+                        const hasSubMenu =
+                          (field.type === "select" ||
+                            field.type === "multiselect") &&
+                          fieldHasOptions(field);
+
+                        if (hasSubMenu) {
+                          const isMultiSelect = field.type === "multiselect";
+                          const fieldKey = field.key as string;
+                          const sessionFilterId = sessionFilterIds[fieldKey];
+                          const sessionFilter = sessionFilterId
+                            ? filters.find((f) => f.id === sessionFilterId)
+                            : null;
+                          const currentValues = sessionFilter?.values || [];
+
+                          return (
+                            <DropdownMenuSub
+                              key={fieldKey}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  setOpenSubMenu(fieldKey);
+                                } else if (openSubMenu === fieldKey) {
+                                  setOpenSubMenu(null);
+                                  setActiveMenu("root");
+                                }
+                              }}
+                              open={openSubMenu === fieldKey}
+                            >
+                              <DropdownMenuSubTrigger
+                                aria-selected={isHighlighted}
+                                className="data-highlighted:bg-accent data-popup-open:bg-accent data-highlighted:text-accent-foreground data-popup-open:text-accent-foreground"
+                                data-highlighted={isHighlighted || undefined}
+                                id={itemId}
+                                onMouseEnter={() => {
+                                  setHighlightedIndex(index);
+                                  setActiveMenu("root");
+                                }}
+                                role="option"
+                              >
+                                {field.icon}
+                                <span>{field.label}</span>
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent
+                                className="w-50"
+                                side="inline-end"
+                              >
+                                <FilterSubmenuContent
+                                  currentValues={currentValues}
+                                  field={field}
+                                  i18n={mergedI18n}
+                                  isActive={activeMenu === fieldKey}
+                                  isMultiSelect={isMultiSelect}
+                                  onActive={() => {
+                                    if (field.searchable !== false) {
+                                      setActiveMenu(fieldKey);
+                                    }
+                                  }}
+                                  onBack={() => {
+                                    setOpenSubMenu(null);
+                                    setActiveMenu("root");
+                                  }}
+                                  onClose={() => setAddFilterOpen(false)}
+                                  onToggle={(value, isSelected) => {
+                                    if (isMultiSelect) {
+                                      const nextValues = isSelected
+                                        ? (currentValues.filter(
+                                            (v) => v !== value
+                                          ) as T[])
+                                        : ([...currentValues, value] as T[]);
+
+                                      if (sessionFilter) {
+                                        if (nextValues.length === 0) {
+                                          onChange(
+                                            filters.filter(
+                                              (f) => f.id !== sessionFilter.id
+                                            )
+                                          );
+                                          setSessionFilterIds((prev) => ({
+                                            ...prev,
+                                            [fieldKey]: "",
+                                          }));
+                                        } else {
+                                          onChange(
+                                            filters.map((f) =>
+                                              f.id === sessionFilter.id
+                                                ? { ...f, values: nextValues }
+                                                : f
+                                            )
+                                          );
+                                        }
+                                      } else {
+                                        const newFilter = createFilter<T>(
+                                          fieldKey,
+                                          field.defaultOperator || "is_any_of",
+                                          nextValues
+                                        );
+                                        onChange([...filters, newFilter]);
+                                        setSessionFilterIds((prev) => ({
+                                          ...prev,
+                                          [fieldKey]: newFilter.id,
+                                        }));
+                                      }
+                                    } else {
+                                      const newFilter = createFilter<T>(
+                                        fieldKey,
+                                        field.defaultOperator || "is",
+                                        [value] as T[]
+                                      );
+                                      setLastAddedFilterId(newFilter.id);
+                                      onChange([...filters, newFilter]);
+                                      setAddFilterOpen(false);
+                                    }
+                                  }}
+                                />
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          );
+                        }
+
+                        return (
+                          <DropdownMenuItem
+                            aria-selected={isHighlighted}
+                            className="data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                            data-highlighted={isHighlighted || undefined}
+                            id={itemId}
+                            key={field.key}
+                            onClick={() => field.key && addFilter(field.key)}
+                            onMouseEnter={() => setHighlightedIndex(index)}
+                            role="option"
+                          >
+                            {field.icon}
+                            <span>{field.label}</span>
+                          </DropdownMenuItem>
+                        );
+                      });
+                    })()}
+                  </ScrollArea>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {filters.map((filter) => {
+          const field = fieldsMap[filter.field];
+          if (!field) {
+            return null;
+          }
+          return (
+            <ButtonGroup
+              // Sera is an underline style: its group text and input group carry
+              // only a bottom border. Normalise the boxed segments (operator,
+              // value, remove) to the same treatment so the whole chip reads as
+              // one underlined group instead of mixing boxes and rules.
+              className=""
+              key={filter.id}
+            >
+              <ButtonGroupText className="bg-background dark:bg-input/30">
+                {field.icon && field.icon}
+                {field.label}
+              </ButtonGroupText>
+              <FilterOperatorDropdown<T>
+                field={field}
+                onChange={(operator) => updateFilter(filter.id, { operator })}
+                operator={filter.operator}
+                values={filter.values}
+              />
+              <FilterValueSelector<T>
+                autoFocus={filter.id === lastAddedFilterId}
+                field={field}
+                onChange={(values) => updateFilter(filter.id, { values })}
+                operator={filter.operator}
+                values={filter.values}
+              />
+              <FilterRemoveButton onClick={() => removeFilter(filter.id)} />
+            </ButtonGroup>
+          );
+        })}
+      </div>
+    </FilterContext.Provider>
+  );
+}
+
+export const createFilter = <T = unknown>(
+  field: string,
+  operator?: string,
+  values: T[] = []
+): Filter<T> => ({
+  field,
+  id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+  operator: operator || "is",
+  values,
+});
+
+export const createFilterGroup = <T = unknown>(
+  id: string,
+  label: string,
+  fields: FilterFieldConfig<T>[],
+  initialFilters: Filter<T>[] = []
+): FilterGroup<T> => ({
+  fields,
+  filters: initialFilters,
+  id,
+  label,
+});

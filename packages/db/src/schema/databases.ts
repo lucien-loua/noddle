@@ -1,0 +1,166 @@
+import {
+  bigint,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { createdAt, updatedAt } from "#schema/columns";
+import { environments } from "#schema/projects";
+import { s3Destinations } from "#schema/s3-destinations";
+import { servers } from "#schema/servers";
+import { serviceStatus } from "#schema/services";
+
+export const databaseEngine = pgEnum("database_engine", [
+  "postgres",
+  "mysql",
+  "mariadb",
+  "mongo",
+  "redis",
+]);
+
+/**
+ * Automatic backup cadence.
+ *
+ * An enum, not a cron expression: Docker and Traefik knobs are not exposed as
+ * form fields, and a cron is no different — it is a whole language inside a
+ * form. "Every day" and "every week" cover what a self-hosted database asks
+ * for; the exact hour is not a setting until someone asks for it.
+ */
+export const backupSchedule = pgEnum("backup_schedule", [
+  "off",
+  "daily",
+  "weekly",
+]);
+
+export const databases = pgTable(
+  "databases",
+  {
+    /**
+     * How many SUCCESSFUL backups to keep. Beyond that, the oldest is deleted,
+     * row AND object — otherwise the bucket grows forever and the user sees the
+     * bill before they discover the setting.
+     */
+    backupRetention: integer("backup_retention").notNull().default(7),
+    backupSchedule: backupSchedule("backup_schedule").notNull().default("off"),
+
+    /**
+     * CPU cap in NanoCPUs (1 core = 1e9), `null` = no limit.
+     *
+     * An intentional bend of "Docker knobs are not exposed as form fields",
+     * same family as `image` just above: the target VM is 2 GB BY DECISION, and
+     * the Monitoring tab already announces "no limit declared" without giving
+     * a way to act. A need already seen on this kind of Advanced tab.
+     *
+     * The stored unit is Swarm's (`Limits.NanoCPUs`), read as-is by the worker;
+     * the screen converts to/from cores. Same principle as `service_metrics`,
+     * which stores raw bytes and lets the UI divide.
+     */
+    cpuLimitNanos: bigint("cpu_limit_nanos", { mode: "number" }),
+
+    /** CPU reservation in NanoCPUs (`Reservations.NanoCPUs`): what the node
+     *  guarantees before placing. Must stay ≤ the limit — checked on save,
+     *  like `memoryReservationBytes`. `null` = no reservation. */
+    cpuReservationNanos: bigint("cpu_reservation_nanos", { mode: "number" }),
+    createdAt,
+
+    /**
+     * The database name INSIDE the server, distinct from `name` (which names
+     * the resource in Noddle) and from `rootUser`.
+     *
+     * It used to equal `rootUser` — `POSTGRES_DB=${rootUser}` — so all three
+     * were the same word. Separated because an app whose config expects
+     * `POSTGRES_DB=shop` cannot live with `noddle`, and because restoring a
+     * dump from elsewhere assumes you can target the name it contains.
+     *
+     * `null` for engines that have no such notion — Redis only has database
+     * numbers.
+     */
+    databaseName: text("database_name"),
+
+    /** Free-form user text. Has no effect on the deploy. */
+    description: text("description"),
+    engine: databaseEngine("engine").notNull(),
+    environmentId: uuid("environment_id")
+      .notNull()
+      .references(() => environments.id, { onDelete: "cascade" }),
+
+    /**
+     * The port PUBLISHED on the host, `null` = the database is only reachable
+     * from the overlay network.
+     *
+     * This is the only way to reach a database from outside: a database does
+     * not go through Traefik, which routes HTTP while an engine speaks its own
+     * protocol over TCP. Publishing a port is therefore an explicit choice,
+     * and it exposes the engine to anything that can reach the machine —
+     * hence the screen copy, which says so rather than implying it.
+     */
+    externalPort: integer("external_port"),
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    /**
+     * Container image, `null` = the engine's pinned default.
+     *
+     * An INTENTIONAL bend of "Docker knobs are not exposed as form fields":
+     * this is not a Docker knob, it is the engine VERSION, and it is imposed
+     * from outside — a PostgreSQL 15 dump does not restore into a 17, and
+     * `pg_dump` flatly refuses a server newer than itself (already noted in
+     * `backup.ts`).
+     *
+     * Written once and re-read later, never recomputed: changing it under an
+     * existing database would start a different engine on its volume.
+     */
+    image: text("image"),
+
+    // Why a teardown failed — same reason as `services.lastError`.
+    lastError: text("last_error"),
+
+    /** Memory cap in BYTES (`Limits.MemoryBytes`), `null` = no limit. See
+     *  `cpuLimitNanos`. */
+    memoryLimitBytes: bigint("memory_limit_bytes", { mode: "number" }),
+
+    /** Memory reservation in bytes (`Reservations.MemoryBytes`): what the
+     *  node guarantees before placing. Must stay ≤ the limit — checked on
+     *  save. `null` = no reservation. */
+    memoryReservationBytes: bigint("memory_reservation_bytes", {
+      mode: "number",
+    }),
+
+    name: text("name").notNull(),
+
+    // Never returned to the browser, even encrypted, even once. Attaching a
+    // database to a service writes an ENCRYPTED environment variable directly
+    // server-side — the password never crosses the network to the client,
+    // unlike a webhook secret that must be handed to a third party.
+    rootPasswordEncrypted: text("root_password_encrypted").notNull(),
+
+    // Absent for redis, which has no user notion — only a password.
+    rootUser: text("root_user"),
+    s3DestinationId: uuid("s3_destination_id").references(
+      () => s3Destinations.id,
+      { onDelete: "set null" }
+    ),
+
+    // Like `services.serverId`: the named volume exists only on THIS node,
+    // the link is structural, not mere placement.
+    serverId: uuid("server_id")
+      .notNull()
+      .references(() => servers.id, { onDelete: "restrict" }),
+    status: serviceStatus("status").notNull().default("created"),
+
+    // Swarm service name AND its volume, WRITTEN at creation and never
+    // recomputed.
+    //
+    // Recomputing it would break THREE things at once, all silently: the named
+    // volume (the database restarts empty, with no error), the host written
+    // into every connection string already encrypted in an attached service's
+    // variables, and the target `backup.ts` finds to dump. Rows from before
+    // this fix are therefore backfilled to `noddle-db-<name>` and never move.
+    // See `@noddle/shared/swarm-names`.
+    swarmName: text("swarm_name").notNull(),
+    updatedAt,
+  },
+  (t) => [uniqueIndex("databases_env_name_idx").on(t.environmentId, t.name)]
+);

@@ -1,0 +1,1 @@
+ALTER TABLE "databases" ADD COLUMN "external_port" integer;

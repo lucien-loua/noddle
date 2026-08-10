@@ -1,0 +1,1 @@
+ALTER TABLE "deployments" ADD COLUMN "image_purged" boolean DEFAULT false NOT NULL;

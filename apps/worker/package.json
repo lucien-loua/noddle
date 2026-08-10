@@ -1,0 +1,30 @@
+{
+  "name": "@noddle/worker",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "start": "node src/index.ts"
+  },
+  "dependencies": {
+    "@noddle/backup": "workspace:*",
+    "@noddle/backup-store": "workspace:*",
+    "@noddle/build-engine": "workspace:*",
+    "@noddle/db": "workspace:*",
+    "@noddle/deploy-contract": "workspace:*",
+    "@noddle/notifier": "workspace:*",
+    "@noddle/proxy-config": "workspace:*",
+    "@noddle/shared": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*",
+    "bullmq": "catalog:",
+    "ioredis": "catalog:",
+    "drizzle-orm": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

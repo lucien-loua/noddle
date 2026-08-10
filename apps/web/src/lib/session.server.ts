@@ -1,0 +1,15 @@
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { auth, type Session } from "@/lib/auth.server";
+
+export async function getSession(): Promise<Session | null> {
+  return await auth.api.getSession({ headers: getRequestHeaders() });
+}
+
+/** Throws if nobody is logged in. Call it BEFORE any data read. */
+export async function requireSession(): Promise<Session> {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("not authenticated");
+  }
+  return session;
+}

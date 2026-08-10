@@ -1,0 +1,122 @@
+import { relations } from "drizzle-orm";
+import { backups } from "#schema/backups";
+import { databases } from "#schema/databases";
+import { deploymentLogs, deployments } from "#schema/deployments";
+import { envVars } from "#schema/env-vars";
+import { environments, projects } from "#schema/projects";
+import { servers } from "#schema/servers";
+import { services } from "#schema/services";
+import { stackDeploymentLogs, stackDeployments, stacks } from "#schema/stacks";
+
+export const projectsRelations = relations(projects, ({ many }) => ({
+  environments: many(environments),
+}));
+
+export const environmentsRelations = relations(
+  environments,
+  ({ one, many }) => ({
+    databases: many(databases),
+    project: one(projects, {
+      fields: [environments.projectId],
+      references: [projects.id],
+    }),
+    services: many(services),
+    stacks: many(stacks),
+  })
+);
+
+export const serversRelations = relations(servers, ({ many }) => ({
+  databases: many(databases),
+  services: many(services),
+  stacks: many(stacks),
+}));
+
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  deployments: many(deployments),
+  environment: one(environments, {
+    fields: [services.environmentId],
+    references: [environments.id],
+  }),
+  envVars: many(envVars),
+  server: one(servers, {
+    fields: [services.serverId],
+    references: [servers.id],
+  }),
+}));
+
+export const envVarsRelations = relations(envVars, ({ one }) => ({
+  service: one(services, {
+    fields: [envVars.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const deploymentsRelations = relations(deployments, ({ one, many }) => ({
+  logs: many(deploymentLogs),
+  service: one(services, {
+    fields: [deployments.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const deploymentLogsRelations = relations(deploymentLogs, ({ one }) => ({
+  deployment: one(deployments, {
+    fields: [deploymentLogs.deploymentId],
+    references: [deployments.id],
+  }),
+}));
+
+export const stacksRelations = relations(stacks, ({ one, many }) => ({
+  deployments: many(stackDeployments),
+  environment: one(environments, {
+    fields: [stacks.environmentId],
+    references: [environments.id],
+  }),
+  server: one(servers, {
+    fields: [stacks.serverId],
+    references: [servers.id],
+  }),
+}));
+
+export const stackDeploymentsRelations = relations(
+  stackDeployments,
+  ({ one, many }) => ({
+    logs: many(stackDeploymentLogs),
+    stack: one(stacks, {
+      fields: [stackDeployments.stackId],
+      references: [stacks.id],
+    }),
+  })
+);
+
+export const stackDeploymentLogsRelations = relations(
+  stackDeploymentLogs,
+  ({ one }) => ({
+    deployment: one(stackDeployments, {
+      fields: [stackDeploymentLogs.stackDeploymentId],
+      references: [stackDeployments.id],
+    }),
+  })
+);
+
+export const databasesRelations = relations(databases, ({ many, one }) => ({
+  backups: many(backups),
+  environment: one(environments, {
+    fields: [databases.environmentId],
+    references: [environments.id],
+  }),
+  server: one(servers, {
+    fields: [databases.serverId],
+    references: [servers.id],
+  }),
+}));
+
+// The backup job needs the server that holds the volume and the engine to
+// choose its dumper: it loads the database WITH its server from this
+// relation, never via a second query.
+export const backupsRelations = relations(backups, ({ one }) => ({
+  database: one(databases, {
+    fields: [backups.databaseId],
+    references: [databases.id],
+  }),
+}));

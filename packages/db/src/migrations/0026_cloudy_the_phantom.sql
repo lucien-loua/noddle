@@ -1,0 +1,2 @@
+ALTER TABLE "services" ADD COLUMN "registry_id" uuid;--> statement-breakpoint
+ALTER TABLE "services" ADD CONSTRAINT "services_registry_id_registries_id_fk" FOREIGN KEY ("registry_id") REFERENCES "public"."registries"("id") ON DELETE restrict ON UPDATE no action;

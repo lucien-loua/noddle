@@ -1,0 +1,127 @@
+# Rejoue la chaîne de déploiement complète sur un vrai hôte Linux.
+#
+# Pourquoi ce workflow existe : sur les sept ruptures rencontrées en Phase 0,
+# SIX venaient de dépendances tierces — un flag nixpacks qui écrase les overlays
+# nix, une image de base sans wget, Traefik < 3.6 incapable de parler à Docker 29.
+# Aucune n'était dans notre code. C'est le vrai profil de risque du projet, et
+# rien d'autre que ce spike ne le détecte. D'autres outils comparables
+# laissent aujourd'hui passer cette casse Traefik/Docker faute d'un
+# équivalent.
+#
+# Pourquoi pas de VM ici : GitHub ne supporte pas la virtualisation imbriquée
+# (« Any use of nested VMs is experimental and done at your own risk »). Le
+# runner EST déjà une VM avec son propre noyau et Docker installé, donc on joue
+# la chaîne dessus, en SSH vers lui-même.
+#
+# Ce n'est pas un contournement : c'est la topologie actée — l'hôte local est le
+# serveur cible n°1 et passe par l'exécuteur SSH comme n'importe quel autre. La
+# CI exerce donc le chemin de production plutôt qu'un chemin de test.
+#
+# CE QUE CETTE CI NE VALIDE PAS : le plafond de 2 Go. Un runner a 16 Go, donc
+# « le service survit au build » y est vrai trivialement. Elle vérifie que le
+# MÉCANISME du cap fonctionne (le build est bien tué) et que les dépendances
+# n'ont pas dérivé. Le réalisme de l'OOM reste l'affaire du run Multipass local,
+# qui demeure la référence avant livraison.
+
+name: spike
+
+on:
+  schedule:
+    # Tous les jours. La dérive de dépendances est le risque principal et elle
+    # arrive sans qu'on pousse quoi que ce soit — une release Docker suffit.
+    - cron: "0 4 * * *"
+  push:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/spike.yml"
+  pull_request:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/spike.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Libérer du disque
+        # Les images nixpacks et les couches de build sont volumineuses, et le
+        # runner arrive chargé d'outils dont on n'a aucun usage.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+          df -h /
+
+      - name: SSH vers soi-même
+        # Le spike parle SSH, point. On ne lui fabrique pas d'exception pour la
+        # CI : on lui donne un hôte SSH, qui se trouve être la machine courante.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openssh-server
+          sudo systemctl enable --now ssh
+
+          ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519 -q
+          cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+
+          # `awk` accumule et n'imprime qu'à la fin : pas d'`exit` anticipé, donc
+          # pas de SIGPIPE sur le producteur. Le piège pipefail rencontré en
+          # Phase 0 nous a déjà coûté une exécution.
+          IP="$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") ip=$(i+1)} END {print ip}')"
+          echo "TARGET_IP=$IP" >> "$GITHUB_ENV"
+          echo "TARGET_SSH=$USER@$IP" >> "$GITHUB_ENV"
+
+          ssh -o StrictHostKeyChecking=accept-new "$USER@$IP" 'echo "SSH OK: $(uname -sr)"'
+
+      - name: 1. create — la chaîne de bout en bout
+        run: ./scripts/spike-local.sh
+
+      - name: 2. update — chemin docker service update
+        run: ./scripts/spike-local.sh
+
+      - name: 3. break — une image cassée ne coupe pas le service
+        run: ./scripts/spike-local.sh break
+
+      - name: 4. cap — un build gourmand est tué
+        run: ./scripts/spike-local.sh cap
+
+      - name: Versions utilisées
+        # Le diagnostic qui compte en cas d'échec : qu'est-ce qui a bougé en face ?
+        if: always()
+        run: |
+          {
+            echo "### Versions sur ce run"
+            echo
+            echo '| Composant | Version |'
+            echo '|---|---|'
+            echo "| Docker Engine | $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') |"
+            echo "| Docker API | $(docker version --format '{{.Server.APIVersion}}' 2>/dev/null || echo '?') (min $(docker version --format '{{.Server.MinAPIVersion}}' 2>/dev/null || echo '?')) |"
+            echo "| Traefik | $(grep -oE 'traefik:v[0-9.]+' scripts/spike-local.sh | head -1) |"
+            echo "| nixpacks | $(nixpacks --version 2>/dev/null || echo 'non installé') |"
+            echo "| Runner | $(uname -sr) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Diagnostic en cas d'échec
+        if: failure()
+        run: |
+          echo "::group::services"
+          sudo docker service ls || true
+          sudo docker service ps spike-app --no-trunc || true
+          echo "::endgroup::"
+          echo "::group::logs traefik"
+          sudo docker service logs noddle-traefik --tail 60 2>&1 || true
+          echo "::endgroup::"
+          echo "::group::logs app"
+          sudo docker service logs spike-app --tail 60 2>&1 || true
+          echo "::endgroup::"
+          echo "::group::état swarm"
+          sudo docker info --format 'swarm={{.Swarm.LocalNodeState}}' || true
+          sudo docker network ls || true
+          echo "::endgroup::"

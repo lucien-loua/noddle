@@ -1,0 +1,1 @@
+ALTER TABLE "databases" ADD COLUMN "cpu_reservation_nanos" bigint;
