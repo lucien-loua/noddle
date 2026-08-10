@@ -33,7 +33,7 @@ let raw = "healthy";
 try {
   raw =
     fs
-      .readFileSync(path.join(import.meta.dirname, "mode.txt"), "utf8")
+      .readFileSync(path.join(__dirname, "mode.txt"), "utf8")
       .trim() || "healthy";
 } catch {
   // pas de mode.txt → healthy
