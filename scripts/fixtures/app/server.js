@@ -23,18 +23,20 @@
 //
 // Le second cas est celui que les vrais utilisateurs rencontrent : une app qui
 // meurt sous charge après quelques minutes, pas en 25 secondes.
-const http = require("node:http");
-const fs = require("node:fs");
-const path = require("node:path");
+
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const port = Number(process.env.PORT) || 3000;
+const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
 
 let raw = "healthy";
 try {
   raw =
-    fs
-      .readFileSync(path.join(__dirname, "mode.txt"), "utf8")
-      .trim() || "healthy";
+    fs.readFileSync(path.join(fixtureDir, "mode.txt"), "utf8").trim() ||
+    "healthy";
 } catch {
   // pas de mode.txt → healthy
 }
