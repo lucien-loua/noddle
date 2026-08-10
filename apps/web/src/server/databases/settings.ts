@@ -1,6 +1,7 @@
 import { databases } from "@noddle/db/schema";
 import {
   changeDatabasePasswordSchema,
+  databaseConfigurationSchema,
   databaseExternalPortSchema,
   databaseResourcesSchema,
 } from "@noddle/shared/validation";
@@ -70,6 +71,30 @@ export const setDatabaseResources = createServerFn({ method: "POST" })
         memoryLimitBytes: data.memoryLimitBytes,
         memoryReservationBytes: data.memoryReservationBytes,
       })
+      .where(eq(databases.id, database.id));
+
+    await enqueueDeploy({
+      databaseId: database.id,
+      kind: "provision-database",
+    });
+    return { queued: true };
+  });
+
+export const setDatabaseConfiguration = createServerFn({ method: "POST" })
+  .validator(databaseConfigurationSchema)
+  .handler(async ({ data }): Promise<{ queued: true }> => {
+    await requirePermission({ action: "create", resource: "database" });
+
+    const database = await db.query.databases.findFirst({
+      where: eq(databases.id, data.databaseId),
+    });
+    if (!database) {
+      throw new Error("database not found");
+    }
+
+    await db
+      .update(databases)
+      .set({ image: data.image })
       .where(eq(databases.id, database.id));
 
     await enqueueDeploy({

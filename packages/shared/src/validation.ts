@@ -349,7 +349,7 @@ const sqlIdentifierSchema = z
  * to target a version Noddle doesn't know about. We only reject what
  * would break the command line — spaces and quotes.
  */
-const imageRefSchema = z
+export const imageRefSchema = z
   .string()
   .min(1)
   .max(200)
@@ -413,6 +413,18 @@ export const databaseResourcesSchema = z.object({
     .min(MIN_MEMORY_BYTES)
     .max(1024 * 1024 * 1024 * 1024)
     .nullable(),
+});
+
+/**
+ * Post-creation engine image for a database.
+ *
+ * Same bounds as `connectDatabaseSchema.image`. Changing the tag under an
+ * existing volume is the operator's call — a major bump can crash-loop or
+ * empty the data dir; the screen warns, the worker does not second-guess.
+ */
+export const databaseConfigurationSchema = z.object({
+  databaseId: z.uuid(),
+  image: imageRefSchema,
 });
 
 /**

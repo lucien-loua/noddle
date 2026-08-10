@@ -16,7 +16,7 @@ export function DatabaseAdvanced({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <DatabaseConfiguration database={database} />
+      <DatabaseConfiguration canEdit={canEdit} database={database} />
       <DatabaseResourceLimits
         canEdit={canEdit}
         cpuLimitNanos={database.cpuLimitNanos}

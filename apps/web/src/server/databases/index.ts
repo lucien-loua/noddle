@@ -19,6 +19,7 @@ export {
 } from "./read";
 export {
   changeDatabasePassword,
+  setDatabaseConfiguration,
   setDatabaseExternalPort,
   setDatabaseResources,
 } from "./settings";

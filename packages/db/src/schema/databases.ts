@@ -109,8 +109,10 @@ export const databases = pgTable(
      * `pg_dump` flatly refuses a server newer than itself (already noted in
      * `backup.ts`).
      *
-     * Written once and re-read later, never recomputed: changing it under an
-     * existing database would start a different engine on its volume.
+     * Editable after creation (Advanced → Configuration). A major bump under
+     * an existing volume can crash-loop or ignore the data directory — the
+     * screen warns; the worker applies whatever is stored here on the next
+     * provision.
      */
     image: text("image"),
 

@@ -13,8 +13,10 @@ import {
 } from "#crypto";
 import {
   bucketNameSchema,
+  databaseConfigurationSchema,
   envVarKeySchema,
   gitBranchSchema,
+  imageRefSchema,
   objectPrefixSchema,
   s3DestinationCreateSchema,
   s3DestinationSchema,
@@ -177,6 +179,29 @@ if (
   ok("envVarKeySchema enforces a shell identifier");
 } else {
   ko("inconsistent envVarKeySchema");
+}
+
+const imageOk = [
+  "postgres:17-alpine",
+  "ghcr.io/org/db:1.2.3",
+  "redis@sha256:abcdef0123456789",
+];
+const imageKo = ["", "postgres 17", "postgres:17'", "a".repeat(201)];
+if (
+  imageOk.every((v) => imageRefSchema.safeParse(v).success) &&
+  imageKo.every((v) => !imageRefSchema.safeParse(v).success) &&
+  databaseConfigurationSchema.safeParse({
+    databaseId: "00000000-0000-4000-8000-000000000001",
+    image: "postgres:17-alpine",
+  }).success &&
+  !databaseConfigurationSchema.safeParse({
+    databaseId: "not-a-uuid",
+    image: "postgres:17-alpine",
+  }).success
+) {
+  ok("databaseConfigurationSchema accepts a valid image update");
+} else {
+  ko("inconsistent databaseConfigurationSchema");
 }
 
 // ?????????????????????????????????????????????????????????????????????????????

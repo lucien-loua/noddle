@@ -418,7 +418,7 @@ export function ConnectDatabaseDialog({
                   <form.AppField name="image">
                     {(f) => (
                       <f.FieldText
-                        description="Fixed after creation."
+                        description="Can be changed later from Advanced → Configuration."
                         label="Image"
                         placeholder={DEFAULT_DATABASE_IMAGE[engine]}
                       />

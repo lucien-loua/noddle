@@ -609,9 +609,8 @@ export async function provisionDatabase(
       extraEnv: userEnv,
       // `??` and not a recomputation: a database from BEFORE the `image`
       // column started on its engine's default, and that default is what it
-      // must find again. A database that has chosen one keeps it forever —
-      // changing the image under an existing volume would start a different
-      // engine on top of it.
+      // must find again. When `databases.image` is set (at create or via
+      // Advanced → Configuration), provision applies that tag as-is.
       image: database.image ?? spec.image,
       name,
       networkName: ctx.networkName,
