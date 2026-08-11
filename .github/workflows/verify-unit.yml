@@ -26,9 +26,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # Pin the version (no `latest` tag resolve) and pass an empty token so
+      # setup-bun downloads from bun.sh instead of api.github.com — the
+      # latter is what surfaced as a bare `TypeError: fetch failed` here.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.3.13"
+          token: ""
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run check
