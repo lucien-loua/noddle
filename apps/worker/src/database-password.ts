@@ -4,15 +4,14 @@ import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import type { DatabaseEngine } from "@noddle/shared/database-engines";
 import {
   type DockerApi,
-  disconnect,
-  dockerClient,
   execStream,
   quoteArg,
   type SshClient,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { assertSafeIdentifier, findDatabaseContainer } from "#backup";
-import { connectForDeploy, type DeployContext } from "#runtime-context";
+import { withDeployClients } from "#job-run";
+import type { DeployContext } from "#runtime-context";
 
 /**
  * Runs a `sh` script INSIDE the container, feeding it `input` on standard
@@ -271,45 +270,36 @@ export async function changeDatabasePassword(
   const rootUser = database.rootUser ?? "root";
   assertSafeIdentifier(rootUser, "database user");
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
+  await withDeployClients(
     ctx,
-    database.server
-  );
+    database.server,
+    async ({ buildClient, managerDocker }) => {
+      const containerId = await findDatabaseContainer(
+        buildClient,
+        database.swarmName
+      );
 
-  try {
-    const containerId = await findDatabaseContainer(
-      buildClient,
-      database.swarmName
-    );
+      await runInContainer(buildClient, {
+        containerId,
+        input: alterInput(database.engine, rootUser, password),
+        script: alterScript(database.engine, rootUser),
+      });
 
-    await runInContainer(buildClient, {
-      containerId,
-      input: alterInput(database.engine, rootUser, password),
-      script: alterScript(database.engine, rootUser),
-    });
+      await rotateSecret(managerDocker, {
+        password,
+        serviceName: database.swarmName,
+      });
 
-    const managerDocker = sameConnection
-      ? dockerClient(buildClient)
-      : dockerClient(managerClient);
-    await rotateSecret(managerDocker, {
-      password,
-      serviceName: database.swarmName,
-    });
-
-    await ctx.db
-      .update(databases)
-      .set({
-        rootPasswordEncrypted: encryptSecret(
-          password,
-          ctx.appKey,
-          secretContext.databasePassword(database.id)
-        ),
-      })
-      .where(eq(databases.id, database.id));
-  } finally {
-    if (managerClient !== buildClient) {
-      disconnect(managerClient);
+      await ctx.db
+        .update(databases)
+        .set({
+          rootPasswordEncrypted: encryptSecret(
+            password,
+            ctx.appKey,
+            secretContext.databasePassword(database.id)
+          ),
+        })
+        .where(eq(databases.id, database.id));
     }
-    disconnect(buildClient);
-  }
+  );
 }

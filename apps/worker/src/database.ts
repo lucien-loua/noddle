@@ -12,12 +12,7 @@ import {
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
-import {
-  type DockerApi,
-  disconnect,
-  dockerClient,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { type DockerApi, execArgv } from "@noddle/ssh-executor";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -27,11 +22,8 @@ import {
   waitForRunningTask,
 } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import {
-  connectForDeploy,
-  type DeployContext,
-  type RouteOptions,
-} from "#runtime-context";
+import { withDeployClients } from "#job-run";
+import type { DeployContext, RouteOptions } from "#runtime-context";
 
 // Docker 29 responds with "volume <name> not found", the older CLI with
 // "no such volume" — neither alone is enough. Duplicated from
@@ -500,134 +492,131 @@ export async function provisionDatabase(
       `${row.key}=${decryptSecret(row.valueEncrypted, ctx.appKey, secretContext.envVar(row.id))}`
   );
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
-    ctx,
-    database.server
-  );
-
   try {
-    const buildDocker = dockerClient(buildClient);
-    // Read back from the row, never recomputed from `database.name`: this
-    // name is also the VOLUME's, and the host in connection strings already
-    // written to attached services. Recomputing it would restart the
-    // database on an empty volume. See `@noddle/shared/swarm-names`.
-    const name = database.swarmName;
+    await withDeployClients(
+      ctx,
+      database.server,
+      async ({ buildDocker, managerDocker }) => {
+        // Read back from the row, never recomputed from `database.name`:
+        // this name is also the VOLUME's, and the host in connection
+        // strings already written to attached services. Recomputing it
+        // would restart the database on an empty volume. See
+        // `@noddle/shared/swarm-names`.
+        const name = database.swarmName;
 
-    // The volume is LOCAL to the node hosting it: created on ITS connection,
-    // never via the manager when the two differ.
-    await ensureVolume(buildDocker, name);
-    for (const mount of database.extraMounts) {
-      if (mount.type === "volume") {
-        // biome-ignore lint/performance/noAwaitInLoops: sequential ensure on one node
-        await ensureVolume(buildDocker, mount.source);
+        // The volume is LOCAL to the node hosting it: created on ITS
+        // connection, never via the manager when the two differ.
+        await ensureVolume(buildDocker, name);
+        for (const mount of database.extraMounts) {
+          if (mount.type === "volume") {
+            // biome-ignore lint/performance/noAwaitInLoops: sequential ensure on one node
+            await ensureVolume(buildDocker, mount.source);
+          }
+        }
+
+        // ALWAYS pinned, unconditionally. A database is the case where the
+        // constraint matters MOST: its named volume only exists on that
+        // node, and Swarm doesn't resolve distributed storage. Without a
+        // constraint, a multi-node cluster could schedule the database
+        // elsewhere — where it would start on an EMPTY volume, with no
+        // error, looking like it works.
+        //
+        // The previous code skipped it when the database was hosted on the
+        // manager (`sameConnection`), assuming it had no effect: that's
+        // only true on a single-node cluster. Same gap as in `deploy.ts`
+        // and `compose.ts`, and this is where it would cost the most.
+        // Placement from Advanced → Swarm Settings overrides this when set.
+        const placementNodeId =
+          database.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
+        await ensureOverlayNetwork(managerDocker, route.networkName);
+
+        const existing = await findServiceByName(managerDocker, name);
+        // Find-or-create, so calling it on an existing database replaces
+        // nothing: a database's password never changes after creation.
+        // Cluster-wide like the service that will mount it, so never
+        // through `buildDocker` when that differs from the manager.
+        const secretId = await ensureSecret(
+          managerDocker,
+          `${name}-password`,
+          password
+        );
+        const desired = databaseServiceSpec({
+          databaseName: database.databaseName,
+          externalPort: database.externalPort,
+          extraEnv: userEnv,
+          extraMounts: database.extraMounts,
+          // `??` and not a recomputation: a database from BEFORE the
+          // `image` column started on its engine's default, and that
+          // default is what it must find again. When `databases.image` is
+          // set (at create or via Advanced → Configuration), provision
+          // applies that tag as-is.
+          image: database.image ?? spec.image,
+          name,
+          networkName: route.networkName,
+          placementNodeId,
+          replicas: database.replicas,
+          // Read as-is: the screen has already converted cores and
+          // megabytes into Swarm units, and the spec is REPLACED in full
+          // on every provisioning pass — so removing a limit (setting it
+          // back to `null`) does make it disappear from the spec, which
+          // the builder's `Resources` omission logic ensures.
+          resources: {
+            cpuLimitNanos: database.cpuLimitNanos,
+            cpuReservationNanos: database.cpuReservationNanos,
+            memoryLimitBytes: database.memoryLimitBytes,
+            memoryReservationBytes: database.memoryReservationBytes,
+          },
+          rootUser: database.rootUser,
+          secretId,
+          spec,
+          swarmSettings: database.swarmSettings,
+          volumePath: database.volumePath ?? spec.volumePath,
+        });
+
+        // dockerode's UpdateConfig types require Parallelism/Order even
+        // though the Engine accepts partial configs — cast at the
+        // boundary.
+        const serviceSpec = desired as never;
+
+        if (existing) {
+          // UPDATE, and not just "do nothing if it already exists".
+          // Without this branch, changing the published port had NO
+          // effect at all: the row changed in the database while the
+          // Swarm service kept its old spec, and the screen announced a
+          // reachable database that wasn't.
+          //
+          // The spec is REPLACED in full rather than merged: it's built
+          // from the row, so it IS the desired state, and merging would
+          // leave behind whatever a previous version had set.
+          await managerDocker.getService(existing.ID as string).update({
+            ...desired,
+            version: existing.Version?.Index,
+          } as never);
+        } else {
+          await managerDocker.createService(serviceSpec);
+          // A CREATE has no UpdateStatus — without waiting for the task, a
+          // broken first startup would read as a success.
+          await waitForRunningTask(managerDocker, name);
+        }
+
+        const state = await readUpdateState(managerDocker, name);
+        const accepted = isDeployAccepted(state.updateState);
+        await ctx.db
+          .update(databases)
+          .set(
+            accepted
+              ? markRunning(null)
+              : markCrashed(null, state.updateMessage ?? "swarm refused")
+          )
+          .where(eq(databases.id, database.id));
       }
-    }
-
-    // ALWAYS pinned, unconditionally. A database is the case where the
-    // constraint matters MOST: its named volume only exists on that node,
-    // and Swarm doesn't resolve distributed storage. Without a constraint, a
-    // multi-node cluster could schedule the database elsewhere — where it
-    // would start on an EMPTY volume, with no error, looking like it works.
-    //
-    // The previous code skipped it when the database was hosted on the
-    // manager (`sameConnection`), assuming it had no effect: that's only true
-    // on a single-node cluster. Same gap as in `deploy.ts` and `compose.ts`,
-    // and this is where it would cost the most.
-    // Placement from Advanced → Swarm Settings overrides this when set.
-    const placementNodeId =
-      database.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
-    const managerDocker = sameConnection
-      ? buildDocker
-      : dockerClient(managerClient);
-    await ensureOverlayNetwork(managerDocker, route.networkName);
-
-    const existing = await findServiceByName(managerDocker, name);
-    // Find-or-create, so calling it on an existing database replaces
-    // nothing: a database's password never changes after creation.
-    // Cluster-wide like the service that will mount it, so never through
-    // `buildDocker` when that differs from the manager.
-    const secretId = await ensureSecret(
-      managerDocker,
-      `${name}-password`,
-      password
     );
-    const desired = databaseServiceSpec({
-      databaseName: database.databaseName,
-      externalPort: database.externalPort,
-      extraEnv: userEnv,
-      extraMounts: database.extraMounts,
-      // `??` and not a recomputation: a database from BEFORE the `image`
-      // column started on its engine's default, and that default is what it
-      // must find again. When `databases.image` is set (at create or via
-      // Advanced → Configuration), provision applies that tag as-is.
-      image: database.image ?? spec.image,
-      name,
-      networkName: route.networkName,
-      placementNodeId,
-      replicas: database.replicas,
-      // Read as-is: the screen has already converted cores and megabytes
-      // into Swarm units, and the spec is REPLACED in full on every
-      // provisioning pass — so removing a limit (setting it back to `null`)
-      // does make it disappear from the spec, which the builder's `Resources`
-      // omission logic ensures.
-      resources: {
-        cpuLimitNanos: database.cpuLimitNanos,
-        cpuReservationNanos: database.cpuReservationNanos,
-        memoryLimitBytes: database.memoryLimitBytes,
-        memoryReservationBytes: database.memoryReservationBytes,
-      },
-      rootUser: database.rootUser,
-      secretId,
-      spec,
-      swarmSettings: database.swarmSettings,
-      volumePath: database.volumePath ?? spec.volumePath,
-    });
-
-    // dockerode's UpdateConfig types require Parallelism/Order even though
-    // the Engine accepts partial configs — cast at the boundary.
-    const serviceSpec = desired as never;
-
-    if (existing) {
-      // UPDATE, and not just "do nothing if it already exists". Without this
-      // branch, changing the published port had NO effect at all: the row
-      // changed in the database while the Swarm service kept its old spec,
-      // and the screen announced a reachable database that wasn't.
-      //
-      // The spec is REPLACED in full rather than merged: it's built from the
-      // row, so it IS the desired state, and merging would leave behind
-      // whatever a previous version had set.
-      await managerDocker.getService(existing.ID as string).update({
-        ...desired,
-        version: existing.Version?.Index,
-      } as never);
-    } else {
-      await managerDocker.createService(serviceSpec);
-      // A CREATE has no UpdateStatus — without waiting for the task, a
-      // broken first startup would read as a success.
-      await waitForRunningTask(managerDocker, name);
-    }
-
-    const state = await readUpdateState(managerDocker, name);
-    const accepted = isDeployAccepted(state.updateState);
-    await ctx.db
-      .update(databases)
-      .set(
-        accepted
-          ? markRunning(null)
-          : markCrashed(null, state.updateMessage ?? "swarm refused")
-      )
-      .where(eq(databases.id, database.id));
   } catch (err) {
     await ctx.db
       .update(databases)
       .set(markCrashed(null, err instanceof Error ? err.message : String(err)))
       .where(eq(databases.id, database.id));
     throw err;
-  } finally {
-    if (managerClient !== buildClient) {
-      disconnect(managerClient);
-    }
-    disconnect(buildClient);
   }
 }
 
@@ -661,57 +650,50 @@ export async function rebuildDatabase(
     throw new Error(`database not found: ${databaseId}`);
   }
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
-    ctx,
-    database.server
-  );
   try {
-    const managerDocker = sameConnection
-      ? dockerClient(buildClient)
-      : dockerClient(managerClient);
+    await withDeployClients(
+      ctx,
+      database.server,
+      async ({ buildClient, managerDocker }) => {
+        await removeService(managerDocker, database.swarmName);
 
-    await removeService(managerDocker, database.swarmName);
-
-    const volumeNames = [
-      database.swarmName,
-      ...database.extraMounts
-        .filter((m) => m.type === "volume")
-        .map((m) => m.source),
-    ];
-    for (const volumeName of volumeNames) {
-      let volumeGone = false;
-      for (let i = 0; i < 20; i += 1) {
-        // biome-ignore lint/performance/noAwaitInLoops: intentional retry
-        const res = await execArgv(buildClient, [
-          "sudo",
-          "docker",
-          "volume",
-          "rm",
-          volumeName,
-        ]);
-        if (res.code === 0 || VOLUME_ALREADY_GONE.test(res.stderr)) {
-          volumeGone = true;
-          break;
+        const volumeNames = [
+          database.swarmName,
+          ...database.extraMounts
+            .filter((m) => m.type === "volume")
+            .map((m) => m.source),
+        ];
+        for (const volumeName of volumeNames) {
+          let volumeGone = false;
+          for (let i = 0; i < 20; i += 1) {
+            // biome-ignore lint/performance/noAwaitInLoops: intentional retry
+            const res = await execArgv(buildClient, [
+              "sudo",
+              "docker",
+              "volume",
+              "rm",
+              volumeName,
+            ]);
+            if (res.code === 0 || VOLUME_ALREADY_GONE.test(res.stderr)) {
+              volumeGone = true;
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (!volumeGone) {
+            throw new Error(
+              `volume ${volumeName} could not be removed — the database was left running as it was`
+            );
+          }
         }
-        await new Promise((r) => setTimeout(r, 1000));
       }
-      if (!volumeGone) {
-        throw new Error(
-          `volume ${volumeName} could not be removed — the database was left running as it was`
-        );
-      }
-    }
+    );
   } catch (err) {
     await ctx.db
       .update(databases)
       .set({ lastError: err instanceof Error ? err.message : String(err) })
       .where(eq(databases.id, databaseId));
     throw err;
-  } finally {
-    if (managerClient !== buildClient) {
-      disconnect(managerClient);
-    }
-    disconnect(buildClient);
   }
 
   // OUTSIDE the SSH block above: `provisionDatabase` opens its OWN

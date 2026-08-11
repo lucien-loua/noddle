@@ -14,7 +14,7 @@ import {
 import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, dockerClient, type SshClient } from "@noddle/ssh-executor";
+import { disconnect, dockerClient } from "@noddle/ssh-executor";
 import {
   deployService,
   ensureOverlayNetwork,
@@ -25,6 +25,7 @@ import {
   watchUntilFor,
 } from "@noddle/swarm-ops";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { type DeployClients, withDeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
 import {
@@ -37,7 +38,6 @@ import {
 import {
   BUILD_ROOT,
   type BuildOptions,
-  connectForDeploy,
   connectTo,
   type DeployContext,
   type RouteOptions,
@@ -130,6 +130,192 @@ function authFor(
   };
 }
 
+type RunDeployment = NonNullable<
+  Awaited<ReturnType<typeof loadDeploymentForRun>>
+>;
+
+function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
+  return ctx.db.query.deployments.findFirst({
+    where: eq(deployments.id, deploymentId),
+    with: { service: { with: { envVars: true, server: true } } },
+  });
+}
+
+/**
+ * Clone, build, push, and roll out — everything that needs the SSH
+ * connection. Hoisted out of `runDeploy` so the guard's closure does not
+ * push an already dense function past the complexity ceiling.
+ */
+async function buildAndDeployService(
+  ctx: DeployContext,
+  route: RouteOptions,
+  registry: RegistryConfig | undefined,
+  deployment: RunDeployment,
+  sink: Awaited<ReturnType<typeof createLogSink>>,
+  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
+  clients: DeployClients
+): Promise<void> {
+  const { db } = ctx;
+  const { service } = deployment;
+  const { server } = service;
+  const { buildClient, buildDocker, managerDocker } = clients;
+
+  if (!service.gitRepoUrl) {
+    throw new Error(
+      "service has no git repository: this source_type is not supported here"
+    );
+  }
+
+  // The cap is derived from the server's memory MINUS what the control
+  // plane already occupies: under the chosen topology, it shares the
+  // machine.
+  const cap = computeBuildCap({ totalMemoryMb: server.totalMemoryMb ?? 2048 });
+  sink.write(`▸ build capped at ${cap.memory}\n`);
+  await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
+
+  const workDir = `${BUILD_ROOT}/${service.id}`;
+  const sha = await fetchSource(buildClient, {
+    branch: service.gitBranch ?? "main",
+    commitSha: deployment.commitSha ?? undefined,
+    dir: workDir,
+    repoUrl: service.gitRepoUrl,
+    ...stream,
+  });
+
+  // The tag carries the registry's host when there is one — and this
+  // prefix isn't decorative: it's what Docker reads to know where to pull
+  // from, so it's what carries the fact "this image is portable". It's
+  // written as-is into history, and that's what will later allow deciding a
+  // rollback's placement without guessing anything.
+  // The Swarm name, not `services.name`: database uniqueness is per
+  // environment, Swarm's is global. See `swarmServiceName`.
+  // The registry repository follows the same name, for the same reason.
+  const swarmName = swarmServiceName(service);
+  const version = `${sha.slice(0, 12)}-${Date.now()}`;
+  const imageTag = registry
+    ? registryImageTag(registry, swarmName, version)
+    : `${swarmName}:${version}`;
+  await db
+    .update(deployments)
+    .set({ commitSha: sha, imageTag, status: "deploying" })
+    .where(eq(deployments.id, deployment.id));
+
+  await buildImage(buildClient, {
+    builderName: "noddle-builder",
+    dir: workDir,
+    imageTag,
+    ...stream,
+  });
+
+  if (registry) {
+    sink.write("▸ pushing image to the registry\n");
+    // `removeLocal`: the build node stops accumulating. The image now lives
+    // in the registry, and Swarm will pull it from there — including on
+    // this very node if it's the one running it.
+    await pushImage(buildClient, registry, {
+      imageTag,
+      removeLocal: true,
+      ...stream,
+    });
+  }
+
+  const env: Record<string, string> = {};
+  for (const v of service.envVars) {
+    env[v.key] = decryptSecret(
+      v.valueEncrypted,
+      ctx.appKey,
+      secretContext.envVar(v.id)
+    );
+  }
+
+  // Free if the image is in the registry, pinned to the build node
+  // otherwise — decided on the image reference, never on a setting.
+  const placementNodeId = await placementFor({
+    buildDocker,
+    image: imageTag,
+    registry,
+    server,
+  });
+
+  await ensureOverlayNetwork(managerDocker, route.networkName);
+
+  sink.write("▸ Swarm rollout\n");
+  const outcome = await deployService(managerDocker, {
+    env,
+    image: imageTag,
+    labels: routeLabels({
+      certResolver: route.certResolver,
+      domain: service.domain ?? undefined,
+      port: service.port,
+      serviceName: swarmName,
+    }),
+    networkName: route.networkName,
+    placementNodeId,
+    port: service.port,
+    registryAuth: authFor(registry),
+    serviceName: swarmName,
+  });
+
+  const finishedAt = new Date();
+
+  // THE point that decides everything. `docker service update` returns 0
+  // even after a rollback: trusting the exit code would show a green
+  // deployment while the old version is still serving.
+  if (!isDeployAccepted(outcome.updateState)) {
+    sink.write(
+      `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`
+    );
+    await db
+      .update(deployments)
+      .set({
+        errorMessage: outcome.updateMessage,
+        finishedAt,
+        status: "rolled_back",
+        swarmUpdateState: outcome.updateState,
+      })
+      .where(eq(deployments.id, deployment.id));
+    await db
+      .update(services)
+      .set({ status: "crashed" })
+      .where(eq(services.id, service.id));
+    await notify(ctx, {
+      detail: outcome.updateMessage ?? undefined,
+      resource: service.name,
+      type: "deploy_reverted",
+    });
+    return;
+  }
+
+  sink.write("✓ deployment accepted\n");
+  // Where the task ACTUALLY runs, not where we requested it. With a
+  // portable image, Swarm made the choice: the dashboard must display its
+  // choice, not our intent.
+  const nodeId = await readRunningNodeId(managerDocker, swarmName);
+  await db
+    .update(deployments)
+    .set({
+      finishedAt,
+      nodeId,
+      status: "succeeded",
+      swarmUpdateState: outcome.updateState,
+      // Swarm's guarantee expires with its monitor window. From here on,
+      // Noddle's own watch covers late crashes.
+      watchUntil: watchUntilFor(finishedAt),
+    })
+    .where(eq(deployments.id, deployment.id));
+
+  await db
+    .update(services)
+    .set({ currentDeploymentId: deployment.id, status: "running" })
+    .where(eq(services.id, service.id));
+  await clearSupersededWatch(db, service.id, deployment.id);
+  await notify(ctx, {
+    detail: deployment.commitSha ?? undefined,
+    resource: service.name,
+    type: "deploy_succeeded",
+  });
+}
+
 export async function runDeploy(
   ctx: DeployContext,
   route: RouteOptions,
@@ -138,16 +324,12 @@ export async function runDeploy(
 ): Promise<void> {
   const { db } = ctx;
 
-  const deployment = await db.query.deployments.findFirst({
-    where: eq(deployments.id, data.deploymentId),
-    with: { service: { with: { envVars: true, server: true } } },
-  });
+  const deployment = await loadDeploymentForRun(ctx, data.deploymentId);
   if (!deployment) {
     throw new Error(`deployment not found: ${data.deploymentId}`);
   }
 
   const { service } = deployment;
-  const { server } = service;
   const registry = await resolveRegistry({
     appKey: ctx.appKey,
     db,
@@ -168,176 +350,20 @@ export async function runDeploy(
   });
   const stream = { onStderr: sink.write, onStdout: sink.write };
 
-  let buildClient: SshClient | undefined;
-  let managerClient: SshClient | undefined;
-
   try {
-    if (!service.gitRepoUrl) {
-      throw new Error(
-        "service has no git repository: this source_type is not supported here"
-      );
-    }
-
-    let sameConnection: boolean;
-    ({ buildClient, managerClient, sameConnection } = await connectForDeploy(
-      ctx,
-      server
-    ));
-
-    // The cap is derived from the server's memory MINUS what the control
-    // plane already occupies: under the chosen topology, it shares the
-    // machine.
-    const cap = computeBuildCap({
-      totalMemoryMb: server.totalMemoryMb ?? 2048,
-    });
-    sink.write(`▸ build capped at ${cap.memory}\n`);
-    await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
-
-    const workDir = `${BUILD_ROOT}/${service.id}`;
-    const sha = await fetchSource(buildClient, {
-      branch: service.gitBranch ?? "main",
-      commitSha: deployment.commitSha ?? undefined,
-      dir: workDir,
-      repoUrl: service.gitRepoUrl,
-      ...stream,
-    });
-
-    // The tag carries the registry's host when there is one — and this
-    // prefix isn't decorative: it's what Docker reads to know where to pull
-    // from, so it's what carries the fact "this image is portable". It's
-    // written as-is into history, and that's what will later allow deciding
-    // a rollback's placement without guessing anything.
-    // The Swarm name, not `services.name`: database uniqueness is per
-    // environment, Swarm's is global. See `swarmServiceName`.
-    // The registry repository follows the same name, for the same reason.
-    const swarmName = swarmServiceName(service);
-    const version = `${sha.slice(0, 12)}-${Date.now()}`;
-    const imageTag = registry
-      ? registryImageTag(registry, swarmName, version)
-      : `${swarmName}:${version}`;
-    await db
-      .update(deployments)
-      .set({ commitSha: sha, imageTag, status: "deploying" })
-      .where(eq(deployments.id, deployment.id));
-
-    await buildImage(buildClient, {
-      builderName: "noddle-builder",
-      dir: workDir,
-      imageTag,
-      ...stream,
-    });
-
-    if (registry) {
-      sink.write("▸ pushing image to the registry\n");
-      // `removeLocal`: the build node stops accumulating. The image now
-      // lives in the registry, and Swarm will pull it from there — including
-      // on this very node if it's the one running it.
-      await pushImage(buildClient, registry, {
-        imageTag,
-        removeLocal: true,
-        ...stream,
-      });
-    }
-
-    const env: Record<string, string> = {};
-    for (const v of service.envVars) {
-      env[v.key] = decryptSecret(
-        v.valueEncrypted,
-        ctx.appKey,
-        secretContext.envVar(v.id)
-      );
-    }
-
-    const buildDocker = dockerClient(buildClient);
-    // Free if the image is in the registry, pinned to the build node
-    // otherwise — decided on the image reference, never on a setting.
-    const placementNodeId = await placementFor({
-      buildDocker,
-      image: imageTag,
-      registry,
-      server,
-    });
-
-    const managerDocker = sameConnection
-      ? buildDocker
-      : dockerClient(managerClient);
-    await ensureOverlayNetwork(managerDocker, route.networkName);
-
-    sink.write("▸ Swarm rollout\n");
-    const outcome = await deployService(managerDocker, {
-      env,
-      image: imageTag,
-      labels: routeLabels({
-        certResolver: route.certResolver,
-        domain: service.domain ?? undefined,
-        port: service.port,
-        serviceName: swarmName,
-      }),
-      networkName: route.networkName,
-      placementNodeId,
-      port: service.port,
-      registryAuth: authFor(registry),
-      serviceName: swarmName,
-    });
-
-    const finishedAt = new Date();
-
-    // THE point that decides everything. `docker service update` returns 0
-    // even after a rollback: trusting the exit code would show a green
-    // deployment while the old version is still serving.
-    if (!isDeployAccepted(outcome.updateState)) {
-      sink.write(
-        `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`
-      );
-      await db
-        .update(deployments)
-        .set({
-          errorMessage: outcome.updateMessage,
-          finishedAt,
-          status: "rolled_back",
-          swarmUpdateState: outcome.updateState,
-        })
-        .where(eq(deployments.id, deployment.id));
-      await db
-        .update(services)
-        .set({ status: "crashed" })
-        .where(eq(services.id, service.id));
-      await notify(ctx, {
-        detail: outcome.updateMessage ?? undefined,
-        resource: service.name,
-        type: "deploy_reverted",
-      });
-      return;
-    }
-
-    sink.write("✓ deployment accepted\n");
-    // Where the task ACTUALLY runs, not where we requested it. With a
-    // portable image, Swarm made the choice: the dashboard must display its
-    // choice, not our intent.
-    const nodeId = await readRunningNodeId(managerDocker, swarmName);
-    await db
-      .update(deployments)
-      .set({
-        finishedAt,
-        nodeId,
-        status: "succeeded",
-        swarmUpdateState: outcome.updateState,
-        // Swarm's guarantee expires with its monitor window. From here on,
-        // Noddle's own watch covers late crashes.
-        watchUntil: watchUntilFor(finishedAt),
-      })
-      .where(eq(deployments.id, deployment.id));
-
-    await db
-      .update(services)
-      .set({ currentDeploymentId: deployment.id, status: "running" })
-      .where(eq(services.id, service.id));
-    await clearSupersededWatch(db, service.id, deployment.id);
-    await notify(ctx, {
-      detail: deployment.commitSha ?? undefined,
-      resource: service.name,
-      type: "deploy_succeeded",
-    });
+    // The connection lives inside `withDeployClients`; a failure to connect
+    // is caught the same way as any other failure below.
+    await withDeployClients(ctx, service.server, (clients) =>
+      buildAndDeployService(
+        ctx,
+        route,
+        registry,
+        deployment,
+        sink,
+        stream,
+        clients
+      )
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     sink.write(`✗ ${message}\n`);
@@ -356,16 +382,6 @@ export async function runDeploy(
     });
     throw err;
   } finally {
-    // Object identity, not `sameConnection`: that variable is scoped to the
-    // `try` block to avoid a false-positive Biome warning about reassigning
-    // an outer `let` through destructuring. Identity is the real invariant
-    // anyway: never close the SAME connection twice.
-    if (managerClient && managerClient !== buildClient) {
-      disconnect(managerClient);
-    }
-    if (buildClient) {
-      disconnect(buildClient);
-    }
     // A POINTER to the file, never the log text, is stored in the database.
     const { byteSize, storageUrl } = await sink.close();
     await db
@@ -430,85 +446,75 @@ export async function redeployImage(
   // command, however, still has to go through the manager — and the
   // placement constraint targets the service's server, not the one
   // receiving the command.
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
+  return await withDeployClients(
     ctx,
-    service.server
-  );
+    service.server,
+    async ({ buildDocker, managerDocker }) => {
+      const env: Record<string, string> = {};
+      for (const v of service.envVars) {
+        env[v.key] = decryptSecret(
+          v.valueEncrypted,
+          ctx.appKey,
+          secretContext.envVar(v.id)
+        );
+      }
 
-  try {
-    const env: Record<string, string> = {};
-    for (const v of service.envVars) {
-      env[v.key] = decryptSecret(
-        v.valueEncrypted,
-        ctx.appKey,
-        secretContext.envVar(v.id)
-      );
-    }
+      // THIS is where the migration plays out. An image from BEFORE the
+      // registry carries an unqualified tag: it only exists on the node
+      // that built it, so it stays pinned there and the rollback works as
+      // before. A registry image is free. Neither case requires knowing
+      // which one it is — the reference tells us.
+      const placementNodeId = await placementFor({
+        buildDocker,
+        image: opts.imageTag,
+        registry,
+        server: service.server,
+      });
 
-    const buildDocker = dockerClient(buildClient);
-    // THIS is where the migration plays out. An image from BEFORE the
-    // registry carries an unqualified tag: it only exists on the node that
-    // built it, so it stays pinned there and the rollback works as before.
-    // A registry image is free. Neither case requires knowing which one it
-    // is — the reference tells us.
-    const placementNodeId = await placementFor({
-      buildDocker,
-      image: opts.imageTag,
-      registry,
-      server: service.server,
-    });
-    const managerDocker = sameConnection
-      ? buildDocker
-      : dockerClient(managerClient);
-
-    // No build: the image already exists. This is precisely what makes the
-    // rollback instant, and possible to ANY version in history — Swarm
-    // itself only keeps one previous spec.
-    const swarmName = swarmServiceName(service);
-    const outcome = await deployService(managerDocker, {
-      env,
-      image: opts.imageTag,
-      labels: routeLabels({
-        certResolver: route.certResolver,
-        domain: service.domain ?? undefined,
+      // No build: the image already exists. This is precisely what makes
+      // the rollback instant, and possible to ANY version in history —
+      // Swarm itself only keeps one previous spec.
+      const swarmName = swarmServiceName(service);
+      const outcome = await deployService(managerDocker, {
+        env,
+        image: opts.imageTag,
+        labels: routeLabels({
+          certResolver: route.certResolver,
+          domain: service.domain ?? undefined,
+          port: service.port,
+          serviceName: swarmName,
+        }),
+        networkName: route.networkName,
+        placementNodeId,
         port: service.port,
+        registryAuth: authFor(registry),
         serviceName: swarmName,
-      }),
-      networkName: route.networkName,
-      placementNodeId,
-      port: service.port,
-      registryAuth: authFor(registry),
-      serviceName: swarmName,
-    });
+      });
 
-    const accepted = isDeployAccepted(outcome.updateState);
-    await ctx.db
-      .update(deployments)
-      .set({
-        finishedAt: new Date(),
-        nodeId: accepted
-          ? await readRunningNodeId(managerDocker, swarmName)
-          : null,
-        status: accepted ? "succeeded" : "rolled_back",
-        swarmUpdateState: outcome.updateState,
-      })
-      .where(eq(deployments.id, created?.id ?? ""));
-
-    if (accepted && created) {
+      const accepted = isDeployAccepted(outcome.updateState);
       await ctx.db
-        .update(services)
-        .set({ currentDeploymentId: created.id, status: "running" })
-        .where(eq(services.id, service.id));
-      await clearSupersededWatch(ctx.db, service.id, created.id);
-    }
+        .update(deployments)
+        .set({
+          finishedAt: new Date(),
+          nodeId: accepted
+            ? await readRunningNodeId(managerDocker, swarmName)
+            : null,
+          status: accepted ? "succeeded" : "rolled_back",
+          swarmUpdateState: outcome.updateState,
+        })
+        .where(eq(deployments.id, created?.id ?? ""));
 
-    return created?.id ?? "";
-  } finally {
-    if (!sameConnection) {
-      disconnect(managerClient);
+      if (accepted && created) {
+        await ctx.db
+          .update(services)
+          .set({ currentDeploymentId: created.id, status: "running" })
+          .where(eq(services.id, service.id));
+        await clearSupersededWatch(ctx.db, service.id, created.id);
+      }
+
+      return created?.id ?? "";
     }
-    disconnect(buildClient);
-  }
+  );
 }
 
 /** Reads back the server's memory to size the cap. Idempotent. */

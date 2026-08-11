@@ -5,7 +5,6 @@ import { backups, databases } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import type { DockerApi } from "@noddle/ssh-executor";
 import {
-  disconnect,
   execArgv,
   execStream,
   quoteArg,
@@ -18,7 +17,8 @@ import {
   findDatabaseContainer,
   runBackup,
 } from "#backup";
-import { connectForDeploy, type DeployContext } from "#runtime-context";
+import { withDeployClients } from "#job-run";
+import type { DeployContext } from "#runtime-context";
 
 const SETTLE_MS = 1500;
 const SCALE_TIMEOUT_MS = 120_000;
@@ -417,97 +417,89 @@ export async function runRestore(
   await runBackup(ctx, safety.id);
 
   const serviceName = database.swarmName;
-  const { buildClient, managerClient } = await connectForDeploy(
+
+  await withDeployClients(
     ctx,
-    database.server
+    database.server,
+    async ({ buildClient, managerDocker }) => {
+      const body = await downloadStream(destination, objectKey);
+
+      // AN EXHAUSTIVE SWITCH, never an `if postgres / else`. The previous
+      // shape made EVERY non-Postgres engine fall through to the REDIS path:
+      // measured on a real MySQL database, the restore wrote a `dump.rdb`
+      // into `/var/lib/mysql`, started a disposable Redis container on that
+      // volume, and reported SUCCESS without having restored anything. The
+      // volume survived by luck — MySQL ignores a file it doesn't recognize —
+      // but the deleted marker never came back.
+      //
+      // `default` THROWS: an engine added tomorrow without a restore path
+      // fails loudly, it doesn't silently restore into the wrong one.
+      const containerId = await findDatabaseContainer(buildClient, serviceName);
+      const databaseName =
+        database.databaseName ?? database.rootUser ?? database.name;
+      // Checked HERE, once, for all five engines: they end up as positionals
+      // and as options for remote clients.
+      assertSafeIdentifier(databaseName, "database name");
+      if (database.rootUser) {
+        assertSafeIdentifier(database.rootUser, "database user");
+      }
+
+      switch (database.engine) {
+        case "postgres":
+          await restorePostgres(buildClient, {
+            body,
+            containerId,
+            // `-d` targets the DATABASE, `-U` the user: two distinct things
+            // since migration 0029. Confusing them would restore into a
+            // database that doesn't exist — or, worse, into another one that
+            // does.
+            databaseName,
+            rootUser: database.rootUser ?? "postgres",
+          });
+          break;
+        case "mariadb":
+        case "mysql":
+          await restoreMysqlFamily(buildClient, {
+            body,
+            clientBinary: database.engine === "mariadb" ? "mariadb" : "mysql",
+            containerId,
+            databaseName,
+            password,
+            rootUser: database.rootUser ?? "root",
+          });
+          break;
+        case "mongo":
+          await restoreMongo(buildClient, {
+            body,
+            containerId,
+            databaseName,
+            password,
+            rootUser: database.rootUser ?? "mongo",
+          });
+          break;
+        case "redis": {
+          // Swarm commands go through the MANAGER — a worker refuses
+          // `docker service update`, it doesn't hold the cluster's state. The
+          // volume, on the other hand, only exists on the database's node.
+          await scaleServiceAndWait(managerDocker, serviceName, 0);
+          // Swarm returns control as soon as the task is marked stopped; give
+          // the daemon a few moments to actually release the volume.
+          await new Promise((r) => setTimeout(r, SETTLE_MS));
+
+          await restoreRedis(buildClient, { body, volume: serviceName });
+
+          await scaleServiceAndWait(
+            managerDocker,
+            serviceName,
+            database.replicas
+          );
+          break;
+        }
+        default: {
+          const jamais: never = database.engine;
+          throw new Error(`no restore path for engine: ${jamais}`);
+        }
+      }
+    }
   );
-
-  try {
-    const body = await downloadStream(destination, objectKey);
-
-    // AN EXHAUSTIVE SWITCH, never an `if postgres / else`. The previous
-    // shape made EVERY non-Postgres engine fall through to the REDIS path:
-    // measured on a real MySQL database, the restore wrote a `dump.rdb`
-    // into `/var/lib/mysql`, started a disposable Redis container on that
-    // volume, and reported SUCCESS without having restored anything. The
-    // volume survived by luck — MySQL ignores a file it doesn't recognize —
-    // but the deleted marker never came back.
-    //
-    // `default` THROWS: an engine added tomorrow without a restore path
-    // fails loudly, it doesn't silently restore into the wrong one.
-    const containerId = await findDatabaseContainer(buildClient, serviceName);
-    const databaseName =
-      database.databaseName ?? database.rootUser ?? database.name;
-    // Checked HERE, once, for all five engines: they end up as positionals
-    // and as options for remote clients.
-    assertSafeIdentifier(databaseName, "database name");
-    if (database.rootUser) {
-      assertSafeIdentifier(database.rootUser, "database user");
-    }
-
-    switch (database.engine) {
-      case "postgres":
-        await restorePostgres(buildClient, {
-          body,
-          containerId,
-          // `-d` targets the DATABASE, `-U` the user: two distinct things
-          // since migration 0029. Confusing them would restore into a
-          // database that doesn't exist — or, worse, into another one that
-          // does.
-          databaseName,
-          rootUser: database.rootUser ?? "postgres",
-        });
-        break;
-      case "mariadb":
-      case "mysql":
-        await restoreMysqlFamily(buildClient, {
-          body,
-          clientBinary: database.engine === "mariadb" ? "mariadb" : "mysql",
-          containerId,
-          databaseName,
-          password,
-          rootUser: database.rootUser ?? "root",
-        });
-        break;
-      case "mongo":
-        await restoreMongo(buildClient, {
-          body,
-          containerId,
-          databaseName,
-          password,
-          rootUser: database.rootUser ?? "mongo",
-        });
-        break;
-      case "redis": {
-        // Swarm commands go through the MANAGER — a worker refuses
-        // `docker service update`, it doesn't hold the cluster's state. The
-        // volume, on the other hand, only exists on the database's node.
-        const { dockerClient } = await import("@noddle/ssh-executor");
-        const managerDocker = dockerClient(managerClient);
-
-        await scaleServiceAndWait(managerDocker, serviceName, 0);
-        // Swarm returns control as soon as the task is marked stopped; give
-        // the daemon a few moments to actually release the volume.
-        await new Promise((r) => setTimeout(r, SETTLE_MS));
-
-        await restoreRedis(buildClient, { body, volume: serviceName });
-
-        await scaleServiceAndWait(
-          managerDocker,
-          serviceName,
-          database.replicas
-        );
-        break;
-      }
-      default: {
-        const jamais: never = database.engine;
-        throw new Error(`no restore path for engine: ${jamais}`);
-      }
-    }
-  } finally {
-    if (managerClient !== buildClient) {
-      disconnect(managerClient);
-    }
-    disconnect(buildClient);
-  }
 }

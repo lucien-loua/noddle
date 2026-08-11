@@ -2,78 +2,102 @@ import { unlink } from "node:fs/promises";
 import { deployments, services } from "@noddle/db/schema";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
+import { type dockerClient, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
+import { type DeployClients, withDeployClients } from "#job-run";
 import { deleteManifest, garbageCollect, parseRegistryRef } from "#registry";
-import {
-  BUILD_ROOT,
-  connectForDeploy,
-  type DeployContext,
-} from "#runtime-context";
+import { BUILD_ROOT, type DeployContext } from "#runtime-context";
 
 /** The registry container in the control-plane Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";
 
 const FILE_URL = "file://";
 
+type ServiceRow = NonNullable<
+  Awaited<ReturnType<typeof loadServiceForTeardown>>
+>;
+type DeploymentRow = Awaited<
+  ReturnType<typeof loadDeploymentsForTeardown>
+>[number];
+
+function loadServiceForTeardown(ctx: DeployContext, serviceId: string) {
+  return ctx.db.query.services.findFirst({
+    where: eq(services.id, serviceId),
+    with: { server: true },
+  });
+}
+
+function loadDeploymentsForTeardown(ctx: DeployContext, serviceId: string) {
+  return ctx.db.query.deployments.findMany({
+    where: eq(deployments.serviceId, serviceId),
+    with: { logs: true },
+  });
+}
+
+/**
+ * The three steps that need the SSH connection: remove the Swarm service,
+ * drop the row, then best-effort disk cleanup. Hoisted out of
+ * `runServiceTeardown` so the guard's closure does not push an already
+ * dense function past the complexity ceiling.
+ */
+async function teardownService(
+  ctx: DeployContext,
+  service: ServiceRow,
+  rows: DeploymentRow[],
+  opts: { containerName?: string },
+  clients: DeployClients
+): Promise<void> {
+  const { buildClient, managerClient, managerDocker } = clients;
+
+  // ── 1. Swarm — must succeed ────────────────────────────────────────────
+  await removeService(managerDocker, swarmServiceName(service));
+
+  // ── 2. the database — the screen can now tell the truth ───────────────
+  // `deployments`, `deployment_logs`, `env_vars` and `service_metrics` go
+  // in cascade (see the schema).
+  await ctx.db.delete(services).where(eq(services.id, service.id));
+
+  // ── 3. the bytes — best-effort, never blocking ─────────────────────────
+  await purgeBytes(ctx, {
+    buildClient,
+    imageTags: rows.map((r) => r.imageTag).filter((t): t is string => !!t),
+    logPaths: rows.flatMap((r) =>
+      r.logs
+        .map((l) => l.storageUrl)
+        .filter((u) => u.startsWith(FILE_URL))
+        .map((u) => u.slice(FILE_URL.length))
+    ),
+    managerClient,
+    registryContainer: opts.containerName ?? REGISTRY_CONTAINER,
+    serviceId: service.id,
+  });
+}
+
 export async function runServiceTeardown(
   ctx: DeployContext,
   serviceId: string,
   opts: { containerName?: string } = {}
 ): Promise<void> {
-  const service = await ctx.db.query.services.findFirst({
-    where: eq(services.id, serviceId),
-    with: { server: true },
-  });
+  const service = await loadServiceForTeardown(ctx, serviceId);
   if (!service) {
     // Already deleted — the job may have been replayed. Nothing to do, and
     // especially not an error: the desired result is reached.
     return;
   }
 
-  const rows = await ctx.db.query.deployments.findMany({
-    where: eq(deployments.serviceId, serviceId),
-    with: { logs: true },
-  });
-
-  // Declared outside the `try` so the `finally` knows what to close even if
-  // the connection itself failed — in which case nothing ever opened.
-  let conn: Awaited<ReturnType<typeof connectForDeploy>> | undefined;
+  const rows = await loadDeploymentsForTeardown(ctx, serviceId);
 
   try {
-    // The connection lives INSIDE this block, not before: a failed key
-    // decrypt is the most common failure in practice, and must also write
-    // to `last_error` — otherwise a row stuck in `deleting` still says
-    // nothing about WHY.
-    conn = await connectForDeploy(ctx, service.server);
-    const { buildClient, managerClient, sameConnection } = conn;
-
-    // ── 1. Swarm — must succeed ──────────────────────────────────────────
-    const managerDocker = sameConnection
-      ? dockerClient(buildClient)
-      : dockerClient(managerClient);
-    await removeService(managerDocker, swarmServiceName(service));
-
-    // ── 2. the database — the screen can now tell the truth ──────────────
-    // `deployments`, `deployment_logs`, `env_vars` and `service_metrics`
-    // go in cascade (see the schema).
-    await ctx.db.delete(services).where(eq(services.id, serviceId));
-
-    // ── 3. the bytes — best-effort, never blocking ───────────────────────
-    await purgeBytes(ctx, {
-      buildClient,
-      imageTags: rows.map((r) => r.imageTag).filter((t): t is string => !!t),
-      logPaths: rows.flatMap((r) =>
-        r.logs
-          .map((l) => l.storageUrl)
-          .filter((u) => u.startsWith(FILE_URL))
-          .map((u) => u.slice(FILE_URL.length))
-      ),
-      managerClient: sameConnection ? buildClient : managerClient,
-      registryContainer: opts.containerName ?? REGISTRY_CONTAINER,
-      serviceId,
-    });
+    // The connection is opened by `withDeployClients` itself, inside this
+    // `try`: a failed key decrypt is the most common failure in practice,
+    // and must also write to `last_error` — otherwise a row stuck in
+    // `deleting` still says nothing about WHY. `withDeployClients` throwing
+    // before its own connection is made costs nothing to disconnect, so the
+    // catch below covers that case the same way it covers every other.
+    await withDeployClients(ctx, service.server, (clients) =>
+      teardownService(ctx, service, rows, opts, clients)
+    );
   } catch (err) {
     // If step 2 already succeeded, the row no longer exists: the update
     // then touches nothing, which is the desired result — not a second
@@ -85,13 +109,6 @@ export async function runServiceTeardown(
       )
       .where(eq(services.id, serviceId));
     throw err;
-  } finally {
-    if (conn && !conn.sameConnection) {
-      disconnect(conn.managerClient);
-    }
-    if (conn) {
-      disconnect(conn.buildClient);
-    }
   }
 }
 

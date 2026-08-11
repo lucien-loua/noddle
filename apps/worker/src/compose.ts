@@ -21,7 +21,6 @@ import {
 } from "@noddle/db/schema";
 import { markCrashed, markRunning, settle } from "@noddle/shared/lifecycle";
 import {
-  disconnect,
   dockerClient,
   execArgv,
   type SshClient,
@@ -37,11 +36,11 @@ import {
 } from "@noddle/swarm-ops";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
-import { createLogSink } from "#log-sink";
+import { type DeployClients, withDeployClients } from "#job-run";
+import { createLogSink, type LogSink } from "#log-sink";
 import {
   BUILD_ROOT,
   type BuildOptions,
-  connectForDeploy,
   type DeployContext,
   type RouteOptions,
 } from "#runtime-context";
@@ -223,6 +222,159 @@ async function buildComposeServices(opts: {
 // Full deployment: clone, build, rollout
 // ─────────────────────────────────────────────────────────────────────────────
 
+type StackDeploymentRow = NonNullable<
+  Awaited<ReturnType<typeof loadStackDeploymentForRun>>
+>;
+
+function loadStackDeploymentForRun(
+  ctx: DeployContext,
+  stackDeploymentId: string
+) {
+  return ctx.db.query.stackDeployments.findFirst({
+    where: eq(stackDeployments.id, stackDeploymentId),
+    with: { stack: { with: { server: true } } },
+  });
+}
+
+/**
+ * Clone, build, and roll out — everything that needs the SSH connection.
+ * Hoisted out of `runStackDeploy` so the guard's closure does not push an
+ * already dense function past the complexity ceiling.
+ */
+async function buildAndDeployStack(
+  ctx: DeployContext,
+  route: RouteOptions,
+  deployment: StackDeploymentRow,
+  sink: LogSink,
+  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
+  clients: DeployClients
+): Promise<void> {
+  const { db } = ctx;
+  const { stack } = deployment;
+  const { server } = stack;
+  const { buildClient, buildDocker, managerClient } = clients;
+
+  const cap = computeBuildCap({ totalMemoryMb: server.totalMemoryMb ?? 2048 });
+  sink.write(`▸ build capped at ${cap.memory}\n`);
+  await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
+
+  const workDir = `${BUILD_ROOT}/stacks/${stack.id}`;
+  const sha = await fetchSource(buildClient, {
+    branch: stack.gitBranch,
+    commitSha: deployment.commitSha ?? undefined,
+    dir: workDir,
+    repoUrl: stack.gitRepoUrl,
+    ...stream,
+  });
+  await db
+    .update(stackDeployments)
+    .set({ commitSha: sha })
+    .where(eq(stackDeployments.id, deployment.id));
+
+  const composePath = `${workDir}/${stack.composeFilePath}`;
+  const catResult = await execArgv(buildClient, ["cat", composePath]);
+  if (catResult.code !== 0) {
+    throw new Error(`compose file not found: ${stack.composeFilePath}`);
+  }
+  const rawText = catResult.stdout;
+  await db
+    .update(stackDeployments)
+    .set({ composeSource: rawText })
+    .where(eq(stackDeployments.id, deployment.id));
+
+  const doc = parseCompose(rawText, stack.composeFilePath);
+  const services = doc.services ?? {};
+
+  sink.write("▸ building services\n");
+  const serviceImages = await buildComposeServices({
+    buildClient,
+    onServiceStart: (key) => sink.write(`▸ ${key}\n`),
+    services,
+    sha,
+    stackName: stack.swarmName,
+    stream,
+    workDir,
+  });
+
+  await db
+    .update(stackDeployments)
+    .set({ serviceImages, status: "deploying" })
+    .where(eq(stackDeployments.id, deployment.id));
+
+  // ALWAYS pinned, unconditionally — see `placementFor` in deploy.ts for the
+  // full reasoning. A stack does NOT go through the registry: its images
+  // stay local to the node that built them, so the constraint is never a
+  // no-op once a second node has joined the cluster.
+  //
+  // The old code skipped this when the stack's server was the manager
+  // (`sameConnection`), assuming it had no effect. Measured: the scheduler
+  // placed the task on the worker, which answered "pull access denied" for
+  // an image built locally — a deployment that "didn't converge in 180s"
+  // with no visible cause.
+  //
+  // Read on the BUILD connection, never the manager's: it's a fact LOCAL to
+  // that node.
+  const placementNodeId =
+    server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
+
+  injectDeployConfig(doc, {
+    builtKeys: Object.keys(serviceImages),
+    certResolver: route.certResolver,
+    domain: stack.domain,
+    networkName: route.networkName,
+    placementNodeId,
+    port: stack.port,
+    publicService: stack.publicService,
+    stackName: stack.swarmName,
+  });
+
+  sink.write("▸ Swarm rollout (docker stack deploy)\n");
+  const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
+    doc,
+    managerClient,
+    stackName: stack.swarmName,
+    stream,
+  });
+
+  const finishedAt = new Date();
+
+  if (!accepted) {
+    sink.write(
+      "✗ Swarm refused the rollout of at least one service in the stack\n"
+    );
+    await db
+      .update(stackDeployments)
+      .set({
+        finishedAt,
+        status: settle("rollback_completed"),
+        swarmUpdateStates,
+      })
+      .where(eq(stackDeployments.id, deployment.id));
+    await db
+      .update(stacks)
+      .set(markCrashed(null, "stack deploy rolled back"))
+      .where(eq(stacks.id, stack.id));
+    return;
+  }
+
+  sink.write("✓ deployment accepted\n");
+  await db
+    .update(stackDeployments)
+    .set({
+      finishedAt,
+      status: settle("completed"),
+      swarmUpdateStates,
+      watchUntil: watchUntilFor(finishedAt),
+    })
+    .where(eq(stackDeployments.id, deployment.id));
+
+  await db
+    .update(stacks)
+    .set({ currentDeploymentId: deployment.id, ...markRunning(null) })
+    .where(eq(stacks.id, stack.id));
+  await clearSupersededStackWatch(db, stack.id, deployment.id);
+}
+
 export async function runStackDeploy(
   ctx: DeployContext,
   route: RouteOptions,
@@ -231,16 +383,15 @@ export async function runStackDeploy(
 ): Promise<void> {
   const { db } = ctx;
 
-  const deployment = await db.query.stackDeployments.findFirst({
-    where: eq(stackDeployments.id, data.stackDeploymentId),
-    with: { stack: { with: { server: true } } },
-  });
+  const deployment = await loadStackDeploymentForRun(
+    ctx,
+    data.stackDeploymentId
+  );
   if (!deployment) {
     throw new Error(`stack deployment not found: ${data.stackDeploymentId}`);
   }
 
   const { stack } = deployment;
-  const { server } = stack;
   const startedAt = new Date();
 
   if (!SAFE_RELATIVE_PATH.test(stack.composeFilePath)) {
@@ -261,134 +412,12 @@ export async function runStackDeploy(
   });
   const stream = { onStderr: sink.write, onStdout: sink.write };
 
-  let buildClient: SshClient | undefined;
-  let managerClient: SshClient | undefined;
-
   try {
-    ({ buildClient, managerClient } = await connectForDeploy(ctx, server));
-
-    const cap = computeBuildCap({
-      totalMemoryMb: server.totalMemoryMb ?? 2048,
-    });
-    sink.write(`▸ build capped at ${cap.memory}\n`);
-    await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
-
-    const workDir = `${BUILD_ROOT}/stacks/${stack.id}`;
-    const sha = await fetchSource(buildClient, {
-      branch: stack.gitBranch,
-      commitSha: deployment.commitSha ?? undefined,
-      dir: workDir,
-      repoUrl: stack.gitRepoUrl,
-      ...stream,
-    });
-    await db
-      .update(stackDeployments)
-      .set({ commitSha: sha })
-      .where(eq(stackDeployments.id, deployment.id));
-
-    const composePath = `${workDir}/${stack.composeFilePath}`;
-    const catResult = await execArgv(buildClient, ["cat", composePath]);
-    if (catResult.code !== 0) {
-      throw new Error(`compose file not found: ${stack.composeFilePath}`);
-    }
-    const rawText = catResult.stdout;
-    await db
-      .update(stackDeployments)
-      .set({ composeSource: rawText })
-      .where(eq(stackDeployments.id, deployment.id));
-
-    const doc = parseCompose(rawText, stack.composeFilePath);
-    const services = doc.services ?? {};
-
-    sink.write("▸ building services\n");
-    const serviceImages = await buildComposeServices({
-      buildClient,
-      onServiceStart: (key) => sink.write(`▸ ${key}\n`),
-      services,
-      sha,
-      stackName: stack.swarmName,
-      stream,
-      workDir,
-    });
-
-    await db
-      .update(stackDeployments)
-      .set({ serviceImages, status: "deploying" })
-      .where(eq(stackDeployments.id, deployment.id));
-
-    const buildDocker = dockerClient(buildClient);
-    // ALWAYS pinned, unconditionally — see `placementFor` in deploy.ts for
-    // the full reasoning. A stack does NOT go through the registry: its
-    // images stay local to the node that built them, so the constraint is
-    // never a no-op once a second node has joined the cluster.
-    //
-    // The old code skipped this when the stack's server was the manager
-    // (`sameConnection`), assuming it had no effect. Measured: the
-    // scheduler placed the task on the worker, which answered "pull access
-    // denied" for an image built locally — a deployment that "didn't
-    // converge in 180s" with no visible cause.
-    //
-    // Read on the BUILD connection, never the manager's: it's a fact LOCAL
-    // to that node.
-    const placementNodeId =
-      server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
-
-    injectDeployConfig(doc, {
-      builtKeys: Object.keys(serviceImages),
-      certResolver: route.certResolver,
-      domain: stack.domain,
-      networkName: route.networkName,
-      placementNodeId,
-      port: stack.port,
-      publicService: stack.publicService,
-      stackName: stack.swarmName,
-    });
-
-    sink.write("▸ Swarm rollout (docker stack deploy)\n");
-    const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
-      doc,
-      managerClient,
-      stackName: stack.swarmName,
-      stream,
-    });
-
-    const finishedAt = new Date();
-
-    if (!accepted) {
-      sink.write(
-        "✗ Swarm refused the rollout of at least one service in the stack\n"
-      );
-      await db
-        .update(stackDeployments)
-        .set({
-          finishedAt,
-          status: settle("rollback_completed"),
-          swarmUpdateStates,
-        })
-        .where(eq(stackDeployments.id, deployment.id));
-      await db
-        .update(stacks)
-        .set(markCrashed(null, "stack deploy rolled back"))
-        .where(eq(stacks.id, stack.id));
-      return;
-    }
-
-    sink.write("✓ deployment accepted\n");
-    await db
-      .update(stackDeployments)
-      .set({
-        finishedAt,
-        status: settle("completed"),
-        swarmUpdateStates,
-        watchUntil: watchUntilFor(finishedAt),
-      })
-      .where(eq(stackDeployments.id, deployment.id));
-
-    await db
-      .update(stacks)
-      .set({ currentDeploymentId: deployment.id, ...markRunning(null) })
-      .where(eq(stacks.id, stack.id));
-    await clearSupersededStackWatch(db, stack.id, deployment.id);
+    // The connection lives inside `withDeployClients`; a failure to connect
+    // is caught the same way as any other failure below.
+    await withDeployClients(ctx, stack.server, (clients) =>
+      buildAndDeployStack(ctx, route, deployment, sink, stream, clients)
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     sink.write(`✗ ${message}\n`);
@@ -398,12 +427,6 @@ export async function runStackDeploy(
       .where(eq(stackDeployments.id, deployment.id));
     throw err;
   } finally {
-    if (managerClient && managerClient !== buildClient) {
-      disconnect(managerClient);
-    }
-    if (buildClient) {
-      disconnect(buildClient);
-    }
     const { byteSize, storageUrl } = await sink.close();
     await db
       .insert(stackDeploymentLogs)
@@ -446,12 +469,15 @@ export async function redeployStack(
       `source deployment not found or has no saved compose: ${opts.sourceDeploymentId}`
     );
   }
+  // Captured here: TypeScript's narrowing of `source.composeSource` above
+  // does not survive into the closure passed to `withDeployClients` below.
+  const { composeSource } = source;
 
   const [created] = await ctx.db
     .insert(stackDeployments)
     .values({
       commitSha: source.commitSha,
-      composeSource: source.composeSource,
+      composeSource,
       serviceImages: source.serviceImages,
       stackId: stack.id,
       status: "deploying",
@@ -462,73 +488,67 @@ export async function redeployStack(
     throw new Error("could not create stack deployment");
   }
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
+  return await withDeployClients(
     ctx,
-    stack.server
-  );
-
-  try {
-    const doc = parseCompose(source.composeSource, stack.composeFilePath);
-    const services = doc.services ?? {};
-    const serviceImages = (source.serviceImages ?? {}) as Record<
-      string,
-      string
-    >;
-    for (const [key, tag] of Object.entries(serviceImages)) {
-      const svc = services[key];
-      if (svc) {
-        // Rebuilds the object rather than `delete svc.build` — same reason
-        // as in `buildComposeServices`: YAML serialization of a key set to
-        // `undefined` isn't guaranteed to be equivalent to its absence.
-        const { build: _build, ...rest } = svc;
-        services[key] = { ...rest, image: tag };
+    stack.server,
+    async ({ buildDocker, managerClient }) => {
+      const doc = parseCompose(composeSource, stack.composeFilePath);
+      const services = doc.services ?? {};
+      const serviceImages = (source.serviceImages ?? {}) as Record<
+        string,
+        string
+      >;
+      for (const [key, tag] of Object.entries(serviceImages)) {
+        const svc = services[key];
+        if (svc) {
+          // Rebuilds the object rather than `delete svc.build` — same
+          // reason as in `buildComposeServices`: YAML serialization of a
+          // key set to `undefined` isn't guaranteed to be equivalent to
+          // its absence.
+          const { build: _build, ...rest } = svc;
+          services[key] = { ...rest, image: tag };
+        }
       }
-    }
 
-    const buildDocker = dockerClient(buildClient);
-    // Unconditional, same reason as in the initial deployment above.
-    const placementNodeId =
-      stack.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
+      // Unconditional, same reason as in the initial deployment above.
+      const placementNodeId =
+        stack.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
 
-    injectDeployConfig(doc, {
-      builtKeys: Object.keys(serviceImages),
-      certResolver: route.certResolver,
-      domain: stack.domain,
-      networkName: route.networkName,
-      placementNodeId,
-      port: stack.port,
-      publicService: stack.publicService,
-      stackName: stack.swarmName,
-    });
+      injectDeployConfig(doc, {
+        builtKeys: Object.keys(serviceImages),
+        certResolver: route.certResolver,
+        domain: stack.domain,
+        networkName: route.networkName,
+        placementNodeId,
+        port: stack.port,
+        publicService: stack.publicService,
+        stackName: stack.swarmName,
+      });
 
-    const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
-      doc,
-      managerClient,
-      stackName: stack.swarmName,
-    });
+      const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
+        doc,
+        managerClient,
+        stackName: stack.swarmName,
+      });
 
-    await ctx.db
-      .update(stackDeployments)
-      .set({
-        finishedAt: new Date(),
-        status: settle(accepted ? "completed" : "rollback_completed"),
-        swarmUpdateStates,
-      })
-      .where(eq(stackDeployments.id, created.id));
-
-    if (accepted) {
       await ctx.db
-        .update(stacks)
-        .set({ currentDeploymentId: created.id, ...markRunning(null) })
-        .where(eq(stacks.id, stack.id));
-      await clearSupersededStackWatch(ctx.db, stack.id, created.id);
-    }
+        .update(stackDeployments)
+        .set({
+          finishedAt: new Date(),
+          status: settle(accepted ? "completed" : "rollback_completed"),
+          swarmUpdateStates,
+        })
+        .where(eq(stackDeployments.id, created.id));
 
-    return created.id;
-  } finally {
-    if (!sameConnection) {
-      disconnect(managerClient);
+      if (accepted) {
+        await ctx.db
+          .update(stacks)
+          .set({ currentDeploymentId: created.id, ...markRunning(null) })
+          .where(eq(stacks.id, stack.id));
+        await clearSupersededStackWatch(ctx.db, stack.id, created.id);
+      }
+
+      return created.id;
     }
-    disconnect(buildClient);
-  }
+  );
 }
