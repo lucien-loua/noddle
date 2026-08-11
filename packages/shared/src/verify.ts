@@ -12,21 +12,22 @@ import {
   secretContext,
 } from "#crypto";
 import {
-  addDatabaseMountSchema,
   backupCronSchema,
   bucketNameSchema,
   createBackupConfigSchema,
-  databaseConfigurationSchema,
-  databaseReplicasSchema,
-  envVarKeySchema,
-  gitBranchSchema,
-  imageRefSchema,
   objectPrefixSchema,
   s3DestinationCreateSchema,
   s3DestinationSchema,
-  serviceNameSchema,
+} from "#validation/backup";
+import {
+  addDatabaseMountSchema,
+  databaseConfigurationSchema,
+  databaseReplicasSchema,
+  imageRefSchema,
   setDatabaseSwarmSettingsSchema,
-} from "#validation";
+} from "#validation/database";
+import { envVarKeySchema } from "#validation/env-var";
+import { gitBranchSchema, serviceNameSchema } from "#validation/service";
 import { expectThrows, ko, ok, runVerify, suite } from "#verify-harness";
 
 const isCrypto = (e: unknown) => e instanceof CryptoError;

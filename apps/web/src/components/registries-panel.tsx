@@ -1,4 +1,4 @@
-import { registrySchema } from "@noddle/shared/validation";
+import { registrySchema } from "@noddle/shared/validation/registry";
 import {
   GlobeIcon,
   KeyIcon,

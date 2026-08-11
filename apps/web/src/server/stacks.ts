@@ -11,7 +11,7 @@ import {
   deleteStackSchema,
   stackDeployRequestSchema,
   stackRollbackRequestSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/stack";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

@@ -4,7 +4,7 @@ import {
   encryptSecret,
   secretContext,
 } from "@noddle/shared/crypto";
-import { attachDatabaseSchema } from "@noddle/shared/validation";
+import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

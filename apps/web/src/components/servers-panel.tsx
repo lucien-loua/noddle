@@ -1,4 +1,4 @@
-import { serverInputSchema } from "@noddle/shared/validation";
+import { serverInputSchema } from "@noddle/shared/validation/server";
 import {
   GlobeIcon,
   HardDrivesIcon,

@@ -1,5 +1,5 @@
 import { generateDatabasePassword } from "@noddle/shared/password";
-import { changeDatabasePasswordSchema } from "@noddle/shared/validation";
+import { changeDatabasePasswordSchema } from "@noddle/shared/validation/database";
 import { ArrowsClockwiseIcon, KeyIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";

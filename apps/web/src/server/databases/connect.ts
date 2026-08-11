@@ -7,7 +7,7 @@ import {
 } from "@noddle/shared/database-engines";
 import { generateDatabasePassword } from "@noddle/shared/password";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
-import { connectDatabaseSchema } from "@noddle/shared/validation";
+import { connectDatabaseSchema } from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

@@ -1,4 +1,4 @@
-import { notificationChannelSchema } from "@noddle/shared/validation";
+import { notificationChannelSchema } from "@noddle/shared/validation/notification";
 import { BellIcon, LinkIcon, TagIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";

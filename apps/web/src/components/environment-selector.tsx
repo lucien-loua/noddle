@@ -1,4 +1,4 @@
-import { environmentNameSchema } from "@noddle/shared/validation";
+import { environmentNameSchema } from "@noddle/shared/validation/project";
 import {
   CaretDownIcon,
   CopyIcon,

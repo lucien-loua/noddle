@@ -13,7 +13,6 @@
     "./logs": "./src/logs.ts",
     "./password": "./src/password.ts",
     "./swarm-names": "./src/swarm-names.ts",
-    "./validation": "./src/validation/index.ts",
     "./validation/*": "./src/validation/*.ts",
     "./verify-harness": "./src/verify-harness.ts"
   },

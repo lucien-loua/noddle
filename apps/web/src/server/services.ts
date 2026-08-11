@@ -4,7 +4,7 @@ import {
   connectRepoSchema,
   deleteServiceSchema,
   moveServiceSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";

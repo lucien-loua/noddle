@@ -1,4 +1,4 @@
-import { projectNameSchema } from "@noddle/shared/validation";
+import { projectNameSchema } from "@noddle/shared/validation/project";
 import {
   DotsThreeIcon,
   PencilSimpleIcon,

@@ -1,8 +1,8 @@
+import { domainSchema } from "@noddle/shared/validation/service";
 import {
   composeServiceKeySchema,
   connectStackBaseSchema,
-  domainSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";

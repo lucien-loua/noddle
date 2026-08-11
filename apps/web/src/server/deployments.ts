@@ -3,7 +3,7 @@ import {
   deployRequestSchema,
   lifecycleRequestSchema,
   rollbackRequestSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

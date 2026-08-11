@@ -1,4 +1,4 @@
-import { createAccountSchema } from "@noddle/shared/validation";
+import { createAccountSchema } from "@noddle/shared/validation/account";
 import { EnvelopeIcon, UserIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";

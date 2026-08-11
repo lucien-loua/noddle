@@ -7,7 +7,7 @@ import {
 import {
   databaseMetricsRequestSchema,
   serviceMetricsRequestSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/metrics";
 import { createServerFn } from "@tanstack/react-start";
 import { and, asc, desc, eq, gte } from "drizzle-orm";
 import { db } from "@/lib/db.server";

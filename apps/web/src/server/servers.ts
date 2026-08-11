@@ -8,7 +8,7 @@ import {
 import {
   deleteServerSchema,
   serverInputSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/server";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";

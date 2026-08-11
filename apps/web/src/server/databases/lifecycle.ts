@@ -4,7 +4,7 @@ import {
   databaseLifecycleRequestSchema,
   deleteDatabaseSchema,
   rebuildDatabaseSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

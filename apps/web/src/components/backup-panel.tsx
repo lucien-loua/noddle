@@ -3,7 +3,7 @@
  * extracting every setState wrapper adds noise without shared children.
  */
 
-import { BACKUP_CRON_PRESETS } from "@noddle/shared/validation";
+import { BACKUP_CRON_PRESETS } from "@noddle/shared/validation/backup";
 import {
   ArchiveIcon,
   CaretDownIcon,

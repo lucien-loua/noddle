@@ -9,7 +9,7 @@ import {
   registryIdSchema,
   registrySchema,
   serviceRegistrySchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/registry";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

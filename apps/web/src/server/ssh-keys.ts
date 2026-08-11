@@ -3,7 +3,7 @@ import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import {
   deleteSshKeySchema,
   sshKeyInputSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/server";
 import { generateKeyPair, publicKeyOf } from "@noddle/ssh-executor/keys";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";

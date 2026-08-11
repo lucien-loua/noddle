@@ -28,7 +28,7 @@ import {
   s3DestinationCreateSchema,
   s3DestinationSchema,
   updateBackupConfigSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/backup";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";

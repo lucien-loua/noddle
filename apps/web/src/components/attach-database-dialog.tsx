@@ -1,4 +1,4 @@
-import { attachDatabaseSchema } from "@noddle/shared/validation";
+import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { CodeIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";

@@ -6,7 +6,7 @@ import {
   secretContext,
 } from "@noddle/shared/crypto";
 import { ENGINE_ENV_PREFIX } from "@noddle/shared/database-engines";
-import { envVarKeySchema } from "@noddle/shared/validation";
+import { envVarKeySchema } from "@noddle/shared/validation/env-var";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";

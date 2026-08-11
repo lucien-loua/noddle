@@ -9,7 +9,7 @@ import {
   notificationChannelIdSchema,
   notificationChannelSchema,
   notificationChannelUpdateSchema,
-} from "@noddle/shared/validation";
+} from "@noddle/shared/validation/notification";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

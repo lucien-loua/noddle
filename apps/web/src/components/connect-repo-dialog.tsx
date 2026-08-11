@@ -1,4 +1,7 @@
-import { connectRepoSchema, domainSchema } from "@noddle/shared/validation";
+import {
+  connectRepoSchema,
+  domainSchema,
+} from "@noddle/shared/validation/service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
