@@ -52,22 +52,63 @@ export async function requirePermission(
   return session;
 }
 
+export interface AuditTarget {
+  id: string;
+  name?: string | null;
+}
+
 /**
- * Record that a mutating act actually completed, with its object.
+ * The one way to run a mutating server function.
  *
- * Call AFTER the handler succeeds. `guardedMutation` does this; hand-
- * written handlers that still call `requirePermission` alone should move
- * to `guardedMutation` so the object and the outcome stop drifting.
+ * Permission, optional row load, optional confirm-name, the act, then the
+ * audit line — in that order. The audit write is NOT exported: this
+ * function is the only caller, so a handler cannot perform an act and
+ * forget to record it. That is the whole point; before this, every
+ * mutation but two wrote nothing on success.
+ *
+ * Three shapes, one interface:
+ * - `load` + `target(row)` — act on an existing row.
+ * - no `load`, `target({ result })` — creation; the object only exists
+ *   once `run` has produced it.
+ * - neither — an act with no single object (`saveEnvVars` writes many
+ *   rows, `startUpdate` acts on the installation). Recorded with a null
+ *   `resourceId`, which is still a line saying who did what and when.
  */
-export async function recordPerformed(
-  session: Session,
-  permission: Permission,
-  target: { id: string; name?: string | null }
-): Promise<void> {
-  await record(session, permission, "allowed", {
-    resourceId: target.id,
-    resourceName: target.name ?? null,
+export async function runGuarded<TRow = undefined, TResult = void>(opts: {
+  confirmName?: { expected: (row: TRow) => string; typed: string };
+  load?: () => Promise<TRow | null | undefined>;
+  notFoundMessage?: string;
+  permission: Permission;
+  run: (ctx: { row: TRow; session: Session }) => Promise<TResult>;
+  target?: (ctx: { result: TResult; row: TRow }) => AuditTarget | null;
+}): Promise<TResult> {
+  const session = await requirePermission(opts.permission);
+
+  let row = undefined as TRow;
+  if (opts.load) {
+    const loaded = (await opts.load()) ?? null;
+    if (loaded === null) {
+      throw new Error(opts.notFoundMessage ?? "not found");
+    }
+    row = loaded;
+  }
+
+  if (opts.confirmName) {
+    const expected = opts.confirmName.expected(row);
+    if (opts.confirmName.typed !== expected) {
+      throw new Error(
+        `the name you typed does not match "${expected}" — cancelled`
+      );
+    }
+  }
+
+  const result = await opts.run({ row, session });
+  const target = opts.target?.({ result, row }) ?? null;
+  await record(session, opts.permission, "allowed", {
+    resourceId: target === null ? null : target.id,
+    resourceName: target?.name ?? null,
   });
+  return result;
 }
 
 /**
