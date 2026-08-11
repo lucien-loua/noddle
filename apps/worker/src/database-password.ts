@@ -103,13 +103,21 @@ function alterScript(engine: DatabaseEngine, rootUser: string): string {
       // `--eval` would put it in the argv, new password included.
       return `umask 077 && cat > /tmp/np.js && NODDLE_CUR="$(cat ${secret})" mongosh --quiet --nodb --file /tmp/np.js; rc=$?; rm -f /tmp/np.js; exit $rc`;
 
-    default:
+    case "redis":
       // `-x` reads the LAST argument from standard input: the new
       // password therefore never appears in redis-cli's argv. `CONFIG SET`
       // takes effect immediately; it's the secret rotation right after
       // that makes it durable — the config file is regenerated on every
       // restart.
       return `REDISCLI_AUTH="$(cat ${secret})" exec redis-cli -x CONFIG SET requirepass`;
+
+    default: {
+      // A 6th engine must fail to COMPILE here, not silently inherit
+      // Redis's script at runtime: `jamais` is `never` only once every
+      // case above is handled.
+      const jamais: never = engine;
+      throw new Error(`no password-change script for engine: ${jamais}`);
+    }
   }
 }
 
@@ -171,9 +179,14 @@ function alterInput(
         "",
       ].join("\n");
 
-    default:
+    case "redis":
       // With NO trailing newline: `-x` takes standard input as-is.
       return password;
+
+    default: {
+      const jamais: never = engine;
+      throw new Error(`no password-change input for engine: ${jamais}`);
+    }
   }
 }
 

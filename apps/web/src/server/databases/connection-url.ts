@@ -22,8 +22,14 @@ function buildConnectionUrl(
       return `mysql://${rootUser}:${secret}@${host}:${port}/${dbName}`;
     case "mongo":
       return `mongodb://${rootUser}:${secret}@${host}:${port}/${dbName}?authSource=admin`;
-    default:
+    case "redis":
       return `redis://default:${secret}@${host}:${port}`;
+    default: {
+      // A 6th engine must fail to COMPILE here, not silently inherit
+      // Redis's connection string format at runtime.
+      const jamais: never = engine;
+      throw new Error(`no connection string format for engine: ${jamais}`);
+    }
   }
 }
 

@@ -234,7 +234,7 @@ try {
           "db.runCommand({ ping: 1 }).ok",
         ];
         break;
-      default:
+      case "redis":
         // Explicit `default:` for the user — without ACL, redis-cli's URI
         // parser needs the name to recognize the password.
         argv = [
@@ -246,6 +246,10 @@ try {
           "ping",
         ];
         break;
+      default: {
+        const jamais: never = engine;
+        throw new Error(`no verify probe for engine: ${jamais}`);
+      }
     }
 
     const res = await execArgv(managerSsh, argv);
