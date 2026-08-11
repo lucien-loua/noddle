@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/frame";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import {
   getUpdateStatus,
@@ -57,7 +58,7 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
 
   const status = useQuery<UpdateStatus>({
     queryFn: () => getUpdateStatus(),
-    queryKey: ["update-status"],
+    queryKey: queryKeys.updateStatus(),
     // We only poll once the update is launched. The rest of the time a
     // single read is enough — and it opens an SSH session, which we don't
     // do every five seconds for nothing.

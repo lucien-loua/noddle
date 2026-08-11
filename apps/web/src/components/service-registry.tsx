@@ -10,6 +10,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import { getRegistryOptions, setServiceRegistry } from "@/server/registries";
 
@@ -35,7 +36,7 @@ export function ServiceRegistry({
   const options = useQuery({
     enabled: canEdit,
     queryFn: () => getRegistryOptions(),
-    queryKey: ["registry-options"],
+    queryKey: queryKeys.registryOptions(),
   });
 
   const save = useMutation({

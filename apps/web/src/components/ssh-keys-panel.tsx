@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/table";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import {
   createSshKey,
@@ -193,11 +194,11 @@ export function SshKeysList({
   const keys = useQuery({
     initialData: initial,
     queryFn: () => getSshKeys(),
-    queryKey: ["ssh-keys"],
+    queryKey: queryKeys.sshKeys(),
   });
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ["ssh-keys"] }),
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.sshKeys() }),
     [queryClient]
   );
 
@@ -309,7 +310,7 @@ export function AddSshKeyDialog({
       }),
     onSuccess: async (result) => {
       setCreated(result.publicKey);
-      await queryClient.invalidateQueries({ queryKey: ["ssh-keys"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.sshKeys() });
     },
   });
 

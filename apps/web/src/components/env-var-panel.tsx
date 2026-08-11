@@ -4,6 +4,7 @@ import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 import { getEnvVars, saveEnvVars } from "@/server/env-vars";
 
 export function EnvVarPanel({
@@ -29,7 +30,7 @@ export function EnvVarPanel({
 
   const vars = useQuery({
     queryFn: () => getEnvVars({ data: target }),
-    queryKey: ["env-vars", key],
+    queryKey: queryKeys.envVars(key),
   });
 
   const save = useMutation({
@@ -47,7 +48,7 @@ export function EnvVarPanel({
     onError: (e: Error) => setError(errorMessage(e, "could not save")),
     onSuccess: async () => {
       setError(null);
-      await queryClient.invalidateQueries({ queryKey: ["env-vars", key] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.envVars(key) });
     },
   });
 

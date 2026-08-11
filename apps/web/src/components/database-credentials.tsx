@@ -20,6 +20,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
+import { queryKeys } from "@/lib/query-keys";
 import { getDatabaseCredentials } from "@/server/databases";
 
 export function DatabaseCredentials({
@@ -50,7 +51,7 @@ export function DatabaseCredentials({
   const credentials = useQuery({
     enabled: canRead,
     queryFn: () => getDatabaseCredentials({ data: { databaseId } }),
-    queryKey: ["database-credentials", databaseId],
+    queryKey: queryKeys.databaseCredentials(databaseId),
   });
 
   if (!canRead) {

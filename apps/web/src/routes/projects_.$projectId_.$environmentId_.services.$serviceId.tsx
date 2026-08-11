@@ -50,6 +50,7 @@ import { useLifecycleActions } from "@/components/use-lifecycle-actions";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { serviceLabel, shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import {
@@ -215,8 +216,8 @@ function ServiceHeaderActions({
     onDone,
     onError,
     role: known,
-    serviceId: service.id,
     status: service.status,
+    target: { resource: "service", serviceId: service.id },
   });
   const del = useDeleteServiceAction({
     onDeleted,
@@ -352,7 +353,7 @@ function ServiceDetail() {
 
   const deployments = useQuery({
     queryFn: () => getDeployments({ data: { serviceId: service.id } }),
-    queryKey: ["deployments", service.id],
+    queryKey: queryKeys.deployments(service.id),
   });
 
   const runningOn = service.lastDeployment?.nodeName ?? null;
@@ -379,7 +380,7 @@ function ServiceDetail() {
       triggerRollback({ data: { deploymentId, serviceId: service.id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["deployments", service.id],
+        queryKey: queryKeys.deployments(service.id),
       });
       await router.invalidate();
     },
@@ -387,7 +388,7 @@ function ServiceDetail() {
 
   const handleEnd = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: ["deployments", service.id],
+      queryKey: queryKeys.deployments(service.id),
     });
     await router.invalidate();
   }, [queryClient, router, service.id]);

@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { ResourcePanel } from "@/components/resource-panel";
+import { queryKeys } from "@/lib/query-keys";
 import { getServiceMetrics } from "@/server/metrics";
 
 export function ServiceResources({ serviceId }: { serviceId: string }) {
   const metrics = useQuery({
     queryFn: () => getServiceMetrics({ data: { serviceId } }),
-    queryKey: ["service-metrics", serviceId],
+    queryKey: queryKeys.serviceMetrics(serviceId),
   });
 
   return (

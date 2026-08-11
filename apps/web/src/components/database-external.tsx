@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getDatabaseCredentials,
   setDatabaseExternalPort,
@@ -67,7 +68,7 @@ export function DatabaseExternal({
   const credentials = useQuery({
     enabled: canReadSecrets && externalPort !== null,
     queryFn: () => getDatabaseCredentials({ data: { databaseId } }),
-    queryKey: ["database-credentials", databaseId],
+    queryKey: queryKeys.databaseCredentials(databaseId),
   });
 
   const save = useMutation({

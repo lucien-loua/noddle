@@ -53,6 +53,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import {
   deleteRegistry,
@@ -146,11 +147,11 @@ export function RegistriesList({
   const list = useQuery({
     initialData: initial,
     queryFn: () => getRegistries(),
-    queryKey: ["registries"],
+    queryKey: queryKeys.registries(),
   });
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ["registries"] }),
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.registries() }),
     [queryClient]
   );
 
@@ -359,7 +360,7 @@ export function RegistryDialog({
         type: "success",
       });
       onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: ["registries"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.registries() });
     },
   });
 

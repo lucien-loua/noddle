@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { useDatabaseLifecycleActions } from "@/components/use-database-lifecycle-actions";
+import { useLifecycleActions } from "@/components/use-lifecycle-actions";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
@@ -151,12 +151,12 @@ function DatabaseHeaderActions({
   onError: (message: string) => void;
   onTerminal: (() => void) | null;
 }) {
-  const lifecycle = useDatabaseLifecycleActions({
-    databaseId: database.id,
+  const lifecycle = useLifecycleActions({
     onDone,
     onError,
     role: known,
     status: database.status,
+    target: { databaseId: database.id, resource: "database" },
   });
   const del = useDeleteDatabaseAction({
     databaseId: database.id,

@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getStackDashboard } from "@/server/dashboard";
@@ -93,7 +94,7 @@ function StackDetail() {
 
   const deployments = useQuery({
     queryFn: () => getStackDeployments({ data: { stackId: stack.id } }),
-    queryKey: ["stack-deployments", stack.id],
+    queryKey: queryKeys.stackDeployments(stack.id),
   });
 
   const rollback = useMutation({
@@ -101,7 +102,7 @@ function StackDetail() {
       triggerStackRollback({ data: { sourceDeploymentId, stackId: stack.id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ["stack-deployments", stack.id],
+        queryKey: queryKeys.stackDeployments(stack.id),
       });
       await router.invalidate();
     },
@@ -109,7 +110,7 @@ function StackDetail() {
 
   const handleEnd = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: ["stack-deployments", stack.id],
+      queryKey: queryKeys.stackDeployments(stack.id),
     });
     await router.invalidate();
   }, [queryClient, router, stack.id]);

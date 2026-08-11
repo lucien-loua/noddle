@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { queryKeys } from "@/lib/query-keys";
 import { getDatabaseMetrics } from "@/server/metrics";
 
 const WINDOW_LABEL: Record<1 | 6 | 24, string> = {
@@ -34,7 +35,7 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
           windowHours: ({ 1: "1", 6: "6", 24: "24" } as const)[windowHours],
         },
       }),
-    queryKey: ["database-metrics", databaseId, windowHours],
+    queryKey: queryKeys.databaseMetrics(databaseId, windowHours),
     refetchInterval: 30_000,
   });
 

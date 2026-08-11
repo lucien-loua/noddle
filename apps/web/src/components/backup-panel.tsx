@@ -110,6 +110,7 @@ import {
   errorMessage,
   relativeTime,
 } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import {
   type BackupConfigRow,
@@ -168,7 +169,7 @@ export function BackupPanel({
   const queryClient = useQueryClient();
   const configs = useQuery({
     queryFn: () => listBackupConfigs({ data: { databaseId } }),
-    queryKey: ["backup-configs", databaseId],
+    queryKey: queryKeys.backupConfigs(databaseId),
   });
 
   const [editor, setEditor] = useState<BackupConfigRow | "new" | null>(null);
@@ -180,7 +181,7 @@ export function BackupPanel({
   const invalidate = useCallback(() => {
     queryClient
       .invalidateQueries({
-        queryKey: ["backup-configs", databaseId],
+        queryKey: queryKeys.backupConfigs(databaseId),
       })
       .catch(() => undefined);
   }, [databaseId, queryClient]);
@@ -436,7 +437,7 @@ function BackupConfigCard({
       toast.add({ title: "Backup queued", type: "success" });
       queryClient
         .invalidateQueries({
-          queryKey: ["backups", config.databaseId, config.id],
+          queryKey: queryKeys.backups(config.databaseId, config.id),
         })
         .catch(() => undefined);
     },
@@ -1034,7 +1035,7 @@ function BackupHistoryDialog({
   const [viewing, setViewing] = useState<BackupRow | null>(null);
   const backups = useQuery({
     queryFn: () => getBackups({ data: { configId: config.id, databaseId } }),
-    queryKey: ["backups", databaseId, config.id],
+    queryKey: queryKeys.backups(databaseId, config.id),
     refetchInterval: (query) =>
       query.state.data?.some(
         (b) => b.status === "queued" || b.status === "running"
@@ -1047,7 +1048,7 @@ function BackupHistoryDialog({
     mutationFn: (backupId: string) => deleteBackup({ data: { backupId } }),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ["backups", databaseId, config.id],
+        queryKey: queryKeys.backups(databaseId, config.id),
       }),
   });
 
@@ -1186,7 +1187,7 @@ function RestoreFromS3Dialog({
   const objects = useQuery({
     enabled: open && Boolean(destinationId),
     queryFn: () => listBackupObjects({ data: { destinationId } }),
-    queryKey: ["backup-objects", destinationId],
+    queryKey: queryKeys.backupObjects(destinationId),
   });
 
   const selected = destinations.find((d) => d.id === destinationId) ?? null;

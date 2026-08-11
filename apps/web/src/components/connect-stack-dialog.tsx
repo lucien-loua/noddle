@@ -24,6 +24,7 @@ import {
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 import type { ServerView } from "@/server/servers";
 import { connectStack } from "@/server/stacks";
 
@@ -92,7 +93,7 @@ export function ConnectStackDialog({
       }),
     onSuccess: async () => {
       onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: ["servers"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.servers() });
       await router.invalidate();
     },
   });

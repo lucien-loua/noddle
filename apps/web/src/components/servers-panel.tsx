@@ -38,6 +38,7 @@ import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queryKeys } from "@/lib/query-keys";
 import { addServer, getServers, type ServerView } from "@/server/servers";
 import { getSshKeys } from "@/server/ssh-keys";
 
@@ -140,14 +141,14 @@ export function ServersList({
   const serversQuery = useQuery({
     initialData: initial,
     queryFn: () => getServers(),
-    queryKey: ["servers"],
+    queryKey: queryKeys.servers(),
     refetchInterval: (query) =>
       query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
   });
   const servers = serversQuery.data ?? initial;
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ["servers"] }),
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.servers() }),
     [queryClient]
   );
 
@@ -216,7 +217,7 @@ export function AddServerDialog({
   // page.
   const keys = useQuery({
     queryFn: () => getSshKeys(),
-    queryKey: ["ssh-keys"],
+    queryKey: queryKeys.sshKeys(),
   });
   const available = keys.data ?? [];
 
@@ -233,7 +234,7 @@ export function AddServerDialog({
       }),
     onSuccess: async () => {
       onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: ["servers"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.servers() });
     },
   });
 
