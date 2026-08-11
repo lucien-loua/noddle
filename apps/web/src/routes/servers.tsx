@@ -2,7 +2,10 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { AddServerDialog, ServersList } from "@/components/servers-panel";
+import {
+  AddServerDialog,
+  ServersList,
+} from "@/components/features/servers/servers-panel";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
@@ -18,9 +21,6 @@ export const Route = createFileRoute("/servers")({
     return { email: state.email, role: state.role };
   },
   component: ServersPage,
-  // No more metrics here: they live on each machine's page. This screen
-  // answers "what machines do I have", one per row, and the loader now
-  // only has one read to do.
   loader: async ({ context }) => ({
     email: context.email,
     role: context.role,

@@ -72,9 +72,11 @@
         "@noddle/compose-engine": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
+        "@noddle/deploy": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/proxy-config": "workspace:*",
+        "@noddle/registry": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
@@ -151,6 +153,18 @@
         "drizzle-kit": "catalog:",
       },
     },
+    "packages/deploy": {
+      "name": "@noddle/deploy",
+      "dependencies": {
+        "@noddle/proxy-config": "workspace:*",
+        "@noddle/registry": "workspace:*",
+        "@noddle/ssh-executor": "workspace:*",
+        "@noddle/swarm-ops": "workspace:*",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
     "packages/deploy-contract": {
       "name": "@noddle/deploy-contract",
       "dependencies": {
@@ -173,6 +187,15 @@
     },
     "packages/proxy-config": {
       "name": "@noddle/proxy-config",
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/registry": {
+      "name": "@noddle/registry",
+      "dependencies": {
+        "@noddle/ssh-executor": "workspace:*",
+      },
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
       },
@@ -561,11 +584,15 @@
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
 
+    "@noddle/deploy": ["@noddle/deploy@workspace:packages/deploy"],
+
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
 
     "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
 
     "@noddle/proxy-config": ["@noddle/proxy-config@workspace:packages/proxy-config"],
+
+    "@noddle/registry": ["@noddle/registry@workspace:packages/registry"],
 
     "@noddle/shared": ["@noddle/shared@workspace:packages/shared"],
 

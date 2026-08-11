@@ -3,6 +3,7 @@ import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
+import { UpdatePanel } from "@/components/features/updates/panel";
 import { ResourceGraphs } from "@/components/resource-graphs";
 import { ServerDiskUsage } from "@/components/server-disk";
 import { ServerPruneToggle } from "@/components/server-prune-toggle";
@@ -15,7 +16,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { UpdatePanel } from "@/components/update-panel";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";

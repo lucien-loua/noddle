@@ -10,19 +10,21 @@
  * `queryClient.prefetchQuery()` / `ensureQueryData()` later if the need
  * comes up.
  *
- * Options that vary by call site — `enabled`, `initialData`,
- * `refetchInterval` driven by local render state — are NOT here: they
- * are call-site concerns, not identity concerns, and stay spread on top
- * at the `useQuery()` call. `["servers"]` used to be hand-typed in three
- * separate files with nothing tying them together — the same shape as
- * the silent `default:` that fell through to Redis in the engine
- * switches: a string standing in for a fact the compiler could
- * otherwise check.
+ * Writes go through `cache` / `mutations` so call sites invalidate via
+ * those adapters instead of re-typing query keys. Options that vary by
+ * call site — `enabled`, `initialData`, `refetchInterval` driven by
+ * local render state — are NOT here: they are call-site concerns, not
+ * identity concerns, and stay spread on top at the `useQuery()` call.
+ * `["servers"]` used to be hand-typed in three separate files with
+ * nothing tying them together — the same shape as the silent `default:`
+ * that fell through to Redis in the engine switches: a string standing
+ * in for a fact the compiler could otherwise check.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { getAccounts } from "@/server/accounts";
 import {
   getBackups,
+  getDestinations,
   listBackupConfigs,
   listBackupObjects,
 } from "@/server/backups";
@@ -86,6 +88,12 @@ export const queries = {
     queryOptions({
       queryFn: () => getDeployments({ data: { serviceId } }),
       queryKey: ["deployments", serviceId],
+    }),
+
+  destinations: () =>
+    queryOptions({
+      queryFn: () => getDestinations(),
+      queryKey: ["destinations"],
     }),
 
   // The identifier alone is enough as a key: a Service and a Database

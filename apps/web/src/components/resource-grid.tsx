@@ -16,7 +16,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
-import { DatabaseMark } from "@/components/database-mark";
+import { DatabaseMark } from "@/components/features/database/database-mark";
 import { IconStack } from "@/components/icon-stack";
 import { MoveServiceDialog } from "@/components/move-service-dialog";
 import { Badge } from "@/components/ui/badge";

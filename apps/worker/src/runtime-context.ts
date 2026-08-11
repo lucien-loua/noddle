@@ -7,10 +7,10 @@
  */
 import type { Database } from "@noddle/db";
 import { servers } from "@noddle/db/schema";
+import type { RegistryConfig } from "@noddle/registry";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import type { RegistryConfig } from "#registry";
 
 export type ServerRow = typeof servers.$inferSelect;
 

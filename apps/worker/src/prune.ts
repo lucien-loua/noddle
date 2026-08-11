@@ -1,4 +1,5 @@
 import { deployments } from "@noddle/db/schema";
+import { isPortableImage } from "@noddle/registry";
 import {
   type DockerApi,
   disconnect,
@@ -8,7 +9,6 @@ import {
 } from "@noddle/ssh-executor";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { recordDiskUsage } from "#metrics";
-import { isPortableImage } from "#registry";
 import { connectTo, type DeployContext } from "#runtime-context";
 
 /**

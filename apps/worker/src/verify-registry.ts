@@ -29,6 +29,14 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
+import {
+  ensureRegistryTrust,
+  KEEP_PER_SERVICE,
+  pushImage,
+  REGISTRY_USER,
+  type RegistryConfig,
+  registryImageTag,
+} from "@noddle/registry";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -42,14 +50,6 @@ import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { redeployImage, runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
-import {
-  ensureRegistryTrust,
-  KEEP_PER_SERVICE,
-  pushImage,
-  REGISTRY_USER,
-  type RegistryConfig,
-  registryImageTag,
-} from "#registry";
 import { sweepRegistry } from "#registry-sweep";
 import { runServiceTeardown } from "#teardown";
 import { seedSshKey } from "#verify-seed";

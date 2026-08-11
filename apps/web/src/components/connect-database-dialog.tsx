@@ -1,4 +1,5 @@
 import {
+  DATABASE_ENGINE_LABEL,
   DATABASE_ENGINES,
   type DatabaseEngine,
   DEFAULT_DATABASE_IMAGE,
@@ -11,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { DatabaseMark, ENGINE_LABEL } from "@/components/database-mark";
+import { DatabaseMark } from "@/components/features/database/database-mark";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -308,7 +309,7 @@ export function ConnectDatabaseDialog({
                     <QuestionnaireChoice key={option} value={option}>
                       <span className="flex items-center gap-2 font-medium">
                         <DatabaseMark engine={option} />
-                        {ENGINE_LABEL[option]}
+                        {DATABASE_ENGINE_LABEL[option]}
                       </span>
                       <QuestionnaireChoiceDescription>
                         {ENGINE_BLURB[option]}

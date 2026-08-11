@@ -59,6 +59,7 @@ import {
   serviceMetrics,
   services,
 } from "@noddle/db/schema";
+import type { RegistryConfig } from "@noddle/registry";
 import {
   connect,
   disconnect,
@@ -68,7 +69,6 @@ import {
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { pruneDocker } from "#prune";
-import type { RegistryConfig } from "#registry";
 import type { DeployContext } from "#runtime-context";
 import { seedSshKey } from "#verify-seed";
 

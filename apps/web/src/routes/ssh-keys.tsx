@@ -2,7 +2,10 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { AddSshKeyDialog, SshKeysList } from "@/components/ssh-keys-panel";
+import {
+  AddSshKeyDialog,
+  SshKeysList,
+} from "@/components/features/ssh-keys/ssh-keys-panel";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";

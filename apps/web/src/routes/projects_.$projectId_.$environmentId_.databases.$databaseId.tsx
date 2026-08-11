@@ -1,4 +1,7 @@
-import { DATABASE_PORT } from "@noddle/shared/database-engines";
+import {
+  DATABASE_ENGINE_LABEL,
+  DATABASE_PORT,
+} from "@noddle/shared/database-engines";
 import {
   ArrowClockwiseIcon,
   CaretDownIcon,
@@ -16,20 +19,18 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import {
-  BackupPanel,
-  RestoreDialog,
-  type RestoreTarget,
-} from "@/components/backup-panel";
-import { DatabaseAdvanced } from "@/components/database-advanced";
-import { DatabaseCredentials } from "@/components/database-credentials";
-import { DatabaseExternal } from "@/components/database-external";
-import { DatabaseLogs } from "@/components/database-logs";
-import { DatabaseMark, ENGINE_LABEL } from "@/components/database-mark";
-import { DatabaseResources } from "@/components/database-resources";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { EnvVarPanel } from "@/components/env-var-panel";
+import { BackupPanel } from "@/components/features/backups/panel";
+import { RestoreDialog } from "@/components/features/backups/restore-dialog";
+import type { RestoreTarget } from "@/components/features/backups/types";
+import { DatabaseAdvanced } from "@/components/features/database/database-advanced";
+import { DatabaseCredentials } from "@/components/features/database/database-credentials";
+import { DatabaseExternal } from "@/components/features/database/database-external";
+import { DatabaseLogs } from "@/components/features/database/database-logs";
+import { DatabaseMark } from "@/components/features/database/database-mark";
+import { DatabaseResources } from "@/components/features/database/database-resources";
+import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { TabRail } from "@/components/tab-rail";
 import { TeardownError } from "@/components/teardown-error";
 import { useTerminalDialog } from "@/components/terminal-dialog";
@@ -396,17 +397,10 @@ function DatabaseDetail() {
       role={role}
       title={database.name}
     >
-      {/* `AppShell`'s container is a `flex-1` block: it does have a height,
-          but a `flex-1` child pulls nothing from it unless the parent is
-          itself a flex COLUMN. Without this wrapper — which a service's page
-          has always carried — the tabs size themselves to their content.
-          Invisible as long as the panels were short cards; measured as soon
-          as the logs arrived: 205px of panel in a 683px window, so 310px of
-          empty space under a truncated log. */}
       <div className="flex h-full min-h-0 flex-col">
         <p className="mb-3 flex items-center gap-2 truncate text-muted-foreground text-sm">
           <DatabaseMark engine={database.engine} />
-          {ENGINE_LABEL[database.engine] ?? database.engine} ·{" "}
+          {DATABASE_ENGINE_LABEL[database.engine] ?? database.engine} ·{" "}
           {database.serverName}
         </p>
         <TeardownError message={database.lastError} />
@@ -416,18 +410,6 @@ function DatabaseDetail() {
           </Alert>
         ) : null}
 
-        {/* The classic tabs of a database page, but ONLY the ones that have
-            something behind them — an empty tab would be decor, which this
-            product forbids itself. Each arrives with its own mechanism:
-
-              Environment  `env_vars` carries a `database_id`
-              Logs         `/api/database-logs`, a `docker logs --follow`
-                           followed by the web app itself, no worker or Redis
-
-              Monitoring   `service_metrics` carries a `database_id` — an
-                           engine IS a container, so the same `docker stats`
-              Advanced     resource limits — the ONLY block of this kind of
-                           Advanced tab that has a use case here (measured) */}
         <Tabs
           className="min-h-0 flex-1"
           onValueChange={handleTabChange}

@@ -180,8 +180,6 @@ function TerminalSession({
     };
   }, [onStatus, target, termRef]);
 
-  // Padding lives on the shell, not the host: FitAddon sizes to the host,
-  // and `scroll-fade-y` on FocusModalBody would mask the last row.
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[#0c0c0c] p-2">
       <div className="min-h-0 flex-1 overflow-hidden" ref={termRef} />

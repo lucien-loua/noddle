@@ -2,7 +2,10 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { RegistriesList, RegistryDialog } from "@/components/registries-panel";
+import {
+  RegistriesList,
+  RegistryDialog,
+} from "@/components/features/registries/registries-panel";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";

@@ -1,9 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { S3DestinationPanel } from "@/components/s3-destination-panel";
+import { S3DestinationPanel } from "@/components/features/destinations/s3-destination-panel";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { type DestinationRow, getDestinations } from "@/server/backups";
@@ -25,14 +27,15 @@ export const Route = createFileRoute("/destinations")({
 });
 
 function DestinationsPage() {
-  const { destinations, email, role } = Route.useLoaderData();
+  const { destinations: initial, email, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const canEdit = useCan(known, "backup", "create");
+  const { data: destinations, isEmpty } = useResourceList(
+    queries.destinations,
+    initial
+  );
 
-  // "Open" and "on what" live TOGETHER here: they're two faces of the same
-  // state. Separating them let the "Add destination" button open the
-  // dialog on the previously-edited destination — and so overwrite it.
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DestinationRow | null>(null);
 
@@ -44,10 +47,7 @@ function DestinationsPage() {
   return (
     <AppShell
       actions={
-        // Hidden when there are none: the empty state already carries its
-        // own button, and two calls to action for the same gesture would
-        // compete with each other.
-        canEdit && destinations.length > 0 ? (
+        canEdit && !isEmpty ? (
           <Button onClick={handleOpen}>Add destination</Button>
         ) : null
       }

@@ -1,8 +1,9 @@
+import { DATABASE_ENGINE_LABEL } from "@noddle/shared/database-engines";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { AttachDatabaseDialog } from "@/components/attach-database-dialog";
-import { DatabaseMark, ENGINE_LABEL } from "@/components/database-mark";
+import { DatabaseMark } from "@/components/features/database/database-mark";
 import { ResourceRow } from "@/components/resource-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -234,7 +235,7 @@ export function DatabaseCard({
       secondary={
         <>
           <span className="text-muted-foreground/70">
-            {ENGINE_LABEL[database.engine]} ·{" "}
+            {DATABASE_ENGINE_LABEL[database.engine]} ·{" "}
           </span>
           {database.serverName}
           {database.lastError ? (

@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import { AccountsPanel } from "@/components/accounts-panel";
 import { AppShell } from "@/components/app-shell";
+import { AccountsPanel } from "@/components/features/accounts/accounts-panel";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
