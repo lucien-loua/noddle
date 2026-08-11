@@ -1,3 +1,4 @@
+import { secretPathFor } from "@noddle/database-spec";
 import { databases } from "@noddle/db/schema";
 import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import type { DatabaseEngine } from "@noddle/shared/database-engines";
@@ -11,7 +12,6 @@ import {
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { assertSafeIdentifier, findDatabaseContainer } from "#backup";
-import { secretPathFor } from "#database";
 import { connectForDeploy, type DeployContext } from "#runtime-context";
 
 /**

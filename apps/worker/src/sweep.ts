@@ -1,3 +1,4 @@
+import { listComposeServiceKeys } from "@noddle/compose-engine";
 import {
   deployments,
   servers,
@@ -8,7 +9,7 @@ import {
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
-import { listComposeServiceKeys, redeployStack } from "#compose";
+import { redeployStack } from "#compose";
 import { redeployImage } from "#deploy";
 import { notify } from "#notify";
 import type { DeployContext } from "#runtime-context";

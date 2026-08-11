@@ -69,6 +69,8 @@
         "@noddle/backup": "workspace:*",
         "@noddle/backup-store": "workspace:*",
         "@noddle/build-engine": "workspace:*",
+        "@noddle/compose-engine": "workspace:*",
+        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
@@ -112,6 +114,26 @@
       "name": "@noddle/build-engine",
       "dependencies": {
         "@noddle/ssh-executor": "workspace:*",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/compose-engine": {
+      "name": "@noddle/compose-engine",
+      "dependencies": {
+        "@noddle/proxy-config": "workspace:*",
+        "@noddle/shared": "workspace:*",
+        "yaml": "catalog:",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/database-spec": {
+      "name": "@noddle/database-spec",
+      "dependencies": {
+        "@noddle/shared": "workspace:*",
       },
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
@@ -515,6 +537,10 @@
     "@noddle/backup-store": ["@noddle/backup-store@workspace:packages/backup-store"],
 
     "@noddle/build-engine": ["@noddle/build-engine@workspace:packages/build-engine"],
+
+    "@noddle/compose-engine": ["@noddle/compose-engine@workspace:packages/compose-engine"],
+
+    "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
 

@@ -1,0 +1,22 @@
+{
+  "name": "@noddle/compose-engine",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "verify": "bun run src/verify.ts"
+  },
+  "dependencies": {
+    "@noddle/proxy-config": "workspace:*",
+    "@noddle/shared": "workspace:*",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/tsconfig": "workspace:*"
+  }
+}
