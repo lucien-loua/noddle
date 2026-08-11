@@ -1,13 +1,15 @@
 import {
   bigint,
+  boolean,
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { createdAt } from "#schema/columns";
+import { createdAt, updatedAt } from "#schema/columns";
 import { databases } from "#schema/databases";
 import { s3Destinations } from "#schema/s3-destinations";
 
@@ -29,9 +31,56 @@ export const backupKind = pgEnum("backup_kind", [
   "pre_restore",
 ]);
 
+/**
+ * A backup schedule for a database.
+ *
+ * One database can have many schedules (different destinations, crons, or
+ * prefixes). Runs live in {@link backups} and point back here via `configId`.
+ */
+export const backupConfigs = pgTable(
+  "backup_configs",
+  {
+    createdAt,
+    databaseId: uuid("database_id")
+      .notNull()
+      .references(() => databases.id, { onDelete: "cascade" }),
+    /**
+     * Dump target name inside the engine (e.g. Postgres `POSTGRES_DB`).
+     * Distinct from the Noddle resource name on `databases.name`.
+     */
+    databaseName: text("database_name").notNull(),
+    destinationId: uuid("destination_id")
+      .notNull()
+      .references(() => s3Destinations.id, { onDelete: "restrict" }),
+    enabled: boolean("enabled").notNull().default(true),
+    id: uuid("id").primaryKey().defaultRandom(),
+    /**
+     * How many SUCCESSFUL runs of THIS config to keep. `null` = keep all.
+     * Prune deletes the S3 object AND the row.
+     */
+    keepLatestCount: integer("keep_latest_count"),
+    /**
+     * Extra path under the destination's own prefix when building object
+     * keys. Empty string = destination prefix only.
+     */
+    prefix: text("prefix").notNull().default(""),
+    /** Five-field cron expression (e.g. `0 0 * * *`). */
+    schedule: text("schedule").notNull(),
+    updatedAt,
+  },
+  (t) => [index("backup_configs_database_idx").on(t.databaseId)]
+);
+
 export const backups = pgTable(
   "backups",
   {
+    /**
+     * Config that produced this run. `null` for `pre_restore`, legacy rows,
+     * or restores from a raw S3 object that never belonged to a config.
+     */
+    configId: uuid("config_id").references(() => backupConfigs.id, {
+      onDelete: "set null",
+    }),
     createdAt,
     databaseId: uuid("database_id")
       .notNull()
@@ -64,5 +113,8 @@ export const backups = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }),
     status: backupStatus("status").notNull().default("queued"),
   },
-  (t) => [index("backups_database_created_idx").on(t.databaseId, t.createdAt)]
+  (t) => [
+    index("backups_database_created_idx").on(t.databaseId, t.createdAt),
+    index("backups_config_created_idx").on(t.configId, t.createdAt),
+  ]
 );

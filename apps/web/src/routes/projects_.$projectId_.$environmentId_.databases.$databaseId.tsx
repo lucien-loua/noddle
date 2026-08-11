@@ -15,7 +15,11 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { BackupPanel, RestoreDialog } from "@/components/backup-panel";
+import {
+  BackupPanel,
+  RestoreDialog,
+  type RestoreTarget,
+} from "@/components/backup-panel";
 import { DatabaseAdvanced } from "@/components/database-advanced";
 import { DatabaseCredentials } from "@/components/database-credentials";
 import { DatabaseExternal } from "@/components/database-external";
@@ -44,11 +48,7 @@ import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import {
-  type BackupRow,
-  getDestinations,
-  triggerRestore,
-} from "@/server/backups";
+import { getDestinations, triggerRestore } from "@/server/backups";
 import { type DatabaseRow, getDatabase } from "@/server/databases";
 
 /**
@@ -230,23 +230,39 @@ function DatabaseDetail() {
   const canEditConfig = useCan(known, "database", "create");
 
   const [tab, setTab] = useState("general");
-  const [target, setTarget] = useState<BackupRow | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(
+    null
+  );
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const restore = useMutation({
-    mutationFn: (confirmName: string) =>
-      triggerRestore({
+    mutationFn: (confirmName: string) => {
+      if (!restoreTarget) {
+        throw new Error("no restore target");
+      }
+      if (restoreTarget.kind === "run") {
+        return triggerRestore({
+          data: {
+            backupId: restoreTarget.backup.id,
+            confirmName,
+            databaseId: database.id,
+          },
+        });
+      }
+      return triggerRestore({
         data: {
-          backupId: target?.id ?? "",
           confirmName,
           databaseId: database.id,
+          destinationId: restoreTarget.destinationId,
+          objectKey: restoreTarget.objectKey,
         },
-      }),
-    onSuccess: () => setTarget(null),
+      });
+    },
+    onSuccess: () => setRestoreTarget(null),
   });
 
   const handleClose = useCallback((open: boolean) => {
     if (!open) {
-      setTarget(null);
+      setRestoreTarget(null);
     }
   }, []);
   const handleConfirm = useCallback(
@@ -405,11 +421,9 @@ function DatabaseDetail() {
               canRestore={canRestoreBackup}
               databaseId={database.id}
               databaseName={database.name}
+              defaultDatabaseName={database.databaseName ?? database.name}
               destinations={destinations}
-              onRestore={setTarget}
-              retention={database.backupRetention}
-              s3DestinationId={database.s3DestinationId}
-              schedule={database.backupSchedule}
+              onRestore={setRestoreTarget}
             />
             {restore.isError ? (
               <Alert className="mt-3" variant="destructive">
@@ -424,11 +438,11 @@ function DatabaseDetail() {
         </Tabs>
 
         <RestoreDialog
-          backup={target}
           databaseName={database.name}
           onConfirm={handleConfirm}
           onOpenChange={handleClose}
           pending={restore.isPending}
+          target={restoreTarget}
         />
       </div>
     </AppShell>

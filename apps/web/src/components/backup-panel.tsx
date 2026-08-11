@@ -1,12 +1,33 @@
-import { ArchiveIcon } from "@phosphor-icons/react";
+/**
+ * biome-ignore-all lint/performance/noJsxPropsBind: dialog forms;
+ * extracting every setState wrapper adds noise without shared children.
+ */
+
+import { BACKUP_CRON_PRESETS } from "@noddle/shared/validation";
+import {
+  ArchiveIcon,
+  ClipboardTextIcon,
+  PencilSimpleIcon,
+  PlayIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
+import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
+import {
+  formatLogStamp,
+  type TerminalLogLine,
+  TerminalLogs,
+} from "@/components/terminal-logs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Combobox,
   ComboboxContent,
@@ -16,6 +37,16 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Empty,
   EmptyContent,
   EmptyDescription,
@@ -24,14 +55,33 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import {
+  FocusModal,
+  FocusModalBody,
+  FocusModalContent,
+  FocusModalHeader,
+  FocusModalTitle,
+} from "@/components/ui/focus-modal";
+import {
   Frame,
   FrameDescription,
   FrameHeader,
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -41,6 +91,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "@/components/ui/toast";
 import {
   backupKindLabel,
   backupLabel,
@@ -50,262 +101,50 @@ import {
   errorMessage,
   relativeTime,
 } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
+  type BackupConfigRow,
+  type BackupObjectRow,
   type BackupRow,
+  createBackupConfig,
   type DestinationRow,
+  deleteBackup,
+  deleteBackupConfig,
   getBackups,
-  saveBackupSchedule,
+  listBackupConfigs,
+  listBackupObjects,
   triggerBackup,
+  updateBackupConfig,
 } from "@/server/backups";
 
-/**
- * While a backup is running, we keep polling. It takes seconds to minutes
- * depending on the database: without this the row would stay "Running"
- * until the user reloads, and they'd conclude it's stuck.
- */
 const POLL_MS = 3000;
+const DEFAULT_CRON = "0 0 * * *";
+/** How many runs the history drawer lists. */
+const HISTORY_LIMIT = 10;
 
-const SCHEDULES: { label: string; value: Schedule }[] = [
-  { label: "Never", value: "off" },
-  { label: "Daily", value: "daily" },
-  { label: "Weekly", value: "weekly" },
-];
+type ScheduleMode = (typeof BACKUP_CRON_PRESETS)[number]["cron"] | "custom";
 
-type Schedule = "daily" | "off" | "weekly";
-
-/**
- * The automatic schedule, as three buttons.
- *
- * Neither cron nor a time picker: "every day" is enough of an answer to the
- * question the user is asking, and the exact time isn't a setting until
- * someone has asked for it. Retention sits next to it because the two are
- * decided together — turning on a schedule without capping what you keep
- * is signing up for a storage bill that climbs on its own.
- */
-function ScheduleControl({
-  databaseId,
-  destinations,
-  retention,
-  s3DestinationId,
-  schedule,
-}: {
-  databaseId: string;
-  destinations: DestinationRow[];
-  retention: number;
-  s3DestinationId: string | null;
-  schedule: Schedule;
-}) {
-  const [value, setValue] = useState<Schedule>(schedule);
-  const [keep, setKeep] = useState(String(retention));
-  const [target, setTarget] = useState<string | null>(s3DestinationId);
-  // `useId` and not a hardcoded identifier: nothing prevents two backup
-  // panels on the same screen, and two identical `for` attributes would
-  // only ever point to the first field.
-  const keepId = useId();
-
-  const save = useMutation({
-    mutationFn: (next: {
-      retention: number;
-      s3DestinationId: string | null;
-      schedule: Schedule;
-    }) =>
-      saveBackupSchedule({
-        data: {
-          databaseId,
-          retention: next.retention,
-          s3DestinationId: next.s3DestinationId,
-          schedule: next.schedule,
-        },
-      }),
-    // The toggle is optimistic so the click responds right away, so it MUST
-    // be rolled back when the server refuses. Without this, a rejected save
-    // — a schedule with no destination, for example — left "Daily" selected
-    // while the database stayed on its old rhythm: the screen was claiming
-    // a protection that didn't exist. Observed in an actual browser.
-    onError: (_err, _next, context: { previous: Schedule } | undefined) => {
-      if (context) {
-        setValue(context.previous);
-      }
-    },
-    onMutate: (next) => {
-      const previous = value;
-      setValue(next.schedule);
-      return { previous };
-    },
-  });
-
-  const handleSchedule = useCallback(
-    (next: Schedule) => {
-      save.mutate({
-        retention: Number(keep) || 1,
-        s3DestinationId: target,
-        schedule: next,
-      });
-    },
-    [keep, save, target]
-  );
-
-  // The selector only exists FROM TWO destinations onward. This preserves
-  // the comfort of the old single-destination setup: an installation with
-  // only one bucket is never asked the question.
-  const handleTarget = useCallback(
-    (next: unknown) => {
-      const chosen = next === "" || typeof next !== "string" ? null : next;
-      setTarget(chosen);
-      save.mutate({
-        retention: Number(keep) || 1,
-        s3DestinationId: chosen,
-        schedule: value,
-      });
-    },
-    [keep, save, value]
-  );
-
-  // The combobox returns the chosen OBJECT, not its identifier: we
-  // translate it back before reusing `handleTarget`, which remains the
-  // single source of truth for writes.
-  const selectedDestination = destinations.find((d) => d.id === target) ?? null;
-  const handleTargetItem = useCallback(
-    (next: unknown) => {
-      const chosen = next as DestinationRow | null;
-      handleTarget(chosen ? chosen.id : "");
-    },
-    [handleTarget]
-  );
-
-  const handleKeep = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setKeep(e.target.value),
-    []
-  );
-  const handleKeepBlur = useCallback(() => {
-    const n = Number(keep);
-    if (Number.isInteger(n) && n >= 1 && n <= 100) {
-      save.mutate({ retention: n, s3DestinationId: target, schedule: value });
-    } else {
-      setKeep(String(retention));
-    }
-  }, [keep, retention, save, target, value]);
-
-  return (
-    <div className="flex flex-wrap items-center gap-3 border-t pt-3">
-      <span className="text-muted-foreground text-xs">Automatic</span>
-      <div className="flex gap-1">
-        {SCHEDULES.map((option) => (
-          <ScheduleButton
-            active={value === option.value}
-            key={option.value}
-            label={option.label}
-            onSelect={handleSchedule}
-            value={option.value}
-          />
-        ))}
-      </div>
-
-      {value === "off" ? null : (
-        <span className="flex items-center gap-2 text-muted-foreground text-xs">
-          {/* The visible word IS the label, rather than an `aria-label`
-              set alongside it: an accessible name that doesn't contain the
-              visible text breaks voice control ("keeping" would point to
-              nothing). The `sr-only` completes the sentence without
-              repeating it on screen. */}
-          <Label
-            className="font-normal text-muted-foreground text-xs"
-            htmlFor={keepId}
-          >
-            keeping
-            <span className="sr-only">backups</span>
-          </Label>
-          <Input
-            className="h-7 w-16 text-xs"
-            id={keepId}
-            inputMode="numeric"
-            onBlur={handleKeepBlur}
-            onChange={handleKeep}
-            value={keep}
-          />
-        </span>
-      )}
-
-      {destinations.length > 1 ? (
-        <span className="flex items-center gap-2 text-muted-foreground text-xs">
-          to
-          {/* A combobox here too: the number of destinations is no longer
-              bounded now that we accept several. Constrained in width to
-              stay within the sentence, unlike the form fields. */}
-          <Combobox
-            items={destinations}
-            itemToStringLabel={destinationToName}
-            itemToStringValue={destinationToName}
-            onValueChange={handleTargetItem}
-            value={selectedDestination}
-          >
-            <ComboboxInput
-              aria-label="S3 destination"
-              className="w-44"
-              placeholder="pick one"
-            />
-            <ComboboxContent>
-              <ComboboxEmpty>No destination matches.</ComboboxEmpty>
-              <ComboboxList>
-                {(d: DestinationRow) => (
-                  <ComboboxItem key={d.id} value={d}>
-                    {d.name}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </span>
-      ) : null}
-
-      {save.isError ? (
-        <span className="text-destructive text-xs">
-          {errorMessage(save.error, "failed")}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function ScheduleButton({
-  active,
-  label,
-  onSelect,
-  value,
-}: {
-  active: boolean;
-  label: string;
-  onSelect: (value: Schedule) => void;
-  value: Schedule;
-}) {
-  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
-  return (
-    <Button
-      onClick={handleClick}
-      size="sm"
-      variant={active ? "secondary" : "ghost"}
-    >
-      {label}
-    </Button>
-  );
-}
+type RestoreTarget =
+  | { backup: BackupRow; kind: "run" }
+  | { kind: "object"; objectKey: string; destinationId: string };
 
 interface Props {
-  /** `backup:create` — also covers scheduling: setting an automatic rhythm
-   *  without being able to trigger a manual backup wouldn't make sense. */
   canCreate: boolean;
-  /** `backup:restore` — distinct from `canCreate`: an operator can back up
-   *  but not restore, the product's only irreversible operation. */
   canRestore: boolean;
   databaseId: string;
   databaseName: string;
-  /** All destinations of the installation. The selector only appears from
-   *  two onward — see `ScheduleControl`. */
+  /** Prefill for the schedule form (engine DB name or resource name). */
+  defaultDatabaseName: string;
   destinations: DestinationRow[];
-  onRestore: (backup: BackupRow) => void;
-  retention: number;
-  s3DestinationId: string | null;
-  schedule: Schedule;
+  onRestore: (target: RestoreTarget) => void;
+}
+
+function isPresetCron(value: string): value is Exclude<ScheduleMode, "custom"> {
+  return BACKUP_CRON_PRESETS.some((p) => p.cron === value);
+}
+
+function scheduleModeFor(schedule: string): ScheduleMode {
+  return isPresetCron(schedule) ? schedule : "custom";
 }
 
 export function BackupPanel({
@@ -313,17 +152,839 @@ export function BackupPanel({
   canRestore,
   databaseId,
   databaseName,
+  defaultDatabaseName,
   destinations,
   onRestore,
-  retention,
-  s3DestinationId,
-  schedule,
 }: Props) {
   const queryClient = useQueryClient();
+  const configs = useQuery({
+    queryFn: () => listBackupConfigs({ data: { databaseId } }),
+    queryKey: ["backup-configs", databaseId],
+  });
 
+  const [editor, setEditor] = useState<BackupConfigRow | "new" | null>(null);
+  const [historyConfig, setHistoryConfig] = useState<BackupConfigRow | null>(
+    null
+  );
+  const [restoreOpen, setRestoreOpen] = useState(false);
+
+  const invalidate = useCallback(() => {
+    queryClient
+      .invalidateQueries({
+        queryKey: ["backup-configs", databaseId],
+      })
+      .catch(() => undefined);
+  }, [databaseId, queryClient]);
+
+  if (destinations.length === 0) {
+    return <NoDestinationEmpty />;
+  }
+
+  const rows = configs.data ?? [];
+  const showHeaderActions = rows.length > 0 && canCreate;
+
+  return (
+    <div className="space-y-3">
+      <Frame variant="ghost">
+        <FrameHeader className="flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <FrameTitle>Backups</FrameTitle>
+            <FrameDescription>
+              Scheduled dumps of this database into an S3 destination. You can
+              keep several schedules — different buckets, prefixes, or cadences.
+            </FrameDescription>
+          </div>
+          {showHeaderActions ? (
+            <BackupActions
+              canRestore={canRestore}
+              onCreate={() => setEditor("new")}
+              onRestoreS3={() => setRestoreOpen(true)}
+            />
+          ) : null}
+        </FrameHeader>
+        <FramePanel>
+          <ConfigsBody
+            canCreate={canCreate}
+            canRestore={canRestore}
+            configsLoading={configs.isLoading}
+            databaseName={databaseName}
+            onCreate={() => setEditor("new")}
+            onDeleted={invalidate}
+            onEdit={setEditor}
+            onHistory={setHistoryConfig}
+            onRestoreS3={() => setRestoreOpen(true)}
+            rows={rows}
+          />
+        </FramePanel>
+      </Frame>
+
+      {editor ? (
+        <BackupConfigDialog
+          databaseId={databaseId}
+          defaultDatabaseName={defaultDatabaseName}
+          destinations={destinations}
+          editing={editor === "new" ? null : editor}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditor(null);
+            }
+          }}
+          onSaved={() => {
+            setEditor(null);
+            invalidate();
+          }}
+          open
+        />
+      ) : null}
+
+      {historyConfig ? (
+        <BackupHistoryDialog
+          canCreate={canCreate}
+          config={historyConfig}
+          databaseId={databaseId}
+          onOpenChange={(open) => {
+            if (!open) {
+              setHistoryConfig(null);
+            }
+          }}
+          open
+        />
+      ) : null}
+
+      {restoreOpen ? (
+        <RestoreFromS3Dialog
+          destinations={destinations}
+          onOpenChange={setRestoreOpen}
+          onPick={(destinationId, objectKey) => {
+            setRestoreOpen(false);
+            onRestore({ destinationId, kind: "object", objectKey });
+          }}
+          open
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function NoDestinationEmpty() {
+  return (
+    <Empty>
+      <EmptyMedia>
+        <IconStack>
+          <ArchiveIcon className="size-5" weight="duotone" />
+        </IconStack>
+      </EmptyMedia>
+      <EmptyHeader>
+        <EmptyTitle>No S3 destination</EmptyTitle>
+        <EmptyDescription>
+          Noddle needs somewhere to push dumps before a schedule can run. Add
+          one under{" "}
+          <Link className="text-foreground underline" to="/destinations">
+            S3 destinations
+          </Link>
+          .
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+function BackupActions({
+  canRestore,
+  onCreate,
+  onRestoreS3,
+}: {
+  canRestore: boolean;
+  onCreate: () => void;
+  onRestoreS3: () => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <Button onClick={onCreate} size="sm">
+        <PlusIcon data-icon="inline-start" />
+        Add schedule
+      </Button>
+      {canRestore ? (
+        <Button onClick={onRestoreS3} size="sm" variant="outline">
+          Restore dump
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function ConfigsBody({
+  canCreate,
+  canRestore,
+  configsLoading,
+  databaseName,
+  onCreate,
+  onDeleted,
+  onEdit,
+  onHistory,
+  onRestoreS3,
+  rows,
+}: {
+  canCreate: boolean;
+  canRestore: boolean;
+  configsLoading: boolean;
+  databaseName: string;
+  onCreate: () => void;
+  onDeleted: () => void;
+  onEdit: (config: BackupConfigRow) => void;
+  onHistory: (config: BackupConfigRow) => void;
+  onRestoreS3: () => void;
+  rows: BackupConfigRow[];
+}) {
+  if (configsLoading) {
+    return (
+      <div className="flex justify-center py-10">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <Empty>
+        <EmptyMedia>
+          <IconStack>
+            <ArchiveIcon className="size-5" weight="duotone" />
+          </IconStack>
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>No schedules yet</EmptyTitle>
+          <EmptyDescription>
+            Nothing dumps {databaseName} on a cadence yet. Add a schedule, or
+            restore from a dump already sitting in a destination.
+          </EmptyDescription>
+        </EmptyHeader>
+        {canCreate ? (
+          <EmptyContent className="flex flex-row flex-wrap gap-2">
+            <Button onClick={onCreate}>
+              <PlusIcon data-icon="inline-start" />
+              Add schedule
+            </Button>
+            {canRestore ? (
+              <Button onClick={onRestoreS3} variant="outline">
+                Restore dump
+              </Button>
+            ) : null}
+          </EmptyContent>
+        ) : null}
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {rows.map((config) => (
+        <BackupConfigCard
+          canCreate={canCreate}
+          config={config}
+          key={config.id}
+          onDeleted={onDeleted}
+          onEdit={() => onEdit(config)}
+          onHistory={() => onHistory(config)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function BackupConfigCard({
+  canCreate,
+  config,
+  onDeleted,
+  onEdit,
+  onHistory,
+}: {
+  canCreate: boolean;
+  config: BackupConfigRow;
+  onDeleted: () => void;
+  onEdit: () => void;
+  onHistory: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const run = useMutation({
+    mutationFn: () => triggerBackup({ data: { configId: config.id } }),
+    onError: (err) =>
+      toast.add({
+        description: errorMessage(err, "backup failed"),
+        title: "Could not queue backup",
+        type: "error",
+      }),
+    onSuccess: () => {
+      toast.add({ title: "Backup queued", type: "success" });
+      queryClient
+        .invalidateQueries({
+          queryKey: ["backups", config.databaseId, config.id],
+        })
+        .catch(() => undefined);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteBackupConfig({ data: { configId: config.id } }),
+    onError: (err) =>
+      toast.add({
+        description: errorMessage(err, "delete failed"),
+        title: "Could not delete schedule",
+        type: "error",
+      }),
+    onSuccess: () => {
+      toast.add({ title: "Schedule deleted", type: "success" });
+      onDeleted();
+    },
+  });
+
+  const keepLatest =
+    config.keepLatestCount === null
+      ? "Keep all"
+      : String(config.keepLatestCount);
+
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 md:flex-row md:items-start md:justify-between">
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              config.enabled ? "bg-emerald-500" : "bg-red-500"
+            )}
+          />
+          <span className="text-muted-foreground text-xs">
+            {config.enabled ? "On" : "Paused"}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-x-8 gap-y-2">
+          <Meta label="Destination" value={config.destinationName} />
+          <Meta label="Database" value={config.databaseName} />
+          <Meta label="Schedule" value={config.schedule} />
+          <Meta label="Prefix" value={config.prefix || "—"} />
+          <Meta label="Retention" value={keepLatest} />
+        </div>
+      </div>
+      <div className="flex flex-row gap-1 md:flex-col">
+        <Button
+          aria-label="Dump history"
+          onClick={onHistory}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <ClipboardTextIcon />
+        </Button>
+        {canCreate ? (
+          <Button
+            aria-label="Run backup now"
+            disabled={run.isPending}
+            onClick={() => run.mutate()}
+            size="icon-sm"
+            variant="ghost"
+          >
+            {run.isPending ? <Spinner /> : <PlayIcon />}
+          </Button>
+        ) : null}
+        {canCreate ? (
+          <Button
+            aria-label="Edit schedule"
+            onClick={onEdit}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <PencilSimpleIcon />
+          </Button>
+        ) : null}
+        {canCreate ? (
+          <Button
+            aria-label="Delete schedule"
+            disabled={remove.isPending}
+            onClick={() => remove.mutate()}
+            size="icon-sm"
+            variant="ghost"
+          >
+            {remove.isPending ? <Spinner /> : <TrashIcon />}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-30">
+      <span className="font-medium text-muted-foreground text-sm">{label}</span>
+      <p className="mt-0.5 font-medium text-sm">{value}</p>
+    </div>
+  );
+}
+
+function configFormDefaults(
+  editing: BackupConfigRow | null,
+  defaultDatabaseName: string,
+  fallbackDestinationId: string
+) {
+  if (editing) {
+    return {
+      databaseName: editing.databaseName,
+      destinationId: editing.destinationId,
+      enabled: editing.enabled,
+      keepLatestCount:
+        editing.keepLatestCount === null ? "" : String(editing.keepLatestCount),
+      prefix: editing.prefix,
+      schedule: editing.schedule,
+    };
+  }
+  return {
+    databaseName: defaultDatabaseName,
+    destinationId: fallbackDestinationId,
+    enabled: true,
+    keepLatestCount: "",
+    prefix: "",
+    schedule: DEFAULT_CRON,
+  };
+}
+
+function BackupConfigDialog({
+  databaseId,
+  defaultDatabaseName,
+  destinations,
+  editing,
+  onOpenChange,
+  onSaved,
+  open,
+}: {
+  databaseId: string;
+  defaultDatabaseName: string;
+  destinations: DestinationRow[];
+  editing: BackupConfigRow | null;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+  open: boolean;
+}) {
+  const [firstDestination] = destinations;
+  const fallbackDestinationId = firstDestination ? firstDestination.id : "";
+  const defaults = configFormDefaults(
+    editing,
+    defaultDatabaseName,
+    fallbackDestinationId
+  );
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
+    scheduleModeFor(defaults.schedule)
+  );
+
+  const form = useAppForm({
+    defaultValues: defaults,
+    onSubmit: async ({ value }) => {
+      try {
+        const keepRaw = value.keepLatestCount.trim();
+        const keepLatestCount =
+          keepRaw === "" ? null : Number.parseInt(keepRaw, 10);
+        if (keepLatestCount !== null && !Number.isFinite(keepLatestCount)) {
+          throw new Error("Keep latest must be a number");
+        }
+        const payload = {
+          databaseName: value.databaseName,
+          destinationId: value.destinationId,
+          enabled: value.enabled,
+          keepLatestCount,
+          prefix: value.prefix,
+          schedule: value.schedule.trim(),
+        };
+        if (editing) {
+          await updateBackupConfig({
+            data: { ...payload, configId: editing.id },
+          });
+        } else {
+          await createBackupConfig({
+            data: { ...payload, databaseId },
+          });
+        }
+        toast.add({
+          title: editing ? "Schedule updated" : "Schedule added",
+          type: "success",
+        });
+        onSaved();
+      } catch (err) {
+        toast.add({
+          description: errorMessage(err, "could not save schedule"),
+          title: "Could not save schedule",
+          type: "error",
+        });
+        throw err;
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    form.reset();
+    setScheduleMode(scheduleModeFor(defaults.schedule));
+  }, [open, form.reset, defaults.schedule]);
+
+  if (!fallbackDestinationId) {
+    return null;
+  }
+
+  const selectedDestination =
+    destinations.find((d) => d.id === form.state.values.destinationId) ?? null;
+
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? "Edit schedule" : "Add schedule"}
+          </DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Changes apply to the next run. A dump already in flight keeps its original settings."
+              : "How often Noddle should dump this database, and which destination receives the file."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form.AppForm>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Destination</FieldLabel>
+                <Combobox
+                  items={destinations}
+                  itemToStringLabel={(d: DestinationRow) => d.name}
+                  itemToStringValue={(d: DestinationRow) => d.name}
+                  onValueChange={(next) => {
+                    if (!next) {
+                      form.setFieldValue("destinationId", "");
+                      return;
+                    }
+                    form.setFieldValue(
+                      "destinationId",
+                      (next as DestinationRow).id
+                    );
+                  }}
+                  value={selectedDestination}
+                >
+                  <ComboboxInput placeholder="Choose a destination" />
+                  <ComboboxContent>
+                    <ComboboxEmpty>No destination matches.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(d: DestinationRow) => (
+                        <ComboboxItem key={d.id} value={d}>
+                          {d.name}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              </Field>
+
+              <form.AppField name="databaseName">
+                {(f) => (
+                  <f.FieldText
+                    description="Name inside the engine that the dumper targets."
+                    label="Database name"
+                  />
+                )}
+              </form.AppField>
+
+              <Field>
+                <FieldLabel>Schedule</FieldLabel>
+                <Select
+                  onValueChange={(v) => {
+                    const next = String(v) as ScheduleMode;
+                    setScheduleMode(next);
+                    if (next !== "custom") {
+                      form.setFieldValue("schedule", next);
+                    }
+                  }}
+                  value={scheduleMode}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a cadence" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {BACKUP_CRON_PRESETS.map((p) => (
+                        <SelectItem key={p.cron} value={p.cron}>
+                          {p.label} ({p.cron})
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom cron</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {scheduleMode === "custom" ? (
+                  <form.AppField name="schedule">
+                    {(f) => (
+                      <f.FieldText
+                        label="Cron expression"
+                        placeholder={DEFAULT_CRON}
+                      />
+                    )}
+                  </form.AppField>
+                ) : null}
+                <FieldDescription>
+                  Five-field cron in UTC. The worker checks due schedules every
+                  few minutes.
+                </FieldDescription>
+              </Field>
+
+              <form.AppField name="prefix">
+                {(f) => (
+                  <f.FieldText
+                    description="Appended under the destination prefix in the bucket. Leave empty to use the destination alone."
+                    label="Object prefix"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="keepLatestCount">
+                {(f) => (
+                  <f.FieldText
+                    description="Leave empty to keep every dump. A number prunes older ones after each successful run."
+                    label="Retention"
+                    placeholder="Keep all"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="enabled">
+                {(f) => (
+                  <Field>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={f.state.value}
+                        onCheckedChange={(checked) =>
+                          f.handleChange(checked === true)
+                        }
+                      />
+                      <FieldLabel className="font-normal">
+                        Run on schedule
+                      </FieldLabel>
+                    </div>
+                    <FieldDescription>
+                      When off, Noddle ignores this cadence until you turn it
+                      back on. Manual runs still work.
+                    </FieldDescription>
+                  </Field>
+                )}
+              </form.AppField>
+            </FieldGroup>
+          </form.AppForm>
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
+          <Button
+            disabled={form.state.isSubmitting}
+            onClick={() => form.handleSubmit()}
+          >
+            {form.state.isSubmitting ? <Spinner /> : null}
+            {editing ? "Save changes" : "Add schedule"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BackupHistoryBody({
+  backups,
+  canCreate,
+  onView,
+  remove,
+}: {
+  backups: BackupRow[] | undefined;
+  canCreate: boolean;
+  onView: (backup: BackupRow) => void;
+  remove: {
+    isPending: boolean;
+    mutate: (backupId: string) => void;
+  };
+}) {
+  if (!backups) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-10">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (backups.length === 0) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 p-4">
+        <Empty className="min-h-0 min-w-0 flex-1">
+          <EmptyMedia>
+            <IconStack>
+              <ClipboardTextIcon className="size-5" weight="duotone" />
+            </IconStack>
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>No dumps yet</EmptyTitle>
+            <EmptyDescription>
+              Run this schedule once, or wait for the next cron fire. Completed
+              dumps show up here with size and timing.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-w-0 p-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Status</TableHead>
+            <TableHead>Kind</TableHead>
+            <TableHead>Size</TableHead>
+            <TableHead>Started</TableHead>
+            <TableHead>Duration</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {backups.map((backup) => {
+            const status = backupLabel(backup.status);
+            const canDelete =
+              canCreate &&
+              backup.status !== "queued" &&
+              backup.status !== "running";
+            return (
+              <TableRow key={backup.id}>
+                <TableCell>
+                  <Badge variant={badgeVariant(status.tone)}>
+                    {status.label}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-xs">
+                  {backupKindLabel(backup.kind)}
+                </TableCell>
+                <TableCell className="text-xs tabular-nums">
+                  {backup.status === "completed"
+                    ? byteSize(backup.sizeBytes)
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs">
+                  <RelativeTime iso={backup.createdAt} />
+                </TableCell>
+                <TableCell className="text-xs tabular-nums">
+                  {duration(backup.createdAt, backup.finishedAt)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      onClick={() => onView(backup)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      View
+                    </Button>
+                    {canDelete ? (
+                      <Button
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate(backup.id)}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function backupRunLogs(backup: BackupRow): TerminalLogLine[] {
+  const start = formatLogStamp(backup.createdAt);
+  const end = formatLogStamp(backup.finishedAt ?? backup.createdAt);
+  const texts: string[] = [
+    `${start} Starting backup process...`,
+    `${start} Executing backup command...`,
+  ];
+
+  if (backup.status === "completed") {
+    texts.push(
+      `${end} Starting backup and upload to S3...`,
+      `${end} ✅ Backup uploaded to S3 successfully`,
+      `${end} Object: ${backup.objectKey} (${byteSize(backup.sizeBytes)})`,
+      "Backup done ✅"
+    );
+  } else if (backup.status === "failed") {
+    texts.push(
+      `${end} ❌ Error: Backup failed`,
+      `Error: ${backup.errorMessage ?? "unknown error"}`
+    );
+  } else if (backup.status === "running") {
+    texts.push(`${start} Starting backup and upload to S3...`);
+  } else {
+    texts.push(`${start} Waiting to start...`);
+  }
+
+  return texts.map((text, index) => ({ id: String(index), text }));
+}
+
+function BackupRunDetailDialog({
+  backup,
+  onOpenChange,
+  open,
+}: {
+  backup: BackupRow | null;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  if (!backup) {
+    return null;
+  }
+
+  const lines = backupRunLogs(backup);
+
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent>
+        <TerminalLogs lines={lines}>
+          <DialogHeader>
+            <DialogTitle>Dump run</DialogTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogDescription>Details for this run</DialogDescription>
+              <TerminalLogs.Count />
+              <TerminalLogs.Copy label="logs" />
+            </div>
+          </DialogHeader>
+          <DialogBody className="min-h-0 pt-0">
+            <TerminalLogs.Viewport />
+          </DialogBody>
+        </TerminalLogs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BackupHistoryDialog({
+  canCreate,
+  config,
+  databaseId,
+  onOpenChange,
+  open,
+}: {
+  canCreate: boolean;
+  config: BackupConfigRow;
+  databaseId: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [viewing, setViewing] = useState<BackupRow | null>(null);
   const backups = useQuery({
-    queryFn: () => getBackups({ data: { databaseId } }),
-    queryKey: ["backups", databaseId],
+    queryFn: () => getBackups({ data: { configId: config.id, databaseId } }),
+    queryKey: ["backups", databaseId, config.id],
     refetchInterval: (query) =>
       query.state.data?.some(
         (b) => b.status === "queued" || b.status === "running"
@@ -332,154 +993,208 @@ export function BackupPanel({
         : false,
   });
 
-  const run = useMutation({
-    mutationFn: () => triggerBackup({ data: { databaseId } }),
+  const remove = useMutation({
+    mutationFn: (backupId: string) => deleteBackup({ data: { backupId } }),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["backups", databaseId] }),
+      queryClient.invalidateQueries({
+        queryKey: ["backups", databaseId, config.id],
+      }),
   });
 
-  const handleBackup = useCallback(() => run.mutate(), [run]);
-
-  const rows = backups.data ?? [];
+  const rows = backups.isLoading
+    ? undefined
+    : (backups.data ?? []).slice(0, HISTORY_LIMIT);
 
   return (
-    <div className="space-y-3">
-      {run.isError ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {errorMessage(run.error, "backup failed")}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+    <>
+      <FocusModal onOpenChange={onOpenChange} open={open}>
+        <FocusModalContent>
+          <FocusModalHeader>
+            <FocusModalTitle>Dump history</FocusModalTitle>
+          </FocusModalHeader>
+          <FocusModalBody className="flex min-h-0 flex-col">
+            <BackupHistoryBody
+              backups={rows}
+              canCreate={canCreate}
+              onView={setViewing}
+              remove={remove}
+            />
+          </FocusModalBody>
+        </FocusModalContent>
+      </FocusModal>
 
-      {rows.length === 0 ? (
-        <Empty>
-          <EmptyMedia>
-            <IconStack>
-              <ArchiveIcon className="size-5" weight="duotone" />
-            </IconStack>
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>No backups yet</EmptyTitle>
-            <EmptyDescription>
-              The first backup of {databaseName} will be restorable from this
-              list.
-            </EmptyDescription>
-          </EmptyHeader>
-          {canCreate ? (
-            <EmptyContent>
-              <Button disabled={run.isPending} onClick={handleBackup}>
-                {run.isPending ? <Spinner /> : null}
-                Back up now
-              </Button>
-            </EmptyContent>
-          ) : null}
-        </Empty>
-      ) : (
-        <Frame variant="ghost">
-          <FrameHeader className="flex-row items-center justify-between gap-3">
-            <div>
-              <FrameTitle>Backups</FrameTitle>
-              <FrameDescription>
-                To this installation's S3 storage.
-              </FrameDescription>
-            </div>
-            {canCreate ? (
-              <Button disabled={run.isPending} onClick={handleBackup} size="sm">
-                {run.isPending ? <Spinner /> : null}
-                Back up now
-              </Button>
-            ) : null}
-          </FrameHeader>
-          <FramePanel className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Taken</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((backup) => (
-                  <BackupLine
-                    backup={backup}
-                    canRestore={canRestore}
-                    key={backup.id}
-                    onRestore={onRestore}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </FramePanel>
-        </Frame>
-      )}
+      <BackupRunDetailDialog
+        backup={viewing}
+        onOpenChange={(next) => {
+          if (!next) {
+            setViewing(null);
+          }
+        }}
+        open={viewing !== null}
+      />
+    </>
+  );
+}
 
-      {canCreate ? (
-        <ScheduleControl
-          databaseId={databaseId}
-          destinations={destinations}
-          retention={retention}
-          s3DestinationId={s3DestinationId}
-          schedule={schedule}
-        />
-      ) : null}
+function ObjectsListBody({
+  destinationId,
+  error,
+  isError,
+  isLoading,
+  objects,
+  onPick,
+}: {
+  destinationId: string;
+  error: unknown;
+  isError: boolean;
+  isLoading: boolean;
+  objects: BackupObjectRow[] | undefined;
+  onPick: (destinationId: string, objectKey: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {errorMessage(error, "could not list objects")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const rows = objects ?? [];
+  if (rows.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        No dump objects under this destination prefix.
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-h-72 overflow-y-auto rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Key</TableHead>
+            <TableHead>Size</TableHead>
+            <TableHead>Modified</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((obj) => (
+            <TableRow key={obj.key}>
+              <TableCell className="max-w-70 truncate font-mono text-xs">
+                {obj.key}
+              </TableCell>
+              <TableCell className="text-xs tabular-nums">
+                {byteSize(obj.sizeBytes)}
+              </TableCell>
+              <TableCell className="text-muted-foreground text-xs">
+                {obj.lastModified ? relativeTime(obj.lastModified) : "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  onClick={() => onPick(destinationId, obj.key)}
+                  size="sm"
+                  variant="outline"
+                >
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
-function BackupLine({
-  backup,
-  canRestore,
-  onRestore,
+function RestoreFromS3Dialog({
+  destinations,
+  onOpenChange,
+  onPick,
+  open,
 }: {
-  backup: BackupRow;
-  canRestore: boolean;
-  onRestore: (backup: BackupRow) => void;
+  destinations: DestinationRow[];
+  onOpenChange: (open: boolean) => void;
+  onPick: (destinationId: string, objectKey: string) => void;
+  open: boolean;
 }) {
-  const status = backupLabel(backup.status);
-  const handleRestore = useCallback(
-    () => onRestore(backup),
-    [backup, onRestore]
+  const [firstDestination] = destinations;
+  const [destinationId, setDestinationId] = useState(
+    firstDestination ? firstDestination.id : ""
   );
+  const objects = useQuery({
+    enabled: open && Boolean(destinationId),
+    queryFn: () => listBackupObjects({ data: { destinationId } }),
+    queryKey: ["backup-objects", destinationId],
+  });
+
+  const selected = destinations.find((d) => d.id === destinationId) ?? null;
 
   return (
-    <TableRow>
-      <TableCell>
-        <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {backupKindLabel(backup.kind)}
-      </TableCell>
-      <TableCell className="text-xs tabular-nums">
-        {byteSize(backup.sizeBytes)}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs tabular-nums">
-        {duration(backup.createdAt, backup.finishedAt)}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        <RelativeTime iso={backup.createdAt} />
-      </TableCell>
-      <TableCell className="text-right">
-        {/* Only a complete backup is restorable: a half-finished backup
-            isn't an option we offer. The server re-checks this. */}
-        {backup.status === "completed" && canRestore ? (
-          <Button onClick={handleRestore} size="sm" variant="outline">
-            Restore
-          </Button>
-        ) : (
-          <span
-            className="text-muted-foreground text-xs"
-            title={backup.errorMessage ?? undefined}
-          >
-            {backup.errorMessage ? "see error" : "—"}
-          </span>
-        )}
-      </TableCell>
-    </TableRow>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Restore from destination</DialogTitle>
+          <DialogDescription>
+            Pick a dump already in the bucket. Noddle takes a safety dump first
+            so the restore stays reversible.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          <Field>
+            <FieldLabel>Destination</FieldLabel>
+            <Combobox
+              items={destinations}
+              itemToStringLabel={(d: DestinationRow) => d.name}
+              itemToStringValue={(d: DestinationRow) => d.name}
+              onValueChange={(next) => {
+                if (!next) {
+                  setDestinationId("");
+                  return;
+                }
+                setDestinationId((next as DestinationRow).id);
+              }}
+              value={selected}
+            >
+              <ComboboxInput placeholder="Choose a destination" />
+              <ComboboxContent>
+                <ComboboxEmpty>No destination matches.</ComboboxEmpty>
+                <ComboboxList>
+                  {(d: DestinationRow) => (
+                    <ComboboxItem key={d.id} value={d}>
+                      {d.name}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </Field>
+
+          <ObjectsListBody
+            destinationId={destinationId}
+            error={objects.error}
+            isError={objects.isError}
+            isLoading={objects.isLoading}
+            objects={objects.data}
+            onPick={onPick}
+          />
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -487,37 +1202,52 @@ function BackupLine({
  * The restore confirmation.
  *
  * It asks for the name to be typed in by hand, and that's not an
- * ornament: the server refuses the request if the name doesn't match. The
- * dialog makes the safeguard visible, it doesn't create it.
+ * ornament: the server refuses the request if the name doesn't match.
  */
 export function RestoreDialog({
-  backup,
   databaseName,
   onConfirm,
   onOpenChange,
   pending,
+  target,
 }: {
-  backup: BackupRow | null;
   databaseName: string;
   onConfirm: (confirmName: string) => void;
   onOpenChange: (open: boolean) => void;
   pending: boolean;
+  target: RestoreTarget | null;
 }) {
+  const description =
+    target?.kind === "run" ? (
+      <>
+        The live data in this database will be{" "}
+        <strong>permanently replaced</strong> by the dump taken{" "}
+        {relativeTime(target.backup.createdAt)}. Noddle writes a safety dump
+        first, so you can undo the restore if needed.
+      </>
+    ) : (
+      <>
+        The live data in this database will be{" "}
+        <strong>permanently replaced</strong> by
+        {target ? (
+          <>
+            {" "}
+            <code className="text-xs">{target.objectKey}</code>
+          </>
+        ) : (
+          " the selected dump"
+        )}
+        . Noddle writes a safety dump first.
+      </>
+    );
+
   return (
     <ConfirmNameDialog
-      confirmLabel="Restore"
-      description={
-        <>
-          The current data in this database will be{" "}
-          <strong>permanently replaced</strong> by the backup
-          {backup ? ` taken ${relativeTime(backup.createdAt)}` : ""}. Noddle
-          automatically takes a safety backup just before, so the operation
-          stays reversible.
-        </>
-      }
+      confirmLabel="Restore database"
+      description={description}
       onConfirm={onConfirm}
       onOpenChange={onOpenChange}
-      open={backup !== null}
+      open={target !== null}
       pending={pending}
       resourceName={databaseName}
       title={`Restore ${databaseName}?`}
@@ -525,7 +1255,4 @@ export function RestoreDialog({
   );
 }
 
-/** What typing filters against in the destination selector. */
-function destinationToName(destination: DestinationRow): string {
-  return destination.name;
-}
+export type { RestoreTarget };

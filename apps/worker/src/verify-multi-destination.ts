@@ -199,8 +199,6 @@ try {
       name: NAME,
       rootPasswordEncrypted: "placeholder",
       rootUser: "noddle",
-      // THE line of the test: this database explicitly aims at the SECOND.
-      s3DestinationId: destB.id,
       serverId: server.id,
       swarmName: legacyDatabaseServiceName(NAME),
     })
@@ -226,9 +224,10 @@ try {
     .insert(backups)
     .values({
       databaseId: database.id,
+      // Explicit destination: the row decides the bucket, not a DB-level
+      // preference (removed in favor of backup_configs).
+      destinationId: destB.id,
       kind: "manual",
-      // Deliberately left EMPTY: `runBackup` must fill it, and that is
-      // precisely what we verify.
       objectKey: `${PREFIX_B}/probe-${crypto.randomUUID()}.dump`,
     })
     .returning();

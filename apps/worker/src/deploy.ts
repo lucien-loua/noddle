@@ -158,6 +158,8 @@ export async function runJob(
     await runRestore(ctx, {
       backupId: data.backupId,
       databaseId: data.databaseId,
+      destinationId: data.destinationId,
+      objectKey: data.objectKey,
     });
     return;
   }

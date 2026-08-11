@@ -10,6 +10,7 @@ import {
 } from "@noddle/backup-store";
 import { createDatabase } from "@noddle/db";
 import {
+  backupConfigs,
   backups,
   databases,
   environments,
@@ -158,8 +159,6 @@ try {
   const [database] = await db
     .insert(databases)
     .values({
-      backupRetention: 2,
-      backupSchedule: "off",
       engine: "postgres",
       environmentId: env?.id ?? "",
       name: NAME,
@@ -192,22 +191,34 @@ try {
     return await Promise.resolve(id);
   };
 
-  // ── 1. `off` triggers NOTHING ─────────────────────────────────────────────
+  // ── 1. No config triggers NOTHING ───────────────────────────────────────
   let r = await sweepBackups(ctx, enqueue);
   if (r.queued.length === 0) {
-    ok('a database set to "off" is never backed up');
+    ok("a database with no backup config is never backed up");
   } else {
-    ko(`"off" triggered ${r.queued.length} backup(s)`);
+    ko(`unexpected ${r.queued.length} backup(s) without a config`);
   }
 
-  // ── 2. `daily` with no history IS due ────────────────────────────────────
-  await db
-    .update(databases)
-    .set({ backupSchedule: "daily" })
-    .where(eq(databases.id, database.id));
+  // ── 2. Enabled daily cron with no history IS due ────────────────────────
+  const [config] = await db
+    .insert(backupConfigs)
+    .values({
+      databaseId: database.id,
+      databaseName: NAME,
+      destinationId: dest.id,
+      enabled: true,
+      keepLatestCount: 2,
+      prefix: "",
+      schedule: "0 0 * * *",
+    })
+    .returning();
+  if (!config) {
+    throw new Error("backup config insert failed");
+  }
+
   r = await sweepBackups(ctx, enqueue);
   if (r.queued.length === 1) {
-    ok('a never-backed-up "daily" database is due immediately');
+    ok("a never-backed-up daily config is due immediately");
   } else {
     ko(`expected 1 due backup, got ${r.queued.length}`);
   }
@@ -258,7 +269,9 @@ try {
   const [third] = await db
     .insert(backups)
     .values({
+      configId: config.id,
       databaseId: database.id,
+      destinationId: dest.id,
       objectKey: backupObjectKey({
         backupId: randomBytes(6).toString("hex"),
         databaseName: NAME,
@@ -271,7 +284,7 @@ try {
   await runBackup(ctx, third?.id ?? "");
 
   const remaining = await db.query.backups.findMany({
-    where: eq(backups.databaseId, database.id),
+    where: eq(backups.configId, config.id),
   });
   const completed = remaining.filter((b) => b.status === "completed");
   if (completed.length === 2) {
@@ -301,7 +314,10 @@ try {
   }
 
   // ── 7. An idempotent prune ───────────────────────────────────────────────
-  const again = await pruneBackups(ctx, database.id);
+  const again = await pruneBackups(ctx, {
+    configId: config.id,
+    databaseId: database.id,
+  });
   if (again.length === 0) {
     ok("a second prune deletes nothing more");
   } else {

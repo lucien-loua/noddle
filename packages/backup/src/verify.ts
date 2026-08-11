@@ -1,6 +1,11 @@
 // bun run packages/backup/src/verify.ts
 // node packages/backup/src/verify.ts
-import { BACKUP_EXTENSION, buildBackupInsert, pickDestination } from "#index";
+import {
+  BACKUP_EXTENSION,
+  buildBackupInsert,
+  joinBackupPrefix,
+  pickDestination,
+} from "#index";
 
 const runtime =
   typeof globalThis.Bun === "undefined"
@@ -121,6 +126,30 @@ if (insertB.destinationId === "b" && insertB.objectKey.startsWith("dest-b/")) {
   ok("destinationId and prefix stay aligned for a second destination");
 } else {
   ko(`destination/prefix mismatch: ${JSON.stringify(insertB)}`);
+}
+
+if (joinBackupPrefix("dest-a", "nightly") === "dest-a/nightly") {
+  ok("joinBackupPrefix stacks destination and config prefixes");
+} else {
+  ko(`joinBackupPrefix failed: ${joinBackupPrefix("dest-a", "nightly")}`);
+}
+
+const insertC = buildBackupInsert({
+  configId: "cfg-1",
+  configPrefix: "nightly",
+  database: { engine: "postgres", id: "db-3", name: "shop" },
+  databaseName: "shop_db",
+  kind: "scheduled",
+  resolved: a,
+  takenAt,
+});
+if (
+  insertC.configId === "cfg-1" &&
+  insertC.objectKey.startsWith("dest-a/nightly/shop_db/")
+) {
+  ok("buildBackupInsert honors configId, configPrefix and databaseName");
+} else {
+  ko(`config-aware insert wrong: ${JSON.stringify(insertC)}`);
 }
 
 console.log(`\n\x1b[1m${runtime} — passed ${pass}, failed ${fail}\x1b[0m\n`);

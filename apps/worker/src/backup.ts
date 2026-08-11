@@ -270,7 +270,7 @@ export async function runBackup(
 ): Promise<void> {
   const backup = await ctx.db.query.backups.findFirst({
     where: eq(backups.id, backupId),
-    with: { database: { with: { server: true } } },
+    with: { config: true, database: { with: { server: true } } },
   });
   if (!backup) {
     throw new Error(`backup not found: ${backupId}`);
@@ -278,15 +278,12 @@ export async function runBackup(
   const { database } = backup;
   // `backup.destinationId` FIRST: it's the destination already decided
   // when the row was created (`buildBackupInsert`), the one whose prefix
-  // is ALREADY in `backup.objectKey` — revisiting it here would break the
-  // agreement between the two if `database.s3DestinationId` changed in the
-  // meantime. Falling back to `database.s3DestinationId` only serves rows
-  // written through a path other than `buildBackupInsert` (test harnesses,
-  // historical data).
+  // is ALREADY in `backup.objectKey`. Config destination is the fallback
+  // for older rows.
   const { destination, id: destinationId } = await resolveDestination(
     ctx.db,
     ctx.appKey,
-    backup.destinationId ?? database.s3DestinationId
+    backup.destinationId ?? backup.config?.destinationId ?? null
   );
 
   const password = decryptSecret(
@@ -295,6 +292,7 @@ export async function runBackup(
     secretContext.databasePassword(database.id)
   );
   const spec = DUMP_SPECS[database.engine];
+  const dumpDatabaseName = backup.config?.databaseName ?? database.databaseName;
 
   await ctx.db
     .update(backups)
@@ -313,15 +311,15 @@ export async function runBackup(
     const containerId = await findDatabaseContainer(client, database.swarmName);
 
     const env = spec.env({
-      databaseName: database.databaseName,
+      databaseName: dumpDatabaseName,
       password,
       rootUser: database.rootUser,
     });
     const envPrefix = Object.entries(env)
       .map(([k, v]) => `${k}=${quoteArg(v)}`)
       .join(" ");
-    if (database.databaseName) {
-      assertSafeIdentifier(database.databaseName, "database name");
+    if (dumpDatabaseName) {
+      assertSafeIdentifier(dumpDatabaseName, "database name");
     }
     if (database.rootUser) {
       assertSafeIdentifier(database.rootUser, "database user");
@@ -329,7 +327,7 @@ export async function runBackup(
     const argv = spec
       .argv({
         containerId,
-        databaseName: database.databaseName,
+        databaseName: dumpDatabaseName,
         rootUser: database.rootUser,
       })
       .map(quoteArg)
@@ -369,7 +367,10 @@ export async function runBackup(
     // backup that itself succeeded.
     try {
       const { pruneBackups } = await import("#backup-sweep");
-      await pruneBackups(ctx, database.id);
+      await pruneBackups(ctx, {
+        configId: backup.configId,
+        databaseId: database.id,
+      });
     } catch {
       // A failed prune leaves extra objects around, which costs storage —
       // not data. The next sweep will retry.

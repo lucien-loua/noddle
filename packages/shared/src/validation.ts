@@ -823,10 +823,104 @@ export const moveServiceSchema = z.object({
 export type BackupDestinationInput = z.infer<typeof s3DestinationSchema>;
 
 export const backupRequestSchema = z.object({
-  databaseId: z.uuid(),
+  configId: z.uuid(),
 });
 
 export type BackupRequest = z.infer<typeof backupRequestSchema>;
+
+export const listBackupsSchema = z.object({
+  configId: z.uuid().optional(),
+  databaseId: z.uuid(),
+});
+
+export type ListBackupsRequest = z.infer<typeof listBackupsSchema>;
+
+/** Common cron presets; the form also allows a free-form custom expression. */
+export const BACKUP_CRON_PRESETS = [
+  { cron: "* * * * *", label: "Every minute" },
+  { cron: "0 * * * *", label: "Every hour" },
+  { cron: "0 0 * * *", label: "Every day at midnight" },
+  { cron: "0 0 * * 0", label: "Every Sunday at midnight" },
+  { cron: "0 0 1 * *", label: "Every month on the 1st at midnight" },
+  { cron: "*/15 * * * *", label: "Every 15 minutes" },
+  { cron: "0 0 * * 1-5", label: "Every weekday at midnight" },
+] as const;
+
+const CRON_FIELD = String.raw`(\*|\*/\d+|\d+(-\d+)?(,\d+(-\d+)?)*)`;
+const CRON_RE = new RegExp(`^${CRON_FIELD}( ${CRON_FIELD}){4}$`);
+
+export const backupCronSchema = z
+  .string()
+  .min(1, "Schedule is required.")
+  .max(64, "Keep the cron under 64 characters.")
+  .refine((v) => CRON_RE.test(v.trim()), "Enter a five-field cron expression.");
+
+export const backupConfigInputSchema = z.object({
+  databaseId: z.uuid(),
+  databaseName: z
+    .string()
+    .min(1, "Database name is required.")
+    .max(64, "Keep the database name under 64 characters."),
+  destinationId: z.uuid(),
+  enabled: z.boolean().default(true),
+  keepLatestCount: z.number().int().min(1).max(100).nullable().default(null),
+  prefix: objectPrefixSchema.default(""),
+  schedule: backupCronSchema,
+});
+
+export type BackupConfigInput = z.infer<typeof backupConfigInputSchema>;
+
+export const createBackupConfigSchema = backupConfigInputSchema;
+
+export const updateBackupConfigSchema = backupConfigInputSchema
+  .omit({ databaseId: true })
+  .extend({ configId: z.uuid() });
+
+export type UpdateBackupConfigRequest = z.infer<
+  typeof updateBackupConfigSchema
+>;
+
+export const backupConfigIdSchema = z.object({ configId: z.uuid() });
+
+export const listBackupObjectsSchema = z.object({
+  destinationId: z.uuid(),
+  prefix: objectPrefixSchema.optional(),
+});
+
+export type ListBackupObjectsRequest = z.infer<typeof listBackupObjectsSchema>;
+
+export const deleteBackupRunSchema = z.object({
+  backupId: z.uuid(),
+});
+
+/**
+ * Restoring is the product's ONLY irreversible operation: it overwrites
+ * current data, whereas replaying an image destroys nothing.
+ *
+ * Provide either `backupId` (completed run) or `destinationId` + `objectKey`
+ * (raw S3 object). `confirmName` is re-checked server-side.
+ */
+export const restoreRequestSchema = z
+  .object({
+    backupId: z.uuid().optional(),
+    confirmName: z.string().min(1).max(48),
+    databaseId: z.uuid(),
+    destinationId: z.uuid().optional(),
+    objectKey: z.string().min(1).max(1024).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const fromRun = Boolean(data.backupId);
+    const fromObject = Boolean(data.destinationId && data.objectKey);
+    if (fromRun === fromObject) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "provide either backupId, or destinationId and objectKey together",
+      });
+    }
+  });
+
+export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
 
 /**
  * Restoring is the product's ONLY irreversible operation: it overwrites
@@ -916,35 +1010,6 @@ export type NotificationChannelUpdate = z.infer<
 >;
 
 export const notificationChannelIdSchema = z.object({ channelId: z.uuid() });
-
-export const backupScheduleSchema = z.enum(["off", "daily", "weekly"]);
-
-/**
- * A database's automatic backup setting.
- *
- * Retention is bounded both above AND below: at 0 you'd erase the backup
- * just taken, and beyond a hundred you're no longer keeping a history but
- * a storage bill nobody rereads.
- */
-export const backupScheduleRequestSchema = z.object({
-  databaseId: z.uuid(),
-  retention: z.number().int().min(1).max(100),
-  // `null` = "the one there is". Explicitly nullable rather than absent:
-  // setting a database back to "automatic" is a choice you must be able
-  // to express, not just a field you omit.
-  s3DestinationId: z.uuid().nullable().default(null),
-  schedule: backupScheduleSchema,
-});
-
-export type BackupScheduleRequest = z.infer<typeof backupScheduleRequestSchema>;
-
-export const restoreRequestSchema = z.object({
-  backupId: z.uuid(),
-  confirmName: z.string().min(1).max(48),
-  databaseId: z.uuid(),
-});
-
-export type RestoreRequest = z.infer<typeof restoreRequestSchema>;
 
 /**
  * Deleting a service is irreversible: the history, images and variables

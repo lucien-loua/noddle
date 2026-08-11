@@ -92,9 +92,11 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
     kind: z.literal("prune-registry"),
   }),
   z.strictObject({
-    backupId: z.uuid(),
+    backupId: z.uuid().optional(),
     databaseId: z.uuid(),
+    destinationId: z.uuid().optional(),
     kind: z.literal("restore"),
+    objectKey: z.string().min(1).optional(),
   }),
   z.strictObject({
     imageTag: z.string().min(1),

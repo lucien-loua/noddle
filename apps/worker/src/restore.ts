@@ -1,7 +1,7 @@
 import { pipeline } from "node:stream/promises";
 import { buildBackupInsert, resolveDestination } from "@noddle/backup";
 import { downloadStream, objectExists } from "@noddle/backup-store";
-import { backups } from "@noddle/db/schema";
+import { backups, databases } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import type { DockerApi } from "@noddle/ssh-executor";
 import {
@@ -24,8 +24,10 @@ const SETTLE_MS = 1500;
 const SCALE_TIMEOUT_MS = 120_000;
 
 export interface RestoreRequest {
-  backupId: string;
+  backupId?: string;
   databaseId: string;
+  destinationId?: string;
+  objectKey?: string;
 }
 
 /**
@@ -324,29 +326,53 @@ async function restoreRedis(
   }
 }
 
+async function resolveRestoreSource(
+  ctx: DeployContext,
+  req: RestoreRequest
+): Promise<{ destinationId: string | null; objectKey: string }> {
+  if (req.backupId) {
+    const backup = await ctx.db.query.backups.findFirst({
+      where: and(
+        eq(backups.id, req.backupId),
+        eq(backups.databaseId, req.databaseId)
+      ),
+    });
+    if (!backup) {
+      throw new Error(
+        "backup not found for this database — cross-database restore refused"
+      );
+    }
+    if (backup.status !== "completed") {
+      throw new Error(
+        `backup is in status "${backup.status}": only a completed backup can be restored`
+      );
+    }
+    const { destinationId, objectKey } = backup;
+    return { destinationId, objectKey };
+  }
+
+  if (req.destinationId && req.objectKey) {
+    const { destinationId, objectKey } = req;
+    return { destinationId, objectKey };
+  }
+
+  throw new Error("restore requires backupId, or destinationId and objectKey");
+}
+
 export async function runRestore(
   ctx: DeployContext,
   req: RestoreRequest
 ): Promise<void> {
-  const backup = await ctx.db.query.backups.findFirst({
-    where: and(
-      eq(backups.id, req.backupId),
-      eq(backups.databaseId, req.databaseId)
-    ),
-    with: { database: { with: { server: true } } },
+  const database = await ctx.db.query.databases.findFirst({
+    where: eq(databases.id, req.databaseId),
+    with: { server: true },
   });
-  if (!backup) {
-    throw new Error(
-      "backup not found for this database — cross-database restore refused"
-    );
-  }
-  if (backup.status !== "completed") {
-    throw new Error(
-      `backup is in status "${backup.status}": only a completed backup can be restored`
-    );
+  if (!database) {
+    throw new Error(`database not found: ${req.databaseId}`);
   }
 
-  const { database } = backup;
+  const { destinationId, objectKey } = await resolveRestoreSource(ctx, req);
+
   // Decrypted HERE and not at the call site: three of the five engines need
   // it to restore (the MySQL/MariaDB SQL client, `mongorestore`), and
   // Postgres doesn't want it — its local socket is set to `trust`.
@@ -355,20 +381,19 @@ export async function runRestore(
     ctx.appKey,
     secretContext.databasePassword(database.id)
   );
-  // THE ONE the object actually went to, read back from the backup row —
-  // never the one the database targets today. Re-choosing a destination
-  // must not make what was written to the old one unrestorable.
-  const { destination, id: destinationId } = await resolveDestination(
+  // THE ONE the object actually went to — never re-picked from "current"
+  // database prefs.
+  const { destination, id: resolvedDestinationId } = await resolveDestination(
     ctx.db,
     ctx.appKey,
-    backup.destinationId
+    destinationId
   );
 
   // BEFORE any destructive action. The database row is not proof that the
   // object is still there.
-  if (!(await objectExists(destination, backup.objectKey))) {
+  if (!(await objectExists(destination, objectKey))) {
     throw new Error(
-      `object ${backup.objectKey} is missing from the bucket — restore refused before touching the database`
+      `object ${objectKey} is missing from the bucket — restore refused before touching the database`
     );
   }
 
@@ -382,7 +407,7 @@ export async function runRestore(
       buildBackupInsert({
         database,
         kind: "pre_restore",
-        resolved: { id: destinationId, prefix: destination.prefix },
+        resolved: { id: resolvedDestinationId, prefix: destination.prefix },
       })
     )
     .returning();
@@ -398,7 +423,7 @@ export async function runRestore(
   );
 
   try {
-    const body = await downloadStream(destination, backup.objectKey);
+    const body = await downloadStream(destination, objectKey);
 
     // AN EXHAUSTIVE SWITCH, never an `if postgres / else`. The previous
     // shape made EVERY non-Postgres engine fall through to the REDIS path:

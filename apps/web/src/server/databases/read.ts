@@ -10,10 +10,9 @@ import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface DatabaseRow {
-  backupRetention: number;
-  backupSchedule: "daily" | "off" | "weekly";
   cpuLimitNanos: number | null;
   cpuReservationNanos: number | null;
+  databaseName: string | null;
   engine: DatabaseEngine;
   environment: string;
   environmentId: string;
@@ -28,7 +27,6 @@ export interface DatabaseRow {
   project: string;
   projectId: string;
   replicas: number;
-  s3DestinationId: string | null;
   serverHost: string;
   serverName: string;
   status: string;
@@ -38,10 +36,9 @@ export interface DatabaseRow {
 }
 
 interface DatabaseJoined {
-  backupRetention: number;
-  backupSchedule: "daily" | "off" | "weekly";
   cpuLimitNanos: number | null;
   cpuReservationNanos: number | null;
+  databaseName: string | null;
   engine: DatabaseEngine;
   environment: { name: string; project: { name: string }; projectId: string };
   environmentId: string;
@@ -54,7 +51,6 @@ interface DatabaseJoined {
   memoryReservationBytes: number | null;
   name: string;
   replicas: number;
-  s3DestinationId: string | null;
   server: { host: string; name: string };
   status: string;
   swarmName: string;
@@ -64,10 +60,9 @@ interface DatabaseJoined {
 
 function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
   return {
-    backupRetention: d.backupRetention,
-    backupSchedule: d.backupSchedule,
     cpuLimitNanos: d.cpuLimitNanos,
     cpuReservationNanos: d.cpuReservationNanos,
+    databaseName: d.databaseName,
     engine: d.engine,
     environment: d.environment.name,
     environmentId: d.environmentId,
@@ -82,7 +77,6 @@ function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
     project: d.environment.project.name,
     projectId: d.environment.projectId,
     replicas: d.replicas,
-    s3DestinationId: d.s3DestinationId,
     serverHost: d.server.host,
     serverName: d.server.name,
     status: d.status,

@@ -1,19 +1,23 @@
-import type { UIEvent } from "react";
+import type { ReactNode, UIEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { TerminalLogs } from "@/components/terminal-logs";
 import { Badge } from "@/components/ui/badge";
 import {
   Frame,
+  FrameDescription,
   FrameHeader,
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { cn } from "@/lib/utils";
 
 /**
  * Cap on displayed lines. A Next.js build produces tens of thousands; the
  * DOM can't hold up, and nobody reads the ten-thousandth one.
  */
 export const MAX_LINES = 4000;
+
+/** Below this, a noise group costs more to collapse than to display. */
+export const MIN_NOISE_GROUP = 4;
 
 /** Distance from the bottom below which we consider the user is following along. */
 const PIN_THRESHOLD_PX = 40;
@@ -73,32 +77,144 @@ export function classifyPlain(text: string): LineKind {
   return ERROR_PATTERN.test(text) ? "error" : "noise";
 }
 
+/** Groups sequences of noise into collapsible blocks. */
+export function groupNoise(lines: Line[]): Block[] {
+  const out: Block[] = [];
+  let run: Line[] = [];
+
+  const flush = () => {
+    if (run.length === 0) {
+      return;
+    }
+    if (run.length >= MIN_NOISE_GROUP) {
+      out.push({ id: run[0]?.id ?? 0, kind: "group", lines: run });
+    } else {
+      out.push(...run);
+    }
+    run = [];
+  };
+
+  for (const line of lines) {
+    if (line.kind === "noise") {
+      run.push(line);
+      continue;
+    }
+    flush();
+    out.push(line);
+  }
+  flush();
+  return out;
+}
+
 interface LogViewProps {
   /** The lines already split and classified by the caller. */
   blocks: Block[];
-  /** The badge label when the stream is closed. */
-  idleLabel: string;
-  live: boolean;
+  /** Optional subtitle under the title. */
+  description?: string;
+  /** The badge label when the stream is closed. Omitted with no `title`. */
+  idleLabel?: string;
+  live?: boolean;
   /** What's shown as long as no line has arrived. */
   placeholder: string;
   /** What follows the title on the right — a selector, an action. */
-  right?: React.ReactNode;
-  title: string;
+  right?: ReactNode;
+  /** Frame title. Omit to hide the title row (and live badge). */
+  title?: string;
+  /** Optional filter row under the title. */
+  toolbar?: ReactNode;
+}
+
+function renderLine(line: Line) {
+  return (
+    <TerminalLogs.Line
+      key={line.id}
+      line={{ id: String(line.id), text: line.text }}
+    />
+  );
+}
+
+export function countLines(blocks: Block[]): number {
+  let total = 0;
+  for (const block of blocks) {
+    total += block.kind === "group" ? block.lines.length : 1;
+  }
+  return total;
+}
+
+function LogViewHeader({
+  description,
+  idleLabel,
+  live,
+  right,
+  title,
+  toolbar,
+}: Pick<
+  LogViewProps,
+  "description" | "idleLabel" | "live" | "right" | "title" | "toolbar"
+>) {
+  const showTitleRow = title !== undefined || right !== undefined;
+  if (!(showTitleRow || toolbar !== undefined)) {
+    return null;
+  }
+
+  const label = live ? "live" : (idleLabel ?? "idle");
+
+  return (
+    <FrameHeader className={toolbar && showTitleRow ? "gap-3" : undefined}>
+      {showTitleRow ? (
+        <div className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            {title ? <FrameTitle>{title}</FrameTitle> : null}
+            {description ? (
+              <FrameDescription>{description}</FrameDescription>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {right}
+            {title === undefined ? null : (
+              <Badge variant={live ? "secondary" : "outline"}>{label}</Badge>
+            )}
+          </div>
+        </div>
+      ) : null}
+      {toolbar}
+    </FrameHeader>
+  );
+}
+
+function renderBlocks(blocks: Block[], placeholder: string) {
+  if (blocks.length === 0) {
+    return <span className="text-muted-foreground text-sm">{placeholder}</span>;
+  }
+
+  return blocks.map((block) =>
+    block.kind === "group" ? (
+      <details key={block.id}>
+        <summary className="cursor-pointer py-1 text-muted-foreground text-xs">
+          {block.lines.length} build lines
+        </summary>
+        {block.lines.map(renderLine)}
+      </details>
+    ) : (
+      renderLine(block)
+    )
+  );
 }
 
 export function LogView({
   blocks,
+  description,
   idleLabel,
   live,
   placeholder,
   right,
   title,
-}: LogViewProps) {
+  toolbar,
+}
+: LogViewProps)
+{
   const viewRef = useRef<HTMLDivElement | null>(null);
   const pinnedRef = useRef(true);
-
-  const count = blocks.length;
-  const label = live ? "live" : idleLabel;
 
   // The dependency is on `blocks`, not on their COUNT: a chunk that
   // extends the last line without opening a new one leaves the count
@@ -123,52 +239,26 @@ export function LogView({
   }, []);
 
   return (
-    <Frame className="h-full min-h-0" stacked variant="ghost">
-      <FrameHeader className="flex-row items-center justify-between gap-3">
-        <FrameTitle>{title}</FrameTitle>
-        <div className="flex items-center gap-2">
-          {right}
-          <Badge variant={live ? "secondary" : "outline"}>{label}</Badge>
-        </div>
-      </FrameHeader>
+    <Frame className="flex h-full min-h-0 flex-col" stacked variant="ghost">
+      <LogViewHeader
+        description={description}
+        idleLabel={idleLabel}
+        live={live}
+        right={right}
+        title={title}
+        toolbar={toolbar}
+      />
 
-      {/* Logs FILL the tab. The 320px cap dated from when they unfolded
-          under a dashboard row: it prevented pushing the rest of the screen
-          down. Since they got their own tab, it does the opposite — 600px
-          of empty space under a narrow window, on what is the page's MAIN
-          content. */}
+      {/* TWO elements: `scroll-fade` is a mask-image — it eats the
+          background and radius of whatever carries it. The FramePanel
+          keeps the border; only the scrolling body is masked. */}
       <FramePanel className="flex min-h-0 flex-1 flex-col p-0">
         <div
-          className="scroll-fade no-scrollbar wrap-break-word min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap p-3 font-mono text-xs leading-relaxed"
-          onScroll={handleScroll}
-          ref={viewRef}
+          className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-3"
+        onScroll={handleScroll}
+         ref={viewRef}
         >
-          {count === 0 ? (
-            <span className="text-muted-foreground">{placeholder}</span>
-          ) : null}
-
-          {blocks.map((block) =>
-            block.kind === "group" ? (
-              <details key={block.id}>
-                <summary className="cursor-pointer text-muted-foreground">
-                  {block.lines.length} build lines
-                </summary>
-                {block.lines.map((line) => (
-                  <div key={line.id}>{line.text}</div>
-                ))}
-              </details>
-            ) : (
-              <div
-                className={cn(
-                  block.kind === "error" && "font-medium text-destructive",
-                  block.kind === "step" && "text-foreground"
-                )}
-                key={block.id}
-              >
-                {block.text}
-              </div>
-            )
-          )}
+          {renderBlocks(blocks, placeholder)}
         </div>
       </FramePanel>
     </Frame>

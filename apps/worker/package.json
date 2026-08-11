@@ -20,6 +20,7 @@
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
     "bullmq": "catalog:",
+    "croner": "^10.0.1",
     "ioredis": "catalog:",
     "drizzle-orm": "catalog:",
     "yaml": "catalog:"

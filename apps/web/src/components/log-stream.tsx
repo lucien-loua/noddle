@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Block, Line, LineKind } from "@/components/log-view";
-import { LogView, parse } from "@/components/log-view";
+import type { LineKind } from "@/components/log-view";
+import { groupNoise, LogView, parse } from "@/components/log-view";
 
 interface LogStreamProps {
   deploymentId: string;
   /** Called when the deployment reaches a terminal status. */
   onEnd?: (status: string) => void;
 }
-
-/** Below this, a noise group costs more to collapse than to display. */
-const MIN_GROUP = 4;
 
 const ERROR_PATTERN = /\berror\b|\bfailed\b|\bERR!|^✗|\bfatal\b/i;
 const STEP_PATTERN = /^[▸✓✗]/;
@@ -19,35 +16,6 @@ function classifyBuild(text: string): LineKind {
     return ERROR_PATTERN.test(text) ? "error" : "step";
   }
   return ERROR_PATTERN.test(text) ? "error" : "noise";
-}
-
-/** Groups sequences of build noise into collapsible blocks. */
-function group(lines: Line[]): Block[] {
-  const out: Block[] = [];
-  let run: Line[] = [];
-
-  const flush = () => {
-    if (run.length === 0) {
-      return;
-    }
-    if (run.length >= MIN_GROUP) {
-      out.push({ id: run[0]?.id ?? 0, kind: "group", lines: run });
-    } else {
-      out.push(...run);
-    }
-    run = [];
-  };
-
-  for (const line of lines) {
-    if (line.kind === "noise") {
-      run.push(line);
-      continue;
-    }
-    flush();
-    out.push(line);
-  }
-  flush();
-  return out;
 }
 
 export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
@@ -89,7 +57,7 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
     return () => source.close();
   }, [deploymentId]);
 
-  const blocks = useMemo(() => group(parse(text, classifyBuild)), [text]);
+  const blocks = useMemo(() => groupNoise(parse(text, classifyBuild)), [text]);
 
   return (
     <LogView

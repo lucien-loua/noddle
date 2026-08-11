@@ -1,9 +1,10 @@
 import { relations } from "drizzle-orm";
-import { backups } from "#schema/backups";
+import { backupConfigs, backups } from "#schema/backups";
 import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
 import { envVars } from "#schema/env-vars";
 import { environments, projects } from "#schema/projects";
+import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
 import { services } from "#schema/services";
 import { stackDeploymentLogs, stackDeployments, stacks } from "#schema/stacks";
@@ -100,6 +101,7 @@ export const stackDeploymentLogsRelations = relations(
 );
 
 export const databasesRelations = relations(databases, ({ many, one }) => ({
+  backupConfigs: many(backupConfigs),
   backups: many(backups),
   environment: one(environments, {
     fields: [databases.environmentId],
@@ -111,12 +113,35 @@ export const databasesRelations = relations(databases, ({ many, one }) => ({
   }),
 }));
 
+export const backupConfigsRelations = relations(
+  backupConfigs,
+  ({ one, many }) => ({
+    backups: many(backups),
+    database: one(databases, {
+      fields: [backupConfigs.databaseId],
+      references: [databases.id],
+    }),
+    destination: one(s3Destinations, {
+      fields: [backupConfigs.destinationId],
+      references: [s3Destinations.id],
+    }),
+  })
+);
+
 // The backup job needs the server that holds the volume and the engine to
 // choose its dumper: it loads the database WITH its server from this
 // relation, never via a second query.
 export const backupsRelations = relations(backups, ({ one }) => ({
+  config: one(backupConfigs, {
+    fields: [backups.configId],
+    references: [backupConfigs.id],
+  }),
   database: one(databases, {
     fields: [backups.databaseId],
     references: [databases.id],
+  }),
+  destination: one(s3Destinations, {
+    fields: [backups.destinationId],
+    references: [s3Destinations.id],
   }),
 }));

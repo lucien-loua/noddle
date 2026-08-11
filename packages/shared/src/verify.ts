@@ -13,7 +13,9 @@ import {
 } from "#crypto";
 import {
   addDatabaseMountSchema,
+  backupCronSchema,
   bucketNameSchema,
+  createBackupConfigSchema,
   databaseConfigurationSchema,
   databaseReplicasSchema,
   envVarKeySchema,
@@ -276,6 +278,33 @@ if (objectPrefixSchema.safeParse("a/../b").success) {
   ko("objectPrefixSchema accepts `..`");
 } else {
   ok("objectPrefixSchema rejects `..`");
+}
+
+if (backupCronSchema.safeParse("0 0 * * *").success) {
+  ok("backupCronSchema accepts a five-field cron");
+} else {
+  ko("backupCronSchema rejected a valid cron");
+}
+
+if (backupCronSchema.safeParse("daily").success) {
+  ko("backupCronSchema accepts a non-cron token");
+} else {
+  ok("backupCronSchema rejects non-cron schedules");
+}
+
+const cfg = createBackupConfigSchema.safeParse({
+  databaseId: "11111111-1111-4111-8111-111111111111",
+  databaseName: "shop",
+  destinationId: "22222222-2222-4222-8222-222222222222",
+  enabled: true,
+  keepLatestCount: 7,
+  prefix: "nightly",
+  schedule: "0 0 * * *",
+});
+if (cfg.success) {
+  ok("createBackupConfigSchema accepts a valid schedule config");
+} else {
+  ko(`createBackupConfigSchema failed: ${JSON.stringify(cfg.error.issues)}`);
 }
 
 const destination = s3DestinationSchema.safeParse({

@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   NoSuchKey,
   NotFound,
   PutObjectCommand,
@@ -232,6 +233,60 @@ export async function deleteObject(
   await client.send(
     new DeleteObjectCommand({ Bucket: destination.bucket, Key: key })
   );
+}
+
+export interface ListedBackupObject {
+  key: string;
+  lastModified: string | null;
+  sizeBytes: number;
+}
+
+const KNOWN_DUMP_SUFFIXES = [".archive.gz", ".dump", ".rdb", ".sql"] as const;
+
+function isKnownDumpKey(key: string): boolean {
+  return KNOWN_DUMP_SUFFIXES.some((suffix) => key.endsWith(suffix));
+}
+
+/**
+ * Lists objects under a prefix. Used when restoring from a dump that
+ * may not appear in Noddle's run history (uploaded elsewhere, or pruned
+ * from the DB while still in the bucket).
+ *
+ * Caps at 500 keys: a restore picker is not a bucket browser.
+ */
+export async function listObjects(
+  destination: BackupDestination,
+  opts?: { maxKeys?: number; prefix?: string }
+): Promise<ListedBackupObject[]> {
+  const client = clientFor(destination);
+  const prefixParts = [destination.prefix, opts?.prefix ?? ""].filter(
+    (p) => p !== ""
+  );
+  const prefix = prefixParts.join("/");
+  const maxKeys = Math.min(Math.max(opts?.maxKeys ?? 200, 1), 500);
+
+  try {
+    const res = await client.send(
+      new ListObjectsV2Command({
+        Bucket: destination.bucket,
+        MaxKeys: maxKeys,
+        Prefix: prefix === "" ? undefined : prefix,
+      })
+    );
+    return (res.Contents ?? [])
+      .filter((obj): obj is typeof obj & { Key: string } => Boolean(obj.Key))
+      .filter((obj) => isKnownDumpKey(obj.Key))
+      .map((obj) => ({
+        key: obj.Key,
+        lastModified: obj.LastModified?.toISOString() ?? null,
+        sizeBytes: obj.Size ?? 0,
+      }));
+  } catch (err) {
+    throw new BackupStoreError(
+      `unable to list objects in "${destination.bucket}": ${describe(err)}`,
+      { cause: err }
+    );
+  }
 }
 
 /**

@@ -10,7 +10,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "#schema/columns";
 import { environments } from "#schema/projects";
-import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
 import { serviceStatus } from "#schema/services";
 
@@ -84,31 +83,9 @@ export const databaseEngine = pgEnum("database_engine", [
   "redis",
 ]);
 
-/**
- * Automatic backup cadence.
- *
- * An enum, not a cron expression: Docker and Traefik knobs are not exposed as
- * form fields, and a cron is no different — it is a whole language inside a
- * form. "Every day" and "every week" cover what a self-hosted database asks
- * for; the exact hour is not a setting until someone asks for it.
- */
-export const backupSchedule = pgEnum("backup_schedule", [
-  "off",
-  "daily",
-  "weekly",
-]);
-
 export const databases = pgTable(
   "databases",
   {
-    /**
-     * How many SUCCESSFUL backups to keep. Beyond that, the oldest is deleted,
-     * row AND object — otherwise the bucket grows forever and the user sees the
-     * bill before they discover the setting.
-     */
-    backupRetention: integer("backup_retention").notNull().default(7),
-    backupSchedule: backupSchedule("backup_schedule").notNull().default("off"),
-
     /**
      * CPU cap in NanoCPUs (1 core = 1e9), `null` = no limit.
      *
@@ -219,10 +196,6 @@ export const databases = pgTable(
 
     // Absent for redis, which has no user notion — only a password.
     rootUser: text("root_user"),
-    s3DestinationId: uuid("s3_destination_id").references(
-      () => s3Destinations.id,
-      { onDelete: "set null" }
-    ),
 
     // Like `services.serverId`: the named volume exists only on THIS node,
     // the link is structural, not mere placement.

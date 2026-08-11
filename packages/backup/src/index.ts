@@ -41,13 +41,26 @@ export interface DestinationCandidate {
 }
 
 /**
+ * Joins the destination bucket prefix with an optional config-level prefix.
+ */
+export function joinBackupPrefix(
+  destinationPrefix: string,
+  configPrefix = ""
+): string {
+  return [destinationPrefix, configPrefix]
+    .map((p) => p.replace(/^\/+|\/+$/g, ""))
+    .filter((p) => p !== "")
+    .join("/");
+}
+
+/**
  * Picks the destination for an operation, FROM the candidates.
  *
  * Pure function: no query, no encryption. This is the multi-destination choice
  * RULE, testable with plain arrays — it is what `verify.ts` exercises
  * exhaustively.
  *
- * `requestedId` comes from `databases.s3_destination_id` (for a backup being
+ * `requestedId` comes from `backup_configs.destination_id` (for a backup being
  * launched) or from `backups.destination_id` (for a restore or retention purge
  * — there you need the ONE where the object actually went, not the one
  * configured today).
@@ -172,6 +185,7 @@ export async function resolveDestinationSecret(
 export type BackupKind = "manual" | "pre_restore" | "scheduled";
 
 export interface BackupInsertValues {
+  configId?: string | null;
   databaseId: string;
   destinationId: string;
   kind: BackupKind;
@@ -181,28 +195,34 @@ export interface BackupInsertValues {
 /**
  * The row for a backup to create, destination and object key DECIDED TOGETHER.
  *
- * This was the missing point: `triggerBackup` built the key with the prefix of
- * ONE destination (`findFirst()`, arbitrary) without writing `destinationId`,
- * while `runBackup` resolved the REAL destination from
- * `database.s3DestinationId` at upload time — two independent resolutions that
- * diverge as soon as there is more than one destination. Here, a single call
- * decides both at once, so they can no longer diverge.
+ * A single call decides both at once so they can no longer diverge between
+ * enqueue time and upload time.
  */
 export function buildBackupInsert(opts: {
+  configId?: string | null;
+  /** Extra path under the destination prefix (from the backup config). */
+  configPrefix?: string;
   database: { engine: DatabaseEngine; id: string; name: string };
+  /** Override the key path segment / dump target name. */
+  databaseName?: string;
   kind: BackupKind;
   resolved: DestinationCandidate;
   takenAt?: Date;
 }): BackupInsertValues {
+  const prefix = joinBackupPrefix(
+    opts.resolved.prefix,
+    opts.configPrefix ?? ""
+  );
   return {
+    configId: opts.configId ?? null,
     databaseId: opts.database.id,
     destinationId: opts.resolved.id,
     kind: opts.kind,
     objectKey: backupObjectKey({
       backupId: crypto.randomUUID(),
-      databaseName: opts.database.name,
+      databaseName: opts.databaseName ?? opts.database.name,
       extension: BACKUP_EXTENSION[opts.database.engine],
-      prefix: opts.resolved.prefix,
+      prefix,
       takenAt: opts.takenAt ?? new Date(),
     }),
   };
