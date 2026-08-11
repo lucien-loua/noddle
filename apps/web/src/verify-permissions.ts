@@ -69,19 +69,11 @@ function parseRequirePermission(
   body: string
 ): { action: string; resource: string } | null {
   // Multiline + ternary actions (containerAction) must still count as a guard.
-  // runGuardedMutation always checks permission inside the helper.
-  if (
-    !(
-      body.includes("requirePermission(") ||
-      body.includes("runGuardedMutation(")
-    )
-  ) {
+  // runGuarded always checks permission inside the helper.
+  if (!(body.includes("requirePermission(") || body.includes("runGuarded("))) {
     return null;
   }
-  if (
-    body.includes("runGuardedMutation(") &&
-    !body.includes("requirePermission(")
-  ) {
+  if (body.includes("runGuarded(") && !body.includes("requirePermission(")) {
     // Permission is named inside the helper options object.
     const match = body.match(GUARDED_MUTATION_PERM);
     if (match?.[1] && match[2]) {
