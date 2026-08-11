@@ -58,6 +58,13 @@ Phase 4+). Without a push, a local image pins the service to that node.
 
 ### Runtime
 
+**Job**:
+One unit of queued work on the deploy queue — a ship, a backup, a teardown, a
+prune. Every Job kind shares that queue on purpose: its concurrency of 1 is what
+keeps a build, a push and a prune from racing.
+_Not_: a Deployment, which is the row in the history. Deploying enqueues a Job;
+most Job kinds produce no Deployment at all.
+
 **Swarm manager**:
 The single node allowed to run `docker service create/update`. Extra servers join
 as workers only.
