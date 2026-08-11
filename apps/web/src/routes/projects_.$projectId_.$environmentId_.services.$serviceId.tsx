@@ -48,6 +48,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { useDeleteServiceAction } from "@/components/use-delete-service-action";
 import { useLifecycleActions } from "@/components/use-lifecycle-actions";
+import { cache } from "@/lib/cache";
 import { serviceLabel, shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -355,18 +356,21 @@ function ServiceDetail() {
     router.invalidate();
   }, [router]);
 
-  const handleDeleted = useCallback(
-    () =>
-      navigate({
-        params: {
-          environmentId: service.environmentId,
-          projectId: service.projectId,
-        },
-        search: {},
-        to: "/projects/$projectId/$environmentId",
-      }),
-    [navigate, service.environmentId, service.projectId]
-  );
+  const handleDeleted = useCallback(async () => {
+    await cache.environmentScope(
+      queryClient,
+      service.projectId,
+      service.environmentId
+    );
+    await navigate({
+      params: {
+        environmentId: service.environmentId,
+        projectId: service.projectId,
+      },
+      search: {},
+      to: "/projects/$projectId/$environmentId",
+    });
+  }, [navigate, queryClient, service.environmentId, service.projectId]);
 
   const rollback = useMutation({
     mutationFn: (deploymentId: string) =>

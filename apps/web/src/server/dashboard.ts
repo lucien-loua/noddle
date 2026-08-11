@@ -1,14 +1,16 @@
 import {
   deployments,
+  environments,
   services,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { count, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+import z from "zod";
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
 import {
@@ -157,9 +159,14 @@ function toStackSummary(
   };
 }
 
-async function loadServiceDashboard(): Promise<ServiceRow[]> {
+async function loadServiceDashboard(
+  environmentId?: string
+): Promise<ServiceRow[]> {
   const rows = await db.query.services.findMany({
     orderBy: services.name,
+    where: environmentId
+      ? eq(services.environmentId, environmentId)
+      : undefined,
     with: {
       environment: { with: { project: true } },
       server: true,
@@ -224,9 +231,10 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
   }
 );
 
-async function loadStackDashboard(): Promise<StackRow[]> {
+async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
   const rows = await db.query.stacks.findMany({
     orderBy: stacks.name,
+    where: environmentId ? eq(stacks.environmentId, environmentId) : undefined,
     with: {
       environment: { with: { project: true } },
       server: true,
@@ -464,6 +472,47 @@ export const getDashboardGroups = createServerFn({ method: "GET" }).handler(
     return buildDashboardData();
   }
 );
+
+/**
+ * One environment's inventory — Services, Stacks, Databases — for the grid.
+ *
+ * Distinct from `getDashboardGroups`: that ships every project. Here we load
+ * only the rows that belong to `environmentId`, and still return an empty
+ * Scope (with project/environment names) when nothing is deployed yet.
+ */
+export const getEnvironmentScope = createServerFn({ method: "GET" })
+  .validator(z.object({ environmentId: z.uuid(), projectId: z.uuid() }))
+  .handler(async ({ data }): Promise<Scope> => {
+    await requireSession();
+
+    const environment = await db.query.environments.findFirst({
+      where: and(
+        eq(environments.id, data.environmentId),
+        eq(environments.projectId, data.projectId)
+      ),
+      with: { project: true },
+    });
+    if (!environment) {
+      throw new Error("environment not found");
+    }
+
+    const [serviceRows, stackRows, databaseRows] = await Promise.all([
+      loadServiceDashboard(data.environmentId),
+      loadStackDashboard(data.environmentId),
+      loadDatabaseDashboardRows(data.environmentId),
+    ]);
+
+    return {
+      databases: databaseRows,
+      environment: environment.name,
+      environmentId: environment.id,
+      key: scopeKey(environment.project.name, environment.name),
+      project: environment.project.name,
+      projectId: environment.projectId,
+      services: serviceRows,
+      stacks: stackRows,
+    };
+  });
 
 /**
  * A row of the deployment log — services AND stacks, flattened.

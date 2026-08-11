@@ -28,7 +28,7 @@ import {
   listBackupConfigs,
   listBackupObjects,
 } from "@/server/backups";
-import { getDeployments } from "@/server/dashboard";
+import { getDeployments, getEnvironmentScope } from "@/server/dashboard";
 import { getDatabaseCredentials } from "@/server/databases";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
@@ -94,6 +94,13 @@ export const queries = {
     queryOptions({
       queryFn: () => getDestinations(),
       queryKey: ["destinations"],
+    }),
+
+  environmentScope: (projectId: string, environmentId: string) =>
+    queryOptions({
+      queryFn: () =>
+        getEnvironmentScope({ data: { environmentId, projectId } }),
+      queryKey: ["environment-scope", projectId, environmentId],
     }),
 
   // The identifier alone is enough as a key: a Service and a Database

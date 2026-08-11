@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -155,18 +156,21 @@ function StackDetail() {
   // We LEAVE the page once the teardown has started, as for a service: the
   // stack is disappearing, staying on it would show a detail view emptying
   // itself out.
-  const handleDeleted = useCallback(
-    () =>
-      navigate({
-        params: {
-          environmentId: stack.environmentId,
-          projectId: stack.projectId,
-        },
-        search: {},
-        to: "/projects/$projectId/$environmentId",
-      }),
-    [navigate, stack.environmentId, stack.projectId]
-  );
+  const handleDeleted = useCallback(async () => {
+    await cache.environmentScope(
+      queryClient,
+      stack.projectId,
+      stack.environmentId
+    );
+    await navigate({
+      params: {
+        environmentId: stack.environmentId,
+        projectId: stack.projectId,
+      },
+      search: {},
+      to: "/projects/$projectId/$environmentId",
+    });
+  }, [navigate, queryClient, stack.environmentId, stack.projectId]);
 
   const currentDeploymentId = stack.lastDeployment
     ? stack.lastDeployment.id

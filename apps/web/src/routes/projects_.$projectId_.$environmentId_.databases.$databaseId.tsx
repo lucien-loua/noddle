@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { useLifecycleActions } from "@/components/use-lifecycle-actions";
+import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
@@ -334,19 +335,22 @@ function DatabaseDetail() {
   // We LEAVE the page once the teardown has started, as for a service: the
   // database is disappearing, staying on it would show a detail view
   // emptying itself out.
-  const handleDeleted = useCallback(
-    () =>
-      navigate({
-        params: {
-          environmentId: database.environmentId,
-          projectId: database.projectId,
-        },
-        to: "/projects/$projectId/$environmentId",
-      }),
-    [navigate, database.environmentId, database.projectId]
-  );
-
   const queryClient = useQueryClient();
+  const handleDeleted = useCallback(async () => {
+    await cache.environmentScope(
+      queryClient,
+      database.projectId,
+      database.environmentId
+    );
+    await navigate({
+      params: {
+        environmentId: database.environmentId,
+        projectId: database.projectId,
+      },
+      to: "/projects/$projectId/$environmentId",
+    });
+  }, [database.environmentId, database.projectId, navigate, queryClient]);
+
   const router = useRouter();
   const handleDone = useCallback(async () => {
     await queryClient.invalidateQueries();

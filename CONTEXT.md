@@ -22,6 +22,11 @@ _Avoid_: Localhost special case, control plane host
 **Project**:
 A tenant-facing grouping of services the user deploys and operates together.
 
+**Environment scope**:
+The inventory of Services, Stacks, and Databases in one environment —
+membership + status for the dashboard grid.
+_Avoid_: dashboard groups (when meaning one environment's list)
+
 **Service**:
 A deployable unit (image + Swarm service + Traefik route) belonging to a project.
 _Avoid_: App (when meaning the Swarm unit), container (the runtime instance)

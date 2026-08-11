@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { getAuthState } from "@/server/auth";
-import { getDashboardGroups } from "@/server/dashboard";
+import { getDashboardGroups, getEnvironmentScope } from "@/server/dashboard";
 import { getProjectEnvironments } from "@/server/environments";
 import { getProjects } from "@/server/projects";
 import { getServers } from "@/server/servers";
@@ -52,23 +52,18 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
       throw notFound();
     }
 
-    // The group, on the other hand, can legitimately be missing: it's only
-    // used to count what the environment contains.
+    const scope = await getEnvironmentScope({
+      data: {
+        environmentId: params.environmentId,
+        projectId: params.projectId,
+      },
+    });
+
+    // The group can legitimately be missing: it's only used to count what
+    // sibling environments contain for the selector.
     const group = dashboard.groups.find(
       (g) => g.projectId === params.projectId
     );
-    const scope = group?.scopes.find(
-      (s) => s.environmentId === params.environmentId
-    ) ?? {
-      databases: [],
-      environment: current.name,
-      environmentId: current.id,
-      key: `${project.name}/${current.name}`,
-      project: project.name,
-      projectId: project.id,
-      services: [],
-      stacks: [],
-    };
 
     return {
       counts: Object.fromEntries(
@@ -174,7 +169,13 @@ function ProjectEnvironmentPage() {
       role={role}
       title={`${scope.project} / ${scope.environment}`}
     >
-      <ResourceGrid groups={dashboard.groups} role={known} scope={scope} />
+      <ResourceGrid
+        environmentId={current.id}
+        groups={dashboard.groups}
+        initialScope={scope}
+        projectId={projectId}
+        role={known}
+      />
     </AppShell>
   );
 }

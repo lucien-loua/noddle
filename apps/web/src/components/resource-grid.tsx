@@ -11,10 +11,10 @@ import {
   StopIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { IconStack } from "@/components/icon-stack";
@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { cache } from "@/lib/cache";
 import {
   badgeVariant,
   dotClass,
@@ -65,6 +66,7 @@ import {
   serviceLabel,
 } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import type { ProjectGroup, Scope } from "@/server/dashboard";
 import { deleteDatabase, triggerDatabaseLifecycle } from "@/server/databases";
@@ -76,6 +78,9 @@ type Kind = "database" | "service" | "stack";
 type SortKey = "name" | "status";
 type TypeFilter = "all" | Kind;
 type LifecycleAction = "restart" | "start" | "stop";
+
+const SCOPE_POLL_MS = 2000;
+const AWAITING_TIMEOUT_MS = 60_000;
 
 interface GridItem {
   domain: string | null;
@@ -95,10 +100,72 @@ interface MoveTarget {
   name: string;
 }
 
+interface AwaitingEntry {
+  since: number;
+  status: string;
+}
+
 /** The selection key: composite, because three tables can theoretically
  *  share the same UUID and we need to know which `deleteX` to call. */
 function itemKey(item: { id: string; kind: Kind }): string {
   return `${item.kind}:${item.id}`;
+}
+
+function scopeHasDeleting(scope: Scope): boolean {
+  return (
+    scope.services.some((s) => s.status === "deleting") ||
+    scope.stacks.some((s) => s.status === "deleting") ||
+    scope.databases.some((d) => d.status === "deleting")
+  );
+}
+
+function statusInScope(scope: Scope, key: string): string | undefined {
+  const colon = key.indexOf(":");
+  const kind = key.slice(0, colon) as Kind;
+  const id = key.slice(colon + 1);
+  if (kind === "service") {
+    return scope.services.find((s) => s.id === id)?.status;
+  }
+  if (kind === "stack") {
+    return scope.stacks.find((s) => s.id === id)?.status;
+  }
+  return scope.databases.find((d) => d.id === id)?.status;
+}
+
+/**
+ * Drop awaiting entries once the resource status moved off the snapshot,
+ * the row disappeared, or the timeout elapsed — no new statuses needed.
+ */
+function refineAwaiting(
+  scope: Scope,
+  awaiting: Map<string, AwaitingEntry>
+): Map<string, AwaitingEntry> {
+  if (awaiting.size === 0) {
+    return awaiting;
+  }
+  const now = Date.now();
+  const next = new Map<string, AwaitingEntry>();
+  for (const [key, entry] of awaiting) {
+    if (now - entry.since > AWAITING_TIMEOUT_MS) {
+      continue;
+    }
+    const current = statusInScope(scope, key);
+    if (current === undefined || current !== entry.status) {
+      continue;
+    }
+    next.set(key, entry);
+  }
+  return next.size === awaiting.size ? awaiting : next;
+}
+
+function shouldPoll(
+  scope: Scope | undefined,
+  awaiting: Map<string, AwaitingEntry>
+): boolean {
+  if (!scope) {
+    return false;
+  }
+  return awaiting.size > 0 || scopeHasDeleting(scope);
 }
 
 /**
@@ -167,22 +234,55 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
 }
 
 export function ResourceGrid({
+  environmentId,
   groups,
+  initialScope,
+  projectId,
   role,
-  scope,
 }: {
+  environmentId: string;
   groups: ProjectGroup[];
+  initialScope: Scope;
+  projectId: string;
   role: RoleName | null;
-  scope: Scope;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  // The grid comes from the route LOADER, not from a `useQuery`:
-  // invalidating the TanStack Query cache doesn't refresh it, the router
-  // also needs to be asked to rerun its loader. As measured in the
-  // browser: without it, a moved service stayed displayed in its old
-  // environment until the page was manually reloaded.
+  // Move still needs the router: the environment selector counts and the
+  // destination environment's loader come from route data, not this query.
   const router = useRouter();
+
+  const [awaitingSettle, setAwaitingSettle] = useState(
+    () => new Map<string, AwaitingEntry>()
+  );
+
+  const scopeQuery = useQuery({
+    ...queries.environmentScope(projectId, environmentId),
+    initialData: initialScope,
+    refetchInterval: (q) =>
+      shouldPoll(q.state.data, awaitingSettle) ? SCOPE_POLL_MS : false,
+  });
+  const scope = scopeQuery.data ?? initialScope;
+
+  useEffect(() => {
+    setAwaitingSettle((prev) => refineAwaiting(scope, prev));
+  }, [scope]);
+
+  const refreshScope = useCallback(
+    () => cache.environmentScope(queryClient, projectId, environmentId),
+    [queryClient, projectId, environmentId]
+  );
+
+  const markSettling = useCallback((targets: GridItem[]) => {
+    setAwaitingSettle((prev) => {
+      const next = new Map(prev);
+      const now = Date.now();
+      for (const item of targets) {
+        next.set(itemKey(item), { since: now, status: item.status });
+      }
+      return next;
+    });
+  }, []);
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -330,6 +430,11 @@ export function ResourceGrid({
     }
   }, []);
 
+  const handleMoved = useCallback(async () => {
+    await refreshScope();
+    await router.invalidate();
+  }, [refreshScope, router]);
+
   const bulkDeploy = useMutation({
     mutationFn: async () => {
       const targets = selectedItems.filter((i) => hasDeploy(i.kind));
@@ -350,8 +455,7 @@ export function ResourceGrid({
         type: "error",
       }),
     onSuccess: async (count) => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      await refreshScope();
       clearSelection();
       toast.add({
         description: `${count} deploy${count === 1 ? "" : "s"} started.`,
@@ -371,7 +475,7 @@ export function ResourceGrid({
         // biome-ignore lint/performance/noAwaitInLoops: deliberately sequential, one resource at a time
         await runLifecycleFor(item, action);
       }
-      return targets.length;
+      return targets;
     },
     onError: (e: Error) =>
       toast.add({
@@ -379,12 +483,12 @@ export function ResourceGrid({
         title: "Bulk action failed",
         type: "error",
       }),
-    onSuccess: async (count, action) => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+    onSuccess: async (targets, action) => {
+      markSettling(targets);
+      await refreshScope();
       clearSelection();
       toast.add({
-        description: `${count} item${count === 1 ? "" : "s"} ${action === "start" ? "starting" : "stopping"}.`,
+        description: `${targets.length} item${targets.length === 1 ? "" : "s"} ${action === "start" ? "starting" : "stopping"}.`,
         title: action === "start" ? "Starting" : "Stopping",
         type: "success",
       });
@@ -426,8 +530,7 @@ export function ResourceGrid({
         type: "error",
       }),
     onSuccess: async (count) => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      await refreshScope();
       clearSelection();
       setBulkDeleteOpen(false);
       toast.add({
@@ -621,8 +724,9 @@ export function ResourceGrid({
               key={itemKey(item)}
               onMove={item.kind === "service" ? requestMove : undefined}
               onOpen={openItem}
+              onSettling={markSettling}
               onToggleSelect={toggleSelected}
-              queryClient={queryClient}
+              refreshScope={refreshScope}
               selected={selected.has(itemKey(item))}
             />
           ))}
@@ -633,6 +737,7 @@ export function ResourceGrid({
         <MoveServiceDialog
           currentEnvironmentId={moveTarget.environmentId}
           groups={groups}
+          onMoved={handleMoved}
           onOpenChange={closeMove}
           open
           serviceId={moveTarget.id}
@@ -683,8 +788,9 @@ function ResourceGridCard({
   item,
   onMove,
   onOpen,
+  onSettling,
   onToggleSelect,
-  queryClient,
+  refreshScope,
   selected,
 }: {
   canDelete: boolean;
@@ -694,8 +800,9 @@ function ResourceGridCard({
   item: GridItem;
   onMove: ((item: GridItem) => void) | undefined;
   onOpen: (item: GridItem) => void;
+  onSettling: (items: GridItem[]) => void;
   onToggleSelect: (item: GridItem) => void;
-  queryClient: ReturnType<typeof useQueryClient>;
+  refreshScope: () => Promise<unknown>;
   selected: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -764,7 +871,8 @@ function ResourceGridCard({
                 lifecycleAvailable={lifecycleAvailable}
                 onDelete={openDelete}
                 onMove={onMove ? handleMove : undefined}
-                queryClient={queryClient}
+                onSettling={onSettling}
+                refreshScope={refreshScope}
                 stopped={stopped}
               />
             </div>
@@ -799,7 +907,7 @@ function ResourceGridCard({
         item={item}
         onOpenChange={setDeleteOpen}
         open={deleteOpen}
-        queryClient={queryClient}
+        refreshScope={refreshScope}
       />
     </>
   );
@@ -813,7 +921,8 @@ function ResourceCardMenu({
   lifecycleAvailable,
   onDelete,
   onMove,
-  queryClient,
+  onSettling,
+  refreshScope,
   stopped,
 }: {
   canDelete: boolean;
@@ -823,11 +932,10 @@ function ResourceCardMenu({
   lifecycleAvailable: boolean;
   onDelete: () => void;
   onMove: (() => void) | undefined;
-  queryClient: ReturnType<typeof useQueryClient>;
+  onSettling: (items: GridItem[]) => void;
+  refreshScope: () => Promise<unknown>;
   stopped: boolean;
 }) {
-  const router = useRouter();
-
   const deploy = useMutation({
     mutationFn: async () => {
       if (item.kind === "service") {
@@ -843,8 +951,7 @@ function ResourceCardMenu({
         type: "error",
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      await refreshScope();
     },
   });
   const handleDeploy = useCallback(() => deploy.mutate(), [deploy]);
@@ -858,8 +965,8 @@ function ResourceCardMenu({
         type: "error",
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      onSettling([item]);
+      await refreshScope();
     },
   });
   const handleToggleRun = useCallback(
@@ -934,15 +1041,13 @@ function ResourceDeleteDialog({
   item,
   onOpenChange,
   open,
-  queryClient,
+  refreshScope,
 }: {
   item: GridItem;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  queryClient: ReturnType<typeof useQueryClient>;
+  refreshScope: () => Promise<unknown>;
 }) {
-  const router = useRouter();
-
   const remove = useMutation({
     mutationFn: (confirmName: string) => {
       if (item.kind === "service") {
@@ -962,8 +1067,7 @@ function ResourceDeleteDialog({
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      await refreshScope();
       onOpenChange(false);
     },
   });

@@ -1,5 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,7 @@ import { moveService } from "@/server/services";
 export function MoveServiceDialog({
   currentEnvironmentId,
   groups,
+  onMoved,
   onOpenChange,
   open,
   serviceId,
@@ -40,15 +40,13 @@ export function MoveServiceDialog({
    *  misses a project, since a project today only exists via an already
    *  connected resource. */
   groups: ProjectGroup[];
+  /** Caller refreshes environment scope + route loaders (counts). */
+  onMoved: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   serviceId: string;
   serviceName: string;
 }) {
-  const queryClient = useQueryClient();
-  // The page that opened this dialog comes from a route LOADER: see
-  // resource-grid.tsx for why `invalidateQueries` alone isn't enough.
-  const router = useRouter();
   // biome-ignore lint/suspicious/noUnnecessaryConditions: false positive, groups can be empty
   const [projectId, setProjectId] = useState(groups[0]?.projectId ?? "");
   const [environmentId, setEnvironmentId] = useState("");
@@ -87,8 +85,7 @@ export function MoveServiceDialog({
     mutationFn: () => moveService({ data: { environmentId, serviceId } }),
     onError: (e: Error) => setError(errorMessage(e, "could not move")),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
-      await router.invalidate();
+      await onMoved();
       onOpenChange(false);
     },
   });

@@ -30,6 +30,15 @@ export const cache = {
   destinations: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.destinations().queryKey }),
 
+  environmentScope: (
+    qc: QueryClient,
+    projectId: string,
+    environmentId: string
+  ) =>
+    qc.invalidateQueries({
+      queryKey: queries.environmentScope(projectId, environmentId).queryKey,
+    }),
+
   envVars: (qc: QueryClient, target: EnvVarTarget) =>
     qc.invalidateQueries({ queryKey: queries.envVars(target).queryKey }),
 
