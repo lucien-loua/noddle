@@ -59,10 +59,11 @@ function FocusModalContent({
       <FocusModalOverlay {...overlayProps} />
       <DialogPrimitive.Popup
         className={cn(
-          "fixed inset-2 z-50 flex flex-col overflow-hidden rounded-4xl bg-popover text-popover-foreground shadow-xl outline-none ring-1 ring-foreground/5 duration-100 dark:ring-foreground/10",
-          // Nested dialogs (Base UI): parent scales via `--nested-dialogs`,
-          // dims with ::after; child backdrops are not rendered.
-          "scale-[calc(1-0.03*var(--nested-dialogs,0))] transition-[scale,opacity] after:pointer-events-none after:absolute after:inset-0 after:bg-black/40 after:opacity-0 after:backdrop-blur-sm after:transition-opacity after:duration-150 data-nested-dialog-open:after:opacity-100",
+          "fixed inset-2 z-50 flex flex-col overflow-hidden rounded-4xl bg-popover text-popover-foreground shadow-xl outline-none ring-1 ring-foreground/5 dark:ring-foreground/10",
+          // Nested stack (Base UI `--nested-dialogs`): toast-like but subtler —
+          // parent peeks up a hair and shrinks; child has no backdrop.
+          "origin-top scale-[calc(1-0.035*var(--nested-dialogs,0))] translate-y-[calc(var(--nested-dialogs,0)*-0.5rem)] transition-[scale,translate,opacity] duration-200 ease-out",
+          "after:pointer-events-none after:absolute after:inset-0 after:bg-black/25 after:opacity-0 after:backdrop-blur-[2px] after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100",
           "data-closed:fade-out-0 data-closed:zoom-out-95 data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-open:animate-in",
           className
         )}
