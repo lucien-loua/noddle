@@ -26,8 +26,21 @@ import { getStackDashboard } from "@/server/dashboard";
 import { getStackDeployments, triggerStackRollback } from "@/server/stacks";
 import { generateStackWebhook, getStackWebhook } from "@/server/webhooks";
 
+const STACK_TABS = ["logs", "history", "webhook"] as const;
+
+type StackTab = (typeof STACK_TABS)[number];
+
 interface DetailSearch {
   deployment?: string;
+  /** Active panel. Omitted when `logs` so the default URL stays clean. */
+  tab?: StackTab;
+}
+
+function isStackTab(value: unknown): value is StackTab {
+  return (
+    typeof value === "string" &&
+    (STACK_TABS as readonly string[]).includes(value)
+  );
 }
 
 export const Route = createFileRoute(
@@ -52,6 +65,7 @@ export const Route = createFileRoute(
   validateSearch: (search: Record<string, unknown>): DetailSearch => ({
     deployment:
       typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: isStackTab(search.tab) ? search.tab : undefined,
   }),
 });
 
@@ -102,7 +116,27 @@ function StackDetail() {
 
   const handleFocus = useCallback(
     (deploymentId: string) =>
-      navigate({ search: { deployment: deploymentId } }),
+      navigate({
+        replace: true,
+        search: (prev) => ({
+          ...prev,
+          deployment: deploymentId,
+          tab: undefined,
+        }),
+      }),
+    [navigate]
+  );
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      navigate({
+        replace: true,
+        search: (prev) => ({
+          ...prev,
+          tab: value === "logs" ? undefined : (value as StackTab),
+        }),
+      });
+    },
     [navigate]
   );
 
@@ -195,7 +229,11 @@ function StackDetail() {
           </Alert>
         ) : null}
 
-        <Tabs className="min-h-0 flex-1" defaultValue="logs">
+        <Tabs
+          className="min-h-0 flex-1"
+          onValueChange={handleTabChange}
+          value={search.tab ?? "logs"}
+        >
           <TabRail>
             <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>

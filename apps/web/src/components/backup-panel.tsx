@@ -6,6 +6,7 @@
 import { BACKUP_CRON_PRESETS } from "@noddle/shared/validation";
 import {
   ArchiveIcon,
+  CaretDownIcon,
   ClipboardTextIcon,
   PencilSimpleIcon,
   PlayIcon,
@@ -47,6 +48,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -184,16 +191,16 @@ export function BackupPanel({
 
   const rows = configs.data ?? [];
   const showHeaderActions = rows.length > 0 && canCreate;
+  const listReady = !(configs.isLoading || rows.length === 0);
 
   return (
     <div className="space-y-3">
-      <Frame variant="ghost">
-        <FrameHeader className="flex-row items-start justify-between gap-3">
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader className="flex-row items-center justify-between gap-3">
           <div className="min-w-0">
             <FrameTitle>Backups</FrameTitle>
             <FrameDescription>
-              Scheduled dumps of this database into an S3 destination. You can
-              keep several schedules — different buckets, prefixes, or cadences.
+              Dump this database to S3 on a schedule.
             </FrameDescription>
           </div>
           {showHeaderActions ? (
@@ -204,20 +211,30 @@ export function BackupPanel({
             />
           ) : null}
         </FrameHeader>
-        <FramePanel>
-          <ConfigsBody
-            canCreate={canCreate}
-            canRestore={canRestore}
-            configsLoading={configs.isLoading}
-            databaseName={databaseName}
-            onCreate={() => setEditor("new")}
-            onDeleted={invalidate}
-            onEdit={setEditor}
-            onHistory={setHistoryConfig}
-            onRestoreS3={() => setRestoreOpen(true)}
-            rows={rows}
-          />
-        </FramePanel>
+        {listReady ? (
+          rows.map((config) => (
+            <BackupConfigCard
+              canCreate={canCreate}
+              config={config}
+              key={config.id}
+              onDeleted={invalidate}
+              onEdit={() => setEditor(config)}
+              onHistory={() => setHistoryConfig(config)}
+            />
+          ))
+        ) : (
+          <FramePanel>
+            <ConfigsBody
+              canCreate={canCreate}
+              canRestore={canRestore}
+              configsLoading={configs.isLoading}
+              databaseName={databaseName}
+              onCreate={() => setEditor("new")}
+              onRestoreS3={() => setRestoreOpen(true)}
+              rows={rows}
+            />
+          </FramePanel>
+        )}
       </Frame>
 
       {editor ? (
@@ -300,18 +317,36 @@ function BackupActions({
   onCreate: () => void;
   onRestoreS3: () => void;
 }) {
-  return (
-    <div className="flex shrink-0 items-center gap-2">
-      <Button onClick={onCreate} size="sm">
+  if (!canRestore) {
+    return (
+      <Button onClick={onCreate} size="sm" variant="outline">
         <PlusIcon data-icon="inline-start" />
         Add schedule
       </Button>
-      {canRestore ? (
-        <Button onClick={onRestoreS3} size="sm" variant="outline">
-          Restore dump
-        </Button>
-      ) : null}
-    </div>
+    );
+  }
+
+  return (
+    <ButtonGroup>
+      <Button onClick={onCreate} size="sm" variant="outline">
+        <PlusIcon data-icon="inline-start" />
+        Add schedule
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button size="icon-sm" variant="outline">
+              <CaretDownIcon />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem onClick={onRestoreS3}>
+            Restore dump
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
   );
 }
 
@@ -321,9 +356,6 @@ function ConfigsBody({
   configsLoading,
   databaseName,
   onCreate,
-  onDeleted,
-  onEdit,
-  onHistory,
   onRestoreS3,
   rows,
 }: {
@@ -332,9 +364,6 @@ function ConfigsBody({
   configsLoading: boolean;
   databaseName: string;
   onCreate: () => void;
-  onDeleted: () => void;
-  onEdit: (config: BackupConfigRow) => void;
-  onHistory: (config: BackupConfigRow) => void;
   onRestoreS3: () => void;
   rows: BackupConfigRow[];
 }) {
@@ -378,20 +407,7 @@ function ConfigsBody({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-3">
-      {rows.map((config) => (
-        <BackupConfigCard
-          canCreate={canCreate}
-          config={config}
-          key={config.id}
-          onDeleted={onDeleted}
-          onEdit={() => onEdit(config)}
-          onHistory={() => onHistory(config)}
-        />
-      ))}
-    </div>
-  );
+  return null;
 }
 
 function BackupConfigCard({
@@ -445,78 +461,81 @@ function BackupConfigCard({
       : String(config.keepLatestCount);
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50 md:flex-row md:items-start md:justify-between">
-      <div className="flex w-full flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              config.enabled ? "bg-emerald-500" : "bg-red-500"
-            )}
-          />
-          <span className="text-muted-foreground text-xs">
-            {config.enabled ? "On" : "Paused"}
-          </span>
+    <FramePanel>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                config.enabled ? "bg-success" : "bg-destructive"
+              )}
+            />
+            <h2 className="font-semibold text-sm">
+              {config.enabled ? "Active" : "Inactive"}
+            </h2>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+            <Meta label="Destination" value={config.destinationName} />
+            <Meta label="Database" value={config.databaseName} />
+            <Meta label="Schedule" value={config.schedule} />
+            <Meta label="Prefix" value={config.prefix || "—"} />
+            <Meta label="Retention" value={keepLatest} />
+          </dl>
         </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-2">
-          <Meta label="Destination" value={config.destinationName} />
-          <Meta label="Database" value={config.databaseName} />
-          <Meta label="Schedule" value={config.schedule} />
-          <Meta label="Prefix" value={config.prefix || "—"} />
-          <Meta label="Retention" value={keepLatest} />
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            aria-label="Dump history"
+            onClick={onHistory}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <ClipboardTextIcon />
+          </Button>
+          {canCreate ? (
+            <Button
+              aria-label="Run backup now"
+              disabled={run.isPending}
+              onClick={() => run.mutate()}
+              size="icon-sm"
+              variant="ghost"
+            >
+              {run.isPending ? <Spinner /> : <PlayIcon />}
+            </Button>
+          ) : null}
+          {canCreate ? (
+            <Button
+              aria-label="Edit schedule"
+              onClick={onEdit}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <PencilSimpleIcon />
+            </Button>
+          ) : null}
+          {canCreate ? (
+            <Button
+              aria-label="Delete schedule"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+              size="icon-sm"
+              variant="ghost"
+            >
+              {remove.isPending ? <Spinner /> : <TrashIcon />}
+            </Button>
+          ) : null}
         </div>
       </div>
-      <div className="flex flex-row gap-1 md:flex-col">
-        <Button
-          aria-label="Dump history"
-          onClick={onHistory}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <ClipboardTextIcon />
-        </Button>
-        {canCreate ? (
-          <Button
-            aria-label="Run backup now"
-            disabled={run.isPending}
-            onClick={() => run.mutate()}
-            size="icon-sm"
-            variant="ghost"
-          >
-            {run.isPending ? <Spinner /> : <PlayIcon />}
-          </Button>
-        ) : null}
-        {canCreate ? (
-          <Button
-            aria-label="Edit schedule"
-            onClick={onEdit}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <PencilSimpleIcon />
-          </Button>
-        ) : null}
-        {canCreate ? (
-          <Button
-            aria-label="Delete schedule"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate()}
-            size="icon-sm"
-            variant="ghost"
-          >
-            {remove.isPending ? <Spinner /> : <TrashIcon />}
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    </FramePanel>
   );
 }
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-30">
-      <span className="font-medium text-muted-foreground text-sm">{label}</span>
-      <p className="mt-0.5 font-medium text-sm">{value}</p>
+    <div className="min-w-0">
+      <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+      <dd className="truncate font-medium text-sm">{value}</dd>
     </div>
   );
 }

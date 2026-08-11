@@ -60,8 +60,27 @@ import {
 import { triggerRollback } from "@/server/deployments";
 import { generateServiceWebhook, getServiceWebhook } from "@/server/webhooks";
 
+const SERVICE_TABS = [
+  "logs",
+  "history",
+  "env",
+  "resources",
+  "webhook",
+] as const;
+
+type ServiceTab = (typeof SERVICE_TABS)[number];
+
 interface DetailSearch {
   deployment?: string;
+  /** Active panel. Omitted when `logs` so the default URL stays clean. */
+  tab?: ServiceTab;
+}
+
+function isServiceTab(value: unknown): value is ServiceTab {
+  return (
+    typeof value === "string" &&
+    (SERVICE_TABS as readonly string[]).includes(value)
+  );
 }
 
 export const Route = createFileRoute(
@@ -86,6 +105,7 @@ export const Route = createFileRoute(
   validateSearch: (search: Record<string, unknown>): DetailSearch => ({
     deployment:
       typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: isServiceTab(search.tab) ? search.tab : undefined,
   }),
 });
 
@@ -305,7 +325,6 @@ function ServiceDetail() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
-  const [tab, setTab] = useState("logs");
 
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -314,6 +333,22 @@ function ServiceDetail() {
   const canReadEnvVar = useCan(known, "envVar", "read");
   const canShell = useCan(known, "container", "shell");
   const { openTerminal, terminal } = useTerminalDialog();
+
+  const requestedTab = search.tab ?? "logs";
+  const tab = requestedTab === "env" && !canReadEnvVar ? "logs" : requestedTab;
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      navigate({
+        replace: true,
+        search: (prev) => ({
+          ...prev,
+          tab: value === "logs" ? undefined : (value as ServiceTab),
+        }),
+      });
+    },
+    [navigate]
+  );
 
   const deployments = useQuery({
     queryFn: () => getDeployments({ data: { serviceId: service.id } }),
@@ -359,8 +394,14 @@ function ServiceDetail() {
 
   const handleFocus = useCallback(
     (deploymentId: string) => {
-      setTab("logs");
-      navigate({ search: { deployment: deploymentId } });
+      navigate({
+        replace: true,
+        search: (prev) => ({
+          ...prev,
+          deployment: deploymentId,
+          tab: undefined,
+        }),
+      });
     },
     [navigate]
   );
@@ -448,7 +489,11 @@ function ServiceDetail() {
           </Alert>
         ) : null}
 
-        <Tabs className="min-h-0 flex-1" onValueChange={setTab} value={tab}>
+        <Tabs
+          className="min-h-0 flex-1"
+          onValueChange={handleTabChange}
+          value={tab}
+        >
           {/* The rail scrolls within ITS OWN container: at 320px, "Webhook"
               would go off-screen and become unreachable — measured. */}
           <TabRail>

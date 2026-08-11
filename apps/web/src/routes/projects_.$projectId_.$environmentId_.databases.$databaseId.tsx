@@ -71,6 +71,29 @@ import { type DatabaseRow, getDatabase } from "@/server/databases";
 const TAB_PANEL =
   "scroll-fade no-scrollbar -mx-2 mt-3 min-h-0 flex-1 overflow-y-auto px-2 data-ending-style:hidden";
 
+const DATABASE_TABS = [
+  "general",
+  "env",
+  "logs",
+  "monitoring",
+  "backups",
+  "advanced",
+] as const;
+
+type DatabaseTab = (typeof DATABASE_TABS)[number];
+
+interface DetailSearch {
+  /** Active panel. Omitted when `general` so the default URL stays clean. */
+  tab?: DatabaseTab;
+}
+
+function isDatabaseTab(value: unknown): value is DatabaseTab {
+  return (
+    typeof value === "string" &&
+    (DATABASE_TABS as readonly string[]).includes(value)
+  );
+}
+
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/databases/$databaseId"
 )({
@@ -97,6 +120,9 @@ export const Route = createFileRoute(
       role: context.role,
     };
   },
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    tab: isDatabaseTab(search.tab) ? search.tab : undefined,
+  }),
 });
 
 /**
@@ -233,6 +259,7 @@ function DatabaseHeaderActions({
 function DatabaseDetail() {
   const { database, destinations, email, role } = Route.useLoaderData();
   const navigate = Route.useNavigate();
+  const search = Route.useSearch();
 
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -247,7 +274,22 @@ function DatabaseDetail() {
   const canShell = useCan(known, "container", "shell");
   const { openTerminal, terminal } = useTerminalDialog();
 
-  const [tab, setTab] = useState("general");
+  const requestedTab = search.tab ?? "general";
+  const tab =
+    (requestedTab === "env" && !canReadSecrets) ||
+    (requestedTab === "advanced" && !canEditConfig)
+      ? "general"
+      : requestedTab;
+
+  const handleTabChange = useCallback<(value: DatabaseTab) => void>(
+    (value) =>
+      navigate({
+        replace: true,
+        search: { tab: value === "general" ? undefined : value },
+      }),
+    [navigate]
+  );
+
   const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(
     null
   );
@@ -386,7 +428,11 @@ function DatabaseDetail() {
                            engine IS a container, so the same `docker stats`
               Advanced     resource limits — the ONLY block of this kind of
                            Advanced tab that has a use case here (measured) */}
-        <Tabs className="min-h-0 flex-1" onValueChange={setTab} value={tab}>
+        <Tabs
+          className="min-h-0 flex-1"
+          onValueChange={handleTabChange}
+          value={tab}
+        >
           <TabRail>
             <TabsTrigger value="general">General</TabsTrigger>
             {canReadSecrets ? (
