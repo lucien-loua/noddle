@@ -53,11 +53,10 @@ import {
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import {
   deleteRegistry,
-  getRegistries,
   type RegistryView,
   saveRegistry,
   testRegistry,
@@ -144,14 +143,13 @@ export function RegistriesList({
 }) {
   const queryClient = useQueryClient();
   const canEdit = useCan(role, "registry", "create");
-  const list = useQuery({
-    initialData: initial,
-    queryFn: () => getRegistries(),
-    queryKey: queryKeys.registries(),
-  });
+  const list = useQuery({ ...queries.registries(), initialData: initial });
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.registries() }),
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: queries.registries().queryKey,
+      }),
     [queryClient]
   );
 
@@ -360,7 +358,9 @@ export function RegistryDialog({
         type: "success",
       });
       onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.registries() });
+      await queryClient.invalidateQueries({
+        queryKey: queries.registries().queryKey,
+      });
     },
   });
 

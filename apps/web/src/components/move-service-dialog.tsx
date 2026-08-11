@@ -23,9 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import type { ProjectGroup } from "@/server/dashboard";
-import { getProjectEnvironments } from "@/server/environments";
 import { moveService } from "@/server/services";
 
 export function MoveServiceDialog({
@@ -56,9 +55,8 @@ export function MoveServiceDialog({
   const [error, setError] = useState<string | null>(null);
 
   const environmentsQuery = useQuery({
+    ...queries.projectEnvironments(projectId),
     enabled: open && Boolean(projectId),
-    queryFn: () => getProjectEnvironments({ data: { projectId } }),
-    queryKey: queryKeys.projectEnvironments(projectId),
   });
   const targetEnvironments = useMemo(
     () =>

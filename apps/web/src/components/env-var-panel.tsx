@@ -4,8 +4,8 @@ import { type DraftVar, EnvVarTable } from "@/components/env-var-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { queryKeys } from "@/lib/query-keys";
-import { getEnvVars, saveEnvVars } from "@/server/env-vars";
+import { queries } from "@/lib/queries";
+import { saveEnvVars } from "@/server/env-vars";
 
 export function EnvVarPanel({
   databaseId,
@@ -24,14 +24,8 @@ export function EnvVarPanel({
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const target = serviceId ? { serviceId } : { databaseId };
-  // The identifier alone is enough as a key: a service and a database can't
-  // share theirs.
-  const key = serviceId ?? databaseId ?? "";
 
-  const vars = useQuery({
-    queryFn: () => getEnvVars({ data: target }),
-    queryKey: queryKeys.envVars(key),
-  });
+  const vars = useQuery(queries.envVars(target));
 
   const save = useMutation({
     mutationFn: (draft: DraftVar[]) =>
@@ -48,7 +42,9 @@ export function EnvVarPanel({
     onError: (e: Error) => setError(errorMessage(e, "could not save")),
     onSuccess: async () => {
       setError(null);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.envVars(key) });
+      await queryClient.invalidateQueries({
+        queryKey: queries.envVars(target).queryKey,
+      });
     },
   });
 

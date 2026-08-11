@@ -47,14 +47,9 @@ import {
 } from "@/components/ui/table";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  createSshKey,
-  deleteSshKey,
-  getSshKeys,
-  type SshKeyView,
-} from "@/server/ssh-keys";
+import { createSshKey, deleteSshKey, type SshKeyView } from "@/server/ssh-keys";
 
 /** The algorithm, READ off the public key rather than stored:
  *  `ssh-ed25519 …` and `ssh-rsa …` already carry it. One more column
@@ -191,14 +186,11 @@ export function SshKeysList({
   role: RoleName | null;
 }) {
   const queryClient = useQueryClient();
-  const keys = useQuery({
-    initialData: initial,
-    queryFn: () => getSshKeys(),
-    queryKey: queryKeys.sshKeys(),
-  });
+  const keys = useQuery({ ...queries.sshKeys(), initialData: initial });
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.sshKeys() }),
+    () =>
+      queryClient.invalidateQueries({ queryKey: queries.sshKeys().queryKey }),
     [queryClient]
   );
 
@@ -310,7 +302,9 @@ export function AddSshKeyDialog({
       }),
     onSuccess: async (result) => {
       setCreated(result.publicKey);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.sshKeys() });
+      await queryClient.invalidateQueries({
+        queryKey: queries.sshKeys().queryKey,
+      });
     },
   });
 

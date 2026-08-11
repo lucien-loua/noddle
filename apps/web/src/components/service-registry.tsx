@@ -10,9 +10,9 @@ import {
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { getRegistryOptions, setServiceRegistry } from "@/server/registries";
+import { setServiceRegistry } from "@/server/registries";
 
 /** What `null` means in the selector: a value, not an absence. */
 const BUILT_IN = "built-in";
@@ -34,9 +34,8 @@ export function ServiceRegistry({
   // lacks the permission — the `errorComponent` pitfall already paid for
   // on /audit.
   const options = useQuery({
+    ...queries.registryOptions(),
     enabled: canEdit,
-    queryFn: () => getRegistryOptions(),
-    queryKey: queryKeys.registryOptions(),
   });
 
   const save = useMutation({

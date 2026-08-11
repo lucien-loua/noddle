@@ -38,9 +38,8 @@ import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
-import { addServer, getServers, type ServerView } from "@/server/servers";
-import { getSshKeys } from "@/server/ssh-keys";
+import { queries } from "@/lib/queries";
+import { addServer, type ServerView } from "@/server/servers";
 
 /** The badge and the dot share the same vocabulary as services:
  *  "connected" reads like "running", with no new color code to learn for
@@ -139,16 +138,16 @@ export function ServersList({
 }) {
   const queryClient = useQueryClient();
   const serversQuery = useQuery({
+    ...queries.servers(),
     initialData: initial,
-    queryFn: () => getServers(),
-    queryKey: queryKeys.servers(),
     refetchInterval: (query) =>
       query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
   });
   const servers = serversQuery.data ?? initial;
 
   const handleRemoved = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.servers() }),
+    () =>
+      queryClient.invalidateQueries({ queryKey: queries.servers().queryKey }),
     [queryClient]
   );
 
@@ -215,10 +214,7 @@ export function AddServerDialog({
   // route: the dialog is the only one that needs them, and it must see
   // them again after a round trip to /ssh-keys without reloading the
   // page.
-  const keys = useQuery({
-    queryFn: () => getSshKeys(),
-    queryKey: queryKeys.sshKeys(),
-  });
+  const keys = useQuery(queries.sshKeys());
   const available = keys.data ?? [];
 
   const add = useMutation({
@@ -234,7 +230,9 @@ export function AddServerDialog({
       }),
     onSuccess: async () => {
       onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.servers() });
+      await queryClient.invalidateQueries({
+        queryKey: queries.servers().queryKey,
+      });
     },
   });
 

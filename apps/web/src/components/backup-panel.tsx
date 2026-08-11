@@ -110,7 +110,7 @@ import {
   errorMessage,
   relativeTime,
 } from "@/lib/format";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   type BackupConfigRow,
@@ -120,9 +120,6 @@ import {
   type DestinationRow,
   deleteBackup,
   deleteBackupConfig,
-  getBackups,
-  listBackupConfigs,
-  listBackupObjects,
   triggerBackup,
   updateBackupConfig,
 } from "@/server/backups";
@@ -167,10 +164,7 @@ export function BackupPanel({
   onRestore,
 }: Props) {
   const queryClient = useQueryClient();
-  const configs = useQuery({
-    queryFn: () => listBackupConfigs({ data: { databaseId } }),
-    queryKey: queryKeys.backupConfigs(databaseId),
-  });
+  const configs = useQuery(queries.backupConfigs(databaseId));
 
   const [editor, setEditor] = useState<BackupConfigRow | "new" | null>(null);
   const [historyConfig, setHistoryConfig] = useState<BackupConfigRow | null>(
@@ -181,7 +175,7 @@ export function BackupPanel({
   const invalidate = useCallback(() => {
     queryClient
       .invalidateQueries({
-        queryKey: queryKeys.backupConfigs(databaseId),
+        queryKey: queries.backupConfigs(databaseId).queryKey,
       })
       .catch(() => undefined);
   }, [databaseId, queryClient]);
@@ -437,7 +431,7 @@ function BackupConfigCard({
       toast.add({ title: "Backup queued", type: "success" });
       queryClient
         .invalidateQueries({
-          queryKey: queryKeys.backups(config.databaseId, config.id),
+          queryKey: queries.backups(config.databaseId, config.id).queryKey,
         })
         .catch(() => undefined);
     },
@@ -1034,8 +1028,7 @@ function BackupHistoryDialog({
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<BackupRow | null>(null);
   const backups = useQuery({
-    queryFn: () => getBackups({ data: { configId: config.id, databaseId } }),
-    queryKey: queryKeys.backups(databaseId, config.id),
+    ...queries.backups(databaseId, config.id),
     refetchInterval: (query) =>
       query.state.data?.some(
         (b) => b.status === "queued" || b.status === "running"
@@ -1048,7 +1041,7 @@ function BackupHistoryDialog({
     mutationFn: (backupId: string) => deleteBackup({ data: { backupId } }),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: queryKeys.backups(databaseId, config.id),
+        queryKey: queries.backups(databaseId, config.id).queryKey,
       }),
   });
 
@@ -1185,9 +1178,8 @@ function RestoreFromS3Dialog({
     firstDestination ? firstDestination.id : ""
   );
   const objects = useQuery({
+    ...queries.backupObjects(destinationId),
     enabled: open && Boolean(destinationId),
-    queryFn: () => listBackupObjects({ data: { destinationId } }),
-    queryKey: queryKeys.backupObjects(destinationId),
   });
 
   const selected = destinations.find((d) => d.id === destinationId) ?? null;

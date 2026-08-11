@@ -54,12 +54,11 @@ import {
   type RoleName,
   roles,
 } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import {
   type AccountRow,
   createAccount,
-  getAccounts,
   removeAccount,
   setAccountRole,
 } from "@/server/accounts";
@@ -86,14 +85,11 @@ export function AccountsPanel({
   const canCreate = useCan(known, "user", "create");
   const queryClient = useQueryClient();
 
-  const accounts = useQuery({
-    initialData: initial,
-    queryFn: () => getAccounts(),
-    queryKey: queryKeys.accounts(),
-  });
+  const accounts = useQuery({ ...queries.accounts(), initialData: initial });
 
   const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.accounts() }),
+    () =>
+      queryClient.invalidateQueries({ queryKey: queries.accounts().queryKey }),
     [queryClient]
   );
 

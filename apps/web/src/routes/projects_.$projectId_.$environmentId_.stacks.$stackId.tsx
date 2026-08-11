@@ -20,11 +20,11 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { WebhookPanel } from "@/components/webhook-panel";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getStackDashboard } from "@/server/dashboard";
-import { getStackDeployments, triggerStackRollback } from "@/server/stacks";
+import { triggerStackRollback } from "@/server/stacks";
 import { generateStackWebhook, getStackWebhook } from "@/server/webhooks";
 
 const STACK_TABS = ["logs", "history", "webhook"] as const;
@@ -92,17 +92,14 @@ function StackDetail() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const deployments = useQuery({
-    queryFn: () => getStackDeployments({ data: { stackId: stack.id } }),
-    queryKey: queryKeys.stackDeployments(stack.id),
-  });
+  const deployments = useQuery(queries.stackDeployments(stack.id));
 
   const rollback = useMutation({
     mutationFn: (sourceDeploymentId: string) =>
       triggerStackRollback({ data: { sourceDeploymentId, stackId: stack.id } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.stackDeployments(stack.id),
+        queryKey: queries.stackDeployments(stack.id).queryKey,
       });
       await router.invalidate();
     },
@@ -110,7 +107,7 @@ function StackDetail() {
 
   const handleEnd = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: queryKeys.stackDeployments(stack.id),
+      queryKey: queries.stackDeployments(stack.id).queryKey,
     });
     await router.invalidate();
   }, [queryClient, router, stack.id]);

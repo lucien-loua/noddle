@@ -42,13 +42,12 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
-import { queryKeys } from "@/lib/query-keys";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import {
   addChannel,
   type ChannelRow,
   deleteChannel,
-  getChannels,
   testChannel,
   updateChannel,
 } from "@/server/notifications";
@@ -83,13 +82,13 @@ export function NotificationChannels({
   const queryClient = useQueryClient();
 
   const channels = useQuery({
+    ...queries.channels(),
     initialData: initial,
-    queryFn: () => getChannels(),
-    queryKey: queryKeys.channels(),
   });
 
   const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.channels() }),
+    () =>
+      queryClient.invalidateQueries({ queryKey: queries.channels().queryKey }),
     [queryClient]
   );
 

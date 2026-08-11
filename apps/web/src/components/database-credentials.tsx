@@ -20,8 +20,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
-import { queryKeys } from "@/lib/query-keys";
-import { getDatabaseCredentials } from "@/server/databases";
+import { queries } from "@/lib/queries";
 
 export function DatabaseCredentials({
   canChangePassword,
@@ -49,9 +48,8 @@ export function DatabaseCredentials({
   const openChange = useCallback(() => setChanging(true), []);
 
   const credentials = useQuery({
+    ...queries.databaseCredentials(databaseId),
     enabled: canRead,
-    queryFn: () => getDatabaseCredentials({ data: { databaseId } }),
-    queryKey: queryKeys.databaseCredentials(databaseId),
   });
 
   if (!canRead) {

@@ -10,8 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { queryKeys } from "@/lib/query-keys";
-import { getDatabaseMetrics } from "@/server/metrics";
+import { queries } from "@/lib/queries";
 
 const WINDOW_LABEL: Record<1 | 6 | 24, string> = {
   1: "1h",
@@ -28,14 +27,7 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
   const handleWindowHours24 = useCallback(() => setWindowHours(24), []);
 
   const metrics = useQuery({
-    queryFn: () =>
-      getDatabaseMetrics({
-        data: {
-          databaseId,
-          windowHours: ({ 1: "1", 6: "6", 24: "24" } as const)[windowHours],
-        },
-      }),
-    queryKey: queryKeys.databaseMetrics(databaseId, windowHours),
+    ...queries.databaseMetrics(databaseId, windowHours),
     refetchInterval: 30_000,
   });
 

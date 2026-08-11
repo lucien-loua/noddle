@@ -29,11 +29,8 @@ import {
 } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { queryKeys } from "@/lib/query-keys";
-import {
-  getDatabaseCredentials,
-  setDatabaseExternalPort,
-} from "@/server/databases";
+import { queries } from "@/lib/queries";
+import { setDatabaseExternalPort } from "@/server/databases";
 
 export function DatabaseExternal({
   canEdit,
@@ -66,9 +63,8 @@ export function DatabaseExternal({
   // there because it belongs to this section — it's this card's port that
   // makes it exist.
   const credentials = useQuery({
+    ...queries.databaseCredentials(databaseId),
     enabled: canReadSecrets && externalPort !== null,
-    queryFn: () => getDatabaseCredentials({ data: { databaseId } }),
-    queryKey: queryKeys.databaseCredentials(databaseId),
   });
 
   const save = useMutation({
