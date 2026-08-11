@@ -36,9 +36,11 @@ import {
 } from "#registry";
 import {
   BUILD_ROOT,
+  type BuildOptions,
   connectForDeploy,
   connectTo,
   type DeployContext,
+  type RouteOptions,
   type ServerRow,
 } from "#runtime-context";
 
@@ -130,6 +132,8 @@ function authFor(
 
 export async function runDeploy(
   ctx: DeployContext,
+  route: RouteOptions,
+  build: BuildOptions,
   data: { deploymentId: string }
 ): Promise<void> {
   const { db } = ctx;
@@ -159,8 +163,8 @@ export async function runDeploy(
 
   const sink = await createLogSink({
     deploymentId: deployment.id,
-    onChunk: (c) => ctx.onLog?.(deployment.id, c),
-    root: ctx.logRoot,
+    onChunk: (c) => build.onLog?.(deployment.id, c),
+    root: build.logRoot,
   });
   const stream = { onStderr: sink.write, onStdout: sink.write };
 
@@ -257,19 +261,19 @@ export async function runDeploy(
     const managerDocker = sameConnection
       ? buildDocker
       : dockerClient(managerClient);
-    await ensureOverlayNetwork(managerDocker, ctx.networkName);
+    await ensureOverlayNetwork(managerDocker, route.networkName);
 
     sink.write("▸ Swarm rollout\n");
     const outcome = await deployService(managerDocker, {
       env,
       image: imageTag,
       labels: routeLabels({
-        certResolver: ctx.certResolver,
+        certResolver: route.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
         serviceName: swarmName,
       }),
-      networkName: ctx.networkName,
+      networkName: route.networkName,
       placementNodeId,
       port: service.port,
       registryAuth: authFor(registry),
@@ -373,6 +377,7 @@ export async function runDeploy(
 /** Redeploys an already-built image — rollback, or watch-triggered recovery. */
 export async function redeployImage(
   ctx: DeployContext,
+  route: RouteOptions,
   opts: {
     serviceId: string;
     imageTag: string;
@@ -464,12 +469,12 @@ export async function redeployImage(
       env,
       image: opts.imageTag,
       labels: routeLabels({
-        certResolver: ctx.certResolver,
+        certResolver: route.certResolver,
         domain: service.domain ?? undefined,
         port: service.port,
         serviceName: swarmName,
       }),
-      networkName: ctx.networkName,
+      networkName: route.networkName,
       placementNodeId,
       port: service.port,
       registryAuth: authFor(registry),

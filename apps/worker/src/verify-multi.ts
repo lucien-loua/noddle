@@ -108,9 +108,9 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-multi-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-multi-logs" };
 
   console.log("    (provisioning the worker — Docker, join, nixpacks…)");
   await provisionServer(ctx, workerRow.id);
@@ -209,7 +209,7 @@ try {
   }
 
   console.log("    (build on the worker, Swarm switchover via the manager…)");
-  await runDeploy(ctx, { deploymentId: dep.id });
+  await runDeploy(ctx, route, build, { deploymentId: dep.id });
 
   const final = await db.query.deployments.findFirst({
     where: eq(deployments.id, dep.id),
@@ -283,7 +283,7 @@ try {
   // for the placement constraint, without rebuilding.
   if (final?.imageTag) {
     const { redeployImage } = await import("#deploy");
-    await redeployImage(ctx, {
+    await redeployImage(ctx, route, {
       imageTag: final.imageTag,
       serviceId: svc.id,
       trigger: "rollback",

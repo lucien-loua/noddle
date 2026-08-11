@@ -32,7 +32,11 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { desc, eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
-import type { DeployContext } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+} from "#runtime-context";
 import { sweepWatch } from "#sweep";
 import { seedSshKey } from "#verify-seed";
 
@@ -138,12 +142,9 @@ try {
     .returning();
 
   const logRoot = await mkdtemp(join(tmpdir(), "noddle-watch-logs-"));
-  const ctx: DeployContext = {
-    appKey,
-    db,
-    logRoot,
-    networkName: "noddle-public",
-  };
+  const ctx: DeployContext = { appKey, db };
+  const route: RouteOptions = { networkName: "noddle-public" };
+  const build: BuildOptions = { logRoot };
 
   // ── deployment 1: healthy ───────────────────────────────────────────────
   step("deploying the healthy version (build, a few minutes)…");
@@ -151,7 +152,7 @@ try {
     .insert(deployments)
     .values({ serviceId: svc?.id ?? "", status: "queued", trigger: "manual" })
     .returning();
-  await runDeploy(ctx, { deploymentId: d1?.id ?? "" });
+  await runDeploy(ctx, route, build, { deploymentId: d1?.id ?? "" });
 
   const dep1 = await db.query.deployments.findFirst({
     where: eq(deployments.id, d1?.id ?? ""),
@@ -174,7 +175,7 @@ try {
     .insert(deployments)
     .values({ serviceId: svc?.id ?? "", status: "queued", trigger: "manual" })
     .returning();
-  await runDeploy(ctx, { deploymentId: d2?.id ?? "" });
+  await runDeploy(ctx, route, build, { deploymentId: d2?.id ?? "" });
 
   const dep2 = await db.query.deployments.findFirst({
     where: eq(deployments.id, d2?.id ?? ""),
@@ -201,7 +202,7 @@ try {
   while (Date.now() < deadline && !reverted) {
     // biome-ignore lint/performance/noAwaitInLoops: intentional polling
     await new Promise((r) => setTimeout(r, 20_000));
-    const result = await sweepWatch(ctx);
+    const result = await sweepWatch(ctx, route);
     if (result.reverted.length > 0) {
       reverted = true;
       ok("monitoring: loop detected and revert triggered");

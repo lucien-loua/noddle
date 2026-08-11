@@ -160,16 +160,16 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-lifecycle-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-lifecycle-logs" };
 
   const [dep] = await db
     .insert(deployments)
     .values({ serviceId: svc.id, status: "queued", trigger: "manual" })
     .returning();
   console.log("    (initial build — a few minutes…)");
-  await runDeploy(ctx, { deploymentId: dep?.id ?? "" });
+  await runDeploy(ctx, route, build, { deploymentId: dep?.id ?? "" });
 
   const started = await waitForRunningTasks(docker, swarmName, 1);
   if (started.length === 1) {

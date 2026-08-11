@@ -3,7 +3,7 @@ import type {
   JobKind,
   PayloadOf,
 } from "@noddle/deploy-contract";
-import type { DeployContext } from "#runtime-context";
+import type { WorkerDeps } from "#runtime-context";
 
 /**
  * Every worker module the table reaches, and the only place its specifier
@@ -38,79 +38,89 @@ export const handlerModules = {
   "teardown-stack": () => import("#teardown-stack"),
 };
 
+/**
+ * `deps.route` and `deps.build` sit next to `deps.ctx` rather than inside
+ * it: only `deploy` and `compose` read them (`database` also reads `route`,
+ * for the overlay network a provisioned database attaches to). Nineteen of
+ * the twenty-three modules below never see either — see `RouteOptions` and
+ * `BuildOptions` in `#runtime-context` for why they were pulled out of
+ * `DeployContext`.
+ */
 type Handlers = {
-  [K in JobKind]: (ctx: DeployContext, data: PayloadOf<K>) => Promise<void>;
+  [K in JobKind]: (deps: WorkerDeps, data: PayloadOf<K>) => Promise<void>;
 };
 
 export type { Handlers };
 
 export const handlers: Handlers = {
-  backup: async (ctx, data) => {
+  backup: async ({ ctx }, data) => {
     const { runBackup } = await handlerModules.backup();
     await runBackup(ctx, data.backupId);
   },
-  "change-database-password": async (ctx, data) => {
+  "change-database-password": async ({ ctx }, data) => {
     const { changeDatabasePassword } =
       await handlerModules["database-password"]();
     await changeDatabasePassword(ctx, data.databaseId, data.password);
   },
-  "database-lifecycle": async (ctx, data) => {
+  "database-lifecycle": async ({ ctx }, data) => {
     const { runDatabaseLifecycle } = await handlerModules.lifecycle();
     await runDatabaseLifecycle(ctx, data.databaseId, data.action);
   },
-  "delete-database": async (ctx, data) => {
+  "delete-database": async ({ ctx }, data) => {
     const { runDatabaseTeardown } = await handlerModules["teardown-stack"]();
     await runDatabaseTeardown(ctx, data.databaseId);
   },
-  "delete-server": async (ctx, data) => {
+  "delete-server": async ({ ctx }, data) => {
     const { runServerTeardown } = await handlerModules["teardown-server"]();
     await runServerTeardown(ctx, data.serverId);
   },
-  "delete-service": async (ctx, data) => {
+  "delete-service": async ({ ctx }, data) => {
     const { runServiceTeardown } = await handlerModules.teardown();
     await runServiceTeardown(ctx, data.serviceId);
   },
-  "delete-stack": async (ctx, data) => {
+  "delete-stack": async ({ ctx }, data) => {
     const { runStackTeardown } = await handlerModules["teardown-stack"]();
     await runStackTeardown(ctx, data.stackId);
   },
-  deploy: async (ctx, data) => {
+  deploy: async ({ build, ctx, route }, data) => {
     const { runDeploy } = await handlerModules.deploy();
-    await runDeploy(ctx, data);
+    await runDeploy(ctx, route, build, data);
   },
-  "deploy-stack": async (ctx, data) => {
+  "deploy-stack": async ({ build, ctx, route }, data) => {
     const { runStackDeploy } = await handlerModules.compose();
-    await runStackDeploy(ctx, { stackDeploymentId: data.stackDeploymentId });
+    await runStackDeploy(ctx, route, build, {
+      stackDeploymentId: data.stackDeploymentId,
+    });
   },
-  lifecycle: async (ctx, data) => {
+  lifecycle: async ({ ctx }, data) => {
     const { runLifecycle } = await handlerModules.lifecycle();
     await runLifecycle(ctx, data.serviceId, data.action);
   },
-  "provision-database": async (ctx, data) => {
+  "provision-database": async ({ ctx, route }, data) => {
     const { provisionDatabase } = await handlerModules.database();
-    await provisionDatabase(ctx, data.databaseId);
+    await provisionDatabase(ctx, route, data.databaseId);
   },
-  "provision-server": async (ctx, data) => {
+  "provision-server": async ({ ctx }, data) => {
     const { provisionServer } = await handlerModules.provision();
     await provisionServer(ctx, data.serverId);
   },
-  "prune-docker": async (ctx) => {
+  "prune-docker": async ({ ctx }) => {
     const { pruneDocker } = await handlerModules.prune();
     await pruneDocker(ctx);
   },
-  "prune-registry": async (ctx) => {
+  "prune-registry": async ({ ctx }) => {
     const { sweepRegistry } = await handlerModules["registry-sweep"]();
     await sweepRegistry(ctx);
   },
-  "rebuild-database": async (ctx, data) => {
+  "rebuild-database": async ({ ctx, route }, data) => {
     const { rebuildDatabase } = await handlerModules.database();
-    await rebuildDatabase(ctx, data.databaseId);
+    await rebuildDatabase(ctx, route, data.databaseId);
   },
-  "restart-swarm-service": async (ctx, data) => {
+  "restart-swarm-service": async ({ ctx }, data) => {
     const { restartSwarmServiceByName } = await handlerModules.containers();
     await restartSwarmServiceByName(ctx, data.serviceName);
   },
-  restore: async (ctx, data) => {
+  restore: async ({ ctx }, data) => {
     const { runRestore } = await handlerModules.restore();
     await runRestore(ctx, {
       backupId: data.backupId,
@@ -119,17 +129,17 @@ export const handlers: Handlers = {
       objectKey: data.objectKey,
     });
   },
-  rollback: async (ctx, data) => {
+  rollback: async ({ ctx, route }, data) => {
     const { redeployImage } = await handlerModules.deploy();
-    await redeployImage(ctx, {
+    await redeployImage(ctx, route, {
       imageTag: data.imageTag,
       serviceId: data.serviceId,
       trigger: "rollback",
     });
   },
-  "rollback-stack": async (ctx, data) => {
+  "rollback-stack": async ({ ctx, route }, data) => {
     const { redeployStack } = await handlerModules.compose();
-    await redeployStack(ctx, {
+    await redeployStack(ctx, route, {
       sourceDeploymentId: data.sourceDeploymentId,
       stackId: data.stackId,
       trigger: "rollback",
@@ -143,10 +153,10 @@ export const handlers: Handlers = {
  */
 export function dispatch(
   table: Handlers,
-  ctx: DeployContext,
+  deps: WorkerDeps,
   data: DeployJobData
 ): Promise<void> {
   return (
-    table[data.kind] as (c: DeployContext, d: DeployJobData) => Promise<void>
-  )(ctx, data);
+    table[data.kind] as (d: WorkerDeps, j: DeployJobData) => Promise<void>
+  )(deps, data);
 }

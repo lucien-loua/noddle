@@ -15,7 +15,12 @@ import IORedis from "ioredis";
 import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
 import { loadRegistryConfig } from "#registry";
-import type { DeployContext } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+  WorkerDeps,
+} from "#runtime-context";
 import { schedules } from "#schedules";
 
 function required(name: string): string {
@@ -38,19 +43,27 @@ const logBus = createLogBus(connection);
 
 const ctx: DeployContext = {
   appKey: loadAppKey(process.env.APP_KEY),
-  // Set by the installer ONLY when a domain is configured: without a name,
-  // no certificate is possible and applications go out over HTTP.
-  certResolver: process.env.CERT_RESOLVER || undefined,
   db: createDatabase({ url: required("DATABASE_URL") }),
-  logRoot: process.env.LOG_ROOT ?? "/var/lib/noddle/logs",
-  networkName: process.env.TRAEFIK_NETWORK ?? "noddle-public",
-  onLog: (deploymentId, chunk) =>
-    logBus.publish(deploymentId, { data: chunk, type: "chunk" }),
   // Absent on an installation whose stack doesn't have the registry yet: the
   // worker then falls back exactly to the previous behavior, local build and
   // pinned service. This is what makes an update safe.
   registry: loadRegistryConfig(),
 };
+
+const route: RouteOptions = {
+  // Set by the installer ONLY when a domain is configured: without a name,
+  // no certificate is possible and applications go out over HTTP.
+  certResolver: process.env.CERT_RESOLVER || undefined,
+  networkName: process.env.TRAEFIK_NETWORK ?? "noddle-public",
+};
+
+const build: BuildOptions = {
+  logRoot: process.env.LOG_ROOT ?? "/var/lib/noddle/logs",
+  onLog: (deploymentId: string, chunk: string) =>
+    logBus.publish(deploymentId, { data: chunk, type: "chunk" }),
+};
+
+const deps: WorkerDeps = { build, ctx, route };
 
 const { enqueue: enqueueDeploy, queue: deployQueue } =
   createDeployQueue(connection);
@@ -104,7 +117,7 @@ const deployWorker = new Worker<DeployJobData>(
   async (job) => {
     const data = parseDeployJob(job.data);
     try {
-      await dispatch(handlers, ctx, data);
+      await dispatch(handlers, deps, data);
     } finally {
       // Even on failure: an open tab must see the stream close, not sit
       // waiting forever. A server provisioning has no associated
@@ -140,7 +153,7 @@ const running = await Promise.all(
   schedules.map((spec) =>
     startSchedule(spec, {
       connection,
-      deps: { ctx, enqueue: enqueueDeploy },
+      deps: { ctx, enqueue: enqueueDeploy, route },
       onFailed: (queue, message) =>
         process.stderr.write(`${queue}: ${message}\n`),
     })

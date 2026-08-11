@@ -27,7 +27,11 @@ import {
   waitForRunningTask,
 } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import { connectForDeploy, type DeployContext } from "#runtime-context";
+import {
+  connectForDeploy,
+  type DeployContext,
+  type RouteOptions,
+} from "#runtime-context";
 
 // Docker 29 responds with "volume <name> not found", the older CLI with
 // "no such volume" — neither alone is enough. Duplicated from
@@ -466,6 +470,7 @@ function databaseServiceSpec(opts: {
 
 export async function provisionDatabase(
   ctx: DeployContext,
+  route: RouteOptions,
   databaseId: string
 ): Promise<void> {
   const database = await ctx.db.query.databases.findFirst({
@@ -534,7 +539,7 @@ export async function provisionDatabase(
     const managerDocker = sameConnection
       ? buildDocker
       : dockerClient(managerClient);
-    await ensureOverlayNetwork(managerDocker, ctx.networkName);
+    await ensureOverlayNetwork(managerDocker, route.networkName);
 
     const existing = await findServiceByName(managerDocker, name);
     // Find-or-create, so calling it on an existing database replaces
@@ -557,7 +562,7 @@ export async function provisionDatabase(
       // Advanced → Configuration), provision applies that tag as-is.
       image: database.image ?? spec.image,
       name,
-      networkName: ctx.networkName,
+      networkName: route.networkName,
       placementNodeId,
       replicas: database.replicas,
       // Read as-is: the screen has already converted cores and megabytes
@@ -645,6 +650,7 @@ export async function provisionDatabase(
  */
 export async function rebuildDatabase(
   ctx: DeployContext,
+  route: RouteOptions,
   databaseId: string
 ): Promise<void> {
   const database = await ctx.db.query.databases.findFirst({
@@ -711,5 +717,5 @@ export async function rebuildDatabase(
   // OUTSIDE the SSH block above: `provisionDatabase` opens its OWN
   // connections. The two responsibilities stay separate — this function must
   // remain correct on the day something else calls one without the other.
-  await provisionDatabase(ctx, databaseId);
+  await provisionDatabase(ctx, route, databaseId);
 }

@@ -122,9 +122,9 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-stack-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-stack-logs" };
 
   managerSsh = await connect({ host: STACK_HOST, privateKey, user: USER });
   // By PREFIX, never by exact name: a stack's Swarm name now carries 8 hex
@@ -193,7 +193,7 @@ try {
   }
 
   console.log("    (v1: build web, image redis, docker stack deploy…)");
-  await runStackDeploy(ctx, { stackDeploymentId: dep1.id });
+  await runStackDeploy(ctx, route, build, { stackDeploymentId: dep1.id });
 
   const dep1Final = await db.query.stackDeployments.findFirst({
     where: eq(stackDeployments.id, dep1.id),
@@ -285,7 +285,7 @@ try {
     throw new Error("v2 deployment insertion failed");
   }
   console.log("    (v2: new content…)");
-  await runStackDeploy(ctx, { stackDeploymentId: dep2.id });
+  await runStackDeploy(ctx, route, build, { stackDeploymentId: dep2.id });
 
   const body2 = await httpOnce();
   if (body2.includes("compose bonjour deux")) {
@@ -296,7 +296,7 @@ try {
 
   // ── rollback to v1, WITHOUT repo or build ──────────────────────────────────
   console.log("    (rollback to v1 — replays stored composeSource + tags…)");
-  const rollbackId = await redeployStack(ctx, {
+  const rollbackId = await redeployStack(ctx, route, {
     sourceDeploymentId: dep1.id,
     stackId: stack.id,
     trigger: "rollback",

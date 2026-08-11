@@ -142,9 +142,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-multi-dest-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   // ── The refusal: two destinations, no choice ────────────────────────────
   //
@@ -217,7 +216,7 @@ try {
     })
     .where(eq(databases.id, database.id));
 
-  await provisionDatabase(ctx, database.id);
+  await provisionDatabase(ctx, route, database.id);
   ok("Postgres database provisioned on the VM");
 
   const [row] = await db

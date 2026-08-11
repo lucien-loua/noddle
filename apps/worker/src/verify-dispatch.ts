@@ -6,7 +6,7 @@ import type {
 } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/shared/verify-harness";
 import { dispatch, type Handlers, handlerModules } from "#handlers";
-import type { DeployContext } from "#runtime-context";
+import type { WorkerDeps } from "#runtime-context";
 
 const ID = "11111111-1111-4111-8111-111111111111";
 
@@ -55,7 +55,7 @@ const samples: { [K in JobKind]: PayloadOf<K> } = {
 
 await runVerify("worker dispatch", async () => {
   await suite("each kind fires only its spy", async () => {
-    const ctx = {} as DeployContext;
+    const deps = {} as WorkerDeps;
     const entries = Object.entries(samples) as [JobKind, DeployJobData][];
 
     await Promise.all(
@@ -71,7 +71,7 @@ await runVerify("worker dispatch", async () => {
           ])
         ) as never;
 
-        await dispatch(spies, ctx, sample);
+        await dispatch(spies, deps, sample);
         check(
           `${kind} dispatches to ${kind}`,
           fired.length === 1 && fired[0] === kind,

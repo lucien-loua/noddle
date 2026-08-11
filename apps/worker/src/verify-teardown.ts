@@ -135,9 +135,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-teardown-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   // ── a DATABASE, really provisioned ───────────────────────────────────────
   const password = randomBytes(24).toString("hex");
@@ -170,7 +169,7 @@ try {
     .where(eq(databases.id, row.id));
 
   console.log("    (provisioning the database…)");
-  await provisionDatabase(ctx, row.id);
+  await provisionDatabase(ctx, route, row.id);
 
   if (
     (await serviceExists(ssh, dbSwarmName)) &&

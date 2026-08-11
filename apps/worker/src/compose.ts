@@ -40,8 +40,10 @@ import { stringify as stringifyYaml } from "yaml";
 import { createLogSink } from "#log-sink";
 import {
   BUILD_ROOT,
+  type BuildOptions,
   connectForDeploy,
   type DeployContext,
+  type RouteOptions,
 } from "#runtime-context";
 
 /** Relative file path, with no escape from the cloned directory. */
@@ -93,7 +95,7 @@ interface DeployStackResult {
  * (`waitForRunningTask` on a creation, `readUpdateState` always).
  */
 async function writeAndDeployStack(
-  ctx: DeployContext,
+  route: RouteOptions,
   opts: {
     doc: ComposeFile;
     managerClient: SshClient;
@@ -107,7 +109,7 @@ async function writeAndDeployStack(
     onStdout: () => undefined,
   };
   const managerDocker = dockerClient(managerClient);
-  await ensureOverlayNetwork(managerDocker, ctx.networkName);
+  await ensureOverlayNetwork(managerDocker, route.networkName);
 
   const serviceKeys = Object.keys(doc.services ?? {});
 
@@ -223,6 +225,8 @@ async function buildComposeServices(opts: {
 
 export async function runStackDeploy(
   ctx: DeployContext,
+  route: RouteOptions,
+  build: BuildOptions,
   data: { stackDeploymentId: string }
 ): Promise<void> {
   const { db } = ctx;
@@ -252,8 +256,8 @@ export async function runStackDeploy(
 
   const sink = await createLogSink({
     deploymentId: deployment.id,
-    onChunk: (c) => ctx.onLog?.(deployment.id, c),
-    root: ctx.logRoot,
+    onChunk: (c) => build.onLog?.(deployment.id, c),
+    root: build.logRoot,
   });
   const stream = { onStderr: sink.write, onStdout: sink.write };
 
@@ -331,9 +335,9 @@ export async function runStackDeploy(
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
-      certResolver: ctx.certResolver,
+      certResolver: route.certResolver,
       domain: stack.domain,
-      networkName: ctx.networkName,
+      networkName: route.networkName,
       placementNodeId,
       port: stack.port,
       publicService: stack.publicService,
@@ -341,7 +345,7 @@ export async function runStackDeploy(
     });
 
     sink.write("▸ Swarm rollout (docker stack deploy)\n");
-    const { accepted, swarmUpdateStates } = await writeAndDeployStack(ctx, {
+    const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
       doc,
       managerClient,
       stackName: stack.swarmName,
@@ -419,6 +423,7 @@ export async function runStackDeploy(
  */
 export async function redeployStack(
   ctx: DeployContext,
+  route: RouteOptions,
   opts: {
     sourceDeploymentId: string;
     stackId: string;
@@ -487,16 +492,16 @@ export async function redeployStack(
 
     injectDeployConfig(doc, {
       builtKeys: Object.keys(serviceImages),
-      certResolver: ctx.certResolver,
+      certResolver: route.certResolver,
       domain: stack.domain,
-      networkName: ctx.networkName,
+      networkName: route.networkName,
       placementNodeId,
       port: stack.port,
       publicService: stack.publicService,
       stackName: stack.swarmName,
     });
 
-    const { accepted, swarmUpdateStates } = await writeAndDeployStack(ctx, {
+    const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
       doc,
       managerClient,
       stackName: stack.swarmName,

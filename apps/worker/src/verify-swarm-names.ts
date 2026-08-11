@@ -163,9 +163,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-swarm-names-logs",
-    networkName: NETWORK,
   };
+  const route = { networkName: NETWORK };
 
   // ── two databases, SAME name, two environments ───────────────────────────
   //
@@ -238,8 +237,8 @@ try {
   }
 
   // ── REAL provisioning of both ─────────────────────────────────────────────
-  await provisionDatabase(ctx, prod.id);
-  await provisionDatabase(ctx, staging.id);
+  await provisionDatabase(ctx, route, prod.id);
+  await provisionDatabase(ctx, route, staging.id);
 
   const docker = dockerClient(ssh);
   const running = (await docker.listServices())

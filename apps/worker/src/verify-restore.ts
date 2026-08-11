@@ -164,9 +164,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-restore-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   ssh = await connect({ host: HOST, privateKey, user: USER });
   const [proj] = await db
@@ -215,7 +214,7 @@ try {
         ),
       })
       .where(eq(databases.id, row.id));
-    await provisionDatabase(ctx, row.id);
+    await provisionDatabase(ctx, route, row.id);
     return row;
   };
 

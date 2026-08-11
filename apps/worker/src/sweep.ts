@@ -15,7 +15,7 @@ import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import { redeployStack } from "#compose";
 import { redeployImage } from "#deploy";
 import { notify } from "#notify";
-import type { DeployContext } from "#runtime-context";
+import type { DeployContext, RouteOptions } from "#runtime-context";
 
 export interface SweepResult {
   /** Deployments still under watch on this pass. */
@@ -28,7 +28,10 @@ export interface SweepResult {
   strandedStacks: string[];
 }
 
-export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
+export async function sweepWatch(
+  ctx: DeployContext,
+  route: RouteOptions
+): Promise<SweepResult> {
   const now = new Date();
   const pending = await ctx.db.query.deployments.findMany({
     where: and(
@@ -124,7 +127,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
           return;
         }
 
-        await redeployImage(ctx, {
+        await redeployImage(ctx, route, {
           imageTag: previous.imageTag,
           serviceId: service.id,
           trigger: "watch_revert",
@@ -193,7 +196,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
           return;
         }
 
-        await redeployStack(ctx, {
+        await redeployStack(ctx, route, {
           sourceDeploymentId: previous.id,
           stackId: stack.id,
           trigger: "watch_revert",

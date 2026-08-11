@@ -123,9 +123,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-password-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   managerSsh = await connect({ host: HOST, privateKey, user: USER });
   const managerDocker = dockerClient(managerSsh);
@@ -295,7 +294,7 @@ try {
       .where(eq(databases.id, database.id));
 
     console.log(`    (provisioning ${engine}…)`);
-    await provisionDatabase(ctx, database.id);
+    await provisionDatabase(ctx, route, database.id);
 
     if (await canConnect(engine, rootUser, oldPassword)) {
       ok(`${engine}: the INITIAL password is accepted`);

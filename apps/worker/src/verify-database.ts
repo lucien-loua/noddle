@@ -69,9 +69,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-database-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   managerSsh = await connect({ host: HOST, privateKey, user: USER });
   await removeService(dockerClient(managerSsh), "noddle-db-probe-postgres");
@@ -164,7 +163,7 @@ try {
       .where(eq(databases.id, database.id));
 
     console.log("    (provisioning postgres…)");
-    await provisionDatabase(ctx, database.id);
+    await provisionDatabase(ctx, route, database.id);
 
     const row = await db.query.databases.findFirst({
       where: eq(databases.id, database.id),
@@ -239,7 +238,7 @@ try {
         memoryReservationBytes: 268_435_456,
       })
       .where(eq(databases.id, database.id));
-    await provisionDatabase(ctx, database.id);
+    await provisionDatabase(ctx, route, database.id);
 
     const withLimits = await readResources();
     if (
@@ -260,7 +259,7 @@ try {
         memoryReservationBytes: null,
       })
       .where(eq(databases.id, database.id));
-    await provisionDatabase(ctx, database.id);
+    await provisionDatabase(ctx, route, database.id);
 
     const cleared = await readResources();
     if (
@@ -303,7 +302,7 @@ try {
       .where(eq(databases.id, database.id));
 
     console.log("    (provisioning redis…)");
-    await provisionDatabase(ctx, database.id);
+    await provisionDatabase(ctx, route, database.id);
 
     const row = await db.query.databases.findFirst({
       where: eq(databases.id, database.id),
@@ -377,15 +376,7 @@ try {
     where: eq(databases.name, "probe-postgres"),
   });
   if (again) {
-    await provisionDatabase(
-      {
-        appKey,
-        db,
-        logRoot: "/tmp/noddle-database-logs",
-        networkName: "noddle-public",
-      },
-      again.id
-    );
+    await provisionDatabase({ appKey, db }, route, again.id);
     ok("second provision replayable without error (idempotent)");
   }
 

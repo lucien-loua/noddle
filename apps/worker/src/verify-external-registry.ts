@@ -212,10 +212,10 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-ext-logs",
-    networkName: "noddle-public",
     registry: undefined,
   };
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-ext-logs" };
 
   console.log("    (provisioning the worker…)");
   await provisionServer(ctx, workerRow.id);
@@ -276,7 +276,7 @@ try {
   }
 
   console.log("    (nixpacks build on the worker, push to the external…)");
-  await runDeploy(ctx, { deploymentId: dep.id });
+  await runDeploy(ctx, route, build, { deploymentId: dep.id });
 
   const done = await db.query.deployments.findFirst({
     where: eq(deployments.id, dep.id),

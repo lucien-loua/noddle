@@ -156,11 +156,10 @@ try {
   );
 
   await runDeploy(
+    { appKey, db },
+    { networkName: "noddle-public" },
     {
-      appKey,
-      db,
       logRoot: logDir,
-      networkName: "noddle-public",
       onLog: () => {
         streamed += 1;
       },

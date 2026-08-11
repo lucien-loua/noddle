@@ -300,13 +300,7 @@ try {
   const portableDep = await seedDeployment(PORTABLE);
   const alreadyDep = await seedDeployment(VANISHED, true);
 
-  const ctx: DeployContext = {
-    appKey,
-    db,
-    logRoot: "/tmp/noddle-prune-logs",
-    networkName: "noddle-public",
-    registry,
-  };
+  const ctx: DeployContext = { appKey, db, registry };
 
   const purgedOf = async (id: string): Promise<boolean> => {
     const row = await db.query.deployments.findFirst({

@@ -14,21 +14,19 @@ import type { RegistryConfig } from "#registry";
 
 export type ServerRow = typeof servers.$inferSelect;
 
+/**
+ * What every job needs: the database, the key that opens secrets, and the
+ * registry when the installation has one.
+ *
+ * These three are shared because they genuinely are — `db` by all 19
+ * modules, `appKey` by the 9 that decrypt something, `registry` by the 5
+ * that place or purge an image. The four ship-only fields that used to sit
+ * here moved to {@link RouteOptions} and {@link BuildOptions}: they were
+ * read by three modules and visible to nineteen.
+ */
 export interface DeployContext {
   appKey: Buffer;
-  /**
-   * Traefik's ACME resolver, when the installation has one. Absent = deployed
-   * applications go out over plain HTTP, which remains the case for a
-   * machine without a domain — a certificate can only be obtained for a name.
-   */
-  certResolver?: string;
   db: Database;
-  /** Root of build logs on the control plane. */
-  logRoot: string;
-  /** Overlay network shared with Traefik. */
-  networkName: string;
-  /** Feeds the dashboard's SSE stream. */
-  onLog?: (deploymentId: string, chunk: string) => void;
   /**
    * This installation's image registry, or `undefined`.
    *
@@ -39,6 +37,46 @@ export interface DeployContext {
    * as before.
    */
   registry?: RegistryConfig;
+}
+
+/**
+ * Where a service is reachable from — needed by anything that writes Traefik
+ * labels or attaches the overlay network.
+ *
+ * Carried by both the ship paths and the rollback paths, and by the
+ * post-deploy watch, which redeploys a previous image on its own (ADR-0012).
+ */
+export interface RouteOptions {
+  /**
+   * Traefik's ACME resolver, when the installation has one. Absent =
+   * deployed applications go out over plain HTTP, which remains the case
+   * for a machine without a domain — a certificate can only be obtained for
+   * a name.
+   */
+  certResolver?: string;
+  /** Overlay network shared with Traefik. */
+  networkName: string;
+}
+
+/**
+ * Where build output goes. Only the two paths that actually BUILD take this.
+ *
+ * A rollback redeploys an image that already exists, so it has no build to
+ * log — and with no parameter to put one in, nobody can wire a build log
+ * into it by mistake.
+ */
+export interface BuildOptions {
+  /** Root of build logs on the control plane. */
+  logRoot: string;
+  /** Feeds the dashboard's SSE stream. */
+  onLog?: (deploymentId: string, chunk: string) => void;
+}
+
+/** What the host hands to every job handler. */
+export interface WorkerDeps {
+  build: BuildOptions;
+  ctx: DeployContext;
+  route: RouteOptions;
 }
 
 /**

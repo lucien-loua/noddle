@@ -277,10 +277,10 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-reg-logs",
-    networkName: "noddle-public",
     registry,
   };
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-reg-logs" };
 
   console.log("    (provisioning the worker: Docker, join, CA…)");
   await provisionServer(ctx, workerRow.id);
@@ -373,7 +373,7 @@ try {
   }
 
   console.log("    (nixpacks build on the worker, push, Swarm switch…)");
-  await runDeploy(ctx, { deploymentId: dep.id });
+  await runDeploy(ctx, route, build, { deploymentId: dep.id });
 
   const final = await db.query.deployments.findFirst({
     where: eq(deployments.id, dep.id),
@@ -555,7 +555,7 @@ try {
   // ── rollback to a registry image ───────────────────────────────────────────
   step("Rollback");
   if (final.imageTag) {
-    await redeployImage(ctx, {
+    await redeployImage(ctx, route, {
       imageTag: final.imageTag,
       serviceId: svc.id,
       trigger: "rollback",
@@ -599,7 +599,7 @@ try {
     ko("building the legacy image failed");
   }
 
-  await redeployImage(ctx, {
+  await redeployImage(ctx, route, {
     imageTag: legacyTag,
     serviceId: svc.id,
     trigger: "rollback",
@@ -652,7 +652,7 @@ try {
     .set({ serverId: managerRow.id })
     .where(eq(services.id, svc.id));
 
-  await redeployImage(ctx, {
+  await redeployImage(ctx, route, {
     imageTag: `${SERVICE_NAME}:mgr-local`,
     serviceId: svc.id,
     trigger: "rollback",

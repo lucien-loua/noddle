@@ -135,9 +135,8 @@ try {
   const ctx = {
     appKey,
     db,
-    logRoot: "/tmp/noddle-planif-logs",
-    networkName: "noddle-public",
   };
+  const route = { networkName: "noddle-public" };
 
   ssh = await connect({ host: HOST, privateKey, user: USER });
   await removeService(dockerClient(ssh), legacyDatabaseServiceName(NAME));
@@ -182,7 +181,7 @@ try {
     })
     .where(eq(databases.id, database.id));
 
-  await provisionDatabase(ctx, database.id);
+  await provisionDatabase(ctx, route, database.id);
   ok("Postgres database provisioned");
 
   const queued: string[] = [];

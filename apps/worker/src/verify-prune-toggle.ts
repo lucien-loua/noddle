@@ -105,12 +105,7 @@ try {
     .set({ pruneEnabled: false })
     .where(eq(servers.id, server.id));
 
-  const ctx: DeployContext = {
-    appKey,
-    db,
-    logRoot: "/tmp/noddle-prune-toggle-logs",
-    networkName: "noddle-public",
-  };
+  const ctx: DeployContext = { appKey, db };
 
   const before = await db.query.serverDiskUsage.findMany({
     where: eq(serverDiskUsage.serverId, server.id),

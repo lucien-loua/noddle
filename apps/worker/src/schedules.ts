@@ -13,12 +13,19 @@ import {
 import { sweepBackups } from "#backup-sweep";
 import { collectMetrics } from "#metrics";
 import { sweepRegistryTrust } from "#registry";
-import { connectTo, type DeployContext } from "#runtime-context";
+import {
+  connectTo,
+  type DeployContext,
+  type RouteOptions,
+} from "#runtime-context";
 import { sweepWatch } from "#sweep";
 
 export interface SweepDeps {
   ctx: DeployContext;
   enqueue: (job: DeployJobData) => Promise<unknown>;
+  /** Only `sweep`'s watch needs it — the post-deploy watch redeploys a
+   *  previous image on its own (ADR-0012), which is a route, not a build. */
+  route: RouteOptions;
 }
 
 const MINUTE = 60_000;
@@ -40,7 +47,7 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     every: 30_000,
     id: "sweep",
     queue: "noddle-watch",
-    run: ({ ctx }) => sweepWatch(ctx),
+    run: ({ ctx, route }) => sweepWatch(ctx, route),
   }),
 
   // A sweep that queries Postgres, not a per-database BullMQ scheduler: the
