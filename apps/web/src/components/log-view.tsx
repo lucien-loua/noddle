@@ -210,9 +210,7 @@ export function LogView({
   right,
   title,
   toolbar,
-}
-: LogViewProps)
-{
+}: LogViewProps) {
   const viewRef = useRef<HTMLDivElement | null>(null);
   const pinnedRef = useRef(true);
 
@@ -255,8 +253,8 @@ export function LogView({
       <FramePanel className="flex min-h-0 flex-1 flex-col p-0">
         <div
           className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-3"
-        onScroll={handleScroll}
-         ref={viewRef}
+          onScroll={handleScroll}
+          ref={viewRef}
         >
           {renderBlocks(blocks, placeholder)}
         </div>

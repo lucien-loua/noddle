@@ -64,6 +64,7 @@ import {
   FocusModal,
   FocusModalBody,
   FocusModalContent,
+  FocusModalDescription,
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
@@ -1053,7 +1054,7 @@ function ObjectsListBody({
 }) {
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex flex-1 items-center justify-center py-10">
         <Spinner />
       </div>
     );
@@ -1079,7 +1080,7 @@ function ObjectsListBody({
   }
 
   return (
-    <div className="max-h-72 overflow-y-auto rounded-lg border">
+    <div className="min-w-0">
       <Table>
         <TableHeader>
           <TableRow>
@@ -1142,17 +1143,19 @@ function RestoreFromS3Dialog({
   const selected = destinations.find((d) => d.id === destinationId) ?? null;
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Restore from destination</DialogTitle>
-          <DialogDescription>
-            Pick a dump already in the bucket. Noddle takes a safety dump first
-            so the restore stays reversible.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-4">
-          <Field>
+    <FocusModal onOpenChange={onOpenChange} open={open}>
+      <FocusModalContent>
+        <FocusModalHeader>
+          <div className="min-w-0">
+            <FocusModalTitle>Restore from destination</FocusModalTitle>
+            <FocusModalDescription>
+              Pick a dump already in the bucket. Noddle takes a safety dump
+              first so the restore stays reversible.
+            </FocusModalDescription>
+          </div>
+        </FocusModalHeader>
+        <FocusModalBody className="flex min-h-0 flex-col gap-4 overflow-hidden p-4">
+          <Field className="shrink-0">
             <FieldLabel>Destination</FieldLabel>
             <Combobox
               items={destinations}
@@ -1181,20 +1184,19 @@ function RestoreFromS3Dialog({
             </Combobox>
           </Field>
 
-          <ObjectsListBody
-            destinationId={destinationId}
-            error={objects.error}
-            isError={objects.isError}
-            isLoading={objects.isLoading}
-            objects={objects.data}
-            onPick={onPick}
-          />
-        </DialogBody>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto">
+            <ObjectsListBody
+              destinationId={destinationId}
+              error={objects.error}
+              isError={objects.isError}
+              isLoading={objects.isLoading}
+              objects={objects.data}
+              onPick={onPick}
+            />
+          </div>
+        </FocusModalBody>
+      </FocusModalContent>
+    </FocusModal>
   );
 }
 
