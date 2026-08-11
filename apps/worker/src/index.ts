@@ -7,17 +7,16 @@ import {
   deployJobSchema,
 } from "@noddle/deploy-contract";
 import { createDeployQueue } from "@noddle/deploy-contract/queue";
+import { startSchedule } from "@noddle/deploy-contract/schedule";
 import { loadAppKey } from "@noddle/shared/crypto";
-import { Queue, UnrecoverableError, Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
-import { sweepBackups } from "#backup-sweep";
 import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
-import { collectMetrics } from "#metrics";
-import { loadRegistryConfig, sweepRegistryTrust } from "#registry";
-import { connectTo, type DeployContext } from "#runtime-context";
-import { sweepWatch } from "#sweep";
+import { loadRegistryConfig } from "#registry";
+import type { DeployContext } from "#runtime-context";
+import { schedules } from "#schedules";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -129,199 +128,37 @@ const deployWorker = new Worker<DeployJobData>(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Post-deployment watch
+// Recurring sweeps
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Swarm's guarantee expires with its monitor window: a service that converges
-// then dies a minute later is declared "completed" and loops on the broken
-// image, with nothing left for Swarm to restore. Measured in Phase 0: 9
-// requests out of 12 failing, indefinitely. The logic lives in sweep.ts so it
-// can be tested without starting this process.
+// Watch, scheduled backups, registry trust, registry retention, Docker prune
+// and metrics. Each one's cadence and its reason live with its entry in
+// `schedules.ts`; concurrency 1 is enforced by `startSchedule` and is not a
+// per-sweep knob.
 
-const WATCH_QUEUE = "noddle-watch";
+const running = await Promise.all(
+  schedules.map((spec) =>
+    startSchedule(spec, {
+      connection,
+      deps: { ctx, enqueue: enqueueDeploy },
+      onFailed: (queue, message) =>
+        process.stderr.write(`${queue}: ${message}\n`),
+    })
+  )
+);
 
-const watchQueue = new Queue(WATCH_QUEUE, { connection });
-const watchWorker = new Worker(WATCH_QUEUE, () => sweepWatch(ctx), {
-  concurrency: 1,
-  connection,
+// ─────────────────────────────────────────────────────────────────────────────
+
+deployWorker.on("failed", (job, err) => {
+  process.stderr.write(`job ${job?.id} failed: ${err.message}\n`);
 });
-
-await watchQueue.upsertJobScheduler(
-  "sweep",
-  { every: 30_000 },
-  { name: "sweep" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Scheduled backups
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// A sweep that queries Postgres, not a per-database BullMQ scheduler: the
-// state lives in the database, so a flushed Redis — which happens, it's a
-// cache — doesn't silently make schedules disappear. Five minutes is enough
-// for a daily or weekly cadence.
-
-const BACKUP_SWEEP_QUEUE = "noddle-backup-sweep";
-
-const backupSweepQueue = new Queue(BACKUP_SWEEP_QUEUE, { connection });
-const backupSweepWorker = new Worker(
-  BACKUP_SWEEP_QUEUE,
-  () =>
-    sweepBackups(ctx, (backupId) =>
-      enqueueDeploy({ backupId, kind: "backup" })
-    ),
-  { concurrency: 1, connection }
-);
-
-await backupSweepQueue.upsertJobScheduler(
-  "backup-sweep",
-  { every: 300_000 },
-  { name: "backup-sweep" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Registry trust
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// Every node must carry the registry's CA, otherwise its daemon refuses to
-// pull. Servers that are added go through `provisionServer`, which deposits
-// it; this sweep exists for the TWO cases provisioning doesn't cover: servers
-// already in place before the registry existed, and ones that were
-// unreachable at the time we tried.
-//
-// Five minutes: it only writes a 2KB file once, and does nothing further
-// after that.
-
-const TRUST_QUEUE = "noddle-registry-trust";
-
-const trustQueue = new Queue(TRUST_QUEUE, { connection });
-const trustWorker = new Worker(
-  TRUST_QUEUE,
-  () =>
-    sweepRegistryTrust({
-      connectTo: (server) => connectTo(ctx, server),
-      db: ctx.db,
-      registry: ctx.registry,
-    }),
-  { concurrency: 1, connection }
-);
-
-await trustQueue.upsertJobScheduler(
-  "registry-trust",
-  { every: 300_000 },
-  { name: "registry-trust" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Registry retention
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// This sweep executes NOTHING itself: it drops a job on the deployments
-// queue. That's the point that matters — `garbage-collect` deletes layers no
-// manifest references, and a layer currently being pushed is exactly that
-// case. Only that queue's concurrency 1 guarantees a GC never runs during a
-// push. Same reason as backups, which share the queue so as not to compete
-// for a 2GB machine's memory.
-//
-// One hour: the registry grows one deployment at a time, there's nothing to
-// catch up on any faster than that.
-
-const PRUNE_QUEUE = "noddle-registry-prune";
-
-const pruneQueue = new Queue(PRUNE_QUEUE, { connection });
-const pruneWorker = new Worker(
-  PRUNE_QUEUE,
-  () => enqueueDeploy({ kind: "prune-registry" }),
-  { concurrency: 1, connection }
-);
-
-await pruneQueue.upsertJobScheduler(
-  "registry-prune",
-  { every: 3_600_000 },
-  { name: "registry-prune" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Docker prune
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// Same shape as the registry retention sweep just above: this sweep prunes
-// NOTHING itself, it drops a job on the deployments queue. The pattern is
-// identical and the reason even more direct — between `buildx --load` and
-// `pushImage`, the freshly built image isn't referenced by any container, so
-// a concurrent prune would delete it.
-//
-// Daily, not hourly like the registry: the prune destroys images the
-// registry doesn't have (ones from before it), and a node's disk doesn't
-// fill up in an hour. A rare cadence also keeps the reconciliation readable
-// in the audit log… which it doesn't write to, but in the deployment
-// history where "expired" suddenly shows up.
-
-const DOCKER_PRUNE_QUEUE = "noddle-docker-prune";
-
-const dockerPruneQueue = new Queue(DOCKER_PRUNE_QUEUE, { connection });
-const dockerPruneWorker = new Worker(
-  DOCKER_PRUNE_QUEUE,
-  () => enqueueDeploy({ kind: "prune-docker" }),
-  { concurrency: 1, connection }
-);
-
-await dockerPruneQueue.upsertJobScheduler(
-  "docker-prune",
-  { every: 86_400_000 },
-  { name: "docker-prune" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Resource collection
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// One minute: fine-grained enough to see a memory leak climbing, coarse
-// enough that a 2GB machine doesn't spend all its time measuring itself.
-
-const METRICS_QUEUE = "noddle-metrics";
-
-const metricsQueue = new Queue(METRICS_QUEUE, { connection });
-const metricsWorker = new Worker(METRICS_QUEUE, () => collectMetrics(ctx), {
-  // Concurrency 1: two overlapping runs would open two SSH connections per
-  // machine and skew the CPU deltas.
-  concurrency: 1,
-  connection,
-});
-
-await metricsQueue.upsertJobScheduler(
-  "collect",
-  { every: 60_000 },
-  { name: "collect" }
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-for (const w of [
-  deployWorker,
-  watchWorker,
-  backupSweepWorker,
-  metricsWorker,
-  trustWorker,
-  pruneWorker,
-  dockerPruneWorker,
-]) {
-  w.on("failed", (job, err) => {
-    process.stderr.write(`job ${job?.id} failed: ${err.message}\n`);
-  });
-}
 
 async function shutdown(): Promise<void> {
   // Clean shutdown: a deployment in progress runs to completion rather than
   // being cut off in the middle of a Swarm rollout.
   await Promise.all([
     deployWorker.close(),
-    watchWorker.close(),
-    backupSweepWorker.close(),
-    metricsWorker.close(),
-    trustWorker.close(),
-    pruneWorker.close(),
-    dockerPruneWorker.close(),
+    ...running.map((schedule) => schedule.close()),
   ]);
   await logBus.close();
   await connection.quit();
