@@ -410,3 +410,136 @@ export function dockerClient(
     protocol: "http",
   } as Docker.DockerOptions);
 }
+
+// ── Interactive PTY (dashboard terminal) ─────────────────────────────────────
+
+export interface PtyOptions {
+  cols?: number;
+  rows?: number;
+  term?: string;
+}
+
+/**
+ * A remote interactive session: stdin/stdout over an SSH channel with a
+ * real PTY. Used by the dashboard terminal — not by deploy jobs.
+ *
+ * Distinct from `exec` / `execStream`: those collect output or pipe bytes
+ * without a TTY. A shell needs resize, echo, and signal delivery.
+ */
+export interface PtySession {
+  close: () => void;
+  onClose: (cb: (code: number | null) => void) => void;
+  onData: (cb: (data: Buffer) => void) => void;
+  resize: (cols: number, rows: number) => void;
+  write: (data: string | Buffer) => void;
+}
+
+function wrapChannel(
+  stream: import("ssh2").ClientChannel,
+  client: Client,
+  /** When true, ending the channel also ends the SSH client (one-shot). */
+  ownClient: boolean
+): PtySession {
+  let exitCode: number | null = null;
+  stream.on("exit", (code: number | null) => {
+    exitCode = code;
+  });
+
+  return {
+    close: () => {
+      stream.close();
+      if (ownClient) {
+        client.end();
+      }
+    },
+    onClose: (cb) => {
+      stream.on("close", () => {
+        if (ownClient) {
+          client.end();
+        }
+        cb(exitCode);
+      });
+    },
+    onData: (cb) => {
+      stream.on("data", (d: Buffer) => cb(d));
+      stream.stderr.on("data", (d: Buffer) => cb(d));
+    },
+    resize: (cols, rows) => {
+      // ssh2 wants rows, cols, height-px, width-px. Pixel sizes are unused
+      // by most shells; pass zeros like OpenSSH clients do when unknown.
+      stream.setWindow(rows, cols, 0, 0);
+    },
+    write: (data) => {
+      stream.write(data);
+    },
+  };
+}
+
+function ptyDims(opts: PtyOptions): {
+  cols: number;
+  rows: number;
+  term: string;
+} {
+  return {
+    cols: opts.cols && opts.cols > 0 ? opts.cols : 80,
+    rows: opts.rows && opts.rows > 0 ? opts.rows : 24,
+    term: opts.term && opts.term.length > 0 ? opts.term : "xterm-256color",
+  };
+}
+
+/** Interactive login shell on the target server. */
+export function openShell(
+  client: Client,
+  opts: PtyOptions = {}
+): Promise<PtySession> {
+  const dims = ptyDims(opts);
+  return new Promise((resolve, reject) => {
+    client.shell(
+      {
+        cols: dims.cols,
+        rows: dims.rows,
+        term: dims.term,
+      },
+      (err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(wrapChannel(stream, client, false));
+      }
+    );
+  });
+}
+
+/**
+ * Remote command attached to a PTY — for `docker exec -it …`.
+ *
+ * Prefer `execArgv`-style callers that pass a pre-quoted command string
+ * built with `quoteArg`, never raw user concatenation.
+ */
+export function openExecPty(
+  client: Client,
+  command: string,
+  opts: PtyOptions = {}
+): Promise<PtySession> {
+  const dims = ptyDims(opts);
+  return new Promise((resolve, reject) => {
+    client.exec(
+      command,
+      {
+        pty: {
+          cols: dims.cols,
+          rows: dims.rows,
+          term: dims.term,
+        },
+      },
+      (err, stream) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(wrapChannel(stream, client, false));
+      }
+    );
+  });
+}

@@ -4,6 +4,7 @@ import {
   CaretDownIcon,
   PlayIcon,
   StopIcon,
+  TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ import { ServiceRegistry } from "@/components/service-registry";
 import { ServiceResources } from "@/components/service-resources";
 import { TabRail } from "@/components/tab-rail";
 import { TeardownError } from "@/components/teardown-error";
+import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -179,12 +181,14 @@ function ServiceHeaderActions({
   onDeleted,
   onDone,
   onError,
+  onTerminal,
   service,
 }: {
   known: RoleName | null;
   onDeleted: () => void;
   onDone: () => void;
   onError: (message: string) => void;
+  onTerminal: (() => void) | null;
   service: ServiceRow;
 }) {
   const lifecycle = useLifecycleActions({
@@ -202,7 +206,7 @@ function ServiceHeaderActions({
     serviceName: service.name,
   });
 
-  if (!(lifecycle.available || del.canDelete)) {
+  if (!(lifecycle.available || del.canDelete || onTerminal)) {
     return null;
   }
 
@@ -213,9 +217,17 @@ function ServiceHeaderActions({
       <>
         <ButtonGroup>
           <ButtonGroupText>{status.label}</ButtonGroupText>
-          <Button onClick={del.handleOpen} variant="outline">
-            Delete
-          </Button>
+          {onTerminal ? (
+            <Button onClick={onTerminal} variant="outline">
+              <TerminalIcon weight="bold" />
+              Terminal
+            </Button>
+          ) : null}
+          {del.canDelete ? (
+            <Button onClick={del.handleOpen} variant="outline">
+              Delete
+            </Button>
+          ) : null}
         </ButtonGroup>
         {del.dialog}
       </>
@@ -239,6 +251,12 @@ function ServiceHeaderActions({
             }
           />
           <DropdownMenuContent align="end">
+            {onTerminal ? (
+              <DropdownMenuItem onClick={onTerminal}>
+                <TerminalIcon weight="bold" />
+                Terminal
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem
               disabled={lifecycle.busy}
               onClick={lifecycle.handleStopStart}
@@ -294,6 +312,8 @@ function ServiceDetail() {
   const canRollback = useCan(known, "service", "rollback");
   const canManageWebhook = useCan(known, "service", "create");
   const canReadEnvVar = useCan(known, "envVar", "read");
+  const canShell = useCan(known, "container", "shell");
+  const { openTerminal, terminal } = useTerminalDialog();
 
   const deployments = useQuery({
     queryFn: () => getDeployments({ data: { serviceId: service.id } }),
@@ -381,6 +401,17 @@ function ServiceDetail() {
             onDeleted={handleDeleted}
             onDone={handleLifecycleDone}
             onError={setActionError}
+            onTerminal={
+              canShell
+                ? () =>
+                    openTerminal({
+                      id: service.id,
+                      kind: "container",
+                      target: "service",
+                      title: service.name,
+                    })
+                : null
+            }
             service={service}
           />
         </>
@@ -488,6 +519,7 @@ function ServiceDetail() {
           </TabsContent>
         </Tabs>
       </div>
+      {terminal}
     </AppShell>
   );
 }

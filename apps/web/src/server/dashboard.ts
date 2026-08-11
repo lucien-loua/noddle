@@ -14,7 +14,7 @@ import { requireSession } from "@/lib/session.server";
 import {
   type DatabaseRow,
   loadDatabaseDashboardRows,
-} from "@/server/databases";
+} from "@/server/databases/read";
 
 export interface DeploymentSummary {
   commitSha: string | null;

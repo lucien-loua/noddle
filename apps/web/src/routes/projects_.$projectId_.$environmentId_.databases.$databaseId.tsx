@@ -4,6 +4,7 @@ import {
   CaretDownIcon,
   PlayIcon,
   StopIcon,
+  TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,7 @@ import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { EnvVarPanel } from "@/components/env-var-panel";
 import { TabRail } from "@/components/tab-rail";
 import { TeardownError } from "@/components/teardown-error";
+import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,12 +116,14 @@ function DatabaseHeaderActions({
   onDeleted,
   onDone,
   onError,
+  onTerminal,
 }: {
   database: DatabaseRow;
   known: RoleName | null;
   onDeleted: () => void;
   onDone: () => void;
   onError: (message: string) => void;
+  onTerminal: (() => void) | null;
 }) {
   const lifecycle = useDatabaseLifecycleActions({
     databaseId: database.id,
@@ -138,7 +142,7 @@ function DatabaseHeaderActions({
 
   const status = serviceLabel(database.status);
 
-  if (!(lifecycle.available || del.canDelete)) {
+  if (!(lifecycle.available || del.canDelete || onTerminal)) {
     return <Badge variant="outline">{status.label}</Badge>;
   }
 
@@ -147,6 +151,12 @@ function DatabaseHeaderActions({
       <>
         <ButtonGroup>
           <ButtonGroupText>{status.label}</ButtonGroupText>
+          {onTerminal ? (
+            <Button onClick={onTerminal} variant="outline">
+              <TerminalIcon weight="bold" />
+              Terminal
+            </Button>
+          ) : null}
           <Button onClick={del.handleOpen} variant="outline">
             Delete
           </Button>
@@ -173,6 +183,12 @@ function DatabaseHeaderActions({
             }
           />
           <DropdownMenuContent align="end">
+            {onTerminal ? (
+              <DropdownMenuItem onClick={onTerminal}>
+                <TerminalIcon weight="bold" />
+                Terminal
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem
               disabled={lifecycle.busy}
               onClick={lifecycle.handleStopStart}
@@ -228,6 +244,8 @@ function DatabaseDetail() {
   // `create` and not `operate`: publishing a port is a CONFIGURATION change
   // that opens up the database, not an action on what's running.
   const canEditConfig = useCan(known, "database", "create");
+  const canShell = useCan(known, "container", "shell");
+  const { openTerminal, terminal } = useTerminalDialog();
 
   const [tab, setTab] = useState("general");
   const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(
@@ -304,6 +322,17 @@ function DatabaseDetail() {
           onDeleted={handleDeleted}
           onDone={handleDone}
           onError={setDeleteError}
+          onTerminal={
+            canShell
+              ? () =>
+                  openTerminal({
+                    id: database.id,
+                    kind: "container",
+                    target: "database",
+                    title: database.name,
+                  })
+              : null
+          }
         />
       }
       breadcrumb={
@@ -445,6 +474,7 @@ function DatabaseDetail() {
           target={restoreTarget}
         />
       </div>
+      {terminal}
     </AppShell>
   );
 }

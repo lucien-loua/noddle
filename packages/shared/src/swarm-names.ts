@@ -40,3 +40,17 @@ export function newDatabaseSwarmName(db: { id: string; name: string }): string {
 export function newStackSwarmName(stack: { id: string; name: string }): string {
   return `${stack.name.slice(0, 20)}-${shortId(stack.id)}`;
 }
+
+/**
+ * Swarm service name for an application Service.
+ *
+ * Readable name in front, eight hex digits of the UUID behind — same
+ * formula the worker has always written. Lives here so the web never
+ * copies it (inventory, terminal, labels).
+ */
+export function swarmServiceName(service: {
+  id: string;
+  name: string;
+}): string {
+  return `${service.name}-${shortId(service.id)}`;
+}

@@ -1,4 +1,12 @@
-import handler from "./dist/server/server.js";
+import handler from "#start-handler";
+import {
+  isTerminalPath,
+  type TerminalSocketData,
+} from "./src/lib/terminal.server.ts";
+import {
+  terminalWebsocket,
+  tryUpgradeTerminal,
+} from "./src/lib/terminal-ws.ts";
 
 const CLIENT_DIR = `${import.meta.dirname}/dist/client`;
 const port = Number(process.env.PORT ?? 3000);
@@ -38,9 +46,15 @@ async function unwrap(res: Response): Promise<Response> {
   return inner ? await inner : res;
 }
 
-Bun.serve({
-  async fetch(request: Request): Promise<Response> {
+Bun.serve<TerminalSocketData>({
+  async fetch(request: Request, server): Promise<Response | undefined> {
     const { pathname } = new URL(request.url);
+
+    if (isTerminalPath(pathname)) {
+      const result = tryUpgradeTerminal(request, server);
+      // Successful upgrade → undefined (Bun requirement). Failure → Response.
+      return result ?? undefined;
+    }
 
     if (pathname !== "/") {
       const file = Bun.file(CLIENT_DIR + pathname);
@@ -57,9 +71,10 @@ Bun.serve({
   },
   // A deployment lasts minutes, but the logs' SSE stream stays open the
   // whole time. Without this, Bun closes the connection after 10s of
-  // inactivity and the tail reconnects in a loop.
+  // inactivity and the tail reconnects in a loop. Same for terminals.
   idleTimeout: 0,
   port,
+  websocket: terminalWebsocket,
 });
 
 process.stdout.write(`noddle dashboard on http://0.0.0.0:${port}\n`);

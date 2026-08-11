@@ -1,5 +1,6 @@
 import { databases, servers, sshKeys } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, execArgv } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
@@ -337,15 +338,6 @@ const restartServiceSchema = z.object({
 });
 
 /**
- * Same formula as the worker's `swarmServiceName` — kept here so the web
- * app never imports the worker. Eight hex digits of the UUID, readable
- * name in front.
- */
-function serviceSwarmName(service: { id: string; name: string }): string {
-  return `${service.name}-${service.id.replaceAll("-", "").slice(0, 8)}`;
-}
-
-/**
  * True when `serviceName` belongs to a row Noddle manages.
  *
  * Client-side hiding is only a courtesy; this is where the rule actually
@@ -363,7 +355,7 @@ async function isManagedSwarmService(serviceName: string): Promise<boolean> {
     db.query.stacks.findMany({ columns: { swarmName: true } }),
   ]);
 
-  if (svcRows.some((s) => serviceSwarmName(s) === serviceName)) {
+  if (svcRows.some((s) => swarmServiceName(s) === serviceName)) {
     return true;
   }
   if (dbRow) {

@@ -6,6 +6,7 @@ import {
   renderDockerodeRollbackConfig,
   renderDockerodeUpdateConfig,
 } from "@noddle/shared/deploy-policy";
+import { swarmServiceName as sharedSwarmServiceName } from "@noddle/shared/swarm-names";
 import type { DockerApi } from "@noddle/ssh-executor";
 
 /**
@@ -14,32 +15,8 @@ import type { DockerApi } from "@noddle/ssh-executor";
  */
 export const UPDATE_MONITOR_SECONDS = MONITOR_SECONDS;
 
-/**
- * The Swarm service's name — and why it's NOT `services.name`.
- *
- * Database uniqueness is `(environment_id, name)`. Swarm's is GLOBAL. Two
- * `api` services, one in `production` and the other in `staging`, therefore
- * designate the SAME Swarm service: the second deployment overwrites the
- * first, with no error at all. And this isn't theoretical — `connectRepo`
- * already exposes `environmentName`, so the case is reachable from the form
- * today.
- *
- * Why an ID suffix rather than `project-environment-service`, which would
- * read better: a Swarm service name becomes a DNS name on the overlay
- * network, so 63 bytes at most. Project and environment can each be up to
- * 64 characters — the readable form doesn't fit, and truncating it would
- * reopen the exact collision it's meant to close.
- *
- * Eight hex digits from a UUID: 48 + 1 + 8 = 57 worst case, under the
- * limit. The readable name stays up front, so `docker service ls | grep
- * api` still works.
- */
-export function swarmServiceName(service: {
-  id: string;
-  name: string;
-}): string {
-  return `${service.name}-${service.id.replaceAll("-", "").slice(0, 8)}`;
-}
+/** Re-export: naming lives in shared so web and worker share one formula. */
+export const swarmServiceName = sharedSwarmServiceName;
 
 export interface DeploySpec {
   /** Already decrypted. Never log this object. */

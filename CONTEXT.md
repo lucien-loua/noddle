@@ -71,3 +71,9 @@ _Avoid_: Healthcheck (that's Swarm's), monitor window (Swarm's only)
 **Rollback**:
 Redeploying a previous image from Noddle's deployment history (not only Swarm's
 single previous spec).
+
+**Terminal**:
+An interactive shell opened from the dashboard over WebSocket — either on a
+target server (SSH) or inside a running container (`docker exec`).
+_Avoid_: Console (ambiguous with browser/devtools), SSH session (when meaning
+the product feature)

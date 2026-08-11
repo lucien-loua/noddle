@@ -16,7 +16,6 @@ export {
   type DatabaseRow,
   getDatabase,
   getDatabaseDashboard,
-  loadDatabaseDashboardRows,
 } from "./read";
 export {
   addDatabaseMount,

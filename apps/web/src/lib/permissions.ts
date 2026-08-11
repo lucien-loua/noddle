@@ -36,7 +36,13 @@ export const statement = {
    * what Noddle hasn't deployed, so being able to touch it isn't the same
    * as being able to deploy.
    */
-  container: ["operate", "delete"],
+  /**
+   * `operate` — start/stop/restart. `delete` — remove the container.
+   * `shell` — interactive `docker exec` into a container (terminal WS).
+   * Separate from `operate`: a restart is one click; a shell is an open
+   * session on the machine's workload.
+   */
+  container: ["operate", "delete", "shell"],
 
   /**
    * `operate` covers start, stop, restart — the same split and the same
@@ -77,7 +83,11 @@ export const statement = {
   // prune switch. Separate from `create`/`delete`: adding or removing a
   // server touches the cluster topology, adjusting its prune setting
   // doesn't.
-  server: ["read", "create", "delete", "update"],
+  //
+  // `shell` is an interactive SSH session on the target server. Not
+  // granted to deployer: a host shell is the installation's strongest
+  // live access, closer to `sshKey` than to a reversible restart.
+  server: ["read", "create", "delete", "update", "shell"],
   service: ["read", "create", "deploy", "rollback", "delete"],
 
   /**
@@ -114,8 +124,9 @@ export const viewer = ac.newRole({
 export const deployer = ac.newRole({
   backup: ["read", "create"],
   // Restarting a misbehaving service is part of operating it; deleting a
-  // container is not. Same split for a database.
-  container: ["operate"],
+  // container is not. Shell into a container is part of operating it —
+  // scoped to that workload, not a host login.
+  container: ["operate", "shell"],
   database: ["read", "operate"],
   notification: ["read"],
   server: ["read"],
@@ -130,7 +141,7 @@ export const admin = ac.newRole({
   // operations.
   audit: ["read"],
   backup: ["read", "create", "restore"],
-  container: ["operate", "delete"],
+  container: ["operate", "delete", "shell"],
   database: ["read", "create", "delete", "attach", "operate"],
   envVar: ["read", "write"],
   // Neither `viewer` nor `deployer`: updating restarts the control plane
@@ -140,7 +151,7 @@ export const admin = ac.newRole({
   installation: ["update"],
   notification: ["read", "manage"],
   registry: ["read", "create", "delete"],
-  server: ["read", "create", "delete", "update"],
+  server: ["read", "create", "delete", "update", "shell"],
   service: ["read", "create", "deploy", "rollback", "delete"],
   sshKey: ["read", "create", "delete"],
 });
@@ -220,7 +231,7 @@ export const ROLE_LABELS: Record<RoleName, string> = {
 export const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
   admin: "Full access to infrastructure, secrets and accounts.",
   deployer:
-    "Deploy, roll back, run backups. No secrets, no deletion, no restore.",
+    "Deploy, roll back, run backups, shell into containers. No host shell, secrets, deletion, or restore.",
   owner: "Same as admin, and cannot be removed by an admin.",
   viewer: "Reads everything, services, logs, backups. Changes nothing.",
 };

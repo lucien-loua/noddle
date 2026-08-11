@@ -1,3 +1,4 @@
+import { TerminalIcon } from "@phosphor-icons/react";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -5,7 +6,9 @@ import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { ResourceGraphs } from "@/components/resource-graphs";
 import { ServerDiskUsage } from "@/components/server-disk";
 import { ServerPruneToggle } from "@/components/server-prune-toggle";
+import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Frame,
   FrameHeader,
@@ -14,6 +17,7 @@ import {
 } from "@/components/ui/frame";
 import { UpdatePanel } from "@/components/update-panel";
 import { type RoleName, roles } from "@/lib/permissions";
+import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServerDiskUsage, getServerMetrics } from "@/server/metrics";
 import { getServers, type ServerView } from "@/server/servers";
@@ -85,12 +89,34 @@ function ServerDetail() {
   // `string`, and `useCan` expects a KNOWN role. An unknown role is treated
   // as `null` — so no action is offered — rather than an optimistic cast.
   const known = role && role in roles ? (role as RoleName) : null;
+  const canShell = useCan(known, "server", "shell");
+  const { openTerminal, terminal } = useTerminalDialog();
   const [pruneError, setPruneError] = useState<string | null>(null);
   const handlePruneError = useCallback((m: string) => setPruneError(m), []);
 
   return (
     <AppShell
-      actions={<Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>}
+      actions={
+        <div className="flex items-center gap-2">
+          {canShell ? (
+            <Button
+              onClick={() =>
+                openTerminal({
+                  kind: "ssh",
+                  serverId: server.id,
+                  title: server.name,
+                })
+              }
+              size="sm"
+              variant="outline"
+            >
+              <TerminalIcon weight="bold" />
+              Terminal
+            </Button>
+          ) : null}
+          <Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>
+        </div>
+      }
       breadcrumb={
         <DetailBreadcrumb
           name={server.name}
@@ -175,6 +201,7 @@ function ServerDetail() {
           <UpdatePanel role={known} />
         </section>
       ) : null}
+      {terminal}
     </AppShell>
   );
 }

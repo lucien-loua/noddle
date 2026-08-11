@@ -2,8 +2,11 @@
   "name": "@noddle/web",
   "private": true,
   "type": "module",
+  "imports": {
+    "#start-handler": "./dist/server/server.js"
+  },
   "scripts": {
-    "dev": "vite dev",
+    "dev": "bun run scripts/dev-web.ts",
     "build": "vite build",
     "start": "bun run server.ts"
   },
@@ -26,6 +29,8 @@
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-start": "catalog:",
     "@tanstack/react-table": "catalog:",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "better-auth": "catalog:",
     "bullmq": "catalog:",
     "class-variance-authority": "^0.7.1",

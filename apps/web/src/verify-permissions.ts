@@ -277,8 +277,16 @@ const cases: [string, boolean][] = [
   ],
   [
     "a viewer can do NOTHING to a container",
-    can("viewer", "container", "operate"),
+    can("viewer", "container", "operate") ||
+      can("viewer", "container", "shell") ||
+      can("viewer", "container", "delete"),
   ],
+  [
+    "a deployer can shell into a container",
+    can("deployer", "container", "shell"),
+  ],
+  ["a deployer CANNOT open a host shell", can("deployer", "server", "shell")],
+  ["an admin can open a host shell", can("admin", "server", "shell")],
   [
     "a deployer can start or stop a database",
     can("deployer", "database", "operate"),

@@ -51,7 +51,19 @@ export default defineConfig({
     viteReact(),
   ],
   resolve: { tsconfigPaths: true },
-  server: { port: 3000 },
+  server: {
+    hmr: {
+      clientPort: Number(process.env.VITE_HMR_PORT ?? 24_678),
+      host: "localhost",
+      port: Number(process.env.VITE_HMR_PORT ?? 24_678),
+    },
+    // Bun owns the public :3000 in `scripts/dev-web.ts` and reverse-proxies
+    // here. HMR keeps a dedicated port so its upgrades do not collide with
+    // terminal WebSockets on the Bun front.
+    host: "127.0.0.1",
+    port: Number(process.env.VITE_DEV_PORT ?? 5173),
+    strictPort: true,
+  },
   ssr: {
     external: ["ssh2", "cpu-features"],
     // `external` covers the BUILD. The dev server's dependency optimizer is
