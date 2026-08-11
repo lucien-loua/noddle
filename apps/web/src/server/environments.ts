@@ -22,7 +22,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface EnvironmentView {
@@ -61,68 +61,74 @@ export const getProjectEnvironments = createServerFn({ method: "GET" })
 export const createEnvironment = createServerFn({ method: "POST" })
   .validator(createEnvironmentSchema)
   .handler(async ({ data }): Promise<{ environmentId: string }> => {
-    await requirePermission({ action: "create", resource: "service" });
+    const created = await runGuarded({
+      // Loads the parent Project — it must exist — but the object recorded
+      // is the Environment that comes out of `run`.
+      load: () =>
+        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
+      notFoundMessage: "project not found",
+      permission: { action: "create", resource: "service" },
+      run: async () => {
+        const existing = await db.query.environments.findFirst({
+          where: and(
+            eq(environments.projectId, data.projectId),
+            eq(environments.name, data.name)
+          ),
+        });
+        if (existing) {
+          throw new Error(`"${data.name}" already exists in this project`);
+        }
 
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, data.projectId),
+        const [created] = await db
+          .insert(environments)
+          .values({
+            description: data.description,
+            name: data.name,
+            projectId: data.projectId,
+          })
+          .returning();
+        if (!created) {
+          throw new Error("could not create environment");
+        }
+        return { environmentId: created.id, name: created.name };
+      },
+      target: ({ result }) => ({ id: result.environmentId, name: result.name }),
     });
-    if (!project) {
-      throw new Error("project not found");
-    }
-
-    const existing = await db.query.environments.findFirst({
-      where: and(
-        eq(environments.projectId, data.projectId),
-        eq(environments.name, data.name)
-      ),
-    });
-    if (existing) {
-      throw new Error(`"${data.name}" already exists in this project`);
-    }
-
-    const [created] = await db
-      .insert(environments)
-      .values({
-        description: data.description,
-        name: data.name,
-        projectId: data.projectId,
-      })
-      .returning();
-    if (!created) {
-      throw new Error("could not create environment");
-    }
-    return { environmentId: created.id };
+    return { environmentId: created.environmentId };
   });
 
 export const renameEnvironment = createServerFn({ method: "POST" })
   .validator(renameEnvironmentSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "service" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.environments.findFirst({
+            where: eq(environments.id, data.environmentId),
+          }),
+        notFoundMessage: "environment not found",
+        permission: { action: "create", resource: "service" },
+        run: async ({ row: environment }) => {
+          const existing = await db.query.environments.findFirst({
+            where: and(
+              eq(environments.projectId, environment.projectId),
+              eq(environments.name, data.name),
+              ne(environments.id, environment.id)
+            ),
+          });
+          if (existing) {
+            throw new Error(`"${data.name}" already exists in this project`);
+          }
 
-    const environment = await db.query.environments.findFirst({
-      where: eq(environments.id, data.environmentId),
-    });
-    if (!environment) {
-      throw new Error("environment not found");
-    }
-
-    const existing = await db.query.environments.findFirst({
-      where: and(
-        eq(environments.projectId, environment.projectId),
-        eq(environments.name, data.name),
-        ne(environments.id, environment.id)
-      ),
-    });
-    if (existing) {
-      throw new Error(`"${data.name}" already exists in this project`);
-    }
-
-    await db
-      .update(environments)
-      .set({ description: data.description, name: data.name })
-      .where(eq(environments.id, environment.id));
-    return { ok: true };
-  });
+          await db
+            .update(environments)
+            .set({ description: data.description, name: data.name })
+            .where(eq(environments.id, environment.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /**
  * Delete an environment — refused if it carries the slightest resource.
@@ -137,36 +143,41 @@ export const renameEnvironment = createServerFn({ method: "POST" })
  */
 export const deleteEnvironment = createServerFn({ method: "POST" })
   .validator(environmentIdSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "delete", resource: "service" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.environments.findFirst({
+            where: eq(environments.id, data.environmentId),
+          }),
+        notFoundMessage: "environment not found",
+        permission: { action: "delete", resource: "service" },
+        run: async ({ row: environment }) => {
+          const [service, stack, database] = await Promise.all([
+            db.query.services.findFirst({
+              where: eq(services.environmentId, environment.id),
+            }),
+            db.query.stacks.findFirst({
+              where: eq(stacks.environmentId, environment.id),
+            }),
+            db.query.databases.findFirst({
+              where: eq(databases.environmentId, environment.id),
+            }),
+          ]);
+          if (service || stack || database) {
+            throw new Error(
+              "this environment still has services, stacks or databases — remove them first"
+            );
+          }
 
-    const environment = await db.query.environments.findFirst({
-      where: eq(environments.id, data.environmentId),
-    });
-    if (!environment) {
-      throw new Error("environment not found");
-    }
-
-    const [service, stack, database] = await Promise.all([
-      db.query.services.findFirst({
-        where: eq(services.environmentId, environment.id),
-      }),
-      db.query.stacks.findFirst({
-        where: eq(stacks.environmentId, environment.id),
-      }),
-      db.query.databases.findFirst({
-        where: eq(databases.environmentId, environment.id),
-      }),
-    ]);
-    if (service || stack || database) {
-      throw new Error(
-        "this environment still has services, stacks or databases — remove them first"
-      );
-    }
-
-    await db.delete(environments).where(eq(environments.id, environment.id));
-    return { ok: true };
-  });
+          await db
+            .delete(environments)
+            .where(eq(environments.id, environment.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /**
  * Duplicate an environment — clones the CONFIGURATION, never the data.
@@ -196,127 +207,133 @@ export const duplicateEnvironment = createServerFn({ method: "POST" })
       environmentId: string;
       servicesCopied: number;
       stacksCopied: number;
-    }> => {
-      await requirePermission({ action: "create", resource: "service" });
+    }> =>
+      runGuarded({
+        load: () =>
+          db.query.environments.findFirst({
+            where: eq(environments.id, data.environmentId),
+            with: {
+              databases: true,
+              services: { with: { envVars: true } },
+              stacks: true,
+            },
+          }),
+        notFoundMessage: "environment not found",
+        permission: { action: "create", resource: "service" },
+        run: async ({ row: source }) => {
+          const nameTaken = await db.query.environments.findFirst({
+            where: and(
+              eq(environments.projectId, source.projectId),
+              eq(environments.name, data.name)
+            ),
+          });
+          if (nameTaken) {
+            throw new Error(`"${data.name}" already exists in this project`);
+          }
 
-      const source = await db.query.environments.findFirst({
-        where: eq(environments.id, data.environmentId),
-        with: {
-          databases: true,
-          services: { with: { envVars: true } },
-          stacks: true,
-        },
-      });
-      if (!source) {
-        throw new Error("environment not found");
-      }
-
-      const nameTaken = await db.query.environments.findFirst({
-        where: and(
-          eq(environments.projectId, source.projectId),
-          eq(environments.name, data.name)
-        ),
-      });
-      if (nameTaken) {
-        throw new Error(`"${data.name}" already exists in this project`);
-      }
-
-      const [target] = await db
-        .insert(environments)
-        .values({
-          description: source.description,
-          name: data.name,
-          projectId: source.projectId,
-        })
-        .returning();
-      if (!target) {
-        throw new Error("could not create environment");
-      }
-
-      for (const s of source.services) {
-        // biome-ignore lint/performance/noAwaitInLoops: each copied service must exist before we can encrypt its variables under ITS id
-        const [clone] = await db
-          .insert(services)
-          .values({
-            buildMethod: s.buildMethod,
-            domain: null,
-            environmentId: target.id,
-            gitBranch: s.gitBranch,
-            gitRepoUrl: s.gitRepoUrl,
-            name: s.name,
-            port: s.port,
-            registryId: s.registryId,
-            serverId: s.serverId,
-            sourceType: s.sourceType,
-          })
-          .returning();
-        if (!clone) {
-          throw new Error(`could not copy service "${s.name}"`);
-        }
-
-        for (const v of s.envVars) {
-          const value = decryptSecret(
-            v.valueEncrypted,
-            env.appKey,
-            secretContext.envVar(v.id)
-          );
-          // biome-ignore lint/performance/noAwaitInLoops: ordered writes, the AAD binds each secret to the row that was just created
-          const [row] = await db
-            .insert(envVars)
+          const [target] = await db
+            .insert(environments)
             .values({
-              isSecret: v.isSecret,
-              key: v.key,
-              serviceId: clone.id,
-              valueEncrypted: "placeholder",
+              description: source.description,
+              name: data.name,
+              projectId: source.projectId,
             })
             .returning();
-          if (!row) {
-            throw new Error("could not copy an environment variable");
+          if (!target) {
+            throw new Error("could not create environment");
           }
-          await db
-            .update(envVars)
-            .set({
-              valueEncrypted: encryptSecret(
-                value,
+
+          for (const s of source.services) {
+            // biome-ignore lint/performance/noAwaitInLoops: each copied service must exist before we can encrypt its variables under ITS id
+            const [clone] = await db
+              .insert(services)
+              .values({
+                buildMethod: s.buildMethod,
+                domain: null,
+                environmentId: target.id,
+                gitBranch: s.gitBranch,
+                gitRepoUrl: s.gitRepoUrl,
+                name: s.name,
+                port: s.port,
+                registryId: s.registryId,
+                serverId: s.serverId,
+                sourceType: s.sourceType,
+              })
+              .returning();
+            if (!clone) {
+              throw new Error(`could not copy service "${s.name}"`);
+            }
+
+            for (const v of s.envVars) {
+              const value = decryptSecret(
+                v.valueEncrypted,
                 env.appKey,
-                secretContext.envVar(row.id)
-              ),
-            })
-            .where(eq(envVars.id, row.id));
-        }
-      }
+                secretContext.envVar(v.id)
+              );
+              // biome-ignore lint/performance/noAwaitInLoops: ordered writes, the AAD binds each secret to the row that was just created
+              const [row] = await db
+                .insert(envVars)
+                .values({
+                  isSecret: v.isSecret,
+                  key: v.key,
+                  serviceId: clone.id,
+                  valueEncrypted: "placeholder",
+                })
+                .returning();
+              if (!row) {
+                throw new Error("could not copy an environment variable");
+              }
+              await db
+                .update(envVars)
+                .set({
+                  valueEncrypted: encryptSecret(
+                    value,
+                    env.appKey,
+                    secretContext.envVar(row.id)
+                  ),
+                })
+                .where(eq(envVars.id, row.id));
+            }
+          }
 
-      for (const st of source.stacks) {
-        // biome-ignore lint/performance/noAwaitInLoops: the Swarm name is computed from the id, which only exists once the row is created
-        const [clone] = await db
-          .insert(stacks)
-          .values({
-            composeFilePath: st.composeFilePath,
-            domain: null,
+          for (const st of source.stacks) {
+            // biome-ignore lint/performance/noAwaitInLoops: the Swarm name is computed from the id, which only exists once the row is created
+            const [clone] = await db
+              .insert(stacks)
+              .values({
+                composeFilePath: st.composeFilePath,
+                domain: null,
+                environmentId: target.id,
+                gitBranch: st.gitBranch,
+                gitRepoUrl: st.gitRepoUrl,
+                name: st.name,
+                port: st.port,
+                publicService: st.publicService,
+                serverId: st.serverId,
+                swarmName: "placeholder",
+              })
+              .returning();
+            if (!clone) {
+              throw new Error(`could not copy stack "${st.name}"`);
+            }
+            await db
+              .update(stacks)
+              .set({ swarmName: newStackSwarmName(clone) })
+              .where(eq(stacks.id, clone.id));
+          }
+
+          return {
+            databasesSkipped: source.databases.length,
             environmentId: target.id,
-            gitBranch: st.gitBranch,
-            gitRepoUrl: st.gitRepoUrl,
-            name: st.name,
-            port: st.port,
-            publicService: st.publicService,
-            serverId: st.serverId,
-            swarmName: "placeholder",
-          })
-          .returning();
-        if (!clone) {
-          throw new Error(`could not copy stack "${st.name}"`);
-        }
-        await db
-          .update(stacks)
-          .set({ swarmName: newStackSwarmName(clone) })
-          .where(eq(stacks.id, clone.id));
-      }
-
-      return {
-        databasesSkipped: source.databases.length,
-        environmentId: target.id,
-        servicesCopied: source.services.length,
-        stacksCopied: source.stacks.length,
-      };
-    }
+            environmentName: target.name,
+            servicesCopied: source.services.length,
+            stacksCopied: source.stacks.length,
+          };
+        },
+        // The COPY is the object, not the source it was made from.
+        target: ({ result }) => ({
+          id: result.environmentId,
+          name: result.environmentName,
+        }),
+      })
   );

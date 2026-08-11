@@ -8,7 +8,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
-import { requirePermission, runGuarded } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
 export const deleteDatabase = createServerFn({ method: "POST" })
@@ -67,12 +67,25 @@ export const rebuildDatabase = createServerFn({ method: "POST" })
 
 export const triggerDatabaseLifecycle = createServerFn({ method: "POST" })
   .validator(databaseLifecycleRequestSchema)
-  .handler(async ({ data }): Promise<{ queued: true }> => {
-    await requirePermission({ action: "operate", resource: "database" });
-    await enqueueDeploy({
-      action: data.action,
-      databaseId: data.databaseId,
-      kind: "database-lifecycle",
-    });
-    return { queued: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ queued: true }> =>
+      // Loaded rather than enqueued blind: "operate · database" with no
+      // object says nothing a month later, and a SELECT is cheap.
+      runGuarded({
+        load: () =>
+          db.query.databases.findFirst({
+            where: eq(databases.id, data.databaseId),
+          }),
+        notFoundMessage: "database not found",
+        permission: { action: "operate", resource: "database" },
+        run: async ({ row }) => {
+          await enqueueDeploy({
+            action: data.action,
+            databaseId: row.id,
+            kind: "database-lifecycle",
+          });
+          return { queued: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
