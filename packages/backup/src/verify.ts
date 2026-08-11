@@ -8,7 +8,7 @@ import {
   pickDestination,
 } from "#index";
 
-await runVerify("backup domain", async () => {
+await runVerify("backup domain", () => {
   const a = { id: "a", prefix: "dest-a" };
   const b = { id: "b", prefix: "dest-b" };
 

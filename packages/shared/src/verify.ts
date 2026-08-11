@@ -27,19 +27,18 @@ import {
   serviceNameSchema,
   setDatabaseSwarmSettingsSchema,
 } from "#validation";
-import { expectThrows, ko, ok, runVerify } from "#verify-harness";
+import { expectThrows, ko, ok, runVerify, suite } from "#verify-harness";
 
 const isCrypto = (e: unknown) => e instanceof CryptoError;
 const mustThrow = (label: string, fn: () => unknown) =>
   expectThrows(label, fn, isCrypto);
 
-await runVerify("shared crypto + validation", async () => {
+function verifyCrypto(): void {
   const KEY = randomBytes(32);
   const OTHER_KEY = randomBytes(32);
   const ctx = secretContext.sshKey("srv-1");
   const SECRET = "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END-----";
 
-  // ?? key ?????????????????????????????????????????????????????????????????????
   mustThrow("missing APP_KEY is rejected", () => loadAppKey(undefined));
   mustThrow("too-short APP_KEY is rejected", () =>
     loadAppKey(Buffer.from("court").toString("base64"))
@@ -50,7 +49,6 @@ await runVerify("shared crypto + validation", async () => {
     ko("valid APP_KEY badly decoded");
   }
 
-  // ?? round trip ????????????????????????????????????????????????????????????
   const box = encryptSecret(SECRET, KEY, ctx);
   if (decryptSecret(box, KEY, ctx) === SECRET) {
     ok("round trip");
@@ -63,25 +61,21 @@ await runVerify("shared crypto + validation", async () => {
     ok("plaintext doesn't appear in the ciphertext");
   }
 
-  // ?? non-determinism: unique IV on every encryption ??????????????????????????
   // Reusing an IV in GCM is catastrophic — it breaks authentication.
   const boxes = new Set(
     Array.from({ length: 200 }, () => encryptSecret(SECRET, KEY, ctx))
   );
   if (boxes.size === 200) {
-    ok("200 encryptions of the same plaintext ? 200 distinct results");
+    ok("200 encryptions of the same plaintext → 200 distinct results");
   } else {
     ko(`reused IV: ${200 - boxes.size} collision(s)`);
   }
 
-  // ?? expected failures ????????????????????????????????????????????????????????
-  mustThrow("wrong key ? rejected", () => decryptSecret(box, OTHER_KEY, ctx));
-
-  mustThrow("wrong context ? rejected (AAD binding)", () =>
+  mustThrow("wrong key → rejected", () => decryptSecret(box, OTHER_KEY, ctx));
+  mustThrow("wrong context → rejected (AAD binding)", () =>
     decryptSecret(box, KEY, secretContext.sshKey("srv-2"))
   );
-
-  mustThrow("ciphertext moved to another field ? rejected", () =>
+  mustThrow("ciphertext moved to another field → rejected", () =>
     decryptSecret(box, KEY, secretContext.envVar("srv-1"))
   );
 
@@ -93,28 +87,27 @@ await runVerify("shared crypto + validation", async () => {
     b[idx] = (b[idx] ?? 0) ^ 0x01;
     return b.toString("base64url");
   };
-  mustThrow("altered ciphertext ? rejected", () =>
+  mustThrow("altered ciphertext → rejected", () =>
     decryptSecret(
       [parts[0], parts[1], parts[2], flip(parts[3] ?? "")].join("."),
       KEY,
       ctx
     )
   );
-  mustThrow("altered auth tag ? rejected", () =>
+  mustThrow("altered auth tag → rejected", () =>
     decryptSecret(
       [parts[0], parts[1], flip(parts[2] ?? ""), parts[3]].join("."),
       KEY,
       ctx
     )
   );
-  mustThrow("unknown version ? rejected", () =>
+  mustThrow("unknown version → rejected", () =>
     decryptSecret(["v2", parts[1], parts[2], parts[3]].join("."), KEY, ctx)
   );
-  mustThrow("malformed format ? rejected", () =>
+  mustThrow("malformed format → rejected", () =>
     decryptSecret("nawak", KEY, ctx)
   );
 
-  // ?? constant-time comparison ?????????????????????????????????????????????????
   if (
     safeEqual("token", "token") &&
     !safeEqual("token", "tokeX") &&
@@ -124,8 +117,9 @@ await runVerify("shared crypto + validation", async () => {
   } else {
     ko("incorrect safeEqual");
   }
+}
 
-  // ?? validation ????????????????????????????????????????????????????????????????
+function verifyNameSchemas(): void {
   const cases: [string, boolean][] = [
     ["api", true],
     ["-api", false],
@@ -159,7 +153,9 @@ await runVerify("shared crypto + validation", async () => {
   } else {
     ko("inconsistent envVarKeySchema");
   }
+}
 
+function verifyDatabaseSchemas(): void {
   const imageOk = [
     "postgres:17-alpine",
     "ghcr.io/org/db:1.2.3",
@@ -215,16 +211,14 @@ await runVerify("shared crypto + validation", async () => {
   } else {
     ko("inconsistent database cluster/volume schemas");
   }
+}
 
-  // ?????????????????????????????????????????????????????????????????????????????
-  // S3 backups
-  // ?????????????????????????????????????????????????????????????????????????????
-
+function verifyS3BucketAndCron(): void {
   const bucketCases: [string, boolean][] = [
     ["noddle-sauvegardes", true],
     ["a.b.c", true],
-    ["ab", false], // fewer than 3 characters, rejected by S3 itself
-    ["Noddle", false], // an uppercase letter, rejected by S3 itself
+    ["ab", false],
+    ["Noddle", false],
     ["-noddle", false],
     ["noddle-", false],
   ];
@@ -280,7 +274,9 @@ await runVerify("shared crypto + validation", async () => {
   } else {
     ko(`createBackupConfigSchema failed: ${JSON.stringify(cfg.error.issues)}`);
   }
+}
 
+function verifyS3Destination(): void {
   const destination = s3DestinationSchema.safeParse({
     accessKeyId: "rustfsadmin",
     bucket: "noddle-sauvegardes",
@@ -291,9 +287,7 @@ await runVerify("shared crypto + validation", async () => {
 
   // An EMPTY secret is accepted by the schema — "keep the one that's
   // stored". It's the handler that requires a key when there's nothing to
-  // keep, since only it knows whether a row exists. The previous `min(1)`
-  // made the screen's promise ("Leave empty to keep the stored key")
-  // impossible to keep.
+  // keep, since only it knows whether a row exists.
   if (
     s3DestinationSchema.safeParse({
       accessKeyId: "rustfsadmin",
@@ -346,8 +340,9 @@ await runVerify("shared crypto + validation", async () => {
   } else {
     ok("s3DestinationSchema rejects an endpoint without http(s)://");
   }
+}
 
-  // ?? secret retention ????????????????????????????????????????????????????????
+async function verifySecretRetention(): Promise<void> {
   if (
     isRetainedSecret(null) &&
     isRetainedSecret(undefined) &&
@@ -359,38 +354,45 @@ await runVerify("shared crypto + validation", async () => {
     ko("isRetainedSecret misclassified an input");
   }
 
-  {
-    const kept = await resolveRetainedSecret(
-      "",
-      async () => "stored-secret",
-      "a secret is required"
-    );
-    if (kept === "stored-secret") {
-      ok("resolveRetainedSecret loads the stored secret when input is empty");
-    } else {
-      ko(`resolveRetainedSecret empty retain: ${kept}`);
-    }
+  const kept = await resolveRetainedSecret(
+    "",
+    async () => "stored-secret",
+    "a secret is required"
+  );
+  if (kept === "stored-secret") {
+    ok("resolveRetainedSecret loads the stored secret when input is empty");
+  } else {
+    ko(`resolveRetainedSecret empty retain: ${kept}`);
+  }
 
-    const fresh = await resolveRetainedSecret(
-      "new-secret",
-      async () => "stored-secret",
-      "a secret is required"
-    );
-    if (fresh === "new-secret") {
-      ok("resolveRetainedSecret prefers a provided secret");
-    } else {
-      ko(`resolveRetainedSecret fresh: ${fresh}`);
-    }
+  const fresh = await resolveRetainedSecret(
+    "new-secret",
+    async () => "stored-secret",
+    "a secret is required"
+  );
+  if (fresh === "new-secret") {
+    ok("resolveRetainedSecret prefers a provided secret");
+  } else {
+    ko(`resolveRetainedSecret fresh: ${fresh}`);
+  }
 
-    try {
-      await resolveRetainedSecret("", async () => null, "domain required msg");
-      ko("resolveRetainedSecret should fail without a stored secret");
-    } catch (e) {
-      if (e instanceof Error && e.message === "domain required msg") {
-        ok("resolveRetainedSecret uses the caller requiredError");
-      } else {
-        ko(`resolveRetainedSecret wrong error: ${e}`);
-      }
+  try {
+    await resolveRetainedSecret("", async () => null, "domain required msg");
+    ko("resolveRetainedSecret should fail without a stored secret");
+  } catch (e) {
+    if (e instanceof Error && e.message === "domain required msg") {
+      ok("resolveRetainedSecret uses the caller requiredError");
+    } else {
+      ko(`resolveRetainedSecret wrong error: ${e}`);
     }
   }
+}
+
+await runVerify("shared crypto + validation", async () => {
+  await suite("crypto", verifyCrypto);
+  await suite("name schemas", verifyNameSchemas);
+  await suite("database schemas", verifyDatabaseSchemas);
+  await suite("s3 bucket and cron", verifyS3BucketAndCron);
+  await suite("s3 destination", verifyS3Destination);
+  await suite("secret retention", verifySecretRetention);
 });
