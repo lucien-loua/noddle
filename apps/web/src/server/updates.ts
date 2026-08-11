@@ -1,6 +1,6 @@
 import { disconnect, execArgv, type SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
-import { requirePermission } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 import { connectToManager } from "@/lib/ssh.server";
 
@@ -173,32 +173,35 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
 );
 
 export const startUpdate = createServerFn({ method: "POST" }).handler(
-  async (): Promise<{ started: true }> => {
-    await requirePermission({ action: "update", resource: "installation" });
-
-    const client = await connectToManager();
-    try {
-      // `setsid`: its own session, so no longer attached to the SSH
-      // terminal.
-      // `nohup`: survives the SIGHUP from the connection closing.
-      // All THREE descriptors redirected, and that's the key point: SSH
-      // keeps the session open as long as some process still holds stdout
-      // or stderr. Without `< /dev/null`, the script would also inherit the
-      // input.
-      const res = await execArgv(client, [
-        "sudo",
-        "sh",
-        "-c",
-        `setsid nohup bash ${NODDLE_DIR}/installer/install.sh > ${UPDATE_LOG} 2>&1 < /dev/null &`,
-      ]);
-      if (res.code !== 0) {
-        throw new Error(
-          `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`
-        );
-      }
-      return { started: true };
-    } finally {
-      disconnect(client);
-    }
-  }
+  async (): Promise<{ started: true }> =>
+    // No `target`: the object is the installation itself, which has no row.
+    runGuarded({
+      permission: { action: "update", resource: "installation" },
+      run: async () => {
+        const client = await connectToManager();
+        try {
+          // `setsid`: its own session, so no longer attached to the SSH
+          // terminal.
+          // `nohup`: survives the SIGHUP from the connection closing.
+          // All THREE descriptors redirected, and that's the key point: SSH
+          // keeps the session open as long as some process still holds stdout
+          // or stderr. Without `< /dev/null`, the script would also inherit the
+          // input.
+          const res = await execArgv(client, [
+            "sudo",
+            "sh",
+            "-c",
+            `setsid nohup bash ${NODDLE_DIR}/installer/install.sh > ${UPDATE_LOG} 2>&1 < /dev/null &`,
+          ]);
+          if (res.code !== 0) {
+            throw new Error(
+              `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`
+            );
+          }
+          return { started: true as const };
+        } finally {
+          disconnect(client);
+        }
+      },
+    })
 );

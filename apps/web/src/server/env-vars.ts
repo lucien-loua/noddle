@@ -12,7 +12,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission } from "@/lib/permission.server";
+import { requirePermission, runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
 /**
@@ -206,76 +206,96 @@ async function writeEnvVar(
 
 export const saveEnvVars = createServerFn({ method: "POST" })
   .validator(saveEnvVarsSchema)
-  .handler(async ({ data }): Promise<EnvVarSaveResult> => {
-    await requirePermission({ action: "write", resource: "envVar" });
+  .handler(
+    async ({ data }): Promise<EnvVarSaveResult> =>
+      // No `target`: this writes, updates and deletes many rows under one
+      // owner, so no single envVar id is the object. The line still records
+      // who wrote variables and when, which is the part that matters.
+      runGuarded({
+        permission: { action: "write", resource: "envVar" },
+        run: async () => {
+          if (data.databaseId) {
+            await assertNoReservedKeys(data.databaseId, data.vars);
+          }
 
-    if (data.databaseId) {
-      await assertNoReservedKeys(data.databaseId, data.vars);
-    }
+          const seen = new Set<string>();
+          for (const v of data.vars) {
+            if (seen.has(v.key)) {
+              throw new Error(`duplicate key: ${v.key}`);
+            }
+            seen.add(v.key);
+          }
 
-    const seen = new Set<string>();
-    for (const v of data.vars) {
-      if (seen.has(v.key)) {
-        throw new Error(`duplicate key: ${v.key}`);
-      }
-      seen.add(v.key);
-    }
+          const result: EnvVarSaveResult = {
+            added: [],
+            removed: [],
+            updated: [],
+          };
+          // The ownership columns, resolved ONCE: `?? null` repeated in the
+          // insertion loop would be two extra branches on every iteration for a
+          // value that never changes.
+          const owner = {
+            databaseId: data.databaseId ?? null,
+            serviceId: data.serviceId ?? null,
+          };
 
-    const result: EnvVarSaveResult = { added: [], removed: [], updated: [] };
-    // The ownership columns, resolved ONCE: `?? null` repeated in the
-    // insertion loop would be two extra branches on every iteration for a
-    // value that never changes.
-    const owner = {
-      databaseId: data.databaseId ?? null,
-      serviceId: data.serviceId ?? null,
-    };
+          // All or nothing. The user approved ONE diff: if the twelfth variable
+          // fails, applying the first eleven would leave the service in a state
+          // nobody asked for — and one that would ship as-is at the next
+          // deployment.
+          await db.transaction(async (tx) => {
+            const existing = await tx.query.envVars.findMany({
+              where: ownedBy(data),
+            });
+            const byKey = new Map(existing.map((row) => [row.key, row]));
 
-    // All or nothing. The user approved ONE diff: if the twelfth variable
-    // fails, applying the first eleven would leave the service in a state
-    // nobody asked for — and one that would ship as-is at the next
-    // deployment.
-    await db.transaction(async (tx) => {
-      const existing = await tx.query.envVars.findMany({
-        where: ownedBy(data),
-      });
-      const byKey = new Map(existing.map((row) => [row.key, row]));
+            for (const incoming of data.vars) {
+              // biome-ignore lint/performance/noAwaitInLoops: ordered writes within a transaction
+              await writeEnvVar(
+                tx,
+                incoming,
+                byKey.get(incoming.key),
+                owner,
+                result
+              );
+            }
 
-      for (const incoming of data.vars) {
-        // biome-ignore lint/performance/noAwaitInLoops: ordered writes within a transaction
-        await writeEnvVar(tx, incoming, byKey.get(incoming.key), owner, result);
-      }
+            const removed = existing.filter((row) => !seen.has(row.key));
+            if (removed.length > 0) {
+              await tx.delete(envVars).where(
+                and(
+                  ownedBy(data),
+                  inArray(
+                    envVars.id,
+                    removed.map((row) => row.id)
+                  )
+                )
+              );
+              result.removed = removed.map((row) => row.key);
+            }
+          });
 
-      const removed = existing.filter((row) => !seen.has(row.key));
-      if (removed.length > 0) {
-        await tx.delete(envVars).where(
-          and(
-            ownedBy(data),
-            inArray(
-              envVars.id,
-              removed.map((row) => row.id)
-            )
-          )
-        );
-        result.removed = removed.map((row) => row.key);
-      }
-    });
+          // A database has NO Deploy button: without this job, the variables
+          // would stay in the database without ever reaching the container, and
+          // the screen would show a configuration that isn't running anywhere. A
+          // service, on the other hand, will pick them up on its next deployment
+          // — that's the action the user takes anyway.
+          //
+          // Nothing is queued when NOTHING changed: restarting a database for an
+          // empty save would be a pointless outage.
+          const changed =
+            result.added.length +
+              result.removed.length +
+              result.updated.length >
+            0;
+          if (data.databaseId && changed) {
+            await enqueueDeploy({
+              databaseId: data.databaseId,
+              kind: "provision-database",
+            });
+          }
 
-    // A database has NO Deploy button: without this job, the variables
-    // would stay in the database without ever reaching the container, and
-    // the screen would show a configuration that isn't running anywhere. A
-    // service, on the other hand, will pick them up on its next deployment
-    // — that's the action the user takes anyway.
-    //
-    // Nothing is queued when NOTHING changed: restarting a database for an
-    // empty save would be a pointless outage.
-    const changed =
-      result.added.length + result.removed.length + result.updated.length > 0;
-    if (data.databaseId && changed) {
-      await enqueueDeploy({
-        databaseId: data.databaseId,
-        kind: "provision-database",
-      });
-    }
-
-    return result;
-  });
+          return result;
+        },
+      })
+  );
