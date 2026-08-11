@@ -14,7 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission } from "@/lib/permission.server";
+import { requirePermission, runGuarded } from "@/lib/permission.server";
 
 export interface RegistryView {
   createdAt: string;
@@ -162,65 +162,86 @@ async function resolvePassword(data: {
 
 export const testRegistry = createServerFn({ method: "POST" })
   .validator(registrySchema)
-  .handler(async ({ data }): Promise<{ error: string | null }> => {
-    await requirePermission({ action: "create", resource: "registry" });
-
-    const password = await resolvePassword(data);
-    return await pingRegistry(data.registryUrl, data.username, password);
-  });
+  .handler(
+    async ({ data }): Promise<{ error: string | null }> =>
+      // A connection test, not a change: the object is the registry URL
+      // being probed, which may not be a saved row yet.
+      runGuarded({
+        permission: { action: "create", resource: "registry" },
+        run: async () => {
+          const password = await resolvePassword(data);
+          return await pingRegistry(data.registryUrl, data.username, password);
+        },
+        target: () => ({ id: data.id ?? data.registryUrl, name: data.name }),
+      })
+  );
 
 export const saveRegistry = createServerFn({ method: "POST" })
   .validator(registrySchema)
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "registry" });
+    const saved = await runGuarded({
+      permission: { action: "create", resource: "registry" },
+      run: async () => {
+        const password = await resolvePassword(data);
 
-    const password = await resolvePassword(data);
+        if (data.id) {
+          await db
+            .update(registries)
+            .set({
+              imagePrefix: data.imagePrefix,
+              name: data.name,
+              passwordEncrypted: encryptSecret(
+                password,
+                env.appKey,
+                secretContext.registry(data.id)
+              ),
+              registryUrl: data.registryUrl,
+              updatedAt: new Date(),
+              username: data.username,
+            })
+            .where(eq(registries.id, data.id));
+          return { id: data.id, ok: true as const };
+        }
 
-    if (data.id) {
-      await db
-        .update(registries)
-        .set({
+        // The AAD binds the ciphertext to ITS row: the id must exist before
+        // encryption, so it's drawn here rather than via `defaultRandom()`.
+        const id = crypto.randomUUID();
+        await db.insert(registries).values({
+          id,
           imagePrefix: data.imagePrefix,
           name: data.name,
           passwordEncrypted: encryptSecret(
             password,
             env.appKey,
-            secretContext.registry(data.id)
+            secretContext.registry(id)
           ),
           registryUrl: data.registryUrl,
-          updatedAt: new Date(),
           username: data.username,
-        })
-        .where(eq(registries.id, data.id));
-      return { ok: true };
-    }
-
-    // The AAD binds the ciphertext to ITS row: the id must exist before
-    // encryption, so it's drawn here rather than via `defaultRandom()`.
-    const id = crypto.randomUUID();
-    await db.insert(registries).values({
-      id,
-      imagePrefix: data.imagePrefix,
-      name: data.name,
-      passwordEncrypted: encryptSecret(
-        password,
-        env.appKey,
-        secretContext.registry(id)
-      ),
-      registryUrl: data.registryUrl,
-      username: data.username,
+        });
+        return { id, ok: true as const };
+      },
+      // The registry, never its password.
+      target: ({ result }) => ({ id: result.id, name: data.name }),
     });
-    return { ok: true };
+    return { ok: saved.ok };
   });
 
 export const deleteRegistry = createServerFn({ method: "POST" })
   .validator(registryIdSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "delete", resource: "registry" });
-
-    await db.delete(registries).where(eq(registries.id, data.id));
-    return { ok: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.registries.findFirst({ where: eq(registries.id, data.id) }),
+        notFoundMessage: "registry not found",
+        permission: { action: "delete", resource: "registry" },
+        run: async ({ row }) => {
+          await db.delete(registries).where(eq(registries.id, row.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /**
  * Enough to fill a service's selector: an id and a name, nothing else.
@@ -243,12 +264,22 @@ export const getRegistryOptions = createServerFn({ method: "GET" }).handler(
 
 export const setServiceRegistry = createServerFn({ method: "POST" })
   .validator(serviceRegistrySchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "service" });
-
-    await db
-      .update(services)
-      .set({ registryId: data.registryId, updatedAt: new Date() })
-      .where(eq(services.id, data.serviceId));
-    return { ok: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.services.findFirst({
+            where: eq(services.id, data.serviceId),
+          }),
+        notFoundMessage: "service not found",
+        permission: { action: "create", resource: "service" },
+        run: async ({ row }) => {
+          await db
+            .update(services)
+            .set({ registryId: data.registryId, updatedAt: new Date() })
+            .where(eq(services.id, row.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );

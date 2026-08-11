@@ -16,7 +16,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueStackDeploy } from "@/lib/deploy-queue.server";
-import { requirePermission } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 import type { DeploymentSummary } from "@/server/dashboard";
@@ -24,111 +24,135 @@ import type { DeploymentSummary } from "@/server/dashboard";
 export const connectStack = createServerFn({ method: "POST" })
   .validator(connectStackSchema)
   .handler(async ({ data }): Promise<{ stackId: string }> => {
-    await requirePermission({ action: "create", resource: "service" });
+    // The Stack is the object; the Project and Environment this may also
+    // have created are find-or-create side effects.
+    const created = await runGuarded({
+      permission: { action: "create", resource: "service" },
+      run: async () => {
+        // Find-or-create by name, exactly like `connectRepo`: the same
+        // project/environment holds several services AND several stacks.
+        let project = await db.query.projects.findFirst({
+          where: eq(projects.name, data.projectName),
+        });
+        if (!project) {
+          const [created] = await db
+            .insert(projects)
+            .values({ name: data.projectName })
+            .returning();
+          if (!created) {
+            throw new Error("could not create project");
+          }
+          project = created;
+        }
 
-    // Find-or-create by name, exactly like `connectRepo`: the same
-    // project/environment holds several services AND several stacks.
-    let project = await db.query.projects.findFirst({
-      where: eq(projects.name, data.projectName),
+        let environment = await db.query.environments.findFirst({
+          where: and(
+            eq(environments.projectId, project.id),
+            eq(environments.name, data.environmentName)
+          ),
+        });
+        if (!environment) {
+          const [created] = await db
+            .insert(environments)
+            .values({ name: data.environmentName, projectId: project.id })
+            .returning();
+          if (!created) {
+            throw new Error("could not create environment");
+          }
+          environment = created;
+        }
+
+        const [stack] = await db
+          .insert(stacks)
+          .values({
+            composeFilePath: data.composeFilePath,
+            domain: data.domain,
+            environmentId: environment.id,
+            gitBranch: data.gitBranch,
+            gitRepoUrl: data.gitRepoUrl,
+            name: data.name,
+            port: data.port,
+            publicService: data.publicService,
+            serverId: data.serverId,
+            swarmName: "placeholder",
+          })
+          .returning();
+        if (!stack) {
+          throw new Error("could not create stack");
+        }
+
+        // The Swarm namespace carries 8 hex characters drawn from the
+        // identifier, so it can only be written once the row is created — same
+        // constraint as a database's password, bound by AAD. Without it, two
+        // `web` stacks living in two environments would share services, network
+        // and VOLUMES.
+        await db
+          .update(stacks)
+          .set({ swarmName: newStackSwarmName(stack) })
+          .where(eq(stacks.id, stack.id));
+
+        return { name: stack.name, stackId: stack.id };
+      },
+      target: ({ result }) => ({ id: result.stackId, name: result.name }),
     });
-    if (!project) {
-      const [created] = await db
-        .insert(projects)
-        .values({ name: data.projectName })
-        .returning();
-      if (!created) {
-        throw new Error("could not create project");
-      }
-      project = created;
-    }
-
-    let environment = await db.query.environments.findFirst({
-      where: and(
-        eq(environments.projectId, project.id),
-        eq(environments.name, data.environmentName)
-      ),
-    });
-    if (!environment) {
-      const [created] = await db
-        .insert(environments)
-        .values({ name: data.environmentName, projectId: project.id })
-        .returning();
-      if (!created) {
-        throw new Error("could not create environment");
-      }
-      environment = created;
-    }
-
-    const [stack] = await db
-      .insert(stacks)
-      .values({
-        composeFilePath: data.composeFilePath,
-        domain: data.domain,
-        environmentId: environment.id,
-        gitBranch: data.gitBranch,
-        gitRepoUrl: data.gitRepoUrl,
-        name: data.name,
-        port: data.port,
-        publicService: data.publicService,
-        serverId: data.serverId,
-        swarmName: "placeholder",
-      })
-      .returning();
-    if (!stack) {
-      throw new Error("could not create stack");
-    }
-
-    // The Swarm namespace carries 8 hex characters drawn from the
-    // identifier, so it can only be written once the row is created — same
-    // constraint as a database's password, bound by AAD. Without it, two
-    // `web` stacks living in two environments would share services, network
-    // and VOLUMES.
-    await db
-      .update(stacks)
-      .set({ swarmName: newStackSwarmName(stack) })
-      .where(eq(stacks.id, stack.id));
-
-    return { stackId: stack.id };
+    return { stackId: created.stackId };
   });
 
 export const triggerStackDeploy = createServerFn({ method: "POST" })
   .validator(stackDeployRequestSchema)
-  .handler(async ({ data }): Promise<{ stackDeploymentId: string }> => {
-    await requirePermission({ action: "deploy", resource: "service" });
-    // Same path as the webhook, which queues the same row without a session.
-    return await queueStackDeploy(data.stackId, { trigger: "manual" });
-  });
+  .handler(
+    async ({ data }): Promise<{ stackDeploymentId: string }> =>
+      runGuarded({
+        load: () =>
+          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+        notFoundMessage: "stack not found",
+        permission: { action: "deploy", resource: "service" },
+        // Same path as the webhook, which queues the same row without a
+        // session.
+        run: ({ row }) => queueStackDeploy(row.id, { trigger: "manual" }),
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 export const triggerStackRollback = createServerFn({ method: "POST" })
   .validator(stackRollbackRequestSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "rollback", resource: "service" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      // The audit object is the Stack, not the deployment the caller named.
+      runGuarded({
+        load: () =>
+          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+        notFoundMessage: "stack not found",
+        permission: { action: "rollback", resource: "service" },
+        run: async () => {
+          // Re-read from the database rather than trusted as given: the client
+          // sends a deployment id, not a compose text — same reason as
+          // `triggerRollback` for the single-service path.
+          const target = await db.query.stackDeployments.findFirst({
+            where: and(
+              eq(stackDeployments.id, data.sourceDeploymentId),
+              eq(stackDeployments.stackId, data.stackId)
+            ),
+          });
+          if (!target) {
+            throw new Error("deployment not found for this stack");
+          }
+          if (!target.composeSource) {
+            throw new Error(
+              "this deployment produced nothing — there is nothing to redeploy"
+            );
+          }
 
-    // Re-read from the database rather than trusted as given: the client
-    // sends a deployment id, not a compose text — same reason as
-    // `triggerRollback` for the single-service path.
-    const target = await db.query.stackDeployments.findFirst({
-      where: and(
-        eq(stackDeployments.id, data.sourceDeploymentId),
-        eq(stackDeployments.stackId, data.stackId)
-      ),
-    });
-    if (!target) {
-      throw new Error("deployment not found for this stack");
-    }
-    if (!target.composeSource) {
-      throw new Error(
-        "this deployment produced nothing — there is nothing to redeploy"
-      );
-    }
-
-    await enqueueDeploy({
-      kind: "rollback-stack",
-      sourceDeploymentId: data.sourceDeploymentId,
-      stackId: data.stackId,
-    });
-    return { ok: true };
-  });
+          await enqueueDeploy({
+            kind: "rollback-stack",
+            sourceDeploymentId: data.sourceDeploymentId,
+            stackId: data.stackId,
+          });
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 function toSummary(
   row: typeof stackDeployments.$inferSelect
@@ -177,27 +201,24 @@ export const getStackDeployments = createServerFn({ method: "GET" })
  */
 export const deleteStack = createServerFn({ method: "POST" })
   .validator(deleteStackSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "delete", resource: "service" });
-
-    const stack = await db.query.stacks.findFirst({
-      where: eq(stacks.id, data.stackId),
-    });
-    if (!stack) {
-      throw new Error("stack not found");
-    }
-    // Re-checked HERE: a dialog box only protects the clients that display
-    // it.
-    if (data.confirmName !== stack.name) {
-      throw new Error(
-        `the name you typed does not match "${stack.name}" — deletion cancelled`
-      );
-    }
-
-    await db
-      .update(stacks)
-      .set(markDeleting(null))
-      .where(eq(stacks.id, stack.id));
-    await enqueueDeploy({ kind: "delete-stack", stackId: stack.id });
-    return { ok: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        // Re-checked by the helper: a dialog box only protects the clients
+        // that display it.
+        confirmName: { expected: (row) => row.name, typed: data.confirmName },
+        load: () =>
+          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+        notFoundMessage: "stack not found",
+        permission: { action: "delete", resource: "service" },
+        run: async ({ row: stack }) => {
+          await db
+            .update(stacks)
+            .set(markDeleting(null))
+            .where(eq(stacks.id, stack.id));
+          await enqueueDeploy({ kind: "delete-stack", stackId: stack.id });
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
