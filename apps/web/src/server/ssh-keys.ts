@@ -9,7 +9,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission } from "@/lib/permission.server";
+import { requirePermission, runGuarded } from "@/lib/permission.server";
 
 export interface SshKeyView {
   createdAt: string;
@@ -61,42 +61,49 @@ export const getSshKeys = createServerFn({ method: "GET" }).handler(
 export const createSshKey = createServerFn({ method: "POST" })
   .validator(sshKeyInputSchema)
   .handler(async ({ data }): Promise<{ publicKey: string }> => {
-    await requirePermission({ action: "create", resource: "sshKey" });
+    // The created row is the audit object, and it does not exist until
+    // `run` has made it — so the target reads the result, not a load.
+    const created = await runGuarded({
+      permission: { action: "create", resource: "sshKey" },
+      run: async () => {
+        const pair =
+          data.mode === "generate"
+            ? generateKeyPair(data.type, data.name)
+            : {
+                privateKey: data.privateKey,
+                publicKey: publicKeyOf(data.privateKey),
+              };
 
-    const pair =
-      data.mode === "generate"
-        ? generateKeyPair(data.type, data.name)
-        : {
-            privateKey: data.privateKey,
-            publicKey: publicKeyOf(data.privateKey),
-          };
+        if (!pair.publicKey) {
+          // An unreadable key, or one protected by a passphrase. The refusal
+          // happens here rather than at the first connection: discovering at
+          // that point that the key doesn't open would leave a server
+          // "unreachable" with no readable cause.
+          throw new Error(
+            "this private key could not be read — it may be malformed, or protected by a passphrase, which Noddle does not support"
+          );
+        }
 
-    if (!pair.publicKey) {
-      // An unreadable key, or one protected by a passphrase. The refusal
-      // happens here rather than at the first connection: discovering at
-      // that point that the key doesn't open would leave a server
-      // "unreachable" with no readable cause.
-      throw new Error(
-        "this private key could not be read — it may be malformed, or protected by a passphrase, which Noddle does not support"
-      );
-    }
+        // The id is generated HERE: the AAD binds the ciphertext to the row, so
+        // it must exist before encryption. Leaving it to `defaultRandom()`
+        // would require writing a "placeholder" and then rewriting it.
+        const id = crypto.randomUUID();
+        await db.insert(sshKeys).values({
+          id,
+          name: data.name,
+          privateKeyEncrypted: encryptSecret(
+            pair.privateKey,
+            env.appKey,
+            secretContext.sshKey(id)
+          ),
+          publicKey: pair.publicKey,
+        });
 
-    // The id is generated HERE: the AAD binds the ciphertext to the row, so
-    // it must exist before encryption. Leaving it to `defaultRandom()`
-    // would require writing a "placeholder" and then rewriting it.
-    const id = crypto.randomUUID();
-    await db.insert(sshKeys).values({
-      id,
-      name: data.name,
-      privateKeyEncrypted: encryptSecret(
-        pair.privateKey,
-        env.appKey,
-        secretContext.sshKey(id)
-      ),
-      publicKey: pair.publicKey,
+        return { id, name: data.name, publicKey: pair.publicKey };
+      },
+      target: ({ result }) => ({ id: result.id, name: result.name }),
     });
-
-    return { publicKey: pair.publicKey };
+    return { publicKey: created.publicKey };
   });
 
 /**
@@ -109,20 +116,28 @@ export const createSshKey = createServerFn({ method: "POST" })
  */
 export const deleteSshKey = createServerFn({ method: "POST" })
   .validator(deleteSshKeySchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "delete", resource: "sshKey" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.sshKeys.findFirst({ where: eq(sshKeys.id, data.sshKeyId) }),
+        notFoundMessage: "ssh key not found",
+        permission: { action: "delete", resource: "sshKey" },
+        run: async ({ row }) => {
+          const used = await db.query.servers.findMany({
+            where: eq(servers.sshKeyId, data.sshKeyId),
+          });
+          if (used.length > 0) {
+            throw new Error(
+              `this key still opens ${used.length} server(s): ${used
+                .map((s) => s.name)
+                .join(", ")} — remove them first`
+            );
+          }
 
-    const used = await db.query.servers.findMany({
-      where: eq(servers.sshKeyId, data.sshKeyId),
-    });
-    if (used.length > 0) {
-      throw new Error(
-        `this key still opens ${used.length} server(s): ${used
-          .map((s) => s.name)
-          .join(", ")} — remove them first`
-      );
-    }
-
-    await db.delete(sshKeys).where(eq(sshKeys.id, data.sshKeyId));
-    return { ok: true };
-  });
+          await db.delete(sshKeys).where(eq(sshKeys.id, row.id));
+          return { ok: true };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );

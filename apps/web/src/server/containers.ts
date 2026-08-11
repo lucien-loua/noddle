@@ -5,7 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
-import { requirePermission } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 import { connectToServer } from "@/lib/ssh.server";
@@ -264,41 +264,58 @@ export const containerAction = createServerFn({ method: "POST" })
   .validator(containerActionSchema)
   .handler(async ({ data }): Promise<{ done: true }> => {
     // `remove` can't be undone, the other two can. The boundary is the same
-    // as everywhere else in the role model.
-    await requirePermission({
-      action: data.action === "remove" ? "delete" : "operate",
-      resource: "container",
+    // as everywhere else in the role model. Computed BEFORE the call:
+    // runGuarded takes one permission, not a function of the payload.
+    const permission = {
+      action: (data.action === "remove" ? "delete" : "operate") as
+        | "delete"
+        | "operate",
+      resource: "container" as const,
+    };
+
+    // The object is a container, not a row — so no `load`; its name comes
+    // back from the machine inside `run` and the target reads the result.
+    const outcome = await runGuarded({
+      permission,
+      run: async () => {
+        const client = await connectToServerById(data.serverId);
+        try {
+          const found = await readKind(client, data.containerId);
+          if (!found) {
+            throw new Error("container not found");
+          }
+          if (found.kind !== "unmanaged") {
+            throw new Error(
+              found.kind === "swarm"
+                ? `${found.name} is a Swarm task — restart its service instead, stopping the container only makes Swarm reschedule it.`
+                : `${found.name} is part of Noddle itself and cannot be changed from here.`
+            );
+          }
+
+          // Never `-f` on `rm`: Docker refuses to remove a RUNNING container
+          // without it, and that refusal is a protection we keep rather than
+          // work around. It has to be stopped first, explicitly.
+          const argv =
+            data.action === "remove"
+              ? ["sudo", "docker", "rm", data.containerId]
+              : ["sudo", "docker", data.action, data.containerId];
+          const res = await execArgv(client, argv);
+          if (res.code !== 0) {
+            throw new Error(
+              res.stderr.trim() || `docker ${data.action} failed`
+            );
+          }
+          return { containerName: found.name, done: true as const };
+        } finally {
+          disconnect(client);
+        }
+      },
+      target: ({ result }) => ({
+        id: data.containerId,
+        name: result.containerName,
+      }),
     });
-
-    const client = await connectToServerById(data.serverId);
-    try {
-      const found = await readKind(client, data.containerId);
-      if (!found) {
-        throw new Error("container not found");
-      }
-      if (found.kind !== "unmanaged") {
-        throw new Error(
-          found.kind === "swarm"
-            ? `${found.name} is a Swarm task — restart its service instead, stopping the container only makes Swarm reschedule it.`
-            : `${found.name} is part of Noddle itself and cannot be changed from here.`
-        );
-      }
-
-      // Never `-f` on `rm`: Docker refuses to remove a RUNNING container
-      // without it, and that refusal is a protection we keep rather than
-      // work around. It has to be stopped first, explicitly.
-      const argv =
-        data.action === "remove"
-          ? ["sudo", "docker", "rm", data.containerId]
-          : ["sudo", "docker", data.action, data.containerId];
-      const res = await execArgv(client, argv);
-      if (res.code !== 0) {
-        throw new Error(res.stderr.trim() || `docker ${data.action} failed`);
-      }
-      return { done: true };
-    } finally {
-      disconnect(client);
-    }
+    return { done: outcome.done };
   });
 
 const restartServiceSchema = z.object({
@@ -354,56 +371,64 @@ async function isManagedSwarmService(serviceName: string): Promise<boolean> {
  */
 export const restartSwarmService = createServerFn({ method: "POST" })
   .validator(restartServiceSchema)
-  .handler(async ({ data }): Promise<{ queued: true }> => {
-    await requirePermission({ action: "operate", resource: "container" });
+  .handler(
+    async ({ data }): Promise<{ queued: true }> =>
+      runGuarded({
+        permission: { action: "operate", resource: "container" },
+        // The Swarm service name IS the object here; there is no local row
+        // for it, so the target is built from the payload after the
+        // ownership check inside `run` has accepted it.
+        run: async () => {
+          if (!(await isManagedSwarmService(data.serviceName))) {
+            throw new Error(
+              `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
+            );
+          }
 
-    if (!(await isManagedSwarmService(data.serviceName))) {
-      throw new Error(
-        `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
-      );
-    }
+          const client = await connectToServerById(data.serverId);
+          try {
+            // Re-read on the machine that reported the task: the page may be
+            // stale, and a forged serverId/serviceName pair must not skip the
+            // kind check that containerAction already applies to unmanaged
+            // containers.
+            const res = await execArgv(client, [
+              "sudo",
+              "docker",
+              "ps",
+              "-a",
+              "--no-trunc",
+              "--filter",
+              `label=com.docker.swarm.service.name=${data.serviceName}`,
+              "--format",
+              PS_FORMAT,
+            ]);
+            if (res.code !== 0) {
+              throw new Error(res.stderr.trim() || "docker ps failed");
+            }
+            const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
+            if (rows.length === 0) {
+              throw new Error(
+                `no running task for Swarm service ${data.serviceName} on that server`
+              );
+            }
+            // Swarm tasks classify as `swarm`. Anything else (control-plane
+            // compose leftovers mis-filtered, empty labels) is refused.
+            const foreign = rows.find((r) => r.kind !== "swarm");
+            if (foreign) {
+              throw new Error(
+                `${foreign.name} is part of Noddle itself and cannot be changed from here.`
+              );
+            }
+          } finally {
+            disconnect(client);
+          }
 
-    const client = await connectToServerById(data.serverId);
-    try {
-      // Re-read on the machine that reported the task: the page may be
-      // stale, and a forged serverId/serviceName pair must not skip the
-      // kind check that containerAction already applies to unmanaged
-      // containers.
-      const res = await execArgv(client, [
-        "sudo",
-        "docker",
-        "ps",
-        "-a",
-        "--no-trunc",
-        "--filter",
-        `label=com.docker.swarm.service.name=${data.serviceName}`,
-        "--format",
-        PS_FORMAT,
-      ]);
-      if (res.code !== 0) {
-        throw new Error(res.stderr.trim() || "docker ps failed");
-      }
-      const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
-      if (rows.length === 0) {
-        throw new Error(
-          `no running task for Swarm service ${data.serviceName} on that server`
-        );
-      }
-      // Swarm tasks classify as `swarm`. Anything else (control-plane
-      // compose leftovers mis-filtered, empty labels) is refused.
-      const foreign = rows.find((r) => r.kind !== "swarm");
-      if (foreign) {
-        throw new Error(
-          `${foreign.name} is part of Noddle itself and cannot be changed from here.`
-        );
-      }
-    } finally {
-      disconnect(client);
-    }
-
-    await enqueueDeploy({
-      kind: "restart-swarm-service",
-      serviceName: data.serviceName,
-    });
-    return { queued: true };
-  });
+          await enqueueDeploy({
+            kind: "restart-swarm-service",
+            serviceName: data.serviceName,
+          });
+          return { queued: true as const };
+        },
+        target: () => ({ id: data.serviceName, name: data.serviceName }),
+      })
+  );
