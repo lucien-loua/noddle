@@ -154,6 +154,8 @@
     "packages/deploy-contract": {
       "name": "@noddle/deploy-contract",
       "dependencies": {
+        "@noddle/shared": "workspace:*",
+        "bullmq": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

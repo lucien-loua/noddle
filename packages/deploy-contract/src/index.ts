@@ -111,3 +111,5 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
 ]);
 
 export type DeployJobData = z.infer<typeof deployJobSchema>;
+export type JobKind = DeployJobData["kind"];
+export type PayloadOf<K extends JobKind> = Extract<DeployJobData, { kind: K }>;

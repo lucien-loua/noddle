@@ -1,21 +1,14 @@
-import {
-  DEPLOY_QUEUE_NAME,
-  type DeployJobData,
-  deployJobSchema,
-} from "@noddle/deploy-contract";
-import { Queue } from "bullmq";
+import type { DeployJobData } from "@noddle/deploy-contract";
+import { createDeployQueue } from "@noddle/deploy-contract/queue";
+import type { Queue } from "bullmq";
 import { redis } from "@/lib/redis.server";
 
 const globalForQueue = globalThis as typeof globalThis & {
-  __noddleDeployQueue?: Queue<DeployJobData>;
+  __noddleDeployQueue?: ReturnType<typeof createDeployQueue>;
 };
 
-export const deployQueue: Queue<DeployJobData> =
-  globalForQueue.__noddleDeployQueue ??
-  new Queue<DeployJobData>(DEPLOY_QUEUE_NAME, { connection: redis });
-globalForQueue.__noddleDeployQueue = deployQueue;
+const created = globalForQueue.__noddleDeployQueue ?? createDeployQueue(redis);
+globalForQueue.__noddleDeployQueue = created;
 
-export function enqueueDeploy(job: DeployJobData): Promise<unknown> {
-  const parsed = deployJobSchema.parse(job);
-  return deployQueue.add(parsed.kind, parsed);
-}
+export const deployQueue: Queue<DeployJobData> = created.queue;
+export const enqueueDeploy = created.enqueue;

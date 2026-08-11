@@ -11,7 +11,6 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import type { DeployJobData } from "@noddle/deploy-contract";
 import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
@@ -42,122 +41,6 @@ import {
   type DeployContext,
   type ServerRow,
 } from "#runtime-context";
-
-/** Queue dispatcher. The web app never executes any of this: it runs on Bun,
- *  where `dockerode` through an SSH tunnel doesn't work. */
-export async function runJob(
-  ctx: DeployContext,
-  data: DeployJobData
-): Promise<void> {
-  if (data.kind === "rollback") {
-    await redeployImage(ctx, {
-      imageTag: data.imageTag,
-      serviceId: data.serviceId,
-      trigger: "rollback",
-    });
-    return;
-  }
-  if (data.kind === "provision-server") {
-    const { provisionServer } = await import("#provision");
-    await provisionServer(ctx, data.serverId);
-    return;
-  }
-  if (data.kind === "delete-service") {
-    const { runServiceTeardown } = await import("#teardown");
-    await runServiceTeardown(ctx, data.serviceId);
-    return;
-  }
-  if (data.kind === "delete-stack") {
-    const { runStackTeardown } = await import("#teardown-stack");
-    await runStackTeardown(ctx, data.stackId);
-    return;
-  }
-  if (data.kind === "delete-database") {
-    const { runDatabaseTeardown } = await import("#teardown-stack");
-    await runDatabaseTeardown(ctx, data.databaseId);
-    return;
-  }
-  if (data.kind === "delete-server") {
-    const { runServerTeardown } = await import("#teardown-server");
-    await runServerTeardown(ctx, data.serverId);
-    return;
-  }
-  if (data.kind === "lifecycle") {
-    const { runLifecycle } = await import("#lifecycle");
-    await runLifecycle(ctx, data.serviceId, data.action);
-    return;
-  }
-  if (data.kind === "change-database-password") {
-    const { changeDatabasePassword } = await import("#database-password");
-    await changeDatabasePassword(ctx, data.databaseId, data.password);
-    return;
-  }
-
-  if (data.kind === "database-lifecycle") {
-    const { runDatabaseLifecycle } = await import("#lifecycle");
-    await runDatabaseLifecycle(ctx, data.databaseId, data.action);
-    return;
-  }
-  if (data.kind === "prune-registry") {
-    const { sweepRegistry } = await import("#registry-sweep");
-    await sweepRegistry(ctx);
-    return;
-  }
-  if (data.kind === "prune-docker") {
-    const { pruneDocker } = await import("#prune");
-    await pruneDocker(ctx);
-    return;
-  }
-  if (data.kind === "restart-swarm-service") {
-    const { restartSwarmServiceByName } = await import("#containers");
-    await restartSwarmServiceByName(ctx, data.serviceName);
-    return;
-  }
-  if (data.kind === "provision-database") {
-    const { provisionDatabase } = await import("#database");
-    await provisionDatabase(ctx, data.databaseId);
-    return;
-  }
-  if (data.kind === "rebuild-database") {
-    const { rebuildDatabase } = await import("#database");
-    await rebuildDatabase(ctx, data.databaseId);
-    return;
-  }
-  // On the SAME queue as deployments, deliberately: concurrency 1. A nightly
-  // backup therefore won't run during a build, which is the conservative
-  // choice on a 2GB machine — the build cap protects against the build, not
-  // against a dump piling on top of it.
-  if (data.kind === "backup") {
-    const { runBackup } = await import("#backup");
-    await runBackup(ctx, data.backupId);
-    return;
-  }
-  if (data.kind === "restore") {
-    const { runRestore } = await import("#restore");
-    await runRestore(ctx, {
-      backupId: data.backupId,
-      databaseId: data.databaseId,
-      destinationId: data.destinationId,
-      objectKey: data.objectKey,
-    });
-    return;
-  }
-  if (data.kind === "deploy-stack") {
-    const { runStackDeploy } = await import("#compose");
-    await runStackDeploy(ctx, { stackDeploymentId: data.stackDeploymentId });
-    return;
-  }
-  if (data.kind === "rollback-stack") {
-    const { redeployStack } = await import("#compose");
-    await redeployStack(ctx, {
-      sourceDeploymentId: data.sourceDeploymentId,
-      stackId: data.stackId,
-      trigger: "rollback",
-    });
-    return;
-  }
-  await runDeploy(ctx, data);
-}
 
 /**
  * Any deployment still "under watch" for this service stops being watched as

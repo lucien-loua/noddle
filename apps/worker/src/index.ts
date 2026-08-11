@@ -6,12 +6,13 @@ import {
   type DeployJobData,
   deployJobSchema,
 } from "@noddle/deploy-contract";
+import { createDeployQueue } from "@noddle/deploy-contract/queue";
 import { loadAppKey } from "@noddle/shared/crypto";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
 import { sweepBackups } from "#backup-sweep";
-import { runJob } from "#deploy";
+import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
 import { collectMetrics } from "#metrics";
 import { loadRegistryConfig, sweepRegistryTrust } from "#registry";
@@ -52,15 +53,10 @@ const ctx: DeployContext = {
   registry: loadRegistryConfig(),
 };
 
-export const deployQueue = new Queue<DeployJobData>(DEPLOY_QUEUE_NAME, {
-  connection,
-});
+const { enqueue: enqueueDeploy, queue: deployQueue } =
+  createDeployQueue(connection);
 
-/** Mirror of the web helper: parse then add. No raw `.add` on this queue. */
-function enqueueDeploy(job: DeployJobData): Promise<unknown> {
-  const parsed = deployJobSchema.parse(job);
-  return deployQueue.add(parsed.kind, parsed);
-}
+export { deployQueue };
 
 function parseDeployJob(data: unknown): DeployJobData {
   const result = deployJobSchema.safeParse(data);
@@ -109,7 +105,7 @@ const deployWorker = new Worker<DeployJobData>(
   async (job) => {
     const data = parseDeployJob(job.data);
     try {
-      await runJob(ctx, data);
+      await dispatch(handlers, ctx, data);
     } finally {
       // Even on failure: an open tab must see the stream close, not sit
       // waiting forever. A server provisioning has no associated
