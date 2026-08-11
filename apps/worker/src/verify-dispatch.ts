@@ -5,7 +5,7 @@ import type {
   PayloadOf,
 } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/shared/verify-harness";
-import { dispatch, type Handlers } from "#handlers";
+import { dispatch, type Handlers, handlerModules } from "#handlers";
 import type { DeployContext } from "#runtime-context";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -77,6 +77,38 @@ await runVerify("worker dispatch", async () => {
           fired.length === 1 && fired[0] === kind,
           `fired=[${fired.join(",")}]`
         );
+      })
+    );
+  });
+
+  // This suite is what pays for the handlers being lazy. Static imports made
+  // a broken module fail at worker boot; they also cost +36 MB of idle RSS on
+  // a 2 GB machine. Resolving every module here moves that failure to CI
+  // instead of losing it — a missing export, an import cycle or a throw at
+  // load time surfaces on this line, not on someone's first restore.
+  await suite("every handler module resolves", async () => {
+    const entries = Object.entries(handlerModules);
+    check(
+      "the map covers every module",
+      entries.length === 14,
+      `${entries.length}`
+    );
+
+    await Promise.all(
+      entries.map(async ([name, load]) => {
+        try {
+          const mod = await load();
+          check(
+            `#${name} loads and exports something`,
+            Object.keys(mod).length > 0
+          );
+        } catch (e) {
+          check(
+            `#${name} loads`,
+            false,
+            e instanceof Error ? e.message : String(e)
+          );
+        }
       })
     );
   });
