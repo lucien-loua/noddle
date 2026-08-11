@@ -8,6 +8,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@noddle/shared": "workspace:*"
+  },
   "devDependencies": {
     "@noddle/tsconfig": "workspace:*"
   }

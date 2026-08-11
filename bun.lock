@@ -164,6 +164,9 @@
     },
     "packages/notifier": {
       "name": "@noddle/notifier",
+      "dependencies": {
+        "@noddle/shared": "workspace:*",
+      },
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
       },
