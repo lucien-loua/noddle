@@ -17,7 +17,7 @@ import {
   execArgv,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import { connectForDeploy, type DeployContext } from "#runtime-context";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,

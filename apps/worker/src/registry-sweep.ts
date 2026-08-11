@@ -1,7 +1,6 @@
 import { deployments, servers } from "@noddle/db/schema";
 import { disconnect } from "@noddle/ssh-executor";
 import { desc, eq, inArray } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#deploy";
 import {
   deleteManifest,
   garbageCollect,
@@ -9,6 +8,7 @@ import {
   parseRegistryRef,
   type RegistryConfig,
 } from "#registry";
+import { connectTo, type DeployContext } from "#runtime-context";
 
 /** The registry container's name in the control plane's Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";

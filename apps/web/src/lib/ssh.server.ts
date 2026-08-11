@@ -1,5 +1,5 @@
-import { servers, sshKeys } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { servers } from "@noddle/db/schema";
+import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, type SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -10,27 +10,11 @@ type ServerRow = typeof servers.$inferSelect;
 /**
  * A session to THIS machine, with the key read from the library.
  *
- * Factored out rather than copied: it's the same lesson as
- * `credentialsFor` on the worker side, where `deploy.ts`, `sweep.ts` and
- * `provision.ts` each kept a copy — three chances to let one go stale.
+ * Credentials come from `@noddle/ssh-credentials` — the same module the
+ * worker uses — so decrypt AAD and field mapping cannot drift.
  */
 export async function connectToServer(server: ServerRow): Promise<SshClient> {
-  const key = await db.query.sshKeys.findFirst({
-    where: eq(sshKeys.id, server.sshKeyId),
-  });
-  if (!key) {
-    throw new Error(`SSH key ${server.sshKeyId} not found`);
-  }
-  return await connect({
-    host: server.host,
-    port: server.sshPort,
-    privateKey: decryptSecret(
-      key.privateKeyEncrypted,
-      env.appKey,
-      secretContext.sshKey(key.id)
-    ),
-    user: server.sshUser,
-  });
+  return await connect(await credentialsFor(db, env.appKey, server));
 }
 
 /**

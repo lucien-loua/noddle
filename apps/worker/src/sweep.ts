@@ -5,12 +5,13 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import { listComposeServiceKeys, redeployStack } from "#compose";
-import { type DeployContext, redeployImage } from "#deploy";
+import { redeployImage } from "#deploy";
 import { notify } from "#notify";
-import { credentialsFor } from "#ssh-key";
+import type { DeployContext } from "#runtime-context";
 import { swarmServiceName } from "#swarm";
 import { inspectServiceHealth } from "#watch";
 
@@ -60,7 +61,9 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
   if (!manager) {
     throw new Error("no Swarm manager registered");
   }
-  const managerClient = await connect(await credentialsFor(ctx, manager));
+  const managerClient = await connect(
+    await credentialsFor(ctx.db, ctx.appKey, manager)
+  );
   const docker = dockerClient(managerClient);
 
   try {

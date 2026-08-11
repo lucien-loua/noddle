@@ -1,7 +1,7 @@
 import { servers } from "@noddle/db/schema";
 import { disconnect, dockerClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#deploy";
+import { connectTo, type DeployContext } from "#runtime-context";
 import { restartService } from "#swarm";
 
 /**

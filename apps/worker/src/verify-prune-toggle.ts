@@ -35,8 +35,8 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import type { DeployContext } from "#deploy";
 import { pruneDocker } from "#prune";
+import type { DeployContext } from "#runtime-context";
 
 const DB_URL =
   process.env.DATABASE_URL ??

@@ -17,7 +17,7 @@ import {
   findDatabaseContainer,
   runBackup,
 } from "#backup";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import { connectForDeploy, type DeployContext } from "#runtime-context";
 import { waitForRunningTask } from "#swarm";
 
 const SETTLE_MS = 1500;

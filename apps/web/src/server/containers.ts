@@ -1,15 +1,14 @@
-import { databases, servers, sshKeys } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { databases, servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { connect, disconnect, execArgv } from "@noddle/ssh-executor";
+import { disconnect, execArgv, type SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
-import { env } from "@/lib/env.server";
 import { requirePermission } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
+import { connectToServer } from "@/lib/ssh.server";
 
 /**
  * The capped builder's container, as buildx names it.
@@ -162,28 +161,13 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
     });
 
     for (const server of connected) {
-      let client: Awaited<ReturnType<typeof connect>> | undefined;
+      let client: SshClient | undefined;
       try {
         // One machine at a time: parallelizing would open N SSH sessions
         // from a 2GB control plane just to read a list. Same discipline as
         // the worker's own passes.
         // biome-ignore lint/performance/noAwaitInLoops: deliberately sequential
-        const key = await db.query.sshKeys.findFirst({
-          where: eq(sshKeys.id, server.sshKeyId),
-        });
-        if (!key) {
-          throw new Error("SSH key not found");
-        }
-        client = await connect({
-          host: server.host,
-          port: server.sshPort,
-          privateKey: decryptSecret(
-            key.privateKeyEncrypted,
-            env.appKey,
-            secretContext.sshKey(key.id)
-          ),
-          user: server.sshUser,
-        });
+        client = await connectToServer(server);
         // `-a`: a stopped container is precisely what we're looking for
         // here, and it's the one the daily prune will remove.
         const res = await execArgv(client, [
@@ -221,29 +205,14 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
  * and not the manager: stopping a container is an operation local to its
  * daemon.
  */
-async function connectToServer(serverId: string) {
+async function connectToServerById(serverId: string) {
   const server = await db.query.servers.findFirst({
     where: eq(servers.id, serverId),
   });
   if (!server) {
     throw new Error("server not found");
   }
-  const key = await db.query.sshKeys.findFirst({
-    where: eq(sshKeys.id, server.sshKeyId),
-  });
-  if (!key) {
-    throw new Error("SSH key not found");
-  }
-  return await connect({
-    host: server.host,
-    port: server.sshPort,
-    privateKey: decryptSecret(
-      key.privateKeyEncrypted,
-      env.appKey,
-      secretContext.sshKey(key.id)
-    ),
-    user: server.sshUser,
-  });
+  return await connectToServer(server);
 }
 
 /**
@@ -256,7 +225,7 @@ async function connectToServer(serverId: string) {
  * have changed nature in the meantime.
  */
 async function readKind(
-  client: Awaited<ReturnType<typeof connect>>,
+  client: SshClient,
   containerId: string
 ): Promise<{ kind: ContainerKind; name: string } | null> {
   const res = await execArgv(client, [
@@ -301,7 +270,7 @@ export const containerAction = createServerFn({ method: "POST" })
       resource: "container",
     });
 
-    const client = await connectToServer(data.serverId);
+    const client = await connectToServerById(data.serverId);
     try {
       const found = await readKind(client, data.containerId);
       if (!found) {
@@ -394,7 +363,7 @@ export const restartSwarmService = createServerFn({ method: "POST" })
       );
     }
 
-    const client = await connectToServer(data.serverId);
+    const client = await connectToServerById(data.serverId);
     try {
       // Re-read on the machine that reported the task: the page may be
       // stale, and a forged serverId/serviceName pair must not skip the

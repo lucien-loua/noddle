@@ -226,7 +226,9 @@ export async function ensureRegistryTrust(
  */
 export async function sweepRegistryTrust(opts: {
   /**
-   * Injected rather than imported from `#deploy`: that module imports this
+   * Injected rather than imported from `#runtime-context`: that module is
+   * the SSH session seam; injecting keeps registry free of a hard cycle
+   * when callers already hold a live connection factory.
    * one in order to push, and the cycle would be real — TYPE imports vanish
    * at compile time, function imports don't.
    */

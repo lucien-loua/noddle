@@ -13,7 +13,7 @@ import {
   exec,
 } from "@noddle/ssh-executor";
 import { desc, eq, lt } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#deploy";
+import { connectTo, type DeployContext } from "#runtime-context";
 import { swarmServiceName } from "#swarm";
 
 /** Seven days. Beyond that, aggregation would be needed, so a time-series basis. */

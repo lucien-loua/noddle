@@ -1,4 +1,5 @@
 import { servers } from "@noddle/db/schema";
+import { credentialsFor } from "@noddle/ssh-credentials";
 import {
   connect,
   disconnect,
@@ -7,16 +8,15 @@ import {
   execArgv,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import type { DeployContext } from "#deploy";
 import { ensureRegistryTrust } from "#registry";
-import { credentialsFor } from "#ssh-key";
+import type { DeployContext } from "#runtime-context";
 import { getSwarmNodeId } from "#swarm";
 
 async function connectAsRow(
   ctx: DeployContext,
   row: typeof servers.$inferSelect
 ) {
-  return await connect(await credentialsFor(ctx, row));
+  return await connect(await credentialsFor(ctx.db, ctx.appKey, row));
 }
 
 async function markFailed(

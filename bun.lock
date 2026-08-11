@@ -24,6 +24,7 @@
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/shared": "workspace:*",
+        "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "@phosphor-icons/react": "^2.1.10",
         "@shadcn/react": "^0.3.0",
@@ -73,6 +74,7 @@
         "@noddle/notifier": "workspace:*",
         "@noddle/proxy-config": "workspace:*",
         "@noddle/shared": "workspace:*",
+        "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "bullmq": "catalog:",
         "croner": "^10.0.1",
@@ -151,6 +153,18 @@
       "name": "@noddle/shared",
       "dependencies": {
         "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/ssh-credentials": {
+      "name": "@noddle/ssh-credentials",
+      "dependencies": {
+        "@noddle/db": "workspace:*",
+        "@noddle/shared": "workspace:*",
+        "@noddle/ssh-executor": "workspace:*",
+        "drizzle-orm": "catalog:",
       },
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
@@ -511,6 +525,8 @@
     "@noddle/proxy-config": ["@noddle/proxy-config@workspace:packages/proxy-config"],
 
     "@noddle/shared": ["@noddle/shared@workspace:packages/shared"],
+
+    "@noddle/ssh-credentials": ["@noddle/ssh-credentials@workspace:packages/ssh-credentials"],
 
     "@noddle/ssh-executor": ["@noddle/ssh-executor@workspace:packages/ssh-executor"],
 

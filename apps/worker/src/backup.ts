@@ -17,8 +17,8 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#deploy";
 import { notify } from "#notify";
+import { connectTo, type DeployContext } from "#runtime-context";
 
 // Drawn from the shared module, never copied: an engine added there
 // without a dumper here would fail on its first backup, long after it was

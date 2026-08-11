@@ -1,8 +1,8 @@
 import { databases, services } from "@noddle/db/schema";
 import { markRunning, markStopped } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
-import type { DeployContext } from "#deploy";
 import { withDeployClients } from "#job-run";
+import type { DeployContext } from "#runtime-context";
 import { restartService, scaleService, swarmServiceName } from "#swarm";
 
 export type LifecycleAction = "restart" | "start" | "stop";

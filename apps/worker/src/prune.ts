@@ -7,9 +7,9 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#deploy";
 import { recordDiskUsage } from "#metrics";
 import { isPortableImage } from "#registry";
+import { connectTo, type DeployContext } from "#runtime-context";
 
 /**
  * A Noddle node's two build caches, and both are genuinely needed.

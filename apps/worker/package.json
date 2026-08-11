@@ -18,6 +18,7 @@
     "@noddle/notifier": "workspace:*",
     "@noddle/proxy-config": "workspace:*",
     "@noddle/shared": "workspace:*",
+    "@noddle/ssh-credentials": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
     "bullmq": "catalog:",
     "croner": "^10.0.1",

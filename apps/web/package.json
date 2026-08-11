@@ -19,6 +19,7 @@
     "@noddle/deploy-contract": "workspace:*",
     "@noddle/notifier": "workspace:*",
     "@noddle/shared": "workspace:*",
+    "@noddle/ssh-credentials": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "@shadcn/react": "^0.3.0",

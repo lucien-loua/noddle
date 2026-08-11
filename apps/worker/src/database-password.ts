@@ -12,7 +12,7 @@ import {
 import { eq } from "drizzle-orm";
 import { assertSafeIdentifier, findDatabaseContainer } from "#backup";
 import { secretPathFor } from "#database";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import { connectForDeploy, type DeployContext } from "#runtime-context";
 
 /**
  * Runs a `sh` script INSIDE the container, feeding it `input` on standard

@@ -11,10 +11,11 @@ import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
 import { sweepBackups } from "#backup-sweep";
-import { connectTo, type DeployContext, runJob } from "#deploy";
+import { runJob } from "#deploy";
 import { createLogBus } from "#log-bus";
 import { collectMetrics } from "#metrics";
 import { loadRegistryConfig, sweepRegistryTrust } from "#registry";
+import { connectTo, type DeployContext } from "#runtime-context";
 import { sweepWatch } from "#sweep";
 
 function required(name: string): string {

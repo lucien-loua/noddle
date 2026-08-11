@@ -3,8 +3,12 @@ import { deployments, services } from "@noddle/db/schema";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { BUILD_ROOT, connectForDeploy, type DeployContext } from "#deploy";
 import { deleteManifest, garbageCollect, parseRegistryRef } from "#registry";
+import {
+  BUILD_ROOT,
+  connectForDeploy,
+  type DeployContext,
+} from "#runtime-context";
 import { removeService, swarmServiceName } from "#swarm";
 
 /** The registry container in the control-plane Compose stack. */

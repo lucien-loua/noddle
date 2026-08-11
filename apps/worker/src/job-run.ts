@@ -10,7 +10,7 @@ import {
   dockerClient,
   type SshClient,
 } from "@noddle/ssh-executor";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import { connectForDeploy, type DeployContext } from "#runtime-context";
 
 type ServerRow = typeof servers.$inferSelect;
 

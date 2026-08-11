@@ -27,8 +27,12 @@ import {
 } from "@noddle/ssh-executor";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { BUILD_ROOT, connectForDeploy, type DeployContext } from "#deploy";
 import { createLogSink } from "#log-sink";
+import {
+  BUILD_ROOT,
+  connectForDeploy,
+  type DeployContext,
+} from "#runtime-context";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,

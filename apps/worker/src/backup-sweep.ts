@@ -7,7 +7,7 @@ import { deleteObject } from "@noddle/backup-store";
 import { backupConfigs, backups } from "@noddle/db/schema";
 import { Cron } from "croner";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import type { DeployContext } from "#deploy";
+import type { DeployContext } from "#runtime-context";
 
 export interface BackupSweepResult {
   /** Objects pruned under retention. */
