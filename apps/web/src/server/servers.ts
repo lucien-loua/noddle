@@ -13,7 +13,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
-import { requirePermission } from "@/lib/permission.server";
+import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -60,42 +60,48 @@ export const getServers = createServerFn({ method: "GET" }).handler(
 export const addServer = createServerFn({ method: "POST" })
   .validator(serverInputSchema)
   .handler(async ({ data }): Promise<{ serverId: string }> => {
-    await requirePermission({ action: "create", resource: "server" });
+    const created = await runGuarded({
+      permission: { action: "create", resource: "server" },
+      run: async () => {
+        // The key is REFERENCED, no longer copied: a single insert is now
+        // enough, whereas the AAD bound to the server's row used to require
+        // inserting a "placeholder" and then rewriting it.
+        //
+        // Checked for existence here rather than left to the foreign key:
+        // Postgres would also reject it, but with a message nobody can read.
+        const key = await db.query.sshKeys.findFirst({
+          where: eq(sshKeys.id, data.sshKeyId),
+        });
+        if (!key) {
+          throw new Error("that SSH key no longer exists — pick another one");
+        }
 
-    // The key is REFERENCED, no longer copied: a single insert is now
-    // enough, whereas the AAD bound to the server's row used to require
-    // inserting a "placeholder" and then rewriting it.
-    //
-    // Checked for existence here rather than left to the foreign key:
-    // Postgres would also reject it, but with a message nobody can read.
-    const key = await db.query.sshKeys.findFirst({
-      where: eq(sshKeys.id, data.sshKeyId),
+        const [created] = await db
+          .insert(servers)
+          .values({
+            host: data.host,
+            name: data.name,
+            sshKeyId: data.sshKeyId,
+            sshPort: data.sshPort,
+            sshUser: data.sshUser,
+          })
+          .returning();
+        if (!created) {
+          throw new Error("could not register server");
+        }
+
+        // The worker does the rest: Docker if missing, joining the Swarm
+        // cluster AS A WORKER (never manager — a second manager would change
+        // the Raft quorum size without being asked to), nixpacks, then the same
+        // facts as machine #1.
+        await enqueueDeploy({ kind: "provision-server", serverId: created.id });
+
+        return { name: created.name, serverId: created.id };
+      },
+      target: ({ result }) => ({ id: result.serverId, name: result.name }),
     });
-    if (!key) {
-      throw new Error("that SSH key no longer exists — pick another one");
-    }
 
-    const [created] = await db
-      .insert(servers)
-      .values({
-        host: data.host,
-        name: data.name,
-        sshKeyId: data.sshKeyId,
-        sshPort: data.sshPort,
-        sshUser: data.sshUser,
-      })
-      .returning();
-    if (!created) {
-      throw new Error("could not register server");
-    }
-
-    // The worker does the rest: Docker if missing, joining the Swarm
-    // cluster AS A WORKER (never manager — a second manager would change
-    // the Raft quorum size without being asked to), nixpacks, then the same
-    // facts as machine #1.
-    await enqueueDeploy({ kind: "provision-server", serverId: created.id });
-
-    return { serverId: created.id };
+    return { serverId: created.serverId };
   });
 
 const setServerPruneEnabledSchema = z.object({
@@ -117,20 +123,23 @@ const setServerPruneEnabledSchema = z.object({
  */
 export const setServerPruneEnabled = createServerFn({ method: "POST" })
   .validator(setServerPruneEnabledSchema)
-  .handler(async ({ data }): Promise<{ done: true }> => {
-    await requirePermission({ action: "update", resource: "server" });
-
-    const updated = await db
-      .update(servers)
-      .set({ pruneEnabled: data.enabled })
-      .where(eq(servers.id, data.serverId))
-      .returning({ id: servers.id });
-    if (updated.length === 0) {
-      throw new Error("server not found");
-    }
-
-    return { done: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ done: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+        notFoundMessage: "server not found",
+        permission: { action: "update", resource: "server" },
+        run: async ({ row }) => {
+          await db
+            .update(servers)
+            .set({ pruneEnabled: data.enabled })
+            .where(eq(servers.id, row.id));
+          return { done: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /**
  * Remove a server from the cluster.
@@ -151,36 +160,34 @@ export const setServerPruneEnabled = createServerFn({ method: "POST" })
  */
 export const deleteServer = createServerFn({ method: "POST" })
   .validator(deleteServerSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "delete", resource: "server" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        confirmName: { expected: (row) => row.name, typed: data.confirmName },
+        load: () =>
+          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+        notFoundMessage: "server not found",
+        permission: { action: "delete", resource: "server" },
+        run: async ({ row: server }) => {
+          if (server.role === "manager") {
+            throw new Error(
+              "this is the Swarm manager: removing it would leave the installation unable to deploy anything"
+            );
+          }
 
-    const server = await db.query.servers.findFirst({
-      where: eq(servers.id, data.serverId),
-    });
-    if (!server) {
-      throw new Error("server not found");
-    }
-    if (data.confirmName !== server.name) {
-      throw new Error(
-        `the name you typed does not match "${server.name}" — removal cancelled`
-      );
-    }
-    if (server.role === "manager") {
-      throw new Error(
-        "this is the Swarm manager: removing it would leave the installation unable to deploy anything"
-      );
-    }
+          const held = await heldBy(server.id);
+          if (held) {
+            throw new Error(
+              `this server still hosts ${held} — move or delete them first`
+            );
+          }
 
-    const held = await heldBy(server.id);
-    if (held) {
-      throw new Error(
-        `this server still hosts ${held} — move or delete them first`
-      );
-    }
-
-    await enqueueDeploy({ kind: "delete-server", serverId: server.id });
-    return { ok: true };
-  });
+          await enqueueDeploy({ kind: "delete-server", serverId: server.id });
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /** What the server still hosts, in plain text, or `null`. */
 async function heldBy(serverId: string): Promise<string | null> {
