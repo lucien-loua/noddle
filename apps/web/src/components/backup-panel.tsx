@@ -27,6 +27,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Combobox,
@@ -941,30 +942,59 @@ function BackupRunDetailDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
-  if (!backup) {
-    return null;
-  }
-
-  const lines = backupRunLogs(backup);
+  const lines = backup ? backupRunLogs(backup) : [];
+  const status = backup ? backupLabel(backup.status) : null;
+  const runMeta = backup
+    ? [
+        backupKindLabel(backup.kind),
+        backup.status === "completed" ? byteSize(backup.sizeBytes) : null,
+        duration(backup.createdAt, backup.finishedAt),
+      ]
+        .filter((part): part is string => Boolean(part) && part !== "—")
+        .join(" · ")
+    : "";
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
-        <TerminalLogs lines={lines}>
-          <DialogHeader>
-            <DialogTitle>Dump run</DialogTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <DialogDescription>Details for this run</DialogDescription>
-              <TerminalLogs.Count />
-              <TerminalLogs.Copy label="logs" />
-            </div>
-          </DialogHeader>
-          <DialogBody className="min-h-0 pt-0">
-            <TerminalLogs.Viewport />
-          </DialogBody>
-        </TerminalLogs>
-      </DialogContent>
-    </Dialog>
+    <FocusModal onOpenChange={onOpenChange} open={open && backup !== null}>
+      <FocusModalContent>
+        {backup && status ? (
+          <TerminalLogs lines={lines}>
+            <FocusModalHeader>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <FocusModalTitle>Dump run</FocusModalTitle>
+                  {runMeta ? (
+                    <FocusModalDescription>{runMeta}</FocusModalDescription>
+                  ) : null}
+                </div>
+                <Badge variant={badgeVariant(status.tone)}>
+                  {status.label}
+                </Badge>
+                <ButtonGroup>
+                  <ButtonGroupText>
+                    {lines.length === 1 ? "1 line" : `${lines.length} lines`}
+                  </ButtonGroupText>
+                  <TerminalLogs.Copy label="logs" />
+                </ButtonGroup>
+              </div>
+            </FocusModalHeader>
+            <FocusModalBody className="flex min-h-0 flex-col overflow-hidden p-0">
+              <div className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+                {lines.length === 0 ? (
+                  <span className="text-muted-foreground text-sm">
+                    No logs for this run.
+                  </span>
+                ) : (
+                  lines.map((line) => (
+                    <TerminalLogs.Line key={line.id} line={line} />
+                  ))
+                )}
+              </div>
+            </FocusModalBody>
+          </TerminalLogs>
+        ) : null}
+      </FocusModalContent>
+    </FocusModal>
   );
 }
 
@@ -1007,23 +1037,23 @@ function BackupHistoryDialog({
     : (backups.data ?? []).slice(0, HISTORY_LIMIT);
 
   return (
-    <>
-      <FocusModal onOpenChange={onOpenChange} open={open}>
-        <FocusModalContent>
-          <FocusModalHeader>
-            <FocusModalTitle>Dump history</FocusModalTitle>
-          </FocusModalHeader>
-          <FocusModalBody className="flex min-h-0 flex-col">
-            <BackupHistoryBody
-              backups={rows}
-              canCreate={canCreate}
-              onView={setViewing}
-              remove={remove}
-            />
-          </FocusModalBody>
-        </FocusModalContent>
-      </FocusModal>
+    <FocusModal onOpenChange={onOpenChange} open={open}>
+      <FocusModalContent>
+        <FocusModalHeader>
+          <FocusModalTitle>Dump history</FocusModalTitle>
+        </FocusModalHeader>
+        <FocusModalBody className="flex min-h-0 flex-col">
+          <BackupHistoryBody
+            backups={rows}
+            canCreate={canCreate}
+            onView={setViewing}
+            remove={remove}
+          />
+        </FocusModalBody>
+      </FocusModalContent>
 
+      {/* Nested under the history Root so Base UI wires Escape,
+          focus, and `data-nested-dialog-open` / `--nested-dialogs`. */}
       <BackupRunDetailDialog
         backup={viewing}
         onOpenChange={(next) => {
@@ -1033,7 +1063,7 @@ function BackupHistoryDialog({
         }}
         open={viewing !== null}
       />
-    </>
+    </FocusModal>
   );
 }
 
