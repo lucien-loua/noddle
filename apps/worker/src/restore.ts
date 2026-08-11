@@ -11,6 +11,7 @@ import {
   quoteArg,
   type SshClient,
 } from "@noddle/ssh-executor";
+import { waitForRunningTask } from "@noddle/swarm-ops";
 import { and, eq } from "drizzle-orm";
 import {
   assertSafeIdentifier,
@@ -18,7 +19,6 @@ import {
   runBackup,
 } from "#backup";
 import { connectForDeploy, type DeployContext } from "#runtime-context";
-import { waitForRunningTask } from "#swarm";
 
 const SETTLE_MS = 1500;
 const SCALE_TIMEOUT_MS = 120_000;

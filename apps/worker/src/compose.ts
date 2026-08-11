@@ -19,6 +19,7 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { markCrashed, markRunning, settle } from "@noddle/shared/lifecycle";
 import {
   disconnect,
   dockerClient,
@@ -26,6 +27,14 @@ import {
   type SshClient,
   writeRemoteFile,
 } from "@noddle/ssh-executor";
+import {
+  ensureOverlayNetwork,
+  getSwarmNodeId,
+  isDeployAccepted,
+  readUpdateState,
+  waitForRunningTask,
+  watchUntilFor,
+} from "@noddle/swarm-ops";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
 import { createLogSink } from "#log-sink";
@@ -34,14 +43,6 @@ import {
   connectForDeploy,
   type DeployContext,
 } from "#runtime-context";
-import {
-  ensureOverlayNetwork,
-  getSwarmNodeId,
-  isDeployAccepted,
-  readUpdateState,
-  waitForRunningTask,
-} from "#swarm";
-import { watchUntilFor } from "#watch";
 
 /** Relative file path, with no escape from the cloned directory. */
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\.\.)[\w./-]+$/;
@@ -355,11 +356,15 @@ export async function runStackDeploy(
       );
       await db
         .update(stackDeployments)
-        .set({ finishedAt, status: "rolled_back", swarmUpdateStates })
+        .set({
+          finishedAt,
+          status: settle("rollback_completed"),
+          swarmUpdateStates,
+        })
         .where(eq(stackDeployments.id, deployment.id));
       await db
         .update(stacks)
-        .set({ status: "crashed" })
+        .set(markCrashed(null, "stack deploy rolled back"))
         .where(eq(stacks.id, stack.id));
       return;
     }
@@ -369,7 +374,7 @@ export async function runStackDeploy(
       .update(stackDeployments)
       .set({
         finishedAt,
-        status: "succeeded",
+        status: settle("completed"),
         swarmUpdateStates,
         watchUntil: watchUntilFor(finishedAt),
       })
@@ -377,7 +382,7 @@ export async function runStackDeploy(
 
     await db
       .update(stacks)
-      .set({ currentDeploymentId: deployment.id, status: "running" })
+      .set({ currentDeploymentId: deployment.id, ...markRunning(null) })
       .where(eq(stacks.id, stack.id));
     await clearSupersededStackWatch(db, stack.id, deployment.id);
   } catch (err) {
@@ -501,7 +506,7 @@ export async function redeployStack(
       .update(stackDeployments)
       .set({
         finishedAt: new Date(),
-        status: accepted ? "succeeded" : "rolled_back",
+        status: settle(accepted ? "completed" : "rollback_completed"),
         swarmUpdateStates,
       })
       .where(eq(stackDeployments.id, created.id));
@@ -509,7 +514,7 @@ export async function redeployStack(
     if (accepted) {
       await ctx.db
         .update(stacks)
-        .set({ currentDeploymentId: created.id, status: "running" })
+        .set({ currentDeploymentId: created.id, ...markRunning(null) })
         .where(eq(stacks.id, stack.id));
       await clearSupersededStackWatch(ctx.db, stack.id, created.id);
     }

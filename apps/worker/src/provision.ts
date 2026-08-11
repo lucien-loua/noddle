@@ -7,10 +7,10 @@ import {
   exec,
   execArgv,
 } from "@noddle/ssh-executor";
+import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { ensureRegistryTrust } from "#registry";
 import type { DeployContext } from "#runtime-context";
-import { getSwarmNodeId } from "#swarm";
 
 async function connectAsRow(
   ctx: DeployContext,

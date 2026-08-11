@@ -78,6 +78,7 @@
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
+        "@noddle/swarm-ops": "workspace:*",
         "bullmq": "catalog:",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
@@ -202,6 +203,17 @@
         "@noddle/tsconfig": "workspace:*",
         "@types/dockerode": "catalog:",
         "@types/ssh2": "catalog:",
+      },
+    },
+    "packages/swarm-ops": {
+      "name": "@noddle/swarm-ops",
+      "dependencies": {
+        "@noddle/proxy-config": "workspace:*",
+        "@noddle/shared": "workspace:*",
+        "@noddle/ssh-executor": "workspace:*",
+      },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/tsconfig": {
@@ -555,6 +567,8 @@
     "@noddle/ssh-credentials": ["@noddle/ssh-credentials@workspace:packages/ssh-credentials"],
 
     "@noddle/ssh-executor": ["@noddle/ssh-executor@workspace:packages/ssh-executor"],
+
+    "@noddle/swarm-ops": ["@noddle/swarm-ops@workspace:packages/swarm-ops"],
 
     "@noddle/tsconfig": ["@noddle/tsconfig@workspace:packages/tsconfig"],
 

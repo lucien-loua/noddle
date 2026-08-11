@@ -5,6 +5,7 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { markDeploying } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { enqueueDeploy } from "@/lib/queue.server";
@@ -37,7 +38,7 @@ export async function queueServiceDeploy(
 
   await db
     .update(services)
-    .set({ status: "deploying" })
+    .set(markDeploying(null))
     .where(eq(services.id, service.id));
 
   await enqueueDeploy({ deploymentId: created.id, kind: "deploy" });
@@ -70,7 +71,7 @@ export async function queueStackDeploy(
 
   await db
     .update(stacks)
-    .set({ status: "deploying" })
+    .set(markDeploying(null))
     .where(eq(stacks.id, stack.id));
 
   await enqueueDeploy({ kind: "deploy-stack", stackDeploymentId: created.id });

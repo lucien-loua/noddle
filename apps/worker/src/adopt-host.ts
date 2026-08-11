@@ -12,9 +12,9 @@ import {
 } from "@noddle/shared/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { publicKeyOf } from "@noddle/ssh-executor/keys";
+import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { and, eq } from "drizzle-orm";
 import { ensureRegistryTrust, loadRegistryConfig } from "#registry";
-import { getSwarmNodeId } from "#swarm";
 
 function required(name: string): string {
   const value = process.env[name];

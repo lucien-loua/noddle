@@ -16,9 +16,9 @@ import {
 } from "@noddle/db/schema";
 import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

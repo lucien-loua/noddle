@@ -1,10 +1,10 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { databases, stacks } from "@noddle/db/schema";
 import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { removeSecretIfExists } from "#database";
 import { connectForDeploy, type DeployContext } from "#runtime-context";
-import { removeService } from "#swarm";
 
 // Docker 29 answers "volume <name> not found", not "no such volume" —
 // measured against a real VM. Both forms are tolerated in case an earlier

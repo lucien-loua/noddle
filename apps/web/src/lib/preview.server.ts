@@ -4,6 +4,7 @@ import {
   encryptSecret,
   secretContext,
 } from "@noddle/shared/crypto";
+import { markDeleting } from "@noddle/shared/lifecycle";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
@@ -255,7 +256,7 @@ export async function destroyPreview(opts: {
 
   await db
     .update(services)
-    .set({ status: "deleting" })
+    .set(markDeleting(null))
     .where(eq(services.id, preview.id));
   await enqueueDeploy({ kind: "delete-service", serviceId: preview.id });
   return { destroyed: preview.id };

@@ -22,10 +22,10 @@ import {
   execArgv,
   quoteArg,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

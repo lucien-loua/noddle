@@ -6,15 +6,16 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { markCrashed } from "@noddle/shared/lifecycle";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
+import { inspectServiceHealth } from "@noddle/swarm-ops";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 import { redeployStack } from "#compose";
 import { redeployImage } from "#deploy";
 import { notify } from "#notify";
 import type { DeployContext } from "#runtime-context";
-import { swarmServiceName } from "#swarm";
-import { inspectServiceHealth } from "#watch";
 
 export interface SweepResult {
   /** Deployments still under watch on this pass. */
@@ -117,7 +118,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
           // it rather than hide the state.
           await ctx.db
             .update(services)
-            .set({ status: "crashed" })
+            .set(markCrashed(null, "watch: crash loop"))
             .where(eq(services.id, service.id));
           strandedServices.push(service.id);
           return;
@@ -186,7 +187,7 @@ export async function sweepWatch(ctx: DeployContext): Promise<SweepResult> {
         if (!previous) {
           await ctx.db
             .update(stacks)
-            .set({ status: "crashed" })
+            .set(markCrashed(null, "watch: crash loop"))
             .where(eq(stacks.id, stack.id));
           strandedStacks.push(stack.id);
           return;

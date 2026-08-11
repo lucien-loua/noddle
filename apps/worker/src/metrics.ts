@@ -6,6 +6,7 @@ import {
   serviceMetrics,
   services,
 } from "@noddle/db/schema";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   type DockerApi,
   disconnect,
@@ -14,7 +15,6 @@ import {
 } from "@noddle/ssh-executor";
 import { desc, eq, lt } from "drizzle-orm";
 import { connectTo, type DeployContext } from "#runtime-context";
-import { swarmServiceName } from "#swarm";
 
 /** Seven days. Beyond that, aggregation would be needed, so a time-series basis. */
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;

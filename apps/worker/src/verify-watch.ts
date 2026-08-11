@@ -29,10 +29,10 @@ import {
   exec,
   quoteArg,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { desc, eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import type { DeployContext } from "#runtime-context";
-import { removeService } from "#swarm";
 import { sweepWatch } from "#sweep";
 import { seedSshKey } from "#verify-seed";
 

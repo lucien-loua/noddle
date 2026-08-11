@@ -42,6 +42,7 @@ import {
   dockerClient,
   execArgv,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import {
   findDatabaseContainer,
@@ -50,7 +51,6 @@ import {
 } from "#backup";
 import { provisionDatabase } from "#database";
 import { runRestore } from "#restore";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

@@ -1,8 +1,6 @@
 /**
- * biome-ignore-all lint/performance/noBarrelFile: worker `#swarm` alias kept for verifies
+ * biome-ignore-all lint/performance/noBarrelFile: package public surface
  */
-
-export { swarmServiceName } from "@noddle/shared/swarm-names";
 export {
   type DeployOutcome,
   type DeploySpec,
@@ -18,4 +16,11 @@ export {
   type SwarmUpdateState,
   scaleService,
   waitForRunningTask,
-} from "@noddle/swarm-ops";
+} from "./swarm.ts";
+export {
+  CRASH_LOOP_THRESHOLD,
+  inspectServiceHealth,
+  WATCH_WINDOW_MS,
+  type WatchVerdict,
+  watchUntilFor,
+} from "./watch.ts";

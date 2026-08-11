@@ -12,8 +12,8 @@ import {
   type SshClient,
   writeRemoteFile,
 } from "@noddle/ssh-executor";
+import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import { getSwarmNodeId } from "#swarm";
 
 type ServerRow = typeof servers.$inferSelect;
 

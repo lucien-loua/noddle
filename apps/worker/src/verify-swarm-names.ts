@@ -26,9 +26,9 @@ import {
   exec,
   execArgv,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { provisionDatabase } from "#database";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

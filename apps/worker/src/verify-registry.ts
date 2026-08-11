@@ -29,6 +29,7 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
   disconnect,
@@ -37,6 +38,7 @@ import {
   execArgv,
   quoteArg,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { redeployImage, runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
@@ -49,7 +51,6 @@ import {
   registryImageTag,
 } from "#registry";
 import { sweepRegistry } from "#registry-sweep";
-import { removeService, swarmServiceName } from "#swarm";
 import { runServiceTeardown } from "#teardown";
 import { seedSshKey } from "#verify-seed";
 

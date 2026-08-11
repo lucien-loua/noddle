@@ -1,0 +1,21 @@
+{
+  "name": "@noddle/swarm-ops",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./swarm": "./src/swarm.ts",
+    "./watch": "./src/watch.ts"
+  },
+  "dependencies": {
+    "@noddle/proxy-config": "workspace:*",
+    "@noddle/shared": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*"
+  },
+  "devDependencies": {
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

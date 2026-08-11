@@ -1,7 +1,9 @@
 import { unlink } from "node:fs/promises";
 import { deployments, services } from "@noddle/db/schema";
 import { markFailed } from "@noddle/shared/lifecycle";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { deleteManifest, garbageCollect, parseRegistryRef } from "#registry";
 import {
@@ -9,7 +11,6 @@ import {
   connectForDeploy,
   type DeployContext,
 } from "#runtime-context";
-import { removeService, swarmServiceName } from "#swarm";
 
 /** The registry container in the control-plane Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";

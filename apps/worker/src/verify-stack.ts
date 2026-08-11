@@ -26,9 +26,9 @@ import {
 } from "@noddle/db/schema";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { redeployStack, runStackDeploy } from "#compose";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);

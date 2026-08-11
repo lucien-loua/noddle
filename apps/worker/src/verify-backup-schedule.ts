@@ -25,11 +25,11 @@ import {
   dockerClient,
   execArgv,
 } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { legacyDatabaseServiceName, runBackup } from "#backup";
 import { pruneBackups, sweepBackups } from "#backup-sweep";
 import { provisionDatabase } from "#database";
-import { removeService } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

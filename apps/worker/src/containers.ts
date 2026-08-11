@@ -1,8 +1,8 @@
 import { servers } from "@noddle/db/schema";
 import { disconnect, dockerClient } from "@noddle/ssh-executor";
+import { restartService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { connectTo, type DeployContext } from "#runtime-context";
-import { restartService } from "#swarm";
 
 /**
  * Restarts the Swarm service carrying this name.

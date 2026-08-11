@@ -4,6 +4,7 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { markDeleting } from "@noddle/shared/lifecycle";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import {
   connectStackSchema,
@@ -195,7 +196,7 @@ export const deleteStack = createServerFn({ method: "POST" })
 
     await db
       .update(stacks)
-      .set({ status: "deleting" })
+      .set(markDeleting(null))
       .where(eq(stacks.id, stack.id));
     await enqueueDeploy({ kind: "delete-stack", stackId: stack.id });
     return { ok: true };

@@ -12,11 +12,12 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { runLifecycle } from "#lifecycle";
-import { removeService, swarmServiceName } from "#swarm";
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL =

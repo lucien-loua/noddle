@@ -14,7 +14,17 @@ import {
 import type { DeployJobData } from "@noddle/deploy-contract";
 import { routeLabels } from "@noddle/proxy-config";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect, dockerClient, type SshClient } from "@noddle/ssh-executor";
+import {
+  deployService,
+  ensureOverlayNetwork,
+  getSwarmNodeId,
+  isDeployAccepted,
+  type RegistryAuth,
+  readRunningNodeId,
+  watchUntilFor,
+} from "@noddle/swarm-ops";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
@@ -32,16 +42,6 @@ import {
   type DeployContext,
   type ServerRow,
 } from "#runtime-context";
-import {
-  deployService,
-  ensureOverlayNetwork,
-  getSwarmNodeId,
-  isDeployAccepted,
-  type RegistryAuth,
-  readRunningNodeId,
-  swarmServiceName,
-} from "#swarm";
-import { watchUntilFor } from "#watch";
 
 /** Queue dispatcher. The web app never executes any of this: it runs on Bun,
  *  where `dockerode` through an SSH tunnel doesn't work. */

@@ -11,14 +11,13 @@ import {
 } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
+import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
 import {
   type DockerApi,
   disconnect,
   dockerClient,
   execArgv,
 } from "@noddle/ssh-executor";
-import { eq } from "drizzle-orm";
-import { connectForDeploy, type DeployContext } from "#runtime-context";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -26,7 +25,9 @@ import {
   readUpdateState,
   removeService,
   waitForRunningTask,
-} from "#swarm";
+} from "@noddle/swarm-ops";
+import { eq } from "drizzle-orm";
+import { connectForDeploy, type DeployContext } from "#runtime-context";
 
 // Docker 29 responds with "volume <name> not found", the older CLI with
 // "no such volume" — neither alone is enough. Duplicated from
@@ -605,12 +606,16 @@ export async function provisionDatabase(
     const accepted = isDeployAccepted(state.updateState);
     await ctx.db
       .update(databases)
-      .set({ status: accepted ? "running" : "crashed" })
+      .set(
+        accepted
+          ? markRunning(null)
+          : markCrashed(null, state.updateMessage ?? "swarm refused")
+      )
       .where(eq(databases.id, database.id));
   } catch (err) {
     await ctx.db
       .update(databases)
-      .set({ status: "crashed" })
+      .set(markCrashed(null, err instanceof Error ? err.message : String(err)))
       .where(eq(databases.id, database.id));
     throw err;
   } finally {
