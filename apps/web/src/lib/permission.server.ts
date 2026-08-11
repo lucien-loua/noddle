@@ -31,8 +31,8 @@ function roleOf(session: Session): string | null {
  *
  * Allowed attempts are NOT written here — a check that passes before the
  * handler body would log "allowed" for work that never happened (not
- * found, confirm-name mismatch). Successes go through `recordPerformed`
- * once the act finished, typically via `guardedMutation`.
+ * found, confirm-name mismatch). Successes are written by `runGuarded`
+ * once the act has finished, and by nothing else.
  */
 export async function requirePermission(
   permission: Permission

@@ -34,7 +34,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission } from "@/lib/permission.server";
+import { requirePermission, runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -122,114 +122,136 @@ export const getDestinations = createServerFn({ method: "GET" }).handler(
  */
 export const deleteDestination = createServerFn({ method: "POST" })
   .validator(destinationIdSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.s3Destinations.findFirst({
+            where: eq(s3Destinations.id, data.id),
+          }),
+        notFoundMessage: "destination not found",
+        permission: { action: "create", resource: "backup" },
+        run: async ({ row }) => {
+          const heldRun = await db.query.backups.findFirst({
+            where: eq(backups.destinationId, data.id),
+          });
+          if (heldRun) {
+            throw new Error(
+              "This destination still holds backups. Delete them first, or they could never be restored."
+            );
+          }
+          const heldConfig = await db.query.backupConfigs.findFirst({
+            where: eq(backupConfigs.destinationId, data.id),
+          });
+          if (heldConfig) {
+            throw new Error(
+              "This destination is still used by a backup config. Delete the config first."
+            );
+          }
 
-    const heldRun = await db.query.backups.findFirst({
-      where: eq(backups.destinationId, data.id),
-    });
-    if (heldRun) {
-      throw new Error(
-        "This destination still holds backups. Delete them first, or they could never be restored."
-      );
-    }
-    const heldConfig = await db.query.backupConfigs.findFirst({
-      where: eq(backupConfigs.destinationId, data.id),
-    });
-    if (heldConfig) {
-      throw new Error(
-        "This destination is still used by a backup config. Delete the config first."
-      );
-    }
-
-    await db.delete(s3Destinations).where(eq(s3Destinations.id, data.id));
-    return { ok: true };
-  });
+          await db.delete(s3Destinations).where(eq(s3Destinations.id, row.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 export const testDestination = createServerFn({ method: "POST" })
   .validator(parseDestinationInput)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "backup" });
-
-    const secret = await resolveDestinationSecret(db, env.appKey, data);
-    await checkDestination({
-      accessKeyId: data.accessKeyId,
-      bucket: data.bucket,
-      endpoint: data.endpoint,
-      forcePathStyle: data.forcePathStyle,
-      prefix: data.prefix,
-      region: data.region,
-      secretAccessKey: secret,
-    });
-    return { ok: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        permission: { action: "create", resource: "backup" },
+        run: async () => {
+          const secret = await resolveDestinationSecret(db, env.appKey, data);
+          await checkDestination({
+            accessKeyId: data.accessKeyId,
+            bucket: data.bucket,
+            endpoint: data.endpoint,
+            forcePathStyle: data.forcePathStyle,
+            prefix: data.prefix,
+            region: data.region,
+            secretAccessKey: secret,
+          });
+          return { ok: true as const };
+        },
+        // The bucket, never the secret access key.
+        target: () => ({ id: data.id ?? data.bucket, name: data.bucket }),
+      })
+  );
 
 export const saveDestination = createServerFn({ method: "POST" })
   .validator(parseDestinationInput)
   .handler(async ({ data }): Promise<{ id: string }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+    const saved = await runGuarded({
+      permission: { action: "create", resource: "backup" },
+      run: async () => {
+        const secret = await resolveDestinationSecret(db, env.appKey, data);
 
-    const secret = await resolveDestinationSecret(db, env.appKey, data);
-
-    await checkDestination({
-      accessKeyId: data.accessKeyId,
-      bucket: data.bucket,
-      endpoint: data.endpoint,
-      forcePathStyle: data.forcePathStyle,
-      prefix: data.prefix,
-      region: data.region,
-      secretAccessKey: secret,
-    });
-
-    if (data.id) {
-      await db
-        .update(s3Destinations)
-        .set({
+        await checkDestination({
           accessKeyId: data.accessKeyId,
           bucket: data.bucket,
           endpoint: data.endpoint,
           forcePathStyle: data.forcePathStyle,
-          name: data.name,
           prefix: data.prefix,
           region: data.region,
-          secretAccessKeyEncrypted: encryptSecret(
-            secret,
-            env.appKey,
-            secretContext.backupDestination(data.id)
-          ),
-          updatedAt: new Date(),
-        })
-        .where(eq(s3Destinations.id, data.id));
-      return { id: data.id };
-    }
+          secretAccessKey: secret,
+        });
 
-    const [created] = await db
-      .insert(s3Destinations)
-      .values({
-        accessKeyId: data.accessKeyId,
-        bucket: data.bucket,
-        endpoint: data.endpoint,
-        forcePathStyle: data.forcePathStyle,
-        name: data.name,
-        prefix: data.prefix,
-        region: data.region,
-        secretAccessKeyEncrypted: "placeholder",
-      })
-      .returning();
-    if (!created) {
-      throw new Error("could not create destination");
-    }
-    await db
-      .update(s3Destinations)
-      .set({
-        secretAccessKeyEncrypted: encryptSecret(
-          secret,
-          env.appKey,
-          secretContext.backupDestination(created.id)
-        ),
-      })
-      .where(eq(s3Destinations.id, created.id));
-    return { id: created.id };
+        if (data.id) {
+          await db
+            .update(s3Destinations)
+            .set({
+              accessKeyId: data.accessKeyId,
+              bucket: data.bucket,
+              endpoint: data.endpoint,
+              forcePathStyle: data.forcePathStyle,
+              name: data.name,
+              prefix: data.prefix,
+              region: data.region,
+              secretAccessKeyEncrypted: encryptSecret(
+                secret,
+                env.appKey,
+                secretContext.backupDestination(data.id)
+              ),
+              updatedAt: new Date(),
+            })
+            .where(eq(s3Destinations.id, data.id));
+          return { id: data.id, name: data.name };
+        }
+
+        const [created] = await db
+          .insert(s3Destinations)
+          .values({
+            accessKeyId: data.accessKeyId,
+            bucket: data.bucket,
+            endpoint: data.endpoint,
+            forcePathStyle: data.forcePathStyle,
+            name: data.name,
+            prefix: data.prefix,
+            region: data.region,
+            secretAccessKeyEncrypted: "placeholder",
+          })
+          .returning();
+        if (!created) {
+          throw new Error("could not create destination");
+        }
+        await db
+          .update(s3Destinations)
+          .set({
+            secretAccessKeyEncrypted: encryptSecret(
+              secret,
+              env.appKey,
+              secretContext.backupDestination(created.id)
+            ),
+          })
+          .where(eq(s3Destinations.id, created.id));
+        return { id: created.id, name: created.name };
+      },
+      // The destination, never its secret access key.
+      target: ({ result }) => ({ id: result.id, name: result.name }),
+    });
+    return { id: saved.id };
   });
 
 export const listBackupConfigs = createServerFn({ method: "GET" })
@@ -259,79 +281,98 @@ export const listBackupConfigs = createServerFn({ method: "GET" })
 export const createBackupConfig = createServerFn({ method: "POST" })
   .validator(createBackupConfigSchema)
   .handler(async ({ data }): Promise<{ configId: string }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+    const created = await runGuarded({
+      load: () =>
+        db.query.databases.findFirst({
+          where: eq(databases.id, data.databaseId),
+        }),
+      notFoundMessage: "database not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: database }) => {
+        const destination = await db.query.s3Destinations.findFirst({
+          where: eq(s3Destinations.id, data.destinationId),
+        });
+        if (!destination) {
+          throw new Error("S3 destination not found");
+        }
 
-    const database = await db.query.databases.findFirst({
-      where: eq(databases.id, data.databaseId),
+        const [created] = await db
+          .insert(backupConfigs)
+          .values({
+            databaseId: data.databaseId,
+            databaseName: data.databaseName,
+            destinationId: data.destinationId,
+            enabled: data.enabled,
+            keepLatestCount: data.keepLatestCount,
+            prefix: data.prefix,
+            schedule: data.schedule.trim(),
+          })
+          .returning();
+        if (!created) {
+          throw new Error("could not create backup config");
+        }
+        return { configId: created.id, name: database.name };
+      },
+      target: ({ result }) => ({ id: result.configId, name: result.name }),
     });
-    if (!database) {
-      throw new Error("database not found");
-    }
-    const destination = await db.query.s3Destinations.findFirst({
-      where: eq(s3Destinations.id, data.destinationId),
-    });
-    if (!destination) {
-      throw new Error("S3 destination not found");
-    }
-
-    const [created] = await db
-      .insert(backupConfigs)
-      .values({
-        databaseId: data.databaseId,
-        databaseName: data.databaseName,
-        destinationId: data.destinationId,
-        enabled: data.enabled,
-        keepLatestCount: data.keepLatestCount,
-        prefix: data.prefix,
-        schedule: data.schedule.trim(),
-      })
-      .returning();
-    if (!created) {
-      throw new Error("could not create backup config");
-    }
-    return { configId: created.id };
+    return { configId: created.configId };
   });
 
 export const updateBackupConfig = createServerFn({ method: "POST" })
   .validator(updateBackupConfigSchema)
-  .handler(async ({ data }): Promise<{ saved: true }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+  .handler(
+    async ({ data }): Promise<{ saved: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.backupConfigs.findFirst({
+            where: eq(backupConfigs.id, data.configId),
+          }),
+        notFoundMessage: "backup config not found",
+        permission: { action: "create", resource: "backup" },
+        run: async ({ row: existing }) => {
+          const destination = await db.query.s3Destinations.findFirst({
+            where: eq(s3Destinations.id, data.destinationId),
+          });
+          if (!destination) {
+            throw new Error("S3 destination not found");
+          }
 
-    const existing = await db.query.backupConfigs.findFirst({
-      where: eq(backupConfigs.id, data.configId),
-    });
-    if (!existing) {
-      throw new Error("backup config not found");
-    }
-    const destination = await db.query.s3Destinations.findFirst({
-      where: eq(s3Destinations.id, data.destinationId),
-    });
-    if (!destination) {
-      throw new Error("S3 destination not found");
-    }
-
-    await db
-      .update(backupConfigs)
-      .set({
-        databaseName: data.databaseName,
-        destinationId: data.destinationId,
-        enabled: data.enabled,
-        keepLatestCount: data.keepLatestCount,
-        prefix: data.prefix,
-        schedule: data.schedule.trim(),
-        updatedAt: new Date(),
+          await db
+            .update(backupConfigs)
+            .set({
+              databaseName: data.databaseName,
+              destinationId: data.destinationId,
+              enabled: data.enabled,
+              keepLatestCount: data.keepLatestCount,
+              prefix: data.prefix,
+              schedule: data.schedule.trim(),
+              updatedAt: new Date(),
+            })
+            .where(eq(backupConfigs.id, existing.id));
+          return { saved: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.databaseName }),
       })
-      .where(eq(backupConfigs.id, data.configId));
-    return { saved: true };
-  });
+  );
 
 export const deleteBackupConfig = createServerFn({ method: "POST" })
   .validator(backupConfigIdSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "backup" });
-    await db.delete(backupConfigs).where(eq(backupConfigs.id, data.configId));
-    return { ok: true };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.backupConfigs.findFirst({
+            where: eq(backupConfigs.id, data.configId),
+          }),
+        notFoundMessage: "backup config not found",
+        permission: { action: "create", resource: "backup" },
+        run: async ({ row }) => {
+          await db.delete(backupConfigs).where(eq(backupConfigs.id, row.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.databaseName }),
+      })
+  );
 
 export const getBackups = createServerFn({ method: "GET" })
   .validator(listBackupsSchema)
@@ -366,36 +407,39 @@ export const getBackups = createServerFn({ method: "GET" })
 export const triggerBackup = createServerFn({ method: "POST" })
   .validator(backupRequestSchema)
   .handler(async ({ data }): Promise<{ backupId: string }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+    const created = await runGuarded({
+      load: () =>
+        db.query.backupConfigs.findFirst({
+          where: eq(backupConfigs.id, data.configId),
+          with: { database: true },
+        }),
+      notFoundMessage: "backup config not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: config }) => {
+        const resolved = await resolveDestinationRow(db, config.destinationId);
+        const [created] = await db
+          .insert(backups)
+          .values(
+            buildBackupInsert({
+              configId: config.id,
+              configPrefix: config.prefix,
+              database: config.database,
+              databaseName: config.databaseName,
+              kind: "manual",
+              resolved,
+            })
+          )
+          .returning();
+        if (!created) {
+          throw new Error("could not create backup");
+        }
 
-    const config = await db.query.backupConfigs.findFirst({
-      where: eq(backupConfigs.id, data.configId),
-      with: { database: true },
+        await enqueueDeploy({ backupId: created.id, kind: "backup" });
+        return { backupId: created.id, name: config.database.name };
+      },
+      target: ({ result }) => ({ id: result.backupId, name: result.name }),
     });
-    if (!config) {
-      throw new Error("backup config not found");
-    }
-
-    const resolved = await resolveDestinationRow(db, config.destinationId);
-    const [created] = await db
-      .insert(backups)
-      .values(
-        buildBackupInsert({
-          configId: config.id,
-          configPrefix: config.prefix,
-          database: config.database,
-          databaseName: config.databaseName,
-          kind: "manual",
-          resolved,
-        })
-      )
-      .returning();
-    if (!created) {
-      throw new Error("could not create backup");
-    }
-
-    await enqueueDeploy({ backupId: created.id, kind: "backup" });
-    return { backupId: created.id };
+    return { backupId: created.backupId };
   });
 
 export const listBackupObjects = createServerFn({ method: "GET" })
@@ -422,85 +466,86 @@ export const listBackupObjects = createServerFn({ method: "GET" })
  */
 export const deleteBackup = createServerFn({ method: "POST" })
   .validator(deleteBackupRunSchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
-    await requirePermission({ action: "create", resource: "backup" });
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.backups.findFirst({ where: eq(backups.id, data.backupId) }),
+        notFoundMessage: "backup not found",
+        permission: { action: "create", resource: "backup" },
+        run: async ({ row: backup }) => {
+          if (backup.status === "queued" || backup.status === "running") {
+            throw new Error("cannot delete a backup that is still in progress");
+          }
 
-    const backup = await db.query.backups.findFirst({
-      where: eq(backups.id, data.backupId),
-    });
-    if (!backup) {
-      throw new Error("backup not found");
-    }
-    if (backup.status === "queued" || backup.status === "running") {
-      throw new Error("cannot delete a backup that is still in progress");
-    }
+          if (backup.destinationId) {
+            try {
+              const { destination } = await resolveDestination(
+                db,
+                env.appKey,
+                backup.destinationId
+              );
+              await deleteObject(destination, backup.objectKey);
+            } catch {
+              // Object may already be gone; still drop the row.
+            }
+          }
 
-    if (backup.destinationId) {
-      try {
-        const { destination } = await resolveDestination(
-          db,
-          env.appKey,
-          backup.destinationId
-        );
-        await deleteObject(destination, backup.objectKey);
-      } catch {
-        // Object may already be gone; still drop the row.
-      }
-    }
-
-    await db.delete(backups).where(eq(backups.id, backup.id));
-    return { ok: true };
-  });
+          await db.delete(backups).where(eq(backups.id, backup.id));
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.objectKey }),
+      })
+  );
 
 /**
  * Triggers a restore from a completed run or a raw S3 object.
  */
 export const triggerRestore = createServerFn({ method: "POST" })
   .validator(restoreRequestSchema)
-  .handler(async ({ data }): Promise<{ queued: true }> => {
-    await requirePermission({ action: "restore", resource: "backup" });
+  .handler(
+    async ({ data }): Promise<{ queued: true }> =>
+      runGuarded({
+        confirmName: { expected: (row) => row.name, typed: data.confirmName },
+        load: () =>
+          db.query.databases.findFirst({
+            where: eq(databases.id, data.databaseId),
+          }),
+        notFoundMessage: "database not found",
+        permission: { action: "restore", resource: "backup" },
+        run: async ({ row: database }) => {
+          if (data.backupId) {
+            const backup = await db.query.backups.findFirst({
+              where: eq(backups.id, data.backupId),
+            });
+            if (!backup || backup.databaseId !== database.id) {
+              throw new Error("backup not found for this database");
+            }
+            if (backup.status !== "completed") {
+              throw new Error(
+                "only a completed backup can be restored — this one is not"
+              );
+            }
+            await enqueueDeploy({
+              backupId: backup.id,
+              databaseId: database.id,
+              kind: "restore",
+            });
+            return { queued: true as const };
+          }
 
-    const database = await db.query.databases.findFirst({
-      where: eq(databases.id, data.databaseId),
-    });
-    if (!database) {
-      throw new Error("database not found");
-    }
-    if (data.confirmName !== database.name) {
-      throw new Error(
-        `the name you typed does not match "${database.name}" — restore cancelled`
-      );
-    }
+          if (!(data.destinationId && data.objectKey)) {
+            throw new Error("destinationId and objectKey are required");
+          }
 
-    if (data.backupId) {
-      const backup = await db.query.backups.findFirst({
-        where: eq(backups.id, data.backupId),
-      });
-      if (!backup || backup.databaseId !== database.id) {
-        throw new Error("backup not found for this database");
-      }
-      if (backup.status !== "completed") {
-        throw new Error(
-          "only a completed backup can be restored — this one is not"
-        );
-      }
-      await enqueueDeploy({
-        backupId: backup.id,
-        databaseId: database.id,
-        kind: "restore",
-      });
-      return { queued: true };
-    }
-
-    if (!(data.destinationId && data.objectKey)) {
-      throw new Error("destinationId and objectKey are required");
-    }
-
-    await enqueueDeploy({
-      databaseId: database.id,
-      destinationId: data.destinationId,
-      kind: "restore",
-      objectKey: data.objectKey,
-    });
-    return { queued: true };
-  });
+          await enqueueDeploy({
+            databaseId: database.id,
+            destinationId: data.destinationId,
+            kind: "restore",
+            objectKey: data.objectKey,
+          });
+          return { queued: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
