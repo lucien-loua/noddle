@@ -114,7 +114,22 @@ function listServerTs(dir: string, prefix = ""): string[] {
 }
 
 const files = listServerTs(SERVER_DIR);
+/**
+ * Mutations with no single object to name.
+ *
+ * `saveEnvVars` writes, updates and deletes many rows under one owner;
+ * `startUpdate` acts on the installation, which has no row. Everything else
+ * must name what it touched — an audit line reading "create · database" with
+ * an empty resourceId says nothing a month later, and that is precisely the
+ * state the whole log was in before runGuarded was adopted.
+ *
+ * Keep this list SHORT. A new entry is a claim that the act has no object;
+ * if the payload carries an id, it has one.
+ */
+const OBJECTLESS_MUTATIONS = new Set(["saveEnvVars", "startUpdate"]);
+
 const unguardedPost: string[] = [];
+const untargetedPost: string[] = [];
 const unguardedGet: string[] = [];
 const universalGuards: string[] = [];
 const restrictedWithoutGuard: string[] = [];
@@ -133,6 +148,12 @@ for (const file of files) {
       mutating += 1;
       if (!perm) {
         unguardedPost.push(`${file}:${decl.name}`);
+      }
+      if (
+        decl.body.includes("runGuarded(") &&
+        !(decl.body.includes("target:") || OBJECTLESS_MUTATIONS.has(decl.name))
+      ) {
+        untargetedPost.push(`${file}:${decl.name}`);
       }
       continue;
     }
@@ -189,6 +210,12 @@ if (unguardedPost.length === 0) {
   ok("all POST handlers declare requirePermission");
 } else {
   ko(`POST WITHOUT A GUARD: ${unguardedPost.join(", ")}`);
+}
+
+if (untargetedPost.length === 0) {
+  ok("every guarded POST names the object it acted on");
+} else {
+  ko(`POST WITHOUT AN AUDIT TARGET: ${untargetedPost.join(", ")}`);
 }
 
 if (unguardedGet.length === 0) {
