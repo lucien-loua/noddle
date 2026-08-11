@@ -38,7 +38,7 @@ export interface RestoreRequest {
  * volume while the container is still running would corrupt exactly what
  * we're restoring.
  */
-async function scaleService(
+async function scaleServiceAndWait(
   docker: DockerApi,
   serviceName: string,
   replicas: number
@@ -485,14 +485,18 @@ export async function runRestore(
         const { dockerClient } = await import("@noddle/ssh-executor");
         const managerDocker = dockerClient(managerClient);
 
-        await scaleService(managerDocker, serviceName, 0);
+        await scaleServiceAndWait(managerDocker, serviceName, 0);
         // Swarm returns control as soon as the task is marked stopped; give
         // the daemon a few moments to actually release the volume.
         await new Promise((r) => setTimeout(r, SETTLE_MS));
 
         await restoreRedis(buildClient, { body, volume: serviceName });
 
-        await scaleService(managerDocker, serviceName, database.replicas);
+        await scaleServiceAndWait(
+          managerDocker,
+          serviceName,
+          database.replicas
+        );
         break;
       }
       default: {

@@ -11,7 +11,10 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
-import { type DatabaseRow, getDatabaseDashboard } from "@/server/databases";
+import {
+  type DatabaseRow,
+  loadDatabaseDashboardRows,
+} from "@/server/databases";
 
 export interface DeploymentSummary {
   commitSha: string | null;
@@ -154,126 +157,132 @@ function toStackSummary(
   };
 }
 
+async function loadServiceDashboard(): Promise<ServiceRow[]> {
+  const rows = await db.query.services.findMany({
+    orderBy: services.name,
+    with: {
+      environment: { with: { project: true } },
+      server: true,
+    },
+  });
+  if (rows.length === 0) {
+    return [];
+  }
+
+  // The last deployment of each service in a single pass. Deployments are
+  // sorted once, then distributed: the first one seen for a service is
+  // necessarily the most recent.
+  const recent = await db.query.deployments.findMany({
+    orderBy: desc(deployments.createdAt),
+    where: inArray(
+      deployments.serviceId,
+      rows.map((r) => r.id)
+    ),
+  });
+
+  const nodes = await nodeNames();
+  const latest = new Map<string, typeof deployments.$inferSelect>();
+  const now = Date.now();
+  const watched = new Set<string>();
+  for (const dep of recent) {
+    if (!latest.has(dep.serviceId)) {
+      latest.set(dep.serviceId, dep);
+    }
+    if (dep.watchUntil && dep.watchUntil.getTime() > now) {
+      watched.add(dep.serviceId);
+    }
+  }
+
+  return rows.map((service) => {
+    const last = latest.get(service.id);
+    return {
+      domain: service.domain,
+      environment: service.environment.name,
+      environmentId: service.environmentId,
+      gitBranch: service.gitBranch,
+      gitRepoUrl: service.gitRepoUrl,
+      id: service.id,
+      lastDeployment: last ? toSummary(last, nodes) : null,
+      lastError: service.lastError,
+      name: service.name,
+      port: service.port,
+      prNumber: service.prNumber,
+      project: service.environment.project.name,
+      projectId: service.environment.projectId,
+      registryId: service.registryId,
+      serverName: service.server.name,
+      status: service.status,
+      watching: watched.has(service.id),
+    };
+  });
+}
+
 export const getDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<ServiceRow[]> => {
     await requireSession();
-
-    const rows = await db.query.services.findMany({
-      orderBy: services.name,
-      with: {
-        environment: { with: { project: true } },
-        server: true,
-      },
-    });
-    if (rows.length === 0) {
-      return [];
-    }
-
-    // The last deployment of each service in a single pass. Deployments are
-    // sorted once, then distributed: the first one seen for a service is
-    // necessarily the most recent.
-    const recent = await db.query.deployments.findMany({
-      orderBy: desc(deployments.createdAt),
-      where: inArray(
-        deployments.serviceId,
-        rows.map((r) => r.id)
-      ),
-    });
-
-    const nodes = await nodeNames();
-    const latest = new Map<string, typeof deployments.$inferSelect>();
-    const now = Date.now();
-    const watched = new Set<string>();
-    for (const dep of recent) {
-      if (!latest.has(dep.serviceId)) {
-        latest.set(dep.serviceId, dep);
-      }
-      if (dep.watchUntil && dep.watchUntil.getTime() > now) {
-        watched.add(dep.serviceId);
-      }
-    }
-
-    return rows.map((service) => {
-      const last = latest.get(service.id);
-      return {
-        domain: service.domain,
-        environment: service.environment.name,
-        environmentId: service.environmentId,
-        gitBranch: service.gitBranch,
-        gitRepoUrl: service.gitRepoUrl,
-        id: service.id,
-        lastDeployment: last ? toSummary(last, nodes) : null,
-        lastError: service.lastError,
-        name: service.name,
-        port: service.port,
-        prNumber: service.prNumber,
-        project: service.environment.project.name,
-        projectId: service.environment.projectId,
-        registryId: service.registryId,
-        serverName: service.server.name,
-        status: service.status,
-        watching: watched.has(service.id),
-      };
-    });
+    return loadServiceDashboard();
   }
 );
+
+async function loadStackDashboard(): Promise<StackRow[]> {
+  const rows = await db.query.stacks.findMany({
+    orderBy: stacks.name,
+    with: {
+      environment: { with: { project: true } },
+      server: true,
+    },
+  });
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const recent = await db.query.stackDeployments.findMany({
+    orderBy: desc(stackDeployments.createdAt),
+    where: inArray(
+      stackDeployments.stackId,
+      rows.map((r) => r.id)
+    ),
+  });
+
+  const latest = new Map<string, typeof stackDeployments.$inferSelect>();
+  const now = Date.now();
+  const watched = new Set<string>();
+  for (const dep of recent) {
+    if (!latest.has(dep.stackId)) {
+      latest.set(dep.stackId, dep);
+    }
+    if (dep.watchUntil && dep.watchUntil.getTime() > now) {
+      watched.add(dep.stackId);
+    }
+  }
+
+  return rows.map((stack) => {
+    const last = latest.get(stack.id);
+    return {
+      domain: stack.domain,
+      environment: stack.environment.name,
+      environmentId: stack.environmentId,
+      gitBranch: stack.gitBranch,
+      gitRepoUrl: stack.gitRepoUrl,
+      id: stack.id,
+      lastDeployment: last ? toStackSummary(last) : null,
+      lastError: stack.lastError,
+      name: stack.name,
+      port: stack.port,
+      project: stack.environment.project.name,
+      projectId: stack.environment.projectId,
+      publicService: stack.publicService,
+      serverName: stack.server.name,
+      status: stack.status,
+      watching: watched.has(stack.id),
+    };
+  });
+}
 
 export const getStackDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<StackRow[]> => {
     await requireSession();
-
-    const rows = await db.query.stacks.findMany({
-      orderBy: stacks.name,
-      with: {
-        environment: { with: { project: true } },
-        server: true,
-      },
-    });
-    if (rows.length === 0) {
-      return [];
-    }
-
-    const recent = await db.query.stackDeployments.findMany({
-      orderBy: desc(stackDeployments.createdAt),
-      where: inArray(
-        stackDeployments.stackId,
-        rows.map((r) => r.id)
-      ),
-    });
-
-    const latest = new Map<string, typeof stackDeployments.$inferSelect>();
-    const now = Date.now();
-    const watched = new Set<string>();
-    for (const dep of recent) {
-      if (!latest.has(dep.stackId)) {
-        latest.set(dep.stackId, dep);
-      }
-      if (dep.watchUntil && dep.watchUntil.getTime() > now) {
-        watched.add(dep.stackId);
-      }
-    }
-
-    return rows.map((stack) => {
-      const last = latest.get(stack.id);
-      return {
-        domain: stack.domain,
-        environment: stack.environment.name,
-        environmentId: stack.environmentId,
-        gitBranch: stack.gitBranch,
-        gitRepoUrl: stack.gitRepoUrl,
-        id: stack.id,
-        lastDeployment: last ? toStackSummary(last) : null,
-        lastError: stack.lastError,
-        name: stack.name,
-        port: stack.port,
-        project: stack.environment.project.name,
-        projectId: stack.environment.projectId,
-        publicService: stack.publicService,
-        serverName: stack.server.name,
-        status: stack.status,
-        watching: watched.has(stack.id),
-      };
-    });
+    return loadStackDashboard();
   }
 );
 
@@ -345,113 +354,114 @@ export interface DashboardData {
  * the data, not a display preference: it has to hold true for any client of
  * this read, not just the one that wrote today's `useMemo`.
  */
+async function buildDashboardData(): Promise<DashboardData> {
+  const [serviceRows, stackRows, databaseRows] = await Promise.all([
+    loadServiceDashboard(),
+    loadStackDashboard(),
+    loadDatabaseDashboardRows(),
+  ]);
+
+  const scopes = new Map<string, Scope>();
+  const scopeProjectId = new Map<string, string>();
+  const ensure = (
+    projectId: string,
+    project: string,
+    environmentId: string,
+    environment: string
+  ): Scope => {
+    const key = scopeKey(project, environment);
+    const found = scopes.get(key);
+    if (found) {
+      return found;
+    }
+    const created: Scope = {
+      databases: [],
+      environment,
+      environmentId,
+      key,
+      project,
+      projectId,
+      services: [],
+      stacks: [],
+    };
+    scopes.set(key, created);
+    scopeProjectId.set(key, projectId);
+    return created;
+  };
+
+  for (const s of serviceRows) {
+    ensure(
+      s.projectId,
+      s.project,
+      s.environmentId,
+      s.environment
+    ).services.push(s);
+  }
+  for (const s of stackRows) {
+    ensure(s.projectId, s.project, s.environmentId, s.environment).stacks.push(
+      s
+    );
+  }
+  for (const d of databaseRows) {
+    ensure(
+      d.projectId,
+      d.project,
+      d.environmentId,
+      d.environment
+    ).databases.push(d);
+  }
+
+  const sorted = [...scopes.values()].sort((a, b) =>
+    a.key.localeCompare(b.key)
+  );
+
+  const groups: ProjectGroup[] = [];
+  for (const scope of sorted) {
+    const last = groups.at(-1);
+    if (last && last.project === scope.project) {
+      last.scopes.push(scope);
+    } else {
+      // biome-ignore lint/style/noNonNullAssertion: `scopeProjectId` is populated by `ensure` before any scope, in lockstep with `scopes`
+      const projectId = scopeProjectId.get(scope.key)!;
+      groups.push({
+        project: scope.project,
+        projectId,
+        scopes: [scope],
+        statusCounts: {},
+      });
+    }
+  }
+
+  const statusCounts: Record<string, number> = {};
+  const tally = (status: string) => {
+    statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+  };
+  const tallyProject = (projectId: string, status: string) => {
+    const group = groups.find((g) => g.projectId === projectId);
+    if (group) {
+      group.statusCounts[status] = (group.statusCounts[status] ?? 0) + 1;
+    }
+  };
+  for (const s of serviceRows) {
+    tally(s.status);
+    tallyProject(s.projectId, s.status);
+  }
+  for (const s of stackRows) {
+    tally(s.status);
+    tallyProject(s.projectId, s.status);
+  }
+  for (const d of databaseRows) {
+    tallyProject(d.projectId, d.status);
+    tally(d.status);
+  }
+
+  return { groups, statusCounts };
+}
+
 export const getDashboardGroups = createServerFn({ method: "GET" }).handler(
   async (): Promise<DashboardData> => {
     await requireSession();
-    const [serviceRows, stackRows, databaseRows] = await Promise.all([
-      getDashboard(),
-      getStackDashboard(),
-      getDatabaseDashboard(),
-    ]);
-
-    const scopes = new Map<string, Scope>();
-    const scopeProjectId = new Map<string, string>();
-    const ensure = (
-      projectId: string,
-      project: string,
-      environmentId: string,
-      environment: string
-    ): Scope => {
-      const key = scopeKey(project, environment);
-      const found = scopes.get(key);
-      if (found) {
-        return found;
-      }
-      const created: Scope = {
-        databases: [],
-        environment,
-        environmentId,
-        key,
-        project,
-        projectId,
-        services: [],
-        stacks: [],
-      };
-      scopes.set(key, created);
-      scopeProjectId.set(key, projectId);
-      return created;
-    };
-
-    for (const s of serviceRows) {
-      ensure(
-        s.projectId,
-        s.project,
-        s.environmentId,
-        s.environment
-      ).services.push(s);
-    }
-    for (const s of stackRows) {
-      ensure(
-        s.projectId,
-        s.project,
-        s.environmentId,
-        s.environment
-      ).stacks.push(s);
-    }
-    for (const d of databaseRows) {
-      ensure(
-        d.projectId,
-        d.project,
-        d.environmentId,
-        d.environment
-      ).databases.push(d);
-    }
-
-    const sorted = [...scopes.values()].sort((a, b) =>
-      a.key.localeCompare(b.key)
-    );
-
-    const groups: ProjectGroup[] = [];
-    for (const scope of sorted) {
-      const last = groups.at(-1);
-      if (last && last.project === scope.project) {
-        last.scopes.push(scope);
-      } else {
-        // biome-ignore lint/style/noNonNullAssertion: `scopeProjectId` is populated by `ensure` before any scope, in lockstep with `scopes`
-        const projectId = scopeProjectId.get(scope.key)!;
-        groups.push({
-          project: scope.project,
-          projectId,
-          scopes: [scope],
-          statusCounts: {},
-        });
-      }
-    }
-
-    const statusCounts: Record<string, number> = {};
-    const tally = (status: string) => {
-      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
-    };
-    const tallyProject = (projectId: string, status: string) => {
-      const group = groups.find((g) => g.projectId === projectId);
-      if (group) {
-        group.statusCounts[status] = (group.statusCounts[status] ?? 0) + 1;
-      }
-    };
-    for (const s of serviceRows) {
-      tally(s.status);
-      tallyProject(s.projectId, s.status);
-    }
-    for (const s of stackRows) {
-      tally(s.status);
-      tallyProject(s.projectId, s.status);
-    }
-    for (const d of databaseRows) {
-      tallyProject(d.projectId, d.status);
-      tally(d.status);
-    }
-
-    return { groups, statusCounts };
+    return buildDashboardData();
   }
 );
 
@@ -650,7 +660,9 @@ function collectAttention(
 export const getOverview = createServerFn({ method: "GET" }).handler(
   async (): Promise<Overview> => {
     await requireSession();
-    const { groups, statusCounts } = await getDashboardGroups();
+    // One session check, one inventory load — do not re-enter getDashboardGroups
+    // as a server function (that would re-auth and re-read servers).
+    const { groups, statusCounts } = await buildDashboardData();
 
     const attention: Overview["attention"] = [];
     for (const group of groups) {

@@ -1,4 +1,4 @@
-import { servers, sshKeys } from "@noddle/db/schema";
+import { databases, servers, sshKeys } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { connect, disconnect, execArgv } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
@@ -331,7 +331,51 @@ export const containerAction = createServerFn({ method: "POST" })
     }
   });
 
-const restartServiceSchema = z.object({ serviceName: z.string().min(1) });
+const restartServiceSchema = z.object({
+  serverId: z.string().uuid(),
+  serviceName: z.string().min(1),
+});
+
+/**
+ * Same formula as the worker's `swarmServiceName` — kept here so the web
+ * app never imports the worker. Eight hex digits of the UUID, readable
+ * name in front.
+ */
+function serviceSwarmName(service: { id: string; name: string }): string {
+  return `${service.name}-${service.id.replaceAll("-", "").slice(0, 8)}`;
+}
+
+/**
+ * True when `serviceName` belongs to a row Noddle manages.
+ *
+ * Client-side hiding is only a courtesy; this is where the rule actually
+ * lives for Swarm restarts. Without it, a forged call could ForceUpdate
+ * Traefik, the registry, or Noddle's own web/worker — anything the
+ * manager will accept by name.
+ */
+async function isManagedSwarmService(serviceName: string): Promise<boolean> {
+  const [svcRows, dbRow, stackRows] = await Promise.all([
+    db.query.services.findMany({ columns: { id: true, name: true } }),
+    db.query.databases.findFirst({
+      columns: { id: true },
+      where: eq(databases.swarmName, serviceName),
+    }),
+    db.query.stacks.findMany({ columns: { swarmName: true } }),
+  ]);
+
+  if (svcRows.some((s) => serviceSwarmName(s) === serviceName)) {
+    return true;
+  }
+  if (dbRow) {
+    return true;
+  }
+  // Compose services are `<swarmName>_<key>`; the stack namespace itself
+  // is also a legitimate match if ever targeted directly.
+  return stackRows.some(
+    (s) =>
+      serviceName === s.swarmName || serviceName.startsWith(`${s.swarmName}_`)
+  );
+}
 
 /**
  * Restarts a Swarm task's SERVICE — the only honest action on it.
@@ -342,11 +386,60 @@ const restartServiceSchema = z.object({ serviceName: z.string().min(1) });
  * converging would be two updates crossing paths. This queue's concurrency
  * of 1 is what forbids that — same rule as rollback, deletion, and the
  * lifecycle.
+ *
+ * Ownership is re-checked here (inventory + live kind on `serverId`), the
+ * same seam `containerAction` uses for stop/restart/remove. A name alone
+ * is never enough.
  */
 export const restartSwarmService = createServerFn({ method: "POST" })
   .validator(restartServiceSchema)
   .handler(async ({ data }): Promise<{ queued: true }> => {
     await requirePermission({ action: "operate", resource: "container" });
+
+    if (!(await isManagedSwarmService(data.serviceName))) {
+      throw new Error(
+        `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
+      );
+    }
+
+    const client = await connectToServer(data.serverId);
+    try {
+      // Re-read on the machine that reported the task: the page may be
+      // stale, and a forged serverId/serviceName pair must not skip the
+      // kind check that containerAction already applies to unmanaged
+      // containers.
+      const res = await execArgv(client, [
+        "sudo",
+        "docker",
+        "ps",
+        "-a",
+        "--no-trunc",
+        "--filter",
+        `label=com.docker.swarm.service.name=${data.serviceName}`,
+        "--format",
+        PS_FORMAT,
+      ]);
+      if (res.code !== 0) {
+        throw new Error(res.stderr.trim() || "docker ps failed");
+      }
+      const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
+      if (rows.length === 0) {
+        throw new Error(
+          `no running task for Swarm service ${data.serviceName} on that server`
+        );
+      }
+      // Swarm tasks classify as `swarm`. Anything else (control-plane
+      // compose leftovers mis-filtered, empty labels) is refused.
+      const foreign = rows.find((r) => r.kind !== "swarm");
+      if (foreign) {
+        throw new Error(
+          `${foreign.name} is part of Noddle itself and cannot be changed from here.`
+        );
+      }
+    } finally {
+      disconnect(client);
+    }
+
     await enqueueDeploy({
       kind: "restart-swarm-service",
       serviceName: data.serviceName,

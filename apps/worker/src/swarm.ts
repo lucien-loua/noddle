@@ -1,18 +1,18 @@
 import type { TraefikLabels } from "@noddle/proxy-config";
+import {
+  MONITOR_SECONDS,
+  renderDockerodeHttpHealthcheck,
+  renderDockerodeRestartPolicy,
+  renderDockerodeRollbackConfig,
+  renderDockerodeUpdateConfig,
+} from "@noddle/shared/deploy-policy";
 import type { DockerApi } from "@noddle/ssh-executor";
-
-/** The Swarm API expresses every duration in nanoseconds. */
-const SECOND_NS = 1_000_000_000;
 
 /**
  * Window during which Swarm watches a task after starting it.
- *
- * Deliberately short: it lengthens every deployment by that much. The
- * guarantee it offers expires with it — beyond that, nothing left to
- * restore. Noddle's own watch (watch.ts) takes over from there, precisely
- * because lengthening this window isn't the right fix.
+ * Re-exported from DeployPolicy so existing imports keep working.
  */
-export const UPDATE_MONITOR_SECONDS = 45;
+export const UPDATE_MONITOR_SECONDS = MONITOR_SECONDS;
 
 /**
  * The Swarm service's name — and why it's NOT `services.name`.
@@ -101,12 +101,8 @@ function serviceSpec(s: DeploySpec) {
     RollbackConfig: {
       // `pause` and not `rollback`: a rollback that fails must not trigger a
       // rollback of the rollback. We stop and let Noddle decide from its
-      // history.
-      FailureAction: "pause",
-      MaxFailureRatio: 0,
-      Monitor: UPDATE_MONITOR_SECONDS * SECOND_NS,
-      Order: "start-first",
-      Parallelism: 1,
+      // history. Numbers live in DeployPolicy (ADR-0012).
+      ...renderDockerodeRollbackConfig(),
     },
     TaskTemplate: {
       // Absent (not `{ Constraints: [] }`) on a single node: an empty list
@@ -121,35 +117,16 @@ function serviceSpec(s: DeploySpec) {
         // isn't in a non-login shell's PATH — and HEALTHCHECK runs in a
         // non-login `sh -c`. Measured in Phase 0; all three look identical
         // until you actually run them.
-        Healthcheck: {
-          Interval: 3 * SECOND_NS,
-          Retries: 3,
-          StartPeriod: 5 * SECOND_NS,
-          Test: [
-            "CMD-SHELL",
-            `curl -fsS -o /dev/null http://127.0.0.1:${s.port}/ || exit 1`,
-          ],
-          Timeout: 2 * SECOND_NS,
-        },
+        Healthcheck: renderDockerodeHttpHealthcheck(s.port),
         Image: s.image,
       },
       Networks: [{ Target: s.networkName }],
-      RestartPolicy: {
-        Condition: "on-failure",
-        MaxAttempts: 3,
-        Window: 120 * SECOND_NS,
-      },
+      RestartPolicy: renderDockerodeRestartPolicy(),
     },
     UpdateConfig: {
       // The health gate: if the task never becomes healthy, Swarm rolls
       // back on its own and the old version never stopped serving.
-      FailureAction: "rollback",
-      MaxFailureRatio: 0,
-      Monitor: UPDATE_MONITOR_SECONDS * SECOND_NS,
-      // The new task becomes healthy BEFORE the old one is drained.
-      // That's what makes the deployment zero-downtime.
-      Order: "start-first",
-      Parallelism: 1,
+      ...renderDockerodeUpdateConfig(),
     },
   };
 }

@@ -9,6 +9,7 @@ import {
   type DatabaseEngine,
   DEFAULT_DATABASE_IMAGE,
 } from "@noddle/shared/database-engines";
+import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import {
   type DockerApi,
   disconnect,
@@ -101,7 +102,6 @@ interface EngineSpec {
   volumePath: string;
 }
 
-const SECOND_NS = 1_000_000_000;
 const SECRET_MODE_OWNER_READ_ONLY = 0o400;
 /** See `EngineSpec.secretMode`: required by MongoDB's entrypoint. */
 const SECRET_MODE_WORLD_READ_ONLY = 0o444;

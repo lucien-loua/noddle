@@ -1,4 +1,5 @@
 import { environments, projects, services } from "@noddle/db/schema";
+import { markDeleting } from "@noddle/shared/lifecycle";
 import {
   connectRepoSchema,
   deleteServiceSchema,
@@ -106,7 +107,7 @@ export const deleteService = createServerFn({ method: "POST" })
 
     await db
       .update(services)
-      .set({ status: "deleting" })
+      .set(markDeleting(null))
       .where(eq(services.id, service.id));
 
     // Deliberately replayable: `removeService` and the registry purge are

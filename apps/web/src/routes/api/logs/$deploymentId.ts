@@ -1,15 +1,12 @@
 import { deployments, stackDeployments } from "@noddle/db/schema";
-import { isTerminalStatus, type LogMessage } from "@noddle/shared/logs";
+import { isTerminalStatus } from "@noddle/shared/logs";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
 import { readArchive } from "@/lib/log-archive.server";
 import { logHub } from "@/lib/redis.server";
-
-/** Proxies cut an idle connection. A build can stay silent for several
- *  minutes during a slow step. */
-const HEARTBEAT_MS = 25_000;
+import { sseChannel } from "@/lib/sse-channel.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -43,110 +40,35 @@ export const Route = createFileRoute("/api/logs/$deploymentId")({
           return new Response("deployment not found", { status: 404 });
         }
 
-        const encoder = new TextEncoder();
+        return sseChannel(request, async ({ finish, send }) => {
+          if (isTerminalStatus(deployment.status)) {
+            const archive = await readArchive(deploymentId);
+            send({
+              data: archive ?? "(no logs kept for this deployment)\n",
+              type: "chunk",
+            });
+            send({ status: deployment.status, type: "end" });
+            finish();
+            return;
+          }
 
-        const stream = new ReadableStream<Uint8Array>({
-          async start(controller) {
-            let closed = false;
-            let heartbeat: ReturnType<typeof setInterval> | undefined;
-            let unsubscribe: (() => void) | undefined;
-
-            const finish = () => {
-              if (closed) {
-                return;
-              }
-              closed = true;
-              if (heartbeat) {
-                clearInterval(heartbeat);
-              }
-              unsubscribe?.();
-              try {
-                controller.close();
-              } catch {
-                // already closed by the client
-              }
-            };
-
-            const send = (message: LogMessage) => {
-              if (closed) {
-                return;
-              }
-              try {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`
-                  )
-                );
-              } catch {
-                finish();
-              }
-            };
-
-            // The client left: close the Redis subscription right away,
-            // otherwise every closed tab leaves a listener behind.
-            request.signal.addEventListener("abort", finish);
-
-            // 1. Finished: the archive is enough, there will be nothing more live.
-            if (isTerminalStatus(deployment.status)) {
-              const archive = await readArchive(deploymentId);
-              send({
-                data: archive ?? "(no logs kept for this deployment)\n",
-                type: "chunk",
-              });
-              send({ status: deployment.status, type: "end" });
-              finish();
-              return;
-            }
-
-            // 3 before 2: we subscribe BEFORE reading the catch-up buffer.
-            //
-            // There's necessarily a window between the two, and we have to
-            // choose what it produces. In this order, a line published
-            // during the window is seen TWICE — once by the subscription,
-            // once by the buffer. In the other order, it's LOST: too late
-            // for the buffer already read, too early for the subscription
-            // not yet active.
-            //
-            // A duplicate line is cosmetic; a line lost from the output of a
-            // failed build is precisely what we were trying to read.
-            // Deduplicating properly would need a sequence number per line,
-            // hence one more Redis command per chunk — not worth it for a
-            // rare few-millisecond duplicate.
-            unsubscribe = await logHub.subscribe(deploymentId, (message) => {
+          // Subscribe BEFORE reading the catch-up buffer — a duplicate line
+          // is cosmetic; a lost line from a failed build is not.
+          const unsubscribe = await logHub.subscribe(
+            deploymentId,
+            (message) => {
               send(message);
               if (message.type === "end") {
                 finish();
               }
-            });
-
-            for (const message of await logHub.backlog(deploymentId)) {
-              send(message);
             }
+          );
 
-            heartbeat = setInterval(() => {
-              if (closed) {
-                return;
-              }
-              try {
-                // An SSE comment: ignored by EventSource, enough to keep the
-                // connection alive.
-                controller.enqueue(encoder.encode(": ping\n\n"));
-              } catch {
-                finish();
-              }
-            }, HEARTBEAT_MS);
-          },
-        });
+          for (const message of await logHub.backlog(deploymentId)) {
+            send(message);
+          }
 
-        return new Response(stream, {
-          headers: {
-            "Cache-Control": "no-cache, no-transform",
-            Connection: "keep-alive",
-            "Content-Type": "text/event-stream",
-            // Without this, an nginx in front buffers the stream and live
-            // output arrives in multi-kilobyte chunks.
-            "X-Accel-Buffering": "no",
-          },
+          return unsubscribe;
         });
       },
     },

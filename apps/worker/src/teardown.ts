@@ -1,5 +1,6 @@
 import { unlink } from "node:fs/promises";
 import { deployments, services } from "@noddle/db/schema";
+import { markFailed } from "@noddle/shared/lifecycle";
 import { disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { BUILD_ROOT, connectForDeploy, type DeployContext } from "#deploy";
@@ -74,7 +75,9 @@ export async function runServiceTeardown(
     // error to handle.
     await ctx.db
       .update(services)
-      .set({ lastError: err instanceof Error ? err.message : String(err) })
+      .set(
+        markFailed("deleting", err instanceof Error ? err.message : String(err))
+      )
       .where(eq(services.id, serviceId));
     throw err;
   } finally {

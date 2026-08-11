@@ -1,7 +1,8 @@
 import { databases, services } from "@noddle/db/schema";
-import { disconnect, dockerClient } from "@noddle/ssh-executor";
+import { markRunning, markStopped } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
-import { connectForDeploy, type DeployContext } from "#deploy";
+import type { DeployContext } from "#deploy";
+import { withDeployClients } from "#job-run";
 import { restartService, scaleService, swarmServiceName } from "#swarm";
 
 export type LifecycleAction = "restart" | "start" | "stop";
@@ -27,17 +28,9 @@ export async function runLifecycle(
     return;
   }
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
-    ctx,
-    service.server
-  );
-
-  try {
+  await withDeployClients(ctx, service.server, async ({ managerDocker }) => {
     // Swarm commands go through the MANAGER: only it holds the cluster's
     // replicated state, a worker node refuses them.
-    const managerDocker = sameConnection
-      ? dockerClient(buildClient)
-      : dockerClient(managerClient);
     const name = swarmServiceName(service);
 
     let applied: boolean;
@@ -62,15 +55,10 @@ export async function runLifecycle(
     if (action !== "restart") {
       await ctx.db
         .update(services)
-        .set({ status: action === "stop" ? "stopped" : "running" })
+        .set(action === "stop" ? markStopped(null) : markRunning(null))
         .where(eq(services.id, service.id));
     }
-  } finally {
-    disconnect(buildClient);
-    if (!sameConnection) {
-      disconnect(managerClient);
-    }
-  }
+  });
 }
 
 /**
@@ -101,15 +89,7 @@ export async function runDatabaseLifecycle(
     return;
   }
 
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
-    ctx,
-    database.server
-  );
-
-  try {
-    const managerDocker = sameConnection
-      ? dockerClient(buildClient)
-      : dockerClient(managerClient);
+  await withDeployClients(ctx, database.server, async ({ managerDocker }) => {
     const name = database.swarmName;
 
     let applied: boolean;
@@ -119,26 +99,21 @@ export async function runDatabaseLifecycle(
       applied = await scaleService(
         managerDocker,
         name,
-        action === "stop" ? 0 : database.replicas
+        action === "stop" ? 0 : 1
       );
     }
 
     if (!applied) {
       throw new Error(
-        `database service ${name} not found on the Swarm cluster`
+        `database service ${name} not found on the Swarm cluster — provision it first`
       );
     }
 
     if (action !== "restart") {
       await ctx.db
         .update(databases)
-        .set({ status: action === "stop" ? "stopped" : "running" })
+        .set(action === "stop" ? markStopped(null) : markRunning(null))
         .where(eq(databases.id, database.id));
     }
-  } finally {
-    disconnect(buildClient);
-    if (!sameConnection) {
-      disconnect(managerClient);
-    }
-  }
+  });
 }

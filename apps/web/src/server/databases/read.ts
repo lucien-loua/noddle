@@ -86,17 +86,23 @@ function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
   };
 }
 
+/** Impure load — no session check. Callers that are already behind a
+ *  requireSession use this so overview/groups don't re-auth five times. */
+export async function loadDatabaseDashboardRows(): Promise<DatabaseRow[]> {
+  const rows = await db.query.databases.findMany({
+    orderBy: databases.name,
+    with: {
+      environment: { with: { project: true } },
+      server: true,
+    },
+  });
+  return rows.map(toDatabaseRow);
+}
+
 export const getDatabaseDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<DatabaseRow[]> => {
     await requireSession();
-    const rows = await db.query.databases.findMany({
-      orderBy: databases.name,
-      with: {
-        environment: { with: { project: true } },
-        server: true,
-      },
-    });
-    return rows.map(toDatabaseRow);
+    return loadDatabaseDashboardRows();
   }
 );
 

@@ -28,6 +28,11 @@ function roleOf(session: Session): string | null {
  *
  * Hiding a button isn't a permission anyway: THIS check is, hiding is
  * merely a courtesy.
+ *
+ * Allowed attempts are NOT written here — a check that passes before the
+ * handler body would log "allowed" for work that never happened (not
+ * found, confirm-name mismatch). Successes go through `recordPerformed`
+ * once the act finished, typically via `guardedMutation`.
  */
 export async function requirePermission(
   permission: Permission
@@ -35,24 +40,34 @@ export async function requirePermission(
   const session = await requireSession();
   const allowed = can(roleOf(session), permission.resource, permission.action);
 
-  // BEFORE throwing: an unlogged denial is precisely the one we'd want to
-  // read back later. It's the useful half of the log — a log that only
-  // keeps what succeeded never shows someone probing around.
-  await record(session, permission, allowed ? "allowed" : "denied");
-
   if (!allowed) {
-    // Without this, every denial returns a 500 — measured: `event.res.status`
-    // is empty as long as nothing has set it, so TanStack Start's generic
-    // catch falls back to its default. Set HERE, at the single point of
-    // passage, rather than in each guarded function: otherwise `/audit`
-    // would remain the only screen behaving differently — exactly the gap
-    // already noted.
+    // Denials are the useful half of the log — a log that only keeps what
+    // succeeded never shows someone probing around.
+    await record(session, permission, "denied");
     setResponseStatus(403);
     throw new ForbiddenError(
       `Action refused: your role does not allow "${permission.action}" on ${permission.resource}.`
     );
   }
   return session;
+}
+
+/**
+ * Record that a mutating act actually completed, with its object.
+ *
+ * Call AFTER the handler succeeds. `guardedMutation` does this; hand-
+ * written handlers that still call `requirePermission` alone should move
+ * to `guardedMutation` so the object and the outcome stop drifting.
+ */
+export async function recordPerformed(
+  session: Session,
+  permission: Permission,
+  target: { id: string; name?: string | null }
+): Promise<void> {
+  await record(session, permission, "allowed", {
+    resourceId: target.id,
+    resourceName: target.name ?? null,
+  });
 }
 
 /**
@@ -83,41 +98,19 @@ function isSelfConsultation(
   );
 }
 
-/**
- * Writes the audit line. NEVER THROWS.
- *
- * Same rule as `notify`, and for the same reason: an incident in this
- * write must not turn a valid deployment into a failure. The try/catch is
- * set up ONCE here rather than copied at every call site.
- *
- * The trade-off is deliberate and worth stating: we'd rather lose an
- * audit line than block the action. This isn't the right call for every
- * product — a system where the audit trail is authoritative would refuse
- * the action — but here the table lives in the SAME Postgres as the
- * action itself, so an unreachable database fails both anyway. The
- * window where only the audit is lost is narrow, and the failure goes to
- * stderr rather than into silence.
- */
 async function record(
   session: Session,
   permission: Permission,
-  outcome: "allowed" | "denied"
+  outcome: "allowed" | "denied",
+  target?: { resourceId: string | null; resourceName: string | null }
 ): Promise<void> {
   if (isSelfConsultation(permission, outcome)) {
     return;
   }
-  // The headers are ENRICHMENT, not the line itself. Reading them depends
-  // on a request context; if it fails, we still want to know WHO
-  // attempted WHAT. Fetching them in their own try/catch prevents an IP
-  // address detail from making the entire event disappear — the silent
-  // gap this log exists to avoid.
   let ipAddress: string | null = null;
   let userAgent: string | null = null;
   try {
     const headers = getRequestHeaders();
-    // `x-forwarded-for` first: the web process sits behind Traefik, so
-    // the socket address would always be the proxy's. The first element
-    // of the list is the origin client.
     ipAddress =
       headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       headers.get("x-real-ip") ??
@@ -130,13 +123,13 @@ async function record(
   try {
     await db.insert(auditLog).values({
       action: permission.action,
-      // COPIED, not joined: deleting an account must not erase the trace
-      // of what it did.
       actorEmail: session.user.email,
       actorUserId: session.user.id,
       ipAddress,
       outcome,
       resource: permission.resource,
+      resourceId: target?.resourceId ?? null,
+      resourceName: target?.resourceName ?? null,
       role: roleOf(session),
       userAgent,
     });

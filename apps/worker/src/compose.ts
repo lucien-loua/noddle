@@ -13,6 +13,12 @@ import {
 } from "@noddle/db/schema";
 import { routeLabels } from "@noddle/proxy-config";
 import {
+  renderComposeHttpHealthcheck,
+  renderComposeRestartPolicy,
+  renderComposeRollbackConfig,
+  renderComposeUpdateConfig,
+} from "@noddle/shared/deploy-policy";
+import {
   disconnect,
   dockerClient,
   execArgv,
@@ -28,7 +34,6 @@ import {
   getSwarmNodeId,
   isDeployAccepted,
   readUpdateState,
-  UPDATE_MONITOR_SECONDS,
   waitForRunningTask,
 } from "#swarm";
 import { watchUntilFor } from "#watch";
@@ -157,27 +162,12 @@ function injectDeployConfig(doc: ComposeFile, opts: InjectOptions): void {
         constraints: [`node.id==${opts.placementNodeId}`],
       };
     }
-    deploy.update_config = {
-      failure_action: "rollback",
-      max_failure_ratio: 0,
-      monitor: `${UPDATE_MONITOR_SECONDS}s`,
-      order: "start-first",
-      parallelism: 1,
-    };
+    deploy.update_config = renderComposeUpdateConfig();
     // `pause`, not `rollback`: a rollback that fails must not trigger
-    // another one — same reason as the single-service path.
-    deploy.rollback_config = {
-      failure_action: "pause",
-      max_failure_ratio: 0,
-      monitor: `${UPDATE_MONITOR_SECONDS}s`,
-      order: "start-first",
-      parallelism: 1,
-    };
-    deploy.restart_policy = {
-      condition: "on-failure",
-      max_attempts: 3,
-      window: "120s",
-    };
+    // another one — same reason as the single-service path. Numbers live
+    // in DeployPolicy (ADR-0012).
+    deploy.rollback_config = renderComposeRollbackConfig();
+    deploy.restart_policy = renderComposeRestartPolicy();
     svc.deploy = deploy;
   }
 
@@ -204,16 +194,7 @@ function injectDeployConfig(doc: ComposeFile, opts: InjectOptions): void {
   // pitfall as `serviceSpec()`. We only inject it if the user doesn't
   // already have their own healthcheck: theirs takes priority.
   if (!pub.healthcheck) {
-    pub.healthcheck = {
-      interval: "3s",
-      retries: 3,
-      start_period: "5s",
-      test: [
-        "CMD-SHELL",
-        `curl -fsS -o /dev/null http://127.0.0.1:${opts.port}/ || exit 1`,
-      ],
-      timeout: "2s",
-    };
+    pub.healthcheck = renderComposeHttpHealthcheck(opts.port);
   }
 
   // The public service must join the overlay network Traefik listens on,

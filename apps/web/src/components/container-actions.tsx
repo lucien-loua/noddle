@@ -42,7 +42,12 @@ export function ContainerActions({
 
   const restart = useMutation({
     mutationFn: () =>
-      restartSwarmService({ data: { serviceName: row.serviceName ?? "" } }),
+      restartSwarmService({
+        data: {
+          serverId: row.serverId,
+          serviceName: row.serviceName ?? "",
+        },
+      }),
     onError: (e: Error) => onError(errorMessage(e, "restart failed")),
   });
 

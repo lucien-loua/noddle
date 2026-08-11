@@ -11,7 +11,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "verify:unit": "bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/backup/src/verify.ts && bun run apps/web/src/verify-permissions.ts"
   },
   "type": "module",
   "workspaces": {

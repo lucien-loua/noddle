@@ -1,0 +1,35 @@
+# VM-free verify suites — the risk net's fast layer.
+#
+# Runs on every push/PR that touches application code. Spike (real VM/host
+# chain) stays separate and still owns infrastructure regressions.
+
+name: verify-unit
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+
+concurrency:
+  group: verify-unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run check
+      - run: bun run verify:unit

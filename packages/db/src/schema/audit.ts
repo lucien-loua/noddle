@@ -40,6 +40,14 @@ export const auditLog = pgTable(
     outcome: auditOutcome("outcome").notNull(),
     resource: text("resource").notNull(),
 
+    /**
+     * Which row was acted on, when known. Null for denials (no target
+     * resolved yet) and for legacy rows written before this column.
+     */
+    resourceId: text("resource_id"),
+    /** Human label at the time of the act (name), denormalized like email. */
+    resourceName: text("resource_name"),
+
     /** The role AT THE TIME OF THE FACTS, not today's. Without it, a
      *  demotion would rewrite the meaning of the entire history. */
     role: text("role"),

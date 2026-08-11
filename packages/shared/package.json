@@ -8,10 +8,13 @@
   "exports": {
     "./crypto": "./src/crypto.ts",
     "./database-engines": "./src/database-engines.ts",
+    "./deploy-policy": "./src/deploy-policy.ts",
+    "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
     "./password": "./src/password.ts",
     "./swarm-names": "./src/swarm-names.ts",
-    "./validation": "./src/validation.ts"
+    "./validation": "./src/validation.ts",
+    "./verify-harness": "./src/verify-harness.ts"
   },
   "dependencies": {
     "zod": "catalog:"

@@ -1,6 +1,7 @@
 //   bun run apps/web/src/verify-permissions.ts
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { finish, ko, ok } from "@noddle/shared/verify-harness";
 import {
   can,
   isPermissionUniversal,
@@ -15,18 +16,9 @@ const REQUIRE_PERM_ACTION_FIRST =
   /requirePermission\(\{[\s\S]*?action:\s*(?:"([^"]+)"|[^,]+)\s*,[\s\S]*?resource:\s*"([^"]+)"[\s\S]*?\}\)/;
 const REQUIRE_PERM_RESOURCE_FIRST =
   /requirePermission\(\{[\s\S]*?resource:\s*"([^"]+)"\s*,[\s\S]*?action:\s*(?:"([^"]+)"|[^}]+)\s*[\s\S]*?\}\)/;
+const GUARDED_MUTATION_PERM =
+  /permission:\s*\{\s*action:\s*"([^"]+)"\s*,\s*resource:\s*"([^"]+)"/;
 const EXPECT_FALSE_LABEL = /CANNOT|cannot|denies|NOTHING|^a viewer cannot/;
-
-let pass = 0;
-let fail = 0;
-const ok = (m: string) => {
-  pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
-};
-const ko = (m: string) => {
-  fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
-};
 
 /**
  * Markers that imply a non-universal read. If a GET touches one of these
@@ -77,8 +69,25 @@ function parseRequirePermission(
   body: string
 ): { action: string; resource: string } | null {
   // Multiline + ternary actions (containerAction) must still count as a guard.
-  if (!body.includes("requirePermission(")) {
+  // runGuardedMutation always checks permission inside the helper.
+  if (
+    !(
+      body.includes("requirePermission(") ||
+      body.includes("runGuardedMutation(")
+    )
+  ) {
     return null;
+  }
+  if (
+    body.includes("runGuardedMutation(") &&
+    !body.includes("requirePermission(")
+  ) {
+    // Permission is named inside the helper options object.
+    const match = body.match(GUARDED_MUTATION_PERM);
+    if (match?.[1] && match[2]) {
+      return { action: match[1], resource: match[2] };
+    }
+    return { action: "dynamic", resource: "unknown" };
   }
   const match = body.match(REQUIRE_PERM_ACTION_FIRST);
   if (match?.[2]) {
@@ -94,7 +103,25 @@ function parseRequirePermission(
 
 console.log("\n\x1b[1mPermission guards on server functions\x1b[0m");
 
-const files = readdirSync(SERVER_DIR).filter((f) => f.endsWith(".ts"));
+/** Every `.ts` under `server/`, including nested dirs like `databases/`.
+ *  A non-recursive readdir misses those handlers entirely — measured: 18
+ *  database mutators were invisible before this. */
+function listServerTs(dir: string, prefix = ""): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      out.push(...listServerTs(join(dir, entry.name), rel));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".ts")) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+const files = listServerTs(SERVER_DIR);
 const unguardedPost: string[] = [];
 const unguardedGet: string[] = [];
 const universalGuards: string[] = [];
@@ -292,5 +319,5 @@ for (const [label, actual] of cases) {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
-process.exit(fail === 0 ? 0 : 1);
+console.log("\n\x1b[1mPermission guards — finishing\x1b[0m");
+await finish();
