@@ -281,6 +281,13 @@
       "when": 1786550000000,
       "tag": "0039_audit_resource_target",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1786441975594,
+      "tag": "0040_magenta_tarantula",
+      "breakpoints": true
     }
   ]
 }

@@ -497,7 +497,15 @@ try {
   //
   // Without it, a row with both keys null would survive BOTH cascades and
   // belong to nothing — invisible from either side, eternal.
-  const orphan = { cpuPercent: 1, memoryLimitBytes: 0, memoryUsedBytes: 1 };
+  const orphan = {
+    blockReadBytes: 0,
+    blockWriteBytes: 0,
+    cpuPercent: 1,
+    memoryLimitBytes: 0,
+    memoryUsedBytes: 1,
+    networkInBytes: 0,
+    networkOutBytes: 0,
+  };
   let refusedBoth = false;
   try {
     await db.insert(serviceMetrics).values({

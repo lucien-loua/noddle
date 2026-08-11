@@ -104,12 +104,38 @@ export function parseHostFacts(stdout: string): HostSample | null {
 }
 
 interface DockerStats {
+  /**
+   * Block IO breakdown.
+   *
+   * We read from `io_service_bytes_recursive` and sum by operation:
+   * - op "Read"  -> read bytes
+   * - op "Write" -> write bytes
+   */
+  blkio_stats?: {
+    io_service_bytes_recursive?: Array<{
+      op?: string;
+      value?: number;
+    }>;
+  };
   cpu_stats?: {
     cpu_usage?: { total_usage?: number };
     online_cpus?: number;
     system_cpu_usage?: number;
   };
   memory_stats?: { limit?: number; usage?: number };
+  /**
+   * Per-interface network counters (what `docker stats` shows as NET I/O).
+   *
+   * Docker's exact shape varies a bit across versions, so everything here is
+   * optional and we treat missing fields as "0 bytes".
+   */
+  networks?: Record<
+    string,
+    {
+      rx_bytes?: number;
+      tx_bytes?: number;
+    }
+  >;
   precpu_stats?: {
     cpu_usage?: { total_usage?: number };
     system_cpu_usage?: number;
@@ -311,6 +337,40 @@ export async function recordDiskUsage(
   return true;
 }
 
+interface IoTotals {
+  blockReadBytes: number;
+  blockWriteBytes: number;
+  networkInBytes: number;
+  networkOutBytes: number;
+}
+
+function ioTotalsFrom(stats: DockerStats): IoTotals {
+  const network = stats.networks ?? {};
+  const networkInBytes = Object.values(network).reduce(
+    (sum, v) => sum + (v.rx_bytes ?? 0),
+    0
+  );
+  const networkOutBytes = Object.values(network).reduce(
+    (sum, v) => sum + (v.tx_bytes ?? 0),
+    0
+  );
+
+  const blk = stats.blkio_stats?.io_service_bytes_recursive ?? [];
+  let blockReadBytes = 0;
+  let blockWriteBytes = 0;
+  for (const e of blk) {
+    const op = (e.op ?? "").toLowerCase();
+    const value = e.value ?? 0;
+    if (op.includes("read")) {
+      blockReadBytes += value;
+    } else if (op.includes("write")) {
+      blockWriteBytes += value;
+    }
+  }
+
+  return { blockReadBytes, blockWriteBytes, networkInBytes, networkOutBytes };
+}
+
 /**
  * Samples ONE container and writes its row.
  *
@@ -325,7 +385,8 @@ async function sampleContainer(
   ctx: DeployContext,
   docker: DockerApi,
   container: { id: string; name: string },
-  owner: { databaseId: string } | { serviceId: string }
+  owner: { databaseId: string } | { serviceId: string },
+  serverIo?: IoTotals
 ): Promise<boolean> {
   const stats = (await docker
     .getContainer(container.id)
@@ -337,15 +398,27 @@ async function sampleContainer(
     return false;
   }
 
+  const io = ioTotalsFrom(stats);
+
   await ctx.db.insert(serviceMetrics).values({
     ...owner,
+    blockReadBytes: io.blockReadBytes,
+    blockWriteBytes: io.blockWriteBytes,
     cpuPercent: percent,
     // 0 = no declared limit. We store what Docker returns rather than
     // substituting the host's memory, so "no limit" stays readable as such.
     memoryLimitBytes: stats.memory_stats?.limit ?? 0,
     memoryUsedBytes: used,
+    networkInBytes: io.networkInBytes,
+    networkOutBytes: io.networkOutBytes,
     taskName: container.name,
   });
+  if (serverIo) {
+    serverIo.blockReadBytes += io.blockReadBytes;
+    serverIo.blockWriteBytes += io.blockWriteBytes;
+    serverIo.networkInBytes += io.networkInBytes;
+    serverIo.networkOutBytes += io.networkOutBytes;
+  }
   return true;
 }
 
@@ -365,7 +438,8 @@ async function sampleDatabases(
   ctx: DeployContext,
   present: Map<string, { id: string; name: string }>,
   docker: DockerApi,
-  result: CollectResult
+  result: CollectResult,
+  serverIo?: IoTotals
 ): Promise<void> {
   const running = await ctx.db.query.databases.findMany({
     where: eq(databases.status, "running"),
@@ -377,9 +451,15 @@ async function sampleDatabases(
       continue;
     }
     // biome-ignore lint/performance/noAwaitInLoops: one container at a time, deliberately
-    const sampled = await sampleContainer(ctx, docker, container, {
-      databaseId: database.id,
-    });
+    const sampled = await sampleContainer(
+      ctx,
+      docker,
+      container,
+      {
+        databaseId: database.id,
+      },
+      serverIo
+    );
     if (sampled) {
       result.databases += 1;
     }
@@ -391,7 +471,8 @@ async function sampleServices(
   ctx: DeployContext,
   present: Map<string, { id: string; name: string }>,
   docker: DockerApi,
-  result: CollectResult
+  result: CollectResult,
+  serverIo?: IoTotals
 ): Promise<void> {
   // ALL running services, not just the ones for which this server is the
   // BUILD server: with a registry, Swarm places wherever it wants. It's the
@@ -406,9 +487,15 @@ async function sampleServices(
       continue;
     }
     // biome-ignore lint/performance/noAwaitInLoops: one container at a time, deliberately
-    const sampled = await sampleContainer(ctx, docker, container, {
-      serviceId: service.id,
-    });
+    const sampled = await sampleContainer(
+      ctx,
+      docker,
+      container,
+      {
+        serviceId: service.id,
+      },
+      serverIo
+    );
     if (sampled) {
       result.services += 1;
     }
@@ -424,28 +511,38 @@ async function sampleServer(
   try {
     const facts = await exec(client, HOST_FACTS);
     const host = facts.code === 0 ? parseHostFacts(facts.stdout) : null;
-    if (host) {
-      await ctx.db
-        .insert(serverMetrics)
-        .values({ ...host, serverId: server.id });
-      result.servers += 1;
-    } else {
-      // The command answered but not as expected: it's a gap, not a zero.
-      // We count it as a skipped server.
-      result.skipped.push(server.id);
-    }
+
+    const serverIo: IoTotals = {
+      blockReadBytes: 0,
+      blockWriteBytes: 0,
+      networkInBytes: 0,
+      networkOutBytes: 0,
+    };
 
     const docker = dockerClient(client);
     // A SINGLE `listContainers` per node, shared by both readings: it's the
     // container's presence HERE that decides, for a database as for a
     // service, and querying it twice would learn nothing more.
     const present = await swarmContainersByService(docker);
-    await sampleServices(ctx, present, docker, result);
-    await sampleDatabases(ctx, present, docker, result);
+    await sampleServices(ctx, present, docker, result, serverIo);
+    await sampleDatabases(ctx, present, docker, result, serverIo);
     // LAST, and deliberately so: disk usage is the only reading we don't
     // take every pass, so the least essential. If it fails, everything
     // before it is already written.
     await sampleDiskUsage(ctx, docker, server.id, result);
+
+    if (host) {
+      await ctx.db.insert(serverMetrics).values({
+        ...host,
+        ...serverIo,
+        serverId: server.id,
+      });
+      result.servers += 1;
+    } else {
+      // The command answered but not as expected: it's a gap, not a zero.
+      // We count it as a skipped server.
+      result.skipped.push(server.id);
+    }
   } finally {
     disconnect(client);
   }

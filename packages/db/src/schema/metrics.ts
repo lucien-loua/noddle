@@ -25,6 +25,14 @@ import { services } from "#schema/services";
 export const serverMetrics = pgTable(
   "server_metrics",
   {
+    /**
+     * Host-level sum across all sampled containers on this node, as `docker
+     * stats` reports them.
+     *
+     * Unit is bytes (base-10); the UI formats it in kB/MB/GB.
+     */
+    blockReadBytes: bigint("block_read_bytes", { mode: "number" }).notNull(),
+    blockWriteBytes: bigint("block_write_bytes", { mode: "number" }).notNull(),
     /** Number of cores, so load can be interpreted without guessing. */
     cpuCount: bigint("cpu_count", { mode: "number" }).notNull(),
     /** 1-minute load average, as reported by `/proc/loadavg`. */
@@ -36,6 +44,8 @@ export const serverMetrics = pgTable(
       mode: "number",
     }).notNull(),
     memoryUsedBytes: bigint("memory_used_bytes", { mode: "number" }).notNull(),
+    networkInBytes: bigint("network_in_bytes", { mode: "number" }).notNull(),
+    networkOutBytes: bigint("network_out_bytes", { mode: "number" }).notNull(),
     sampledAt: timestamp("sampled_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -71,6 +81,10 @@ export const serverMetrics = pgTable(
 export const serviceMetrics = pgTable(
   "service_metrics",
   {
+    /** Block I/O read bytes across container block devices. */
+    blockReadBytes: bigint("block_read_bytes", { mode: "number" }).notNull(),
+    /** Block I/O write bytes across container block devices. */
+    blockWriteBytes: bigint("block_write_bytes", { mode: "number" }).notNull(),
     /** Percentage of ONE core, as computed by `docker stats`. */
     cpuPercent: real("cpu_percent").notNull(),
     databaseId: uuid("database_id").references(() => databases.id, {
@@ -81,6 +95,14 @@ export const serviceMetrics = pgTable(
       mode: "number",
     }).notNull(),
     memoryUsedBytes: bigint("memory_used_bytes", { mode: "number" }).notNull(),
+    /**
+     * Container-level sum across all network interfaces, as `docker stats`
+     * reports them.
+     *
+     * Unit is bytes (base-10); the UI formats it in kB/MB/GB.
+     */
+    networkInBytes: bigint("network_in_bytes", { mode: "number" }).notNull(),
+    networkOutBytes: bigint("network_out_bytes", { mode: "number" }).notNull(),
     sampledAt: timestamp("sampled_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -17,9 +17,13 @@ import { requireSession } from "@/lib/session.server";
 const WINDOW_MS = 6 * 60 * 60 * 1000;
 
 export interface MetricPoint {
+  blockReadBytes: number;
+  blockWriteBytes: number;
   cpuLoad1: number;
   diskUsedRatio: number;
   memoryUsedRatio: number;
+  networkInBytes: number;
+  networkOutBytes: number;
   sampledAt: string;
 }
 
@@ -53,6 +57,8 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
       });
 
       const points: MetricPoint[] = rows.map((r) => ({
+        blockReadBytes: r.blockReadBytes,
+        blockWriteBytes: r.blockWriteBytes,
         cpuLoad1: r.cpuLoad1,
         // Ratios rather than bytes: that's what the screen shows, and
         // converting it here keeps every component from redoing the
@@ -62,6 +68,8 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
           r.diskTotalBytes > 0 ? r.diskUsedBytes / r.diskTotalBytes : 0,
         memoryUsedRatio:
           r.memoryTotalBytes > 0 ? r.memoryUsedBytes / r.memoryTotalBytes : 0,
+        networkInBytes: r.networkInBytes,
+        networkOutBytes: r.networkOutBytes,
         sampledAt: r.sampledAt.toISOString(),
       }));
 
@@ -82,11 +90,15 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ServicePoint {
+  blockReadBytes: number;
+  blockWriteBytes: number;
   cpuPercent: number;
   memoryUsedBytes: number;
   /** `null` when no limit is declared: the container is bounded by the
    *  machine. Distinct from 0, which would mean "zero limit". */
   memoryUsedRatio: number | null;
+  networkInBytes: number;
+  networkOutBytes: number;
   sampledAt: string;
   /** Changes on every redeploy. See `ServiceSeries.restarts`. */
   taskName: string;
@@ -112,10 +124,14 @@ function seriesFrom(
   rows: (typeof serviceMetrics.$inferSelect)[]
 ): ServiceSeries {
   const points: ServicePoint[] = rows.map((r) => ({
+    blockReadBytes: r.blockReadBytes,
+    blockWriteBytes: r.blockWriteBytes,
     cpuPercent: r.cpuPercent,
     memoryUsedBytes: r.memoryUsedBytes,
     memoryUsedRatio:
       r.memoryLimitBytes > 0 ? r.memoryUsedBytes / r.memoryLimitBytes : null,
+    networkInBytes: r.networkInBytes,
+    networkOutBytes: r.networkOutBytes,
     sampledAt: r.sampledAt.toISOString(),
     taskName: r.taskName,
   }));
@@ -156,7 +172,8 @@ export const getDatabaseMetrics = createServerFn({ method: "GET" })
   .validator(databaseMetricsRequestSchema)
   .handler(async ({ data }): Promise<ServiceSeries> => {
     await requireSession();
-    const since = new Date(Date.now() - WINDOW_MS);
+    const windowHours = Number(data.windowHours);
+    const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
 
     const rows = await db.query.serviceMetrics.findMany({
       orderBy: asc(serviceMetrics.sampledAt),

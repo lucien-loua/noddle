@@ -93,23 +93,20 @@ function ServerDetail() {
   const { openTerminal, terminal } = useTerminalDialog();
   const [pruneError, setPruneError] = useState<string | null>(null);
   const handlePruneError = useCallback((m: string) => setPruneError(m), []);
+  const handleOpenTerminal = useCallback(() => {
+    openTerminal({
+      kind: "ssh",
+      serverId: server.id,
+      title: server.name,
+    });
+  }, [openTerminal, server.id, server.name]);
 
   return (
     <AppShell
       actions={
         <div className="flex items-center gap-2">
           {canShell ? (
-            <Button
-              onClick={() =>
-                openTerminal({
-                  kind: "ssh",
-                  serverId: server.id,
-                  title: server.name,
-                })
-              }
-              size="sm"
-              variant="outline"
-            >
+            <Button onClick={handleOpenTerminal} size="sm" variant="outline">
               <TerminalIcon weight="bold" />
               Terminal
             </Button>

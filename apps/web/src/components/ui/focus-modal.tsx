@@ -67,8 +67,8 @@ function FocusModalContent({
           "data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in",
           // Nested stack (Base UI `--nested-dialogs`): only while a child
           // dialog is open — parent peeks up and dims.
-          "origin-top data-nested-dialog-open:scale-[calc(1-0.035*var(--nested-dialogs,0))] data-nested-dialog-open:translate-y-[calc(var(--nested-dialogs,0)*-0.5rem)] data-nested-dialog-open:transition-[scale,translate] data-nested-dialog-open:duration-200 data-nested-dialog-open:ease-out",
-          "after:pointer-events-none after:absolute after:inset-0 after:bg-black/25 after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100 data-nested-dialog-open:after:backdrop-blur-[2px]",
+          "origin-top data-nested-dialog-open:scale-[calc(1-0.025*var(--nested-dialogs,0))] data-nested-dialog-open:translate-y-[calc(var(--nested-dialogs,0)*-0.25rem)] data-nested-dialog-open:transition-[scale,translate] data-nested-dialog-open:duration-200 data-nested-dialog-open:ease-out",
+          "after:pointer-events-none after:absolute after:inset-0 after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100",
           className
         )}
         data-slot="focus-modal-popup"

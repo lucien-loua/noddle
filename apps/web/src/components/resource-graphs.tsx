@@ -21,6 +21,7 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import { byteSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { MetricPoint, ServerSeries } from "@/server/metrics";
 
@@ -108,6 +109,7 @@ export function Sparkline<T extends { sampledAt: string }>({
   max,
   points,
   shade,
+  windowHours = 6,
   value,
 }: {
   formatValue: (v: number) => string;
@@ -115,6 +117,7 @@ export function Sparkline<T extends { sampledAt: string }>({
   max: number;
   points: T[];
   shade: string;
+  windowHours?: 1 | 6 | 24;
   value: (p: T) => number;
 }) {
   const { measured, ref } = useMeasuredHeight<HTMLDivElement>(HEIGHT);
@@ -163,7 +166,9 @@ export function Sparkline<T extends { sampledAt: string }>({
       ref={ref}
     >
       <Chart
-        ariaLabel={`${label} over the last six hours`}
+        ariaLabel={`${label} over the last ${windowHours} ${
+          windowHours === 1 ? "hour" : "hours"
+        }`}
         definition={definition}
         height={measured}
         initialWidth={640}
@@ -179,6 +184,7 @@ export function MetricRow<T extends { sampledAt: string }>({
   points,
   reading,
   shade,
+  windowHours = 6,
   value,
 }: {
   formatValue: (v: number) => string;
@@ -187,6 +193,7 @@ export function MetricRow<T extends { sampledAt: string }>({
   points: T[];
   reading: string;
   shade: string;
+  windowHours?: 1 | 6 | 24;
   value: (p: T) => number;
 }) {
   return (
@@ -209,6 +216,7 @@ export function MetricRow<T extends { sampledAt: string }>({
           points={points}
           shade={shade}
           value={value}
+          windowHours={windowHours}
         />
       </div>
     </div>
@@ -217,10 +225,13 @@ export function MetricRow<T extends { sampledAt: string }>({
 
 const pct = (ratio: number) => `${Math.round(ratio * 100)} %`;
 const formatLoad = (v: number) => v.toFixed(2);
+const formatIo = (v: number) => (v === 0 ? "0 B" : byteSize(v, 1000));
 
 const readLoad = (p: MetricPoint) => p.cpuLoad1;
 const readMemory = (p: MetricPoint) => p.memoryUsedRatio;
 const readDisk = (p: MetricPoint) => p.diskUsedRatio;
+const readBlockIo = (p: MetricPoint) => p.blockReadBytes + p.blockWriteBytes;
+const readNetworkIo = (p: MetricPoint) => p.networkInBytes + p.networkOutBytes;
 
 /**
  * The resources of ONE machine.
@@ -232,7 +243,13 @@ const readDisk = (p: MetricPoint) => p.diskUsedRatio;
  * state "no machine" had become both unreachable and wrong, since we're
  * looking at exactly one.
  */
-export function ResourceGraphs({ series }: { series: ServerSeries | null }) {
+export function ResourceGraphs({
+  series,
+  windowHours = 6,
+}: {
+  series: ServerSeries | null;
+  windowHours?: 1 | 6 | 24;
+}) {
   if (!series) {
     return (
       <Empty className="border">
@@ -272,6 +289,7 @@ export function ResourceGraphs({ series }: { series: ServerSeries | null }) {
               reading={series.latest.cpuLoad1.toFixed(2)}
               shade="text-chart-1"
               value={readLoad}
+              windowHours={windowHours}
             />
           </FramePanel>
           <FramePanel>
@@ -283,6 +301,7 @@ export function ResourceGraphs({ series }: { series: ServerSeries | null }) {
               reading={pct(series.latest.memoryUsedRatio)}
               shade="text-chart-2"
               value={readMemory}
+              windowHours={windowHours}
             />
           </FramePanel>
           <FramePanel>
@@ -294,12 +313,40 @@ export function ResourceGraphs({ series }: { series: ServerSeries | null }) {
               reading={pct(series.latest.diskUsedRatio)}
               shade="text-chart-3"
               value={readDisk}
+              windowHours={windowHours}
+            />
+          </FramePanel>
+          <FramePanel>
+            <MetricRow
+              formatValue={formatIo}
+              label="Block I/O"
+              max={Math.max(...series.points.map((p) => readBlockIo(p)))}
+              points={series.points}
+              reading={`Read: ${formatIo(series.latest.blockReadBytes)} / Write: ${formatIo(series.latest.blockWriteBytes)}`}
+              shade="text-chart-4"
+              value={readBlockIo}
+              windowHours={windowHours}
+            />
+          </FramePanel>
+          <FramePanel>
+            <MetricRow
+              formatValue={formatIo}
+              label="Network I/O"
+              max={Math.max(...series.points.map((p) => readNetworkIo(p)))}
+              points={series.points}
+              reading={`In: ${formatIo(series.latest.networkInBytes)} / Out: ${formatIo(series.latest.networkOutBytes)}`}
+              shade="text-chart-2"
+              value={readNetworkIo}
+              windowHours={windowHours}
             />
           </FramePanel>
         </>
       ) : (
         <FramePanel>
-          <FrameDescription>No samples in the last six hours.</FrameDescription>
+          <FrameDescription>
+            No samples in the last {windowHours}{" "}
+            {windowHours === 1 ? "hour" : "hours"}.
+          </FrameDescription>
         </FramePanel>
       )}
     </Frame>
