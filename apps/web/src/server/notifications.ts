@@ -59,7 +59,7 @@ export const getChannels = createServerFn({ method: "GET" }).handler(
 export const addChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelSchema)
   .handler(async ({ data }): Promise<{ id: string }> => {
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "manage", resource: "notification" },
       run: async () => {
         // Encryption is bound to the row's id (AAD): insert then update, same
@@ -91,7 +91,7 @@ export const addChannel = createServerFn({ method: "POST" })
       // The channel, never its URL — a webhook URL is a secret.
       target: ({ result }) => ({ id: result.id, name: result.name }),
     });
-    return { id: created.id };
+    return { id: guarded.id };
   });
 
 export const updateChannel = createServerFn({ method: "POST" })

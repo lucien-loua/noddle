@@ -179,7 +179,7 @@ export const testRegistry = createServerFn({ method: "POST" })
 export const saveRegistry = createServerFn({ method: "POST" })
   .validator(registrySchema)
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    const saved = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "registry" },
       run: async () => {
         const password = await resolvePassword(data);
@@ -223,7 +223,7 @@ export const saveRegistry = createServerFn({ method: "POST" })
       // The registry, never its password.
       target: ({ result }) => ({ id: result.id, name: data.name }),
     });
-    return { ok: saved.ok };
+    return { ok: guarded.ok };
   });
 
 export const deleteRegistry = createServerFn({ method: "POST" })

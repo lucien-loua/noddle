@@ -183,7 +183,7 @@ export const testDestination = createServerFn({ method: "POST" })
 export const saveDestination = createServerFn({ method: "POST" })
   .validator(parseDestinationInput)
   .handler(async ({ data }): Promise<{ id: string }> => {
-    const saved = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "backup" },
       run: async () => {
         const secret = await resolveDestinationSecret(db, env.appKey, data);
@@ -251,7 +251,7 @@ export const saveDestination = createServerFn({ method: "POST" })
       // The destination, never its secret access key.
       target: ({ result }) => ({ id: result.id, name: result.name }),
     });
-    return { id: saved.id };
+    return { id: guarded.id };
   });
 
 export const listBackupConfigs = createServerFn({ method: "GET" })
@@ -281,7 +281,7 @@ export const listBackupConfigs = createServerFn({ method: "GET" })
 export const createBackupConfig = createServerFn({ method: "POST" })
   .validator(createBackupConfigSchema)
   .handler(async ({ data }): Promise<{ configId: string }> => {
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       load: () =>
         db.query.databases.findFirst({
           where: eq(databases.id, data.databaseId),
@@ -315,7 +315,7 @@ export const createBackupConfig = createServerFn({ method: "POST" })
       },
       target: ({ result }) => ({ id: result.configId, name: result.name }),
     });
-    return { configId: created.configId };
+    return { configId: guarded.configId };
   });
 
 export const updateBackupConfig = createServerFn({ method: "POST" })
@@ -407,7 +407,7 @@ export const getBackups = createServerFn({ method: "GET" })
 export const triggerBackup = createServerFn({ method: "POST" })
   .validator(backupRequestSchema)
   .handler(async ({ data }): Promise<{ backupId: string }> => {
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       load: () =>
         db.query.backupConfigs.findFirst({
           where: eq(backupConfigs.id, data.configId),
@@ -439,7 +439,7 @@ export const triggerBackup = createServerFn({ method: "POST" })
       },
       target: ({ result }) => ({ id: result.backupId, name: result.name }),
     });
-    return { backupId: created.backupId };
+    return { backupId: guarded.backupId };
   });
 
 export const listBackupObjects = createServerFn({ method: "GET" })

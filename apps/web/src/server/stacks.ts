@@ -26,7 +26,7 @@ export const connectStack = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ stackId: string }> => {
     // The Stack is the object; the Project and Environment this may also
     // have created are find-or-create side effects.
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "service" },
       run: async () => {
         // Find-or-create by name, exactly like `connectRepo`: the same
@@ -95,7 +95,7 @@ export const connectStack = createServerFn({ method: "POST" })
       },
       target: ({ result }) => ({ id: result.stackId, name: result.name }),
     });
-    return { stackId: created.stackId };
+    return { stackId: guarded.stackId };
   });
 
 export const triggerStackDeploy = createServerFn({ method: "POST" })

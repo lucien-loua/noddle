@@ -275,7 +275,7 @@ export const containerAction = createServerFn({ method: "POST" })
 
     // The object is a container, not a row — so no `load`; its name comes
     // back from the machine inside `run` and the target reads the result.
-    const outcome = await runGuarded({
+    const guarded = await runGuarded({
       permission,
       run: async () => {
         const client = await connectToServerById(data.serverId);
@@ -315,7 +315,7 @@ export const containerAction = createServerFn({ method: "POST" })
         name: result.containerName,
       }),
     });
-    return { done: outcome.done };
+    return { done: guarded.done };
   });
 
 const restartServiceSchema = z.object({

@@ -63,7 +63,7 @@ export const createSshKey = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ publicKey: string }> => {
     // The created row is the audit object, and it does not exist until
     // `run` has made it — so the target reads the result, not a load.
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "sshKey" },
       run: async () => {
         const pair =
@@ -103,7 +103,7 @@ export const createSshKey = createServerFn({ method: "POST" })
       },
       target: ({ result }) => ({ id: result.id, name: result.name }),
     });
-    return { publicKey: created.publicKey };
+    return { publicKey: guarded.publicKey };
   });
 
 /**

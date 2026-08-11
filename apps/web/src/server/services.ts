@@ -17,7 +17,7 @@ export const connectRepo = createServerFn({ method: "POST" })
     // The Service is the object recorded, not the Project or Environment
     // this may also have created: those are find-or-create side effects,
     // the Service is what the user asked for.
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "service" },
       run: async () => {
         // Find-or-create BY NAME: a lone administrator at their dashboard types
@@ -77,7 +77,7 @@ export const connectRepo = createServerFn({ method: "POST" })
       target: ({ result }) => ({ id: result.serviceId, name: result.name }),
     });
 
-    return { serviceId: created.serviceId };
+    return { serviceId: guarded.serviceId };
   });
 
 /**

@@ -60,7 +60,7 @@ export const getServers = createServerFn({ method: "GET" }).handler(
 export const addServer = createServerFn({ method: "POST" })
   .validator(serverInputSchema)
   .handler(async ({ data }): Promise<{ serverId: string }> => {
-    const created = await runGuarded({
+    const guarded = await runGuarded({
       permission: { action: "create", resource: "server" },
       run: async () => {
         // The key is REFERENCED, no longer copied: a single insert is now
@@ -101,7 +101,7 @@ export const addServer = createServerFn({ method: "POST" })
       target: ({ result }) => ({ id: result.serverId, name: result.name }),
     });
 
-    return { serverId: created.serverId };
+    return { serverId: guarded.serverId };
   });
 
 const setServerPruneEnabledSchema = z.object({
