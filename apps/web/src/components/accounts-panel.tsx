@@ -85,7 +85,10 @@ export function AccountsPanel({
   const canCreate = useCan(known, "user", "create");
   const queryClient = useQueryClient();
 
-  const accounts = useQuery({ ...queries.accounts(), initialData: initial });
+  const accounts = useQuery({
+    ...queries.accounts(),
+    initialData: initial,
+  });
 
   const refresh = useCallback(
     () =>
