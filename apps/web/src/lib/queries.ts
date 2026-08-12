@@ -29,7 +29,7 @@ import {
   listBackupObjects,
 } from "@/server/backups";
 import { getDeployments, getEnvironmentScope } from "@/server/dashboard";
-import { getDatabaseCredentials } from "@/server/databases";
+import { getDatabase, getDatabaseCredentials } from "@/server/databases";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
 import { getProjectEnvironments } from "@/server/environments";
@@ -65,6 +65,18 @@ export const queries = {
 
   channels: () =>
     queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
+
+  database: (databaseId: string) =>
+    queryOptions({
+      queryFn: async () => {
+        const row = await getDatabase({ data: { databaseId } });
+        if (!row) {
+          throw new Error(`database not found: ${databaseId}`);
+        }
+        return row;
+      },
+      queryKey: ["database", databaseId],
+    }),
 
   databaseCredentials: (databaseId: string) =>
     queryOptions({

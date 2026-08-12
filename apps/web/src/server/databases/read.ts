@@ -32,6 +32,9 @@ export interface DatabaseRow {
   status: string;
   swarmName: string;
   swarmSettings: DatabaseSwarmSettings | null;
+  /** ISO timestamp — Restart doesn't change `status`, so the detail header
+   *  settles its pending state off this bump instead. */
+  updatedAt: string;
   volumePath: string | null;
 }
 
@@ -55,6 +58,7 @@ interface DatabaseJoined {
   status: string;
   swarmName: string;
   swarmSettings: DatabaseSwarmSettings | null;
+  updatedAt: Date;
   volumePath: string | null;
 }
 
@@ -82,6 +86,7 @@ function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
     status: d.status,
     swarmName: d.swarmName,
     swarmSettings: d.swarmSettings,
+    updatedAt: d.updatedAt.toISOString(),
     volumePath: d.volumePath,
   };
 }

@@ -36,6 +36,12 @@ import {
 interface DatabaseLogsProps {
   databaseId: string;
   databaseName: string;
+  /**
+   * Remounts the SSE follow when the database's container is replaced
+   * (start / restart bump `status` or `updatedAt`). Without this the
+   * stream stays on the dead container until a full reload.
+   */
+  generation: string;
 }
 
 const LINE_OPTIONS = [
@@ -95,7 +101,11 @@ function filterLines(
   return next;
 }
 
-export function DatabaseLogs({ databaseId, databaseName }: DatabaseLogsProps) {
+export function DatabaseLogs({
+  databaseId,
+  databaseName,
+  generation,
+}: DatabaseLogsProps) {
   const [text, setText] = useState("");
   const [live, setLive] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -119,14 +129,15 @@ export function DatabaseLogs({ databaseId, databaseName }: DatabaseLogsProps) {
     setBuffer([]);
 
     const params = new URLSearchParams({ since, tail });
+    // `generation` is a client remount key (status/updatedAt). Unused by
+    // the handler; putting it on the URL makes the dependency real.
+    params.set("g", generation);
     const source = new EventSource(
       `/api/database-logs/${databaseId}?${params}`
     );
 
-    source.addEventListener("chunk", (event) => {
-      const payload = JSON.parse((event as MessageEvent<string>).data) as {
-        data: string;
-      };
+    source.addEventListener("chunk", (event: MessageEvent<string>) => {
+      const payload = JSON.parse(event.data);
       if (pausedRef.current) {
         setBuffer((previous) => [...previous, payload.data]);
         return;
@@ -144,7 +155,7 @@ export function DatabaseLogs({ databaseId, databaseName }: DatabaseLogsProps) {
     };
 
     return () => source.close();
-  }, [databaseId, since, tail]);
+  }, [databaseId, generation, since, tail]);
 
   const handlePauseToggle = useCallback(() => {
     setPaused((wasPaused) => {

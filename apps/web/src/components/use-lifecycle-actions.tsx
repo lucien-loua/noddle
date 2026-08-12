@@ -6,7 +6,7 @@ import { useCan } from "@/lib/use-permission";
 import { triggerDatabaseLifecycle } from "@/server/databases";
 import { triggerLifecycle } from "@/server/deployments";
 
-type Action = "restart" | "start" | "stop";
+export type LifecycleAction = "restart" | "start" | "stop";
 
 /**
  * Start/stop/restart, for a Service or a Database — the two resources with
@@ -21,7 +21,7 @@ type LifecycleTarget =
 
 function runLifecycle(
   target: LifecycleTarget,
-  action: Action
+  action: LifecycleAction
 ): Promise<unknown> {
   return target.resource === "database"
     ? triggerDatabaseLifecycle({
@@ -37,7 +37,7 @@ export function useLifecycleActions({
   status,
   target,
 }: {
-  onDone: () => void;
+  onDone: (action: LifecycleAction) => void;
   onError: (message: string) => void;
   role: RoleName | null;
   status: string;
@@ -46,9 +46,9 @@ export function useLifecycleActions({
   const canOperate = useCan(role, target.resource, "operate");
 
   const run = useMutation({
-    mutationFn: (action: Action) => runLifecycle(target, action),
+    mutationFn: (action: LifecycleAction) => runLifecycle(target, action),
     onError: (e: Error) => onError(errorMessage(e, "action refused")),
-    onSuccess: onDone,
+    onSuccess: (_data, action) => onDone(action),
   });
 
   const stop = useCallback(() => run.mutate("stop"), [run]);

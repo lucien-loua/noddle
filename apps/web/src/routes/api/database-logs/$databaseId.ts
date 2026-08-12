@@ -1,15 +1,18 @@
 import { databases, servers } from "@noddle/db/schema";
-import { execStream, quoteArg } from "@noddle/ssh-executor";
+import { exec, openExecPty, quoteArg } from "@noddle/ssh-executor";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
-import { sseChannel } from "@/lib/sse-channel.server";
+import { type SseChannel, sseChannel } from "@/lib/sse-channel.server";
 import { connectToServer } from "@/lib/ssh.server";
 
 /** The catch-up window. Enough to see a full startup. */
 const DEFAULT_TAIL = 500;
 const MAX_TAIL = 5000;
+
+/** Pause between follow attempts when the container is gone or replaced. */
+const RECONNECT_MS = 1500;
 
 const SINCE_VALUES = new Set(["all", "1h", "6h", "24h", "168h", "720h"]);
 
@@ -19,20 +22,29 @@ const UUID = /^[0-9a-f-]{36}$/i;
 const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
 
 /**
- * The remote command — quirks measured on a real VM (see git history for
- * the full rationale on container vs service logs, 2>&1, and stdin guard).
+ * Remote command — measured quirks (git history has the long form):
+ *
+ * 1. Container `docker logs`, not `docker service logs` (time order).
+ * 2. `2>&1` — Postgres logs on stderr; without it the tab is nearly empty.
+ * 3. **PTY required for live lines.** The Docker CLI is Go: without a TTY
+ *    its stdout is block-buffered. `stdbuf` is a no-op on Go. We allocate
+ *    the PTY on the ssh2 channel (`openExecPty`).
+ * 4. Follow ONE container id. When it dies (stop / restart), the loop
+ *    below waits for a *different* id — re-following the same stopped
+ *    container would dump the same tail in a tight loop.
  */
-function tailCommand(swarmName: string, tail: number, since: string): string {
-  const filter = quoteArg(`label=${SWARM_SERVICE_LABEL}=${swarmName}`);
+function followCommand(
+  containerId: string,
+  tail: number,
+  since: string
+): string {
   const sinceFlag = since === "all" ? "" : ` --since ${quoteArg(since)}`;
-  return [
-    `C=$(docker ps -a -q -l --filter ${filter})`,
-    `if [ -z "$C" ]; then exit 3; fi`,
-    "exec 3<&0",
-    `docker logs --tail ${tail}${sinceFlag} --follow "$C" 2>&1 & L=$!`,
-    '{ cat <&3 >/dev/null; kill "$L" 2>/dev/null; } &',
-    'wait "$L"',
-  ].join("\n");
+  return `exec docker logs --tail ${tail}${sinceFlag} --follow ${quoteArg(containerId)} 2>&1`;
+}
+
+function latestContainerCommand(swarmName: string): string {
+  const filter = quoteArg(`label=${SWARM_SERVICE_LABEL}=${swarmName}`);
+  return `docker ps -a -q -l --filter ${filter}`;
 }
 
 function parseTail(raw: string | null): number {
@@ -51,6 +63,133 @@ function parseSince(raw: string | null): string {
     return "all";
   }
   return raw;
+}
+
+function sendLogError(send: SseChannel["send"], error: unknown): void {
+  send({
+    data: `Could not read logs: ${
+      error instanceof Error ? error.message : String(error)
+    }\n`,
+    type: "chunk",
+  });
+  send({ status: "error", type: "end" });
+}
+
+function pipePty(
+  channel: SseChannel,
+  pty: Awaited<ReturnType<typeof openExecPty>>,
+  onClose: () => void
+): void {
+  pty.onData((chunk) => {
+    channel.send({
+      data: chunk.toString("utf8").replaceAll("\r", ""),
+      type: "chunk",
+    });
+    channel.flush();
+  });
+  pty.onClose(() => onClose());
+}
+
+/**
+ * Arms a PTY follow and returns the cancel fn immediately. When the
+ * followed container dies, wait for a new id instead of ending the SSE
+ * — Start/Restart replace the task, and the tab should pick it up.
+ */
+function followDatabaseLogs(
+  channel: SseChannel,
+  client: Awaited<ReturnType<typeof connectToServer>>,
+  swarmName: string,
+  tail: number,
+  since: string
+): () => void {
+  const { finish } = channel;
+  let aborted = false;
+  let followedId: string | null = null;
+  let session: Awaited<ReturnType<typeof openExecPty>> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const leave = () => {
+    aborted = true;
+    if (timer) {
+      clearTimeout(timer);
+    }
+    session?.close();
+  };
+
+  const done = () => {
+    client.end();
+    finish();
+  };
+
+  const schedule = () => {
+    if (aborted || channel.closed) {
+      done();
+      return;
+    }
+    timer = setTimeout(pump, RECONNECT_MS);
+  };
+
+  const attach = (pty: Awaited<ReturnType<typeof openExecPty>>) => {
+    if (aborted || channel.closed) {
+      pty.close();
+      done();
+      return;
+    }
+    session = pty;
+    pipePty(channel, pty, () => {
+      session = undefined;
+      if (aborted || channel.closed) {
+        done();
+        return;
+      }
+      schedule();
+    });
+  };
+
+  const pump = () => {
+    if (aborted || channel.closed) {
+      done();
+      return;
+    }
+
+    exec(client, latestContainerCommand(swarmName))
+      .then((result) => {
+        if (aborted || channel.closed) {
+          done();
+          return;
+        }
+        const id = result.stdout.trim();
+        // Same id already followed to EOF (stopped container): wait for a
+        // replacement rather than dumping the same tail forever.
+        if (id.length === 0 || id === followedId) {
+          schedule();
+          return;
+        }
+        followedId = id;
+        return openExecPty(client, followCommand(id, tail, since));
+      })
+      .then((pty) => {
+        if (!pty) {
+          return;
+        }
+        attach(pty);
+      })
+      .catch(() => {
+        if (aborted || channel.closed) {
+          done();
+          return;
+        }
+        schedule();
+      });
+  };
+
+  if (channel.closed) {
+    done();
+    return leave;
+  }
+
+  pump();
+  return leave;
 }
 
 export const Route = createFileRoute("/api/database-logs/$databaseId")({
@@ -85,52 +224,24 @@ export const Route = createFileRoute("/api/database-logs/$databaseId")({
           return new Response("server not found", { status: 404 });
         }
 
-        return sseChannel(request, async ({ closed, finish, send }) => {
-          let leave: (() => void) | undefined;
+        return sseChannel(request, async (channel) => {
+          const { finish, send } = channel;
           let client: Awaited<ReturnType<typeof connectToServer>> | undefined;
 
           try {
             client = await connectToServer(server);
-            const result = await execStream(
+            return followDatabaseLogs(
+              channel,
               client,
-              tailCommand(database.swarmName, tail, since),
-              (io) =>
-                new Promise<void>((resolve, reject) => {
-                  leave = () => {
-                    io.stdin.end();
-                    reject(new Error("viewer left"));
-                  };
-                  io.stdout.on("data", (chunk: Buffer) =>
-                    send({ data: chunk.toString("utf8"), type: "chunk" })
-                  );
-                  io.stdout.on("end", () => resolve());
-                  io.stdout.on("error", reject);
-                })
+              database.swarmName,
+              tail,
+              since
             );
-
-            if (result.code === 3) {
-              send({
-                data: "No container for this database yet.\n",
-                type: "chunk",
-              });
-            }
-            send({ status: "ended", type: "end" });
           } catch (error) {
-            if (!closed) {
-              send({
-                data: `Could not read logs: ${
-                  error instanceof Error ? error.message : String(error)
-                }\n`,
-                type: "chunk",
-              });
-              send({ status: "error", type: "end" });
-            }
-          } finally {
+            sendLogError(send, error);
             client?.end();
             finish();
           }
-
-          return () => leave?.();
         });
       },
     },

@@ -8,19 +8,24 @@ import type { LogMessage } from "@noddle/shared/logs";
 /** Proxies cut an idle connection. Builds and quiet databases stay silent. */
 export const SSE_HEARTBEAT_MS = 25_000;
 
-export const SSE_HEADERS = {
+export const SSE_HEADERS = Object.freeze({
   "Cache-Control": "no-cache, no-transform",
   Connection: "keep-alive",
   "Content-Type": "text/event-stream",
   // Without this, an nginx in front buffers the stream and live
   // output arrives in multi-kilobyte chunks.
   "X-Accel-Buffering": "no",
-} as const;
+});
 
 export interface SseChannel {
   /** True once finish() has run (abort, end, or error). */
   get closed(): boolean;
   finish: () => void;
+  /**
+   * Nudge proxies that buffer small writes (Bun→Vite in dev). An SSE
+   * comment is ignored by EventSource; the padding is only on the wire.
+   */
+  flush: () => void;
   send: (message: LogMessage) => void;
 }
 
@@ -30,6 +35,9 @@ export interface SseChannel {
  */
 type SseCancel = () => void;
 type SseSourceResult = SseCancel | undefined;
+
+/** Enough to push past common 4 KiB proxy buffers without a full page of junk. */
+const SSE_FLUSH_PAD = `: ${" ".repeat(4096)}\n\n`;
 
 export function sseChannel(
   request: Request,
@@ -74,11 +82,23 @@ export function sseChannel(
         }
       };
 
+      const flush = () => {
+        if (closed) {
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode(SSE_FLUSH_PAD));
+        } catch {
+          finish();
+        }
+      };
+
       const channel: SseChannel = {
         get closed() {
           return closed;
         },
         finish,
+        flush,
         send,
       };
 

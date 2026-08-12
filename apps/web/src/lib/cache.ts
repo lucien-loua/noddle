@@ -27,6 +27,11 @@ export const cache = {
   channels: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.channels().queryKey }),
 
+  database: (qc: QueryClient, databaseId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.database(databaseId).queryKey,
+    }),
+
   destinations: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.destinations().queryKey }),
 

@@ -85,7 +85,18 @@ function proxyToVite(request: Request): Promise<Response> {
     // Required by fetch when streaming a request body.
     (init as { duplex?: string }).duplex = "half";
   }
-  return fetch(target, init);
+  // Re-wrap the proxied Response. Returning Vite's Response object as-is
+  // can leave SSE bodies (database logs, deploy streams) buffered until the
+  // upstream handler settles — live lines never reach the browser. A new
+  // Response around the same body stream lets Bun.serve pipe chunks through.
+  return fetch(target, init).then(
+    (res) =>
+      new Response(res.body, {
+        headers: res.headers,
+        status: res.status,
+        statusText: res.statusText,
+      })
+  );
 }
 
 await waitForVite();

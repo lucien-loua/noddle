@@ -1,7 +1,11 @@
 import { databases, services } from "@noddle/db/schema";
 import { markRunning, markStopped } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { restartService, scaleService } from "@noddle/swarm-ops";
+import {
+  restartService,
+  scaleService,
+  waitForRunningTask,
+} from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
@@ -51,9 +55,22 @@ export async function runLifecycle(
       );
     }
 
-    // `restart` doesn't change the state: a service that restarts stays in
-    // service. Only `stop` and `start` move the row.
-    if (action !== "restart") {
+    // Stop is a spec write and feels instant. Start/restart wait until a
+    // task is actually running — otherwise the badge flips to Running
+    // while the container is still booting.
+    if (action !== "stop") {
+      await waitForRunningTask(managerDocker, name);
+    }
+
+    // `restart` doesn't change the status: a service that restarts stays
+    // in service. We still bump `updatedAt` so the dashboard can settle
+    // its pending "Restarting" state — otherwise the badge never moves.
+    if (action === "restart") {
+      await ctx.db
+        .update(services)
+        .set({ updatedAt: new Date() })
+        .where(eq(services.id, service.id));
+    } else {
       await ctx.db
         .update(services)
         .set(action === "stop" ? markStopped(null) : markRunning(null))
@@ -110,7 +127,16 @@ export async function runDatabaseLifecycle(
       );
     }
 
-    if (action !== "restart") {
+    if (action !== "stop") {
+      await waitForRunningTask(managerDocker, name);
+    }
+
+    if (action === "restart") {
+      await ctx.db
+        .update(databases)
+        .set({ updatedAt: new Date() })
+        .where(eq(databases.id, database.id));
+    } else {
       await ctx.db
         .update(databases)
         .set(action === "stop" ? markStopped(null) : markRunning(null))

@@ -10,14 +10,9 @@ import {
   TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  notFound,
-  redirect,
-  useRouter,
-} from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
@@ -45,11 +40,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { useLifecycleActions } from "@/components/use-lifecycle-actions";
+import {
+  type LifecycleAction,
+  useLifecycleActions,
+} from "@/components/use-lifecycle-actions";
 import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getDestinations, triggerRestore } from "@/server/backups";
@@ -81,6 +81,37 @@ const DATABASE_TABS = [
   "backups",
   "advanced",
 ] as const;
+
+const DETAIL_POLL_MS = 2000;
+const AWAITING_TIMEOUT_MS = 60_000;
+
+const PENDING_LABEL: Record<LifecycleAction, string> = {
+  restart: "Restarting",
+  start: "Starting",
+  stop: "Stopping",
+};
+
+interface AwaitingLifecycle {
+  action: LifecycleAction;
+  since: number;
+  status: string;
+  updatedAt: string;
+}
+
+function isLifecycleSettled(
+  database: DatabaseRow,
+  awaiting: AwaitingLifecycle
+): boolean {
+  if (Date.now() - awaiting.since > AWAITING_TIMEOUT_MS) {
+    return true;
+  }
+  // Restart stays `running`: the worker bumps `updatedAt` when Swarm
+  // accepted the force-update. Start/stop move `status`.
+  if (awaiting.action === "restart") {
+    return database.updatedAt !== awaiting.updatedAt;
+  }
+  return database.status !== awaiting.status;
+}
 
 type DatabaseTab = (typeof DATABASE_TABS)[number];
 
@@ -145,13 +176,15 @@ function DatabaseHeaderActions({
   onDone,
   onError,
   onTerminal,
+  pendingAction,
 }: {
   database: DatabaseRow;
   known: RoleName | null;
   onDeleted: () => void;
-  onDone: () => void;
+  onDone: (action: LifecycleAction) => void;
   onError: (message: string) => void;
   onTerminal: (() => void) | null;
+  pendingAction: LifecycleAction | null;
 }) {
   const lifecycle = useLifecycleActions({
     onDone,
@@ -169,16 +202,24 @@ function DatabaseHeaderActions({
   });
 
   const status = serviceLabel(database.status);
+  const pending = pendingAction !== null;
+  const headerLabel = pendingAction
+    ? PENDING_LABEL[pendingAction]
+    : status.label;
+  const actionsBusy = lifecycle.busy || pending;
 
   if (!(lifecycle.available || del.canDelete || onTerminal)) {
-    return <Badge variant="outline">{status.label}</Badge>;
+    return <Badge variant="outline">{headerLabel}</Badge>;
   }
 
   if (!lifecycle.available) {
     return (
       <>
         <ButtonGroup>
-          <ButtonGroupText>{status.label}</ButtonGroupText>
+          <ButtonGroupText>
+            {pending ? <Spinner /> : null}
+            {headerLabel}
+          </ButtonGroupText>
           {onTerminal ? (
             <Button onClick={onTerminal} variant="outline">
               <TerminalIcon weight="bold" />
@@ -197,7 +238,10 @@ function DatabaseHeaderActions({
   return (
     <>
       <ButtonGroup>
-        <ButtonGroupText>{status.label}</ButtonGroupText>
+        <ButtonGroupText>
+          {pending ? <Spinner /> : null}
+          {headerLabel}
+        </ButtonGroupText>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -218,7 +262,7 @@ function DatabaseHeaderActions({
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem
-              disabled={lifecycle.busy}
+              disabled={actionsBusy}
               onClick={lifecycle.handleStopStart}
             >
               {lifecycle.stopped ? (
@@ -230,7 +274,7 @@ function DatabaseHeaderActions({
             </DropdownMenuItem>
             {lifecycle.showRestart ? (
               <DropdownMenuItem
-                disabled={lifecycle.busy}
+                disabled={actionsBusy}
                 onClick={lifecycle.handleRestart}
               >
                 <ArrowClockwiseIcon weight="fill" />
@@ -259,9 +303,45 @@ function DatabaseHeaderActions({
 }
 
 function DatabaseDetail() {
-  const { database, destinations, email, role } = Route.useLoaderData();
+  const {
+    database: initialDatabase,
+    destinations,
+    email,
+    role,
+  } = Route.useLoaderData();
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
+  const queryClient = useQueryClient();
+
+  const [awaiting, setAwaiting] = useState<AwaitingLifecycle | null>(null);
+
+  const databaseQuery = useQuery({
+    ...queries.database(initialDatabase.id),
+    initialData: initialDatabase,
+    refetchInterval: (q) => {
+      const row = q.state.data;
+      if (!row) {
+        return false;
+      }
+      if (row.status === "deleting") {
+        return DETAIL_POLL_MS;
+      }
+      if (!awaiting) {
+        return false;
+      }
+      return isLifecycleSettled(row, awaiting) ? false : DETAIL_POLL_MS;
+    },
+  });
+  const database = databaseQuery.data ?? initialDatabase;
+
+  useEffect(() => {
+    if (!awaiting) {
+      return;
+    }
+    if (isLifecycleSettled(database, awaiting)) {
+      setAwaiting(null);
+    }
+  }, [awaiting, database]);
 
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -335,7 +415,6 @@ function DatabaseDetail() {
   // We LEAVE the page once the teardown has started, as for a service: the
   // database is disappearing, staying on it would show a detail view
   // emptying itself out.
-  const queryClient = useQueryClient();
   const handleDeleted = useCallback(async () => {
     await cache.environmentScope(
       queryClient,
@@ -351,14 +430,32 @@ function DatabaseDetail() {
     });
   }, [database.environmentId, database.projectId, navigate, queryClient]);
 
-  const router = useRouter();
-  const handleDone = useCallback(async () => {
-    await queryClient.invalidateQueries();
-    // `router.invalidate()` on top: the status comes from the route's
-    // LOADER, which `invalidateQueries` doesn't refresh — the badge would
-    // stay on its old value after a Stop.
-    await router.invalidate();
-  }, [queryClient, router]);
+  const handleDone = useCallback(
+    async (action: LifecycleAction) => {
+      // Snapshot at enqueue: the Job writes later. Restart doesn't move
+      // `status`, so we also snapshot `updatedAt` and wait for that bump.
+      setAwaiting({
+        action,
+        since: Date.now(),
+        status: database.status,
+        updatedAt: database.updatedAt,
+      });
+      await cache.database(queryClient, database.id);
+      await cache.environmentScope(
+        queryClient,
+        database.projectId,
+        database.environmentId
+      );
+    },
+    [
+      database.environmentId,
+      database.id,
+      database.projectId,
+      database.status,
+      database.updatedAt,
+      queryClient,
+    ]
+  );
 
   return (
     <AppShell
@@ -380,6 +477,7 @@ function DatabaseDetail() {
                   })
               : null
           }
+          pendingAction={awaiting?.action ?? null}
         />
       }
       breadcrumb={
@@ -463,6 +561,7 @@ function DatabaseDetail() {
             <DatabaseLogs
               databaseId={database.id}
               databaseName={database.name}
+              generation={`${database.status}:${database.updatedAt}`}
             />
           </TabsContent>
 
