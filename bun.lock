@@ -189,6 +189,9 @@
     },
     "packages/proxy-config": {
       "name": "@noddle/proxy-config",
+      "dependencies": {
+        "@noddle/shared": "workspace:*",
+      },
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
       },
