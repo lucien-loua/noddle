@@ -16,6 +16,7 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import { databaseBackupSubject } from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
 import type { BackupConfigRow, DestinationRow } from "@/server/backups";
@@ -55,7 +56,9 @@ export function BackupPanel({
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   const invalidate = useCallback(() => {
-    cache.backupConfigs(queryClient, databaseId).catch(() => undefined);
+    cache
+      .backupConfigsFor(queryClient, databaseBackupSubject(databaseId))
+      .catch(() => undefined);
   }, [databaseId, queryClient]);
 
   if (destinations.length === 0) {

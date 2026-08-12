@@ -7,7 +7,11 @@
  * architecture review asked for once GET already went through `queries`.
  */
 import type { QueryClient } from "@tanstack/react-query";
-import type { BackupSubject } from "@/lib/backup-subject";
+import {
+  type BackupSubject,
+  databaseBackupSubject,
+  volumeBackupSubject,
+} from "@/lib/backup-subject";
 import { queries } from "@/lib/queries";
 import type { EnvVarTarget } from "@/server/env-vars";
 
@@ -15,10 +19,9 @@ export const cache = {
   accounts: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.accounts().queryKey }),
 
+  /** Prefer `backupConfigsFor` — subject is the stable invalidation key. */
   backupConfigs: (qc: QueryClient, databaseId: string) =>
-    qc.invalidateQueries({
-      queryKey: queries.backupConfigs(databaseId).queryKey,
-    }),
+    cache.backupConfigsFor(qc, databaseBackupSubject(databaseId)),
 
   backupConfigsFor: (qc: QueryClient, subject: BackupSubject) =>
     qc.invalidateQueries({
@@ -30,10 +33,9 @@ export const cache = {
       queryKey: queries.backupRunsFor(subject, configId).queryKey,
     }),
 
+  /** Prefer `backupRunsFor` with a `BackupSubject`. */
   backups: (qc: QueryClient, databaseId: string, configId: string) =>
-    qc.invalidateQueries({
-      queryKey: queries.backups(databaseId, configId).queryKey,
-    }),
+    cache.backupRunsFor(qc, databaseBackupSubject(databaseId), configId),
 
   channels: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.channels().queryKey }),
@@ -75,13 +77,11 @@ export const cache = {
   sshKeys: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.sshKeys().queryKey }),
 
+  /** Prefer `backupConfigsFor` with a volume `BackupSubject`. */
   volumeBackupConfigs: (qc: QueryClient, serviceId: string) =>
-    qc.invalidateQueries({
-      queryKey: queries.volumeBackupConfigs(serviceId).queryKey,
-    }),
+    cache.backupConfigsFor(qc, volumeBackupSubject(serviceId)),
 
+  /** Prefer `backupRunsFor` with a volume `BackupSubject`. */
   volumeBackups: (qc: QueryClient, serviceId: string, configId: string) =>
-    qc.invalidateQueries({
-      queryKey: queries.volumeBackups(serviceId, configId).queryKey,
-    }),
+    cache.backupRunsFor(qc, volumeBackupSubject(serviceId), configId),
 } as const;

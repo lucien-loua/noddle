@@ -15,6 +15,7 @@ import {
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
+import { volumeBackupSubject } from "@/lib/backup-subject";
 import { mutations } from "@/lib/mutations";
 import { queries } from "@/lib/queries";
 import type {
@@ -44,6 +45,7 @@ export function VolumeBackupHistoryDialog({
 }) {
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<VolumeBackupRow | null>(null);
+  const subject = volumeBackupSubject(serviceId);
   const backups = useQuery({
     ...queries.volumeBackups(serviceId, config.id),
     refetchInterval: (query) =>
@@ -55,7 +57,7 @@ export function VolumeBackupHistoryDialog({
   });
 
   const remove = useMutation(
-    mutations.deleteVolumeBackup(queryClient, serviceId, config.id)
+    mutations.deleteBackupRun(queryClient, subject, config.id)
   );
 
   const rows = backups.isLoading

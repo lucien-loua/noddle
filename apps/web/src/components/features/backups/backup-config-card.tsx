@@ -14,14 +14,10 @@ import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { cache } from "@/lib/cache";
-import { errorMessage } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import {
-  type BackupConfigRow,
-  deleteBackupConfig,
-  triggerBackup,
-} from "@/server/backups";
+import { databaseBackupSubject } from "@/lib/backup-subject";
+import { errorMessage, errorMessage } from "@/lib/format";
+import { mutations,/mutations lib/ut
+ls";mutationsonfig } from "@/server/backups";
 
 export function BackupConfigCard({
   canCreate,
@@ -37,19 +33,13 @@ export function BackupConfigCard({
   onHistory: () => void;
 }) {
   const queryClient = useQueryClient();
-  const run = useMutation({
-    mutationFn: () => triggerBackup({ data: { configId: config.id } }),
-    onError: (err) =>
-      toast.add({
-        description: errorMessage(err, "backup failed"),
-        title: "Could not queue backup",
-        type: "error",
-      }),
-    onSuccess: async () => {
-      toast.add({ title: "Backup queued", type: "success" });
-      await cache.backups(queryClient, config.databaseId, config.id);
-    },
-  });
+  const run = useMutation(
+    mutations.triggerBackupRun(
+      queryClient,
+      databaseBackupSubject(config.databaseId),
+      config.id
+    )
+  );
   const remove = useMutation({
     mutationFn: () => deleteBackupConfig({ data: { configId: config.id } }),
     onError: (err) =>
@@ -106,7 +96,20 @@ export function BackupConfigCard({
             <Button
               aria-label="Run backup now"
               disabled={run.isPending}
-              onClick={() => run.mutate()}
+              onClick={() => {
+                run
+                  .mutateAsync()
+                  .then(() => {
+                    toast.add({ title: "Backup queued", type: "success" });
+                  })
+                  .catch((err) => {
+                    toast.add({
+                      description: errorMessage(err, "backup failed"),
+                      title: "Could not queue backup",
+                      type: "error",
+                    });
+                  });
+              }}
               size="icon-sm"
               variant="ghost"
             >

@@ -16,6 +16,7 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import { volumeBackupSubject } from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
 import type { DestinationRow } from "@/server/backups";
@@ -60,7 +61,9 @@ export function VolumeBackupPanel({
   >();
 
   const invalidate = useCallback(() => {
-    cache.volumeBackupConfigs(queryClient, serviceId).catch(() => undefined);
+    cache
+      .backupConfigsFor(queryClient, volumeBackupSubject(serviceId))
+      .catch(() => undefined);
   }, [queryClient, serviceId]);
 
   if (destinations.length === 0) {

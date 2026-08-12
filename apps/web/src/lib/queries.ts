@@ -27,30 +27,53 @@ import { getSshKeys } from "@/server/ssh-keys";
 import { getStackDeployments } from "@/server/stacks";
 import { getUpdateStatus } from "@/server/updates";
 
+function databaseBackupConfigsQuery(databaseId: string) {
+  return queryOptions({
+    queryFn: () => listBackupConfigs({ data: { databaseId } }),
+    queryKey: ["backup-configs", databaseId],
+  });
+}
+
+function volumeBackupConfigsQuery(serviceId: string) {
+  return queryOptions({
+    queryFn: () => listVolumeBackupConfigs({ data: { serviceId } }),
+    queryKey: ["volume-backup-configs", serviceId],
+  });
+}
+
+function backupConfigsForQuery(subject: BackupSubject) {
+  return subject.kind === "database"
+    ? databaseBackupConfigsQuery(subject.databaseId)
+    : volumeBackupConfigsQuery(subject.serviceId);
+}
+
+function databaseBackupRunsQuery(databaseId: string, configId: string) {
+  return queryOptions({
+    queryFn: () => getBackups({ data: { configId, databaseId } }),
+    queryKey: ["backups", databaseId, configId],
+  });
+}
+
+function volumeBackupRunsQuery(serviceId: string, configId: string) {
+  return queryOptions({
+    queryFn: () => getVolumeBackups({ data: { configId, serviceId } }),
+    queryKey: ["volume-backups", serviceId, configId],
+  });
+}
+
+function backupRunsForQuery(subject: BackupSubject, configId: string) {
+  return subject.kind === "database"
+    ? databaseBackupRunsQuery(subject.databaseId, configId)
+    : volumeBackupRunsQuery(subject.serviceId, configId);
+}
+
 export const queries = {
   accounts: () =>
     queryOptions({ queryFn: () => getAccounts(), queryKey: ["accounts"] }),
 
-  backupConfigs: (databaseId: string) =>
-    queryOptions({
-      queryFn: () => listBackupConfigs({ data: { databaseId } }),
-      queryKey: ["backup-configs", databaseId],
-    }),
+  backupConfigs: databaseBackupConfigsQuery,
 
-  backupConfigsFor: (subject: BackupSubject) => {
-    if (subject.kind === "database") {
-      return queryOptions({
-        queryFn: () =>
-          listBackupConfigs({ data: { databaseId: subject.databaseId } }),
-        queryKey: ["backup-configs", subject.databaseId],
-      });
-    }
-    return queryOptions({
-      queryFn: () =>
-        listVolumeBackupConfigs({ data: { serviceId: subject.serviceId } }),
-      queryKey: ["volume-backup-configs", subject.serviceId],
-    });
-  },
+  backupConfigsFor: backupConfigsForQuery,
 
   backupObjects: (destinationId: string) =>
     queryOptions({
@@ -58,26 +81,9 @@ export const queries = {
       queryKey: ["backup-objects", destinationId],
     }),
 
-  backupRunsFor: (subject: BackupSubject, configId: string) => {
-    if (subject.kind === "database") {
-      return queryOptions({
-        queryFn: () =>
-          getBackups({ data: { configId, databaseId: subject.databaseId } }),
-        queryKey: ["backups", subject.databaseId, configId],
-      });
-    }
-    return queryOptions({
-      queryFn: () =>
-        getVolumeBackups({ data: { configId, serviceId: subject.serviceId } }),
-      queryKey: ["volume-backups", subject.serviceId, configId],
-    });
-  },
+  backupRunsFor: backupRunsForQuery,
 
-  backups: (databaseId: string, configId: string) =>
-    queryOptions({
-      queryFn: () => getBackups({ data: { configId, databaseId } }),
-      queryKey: ["backups", databaseId, configId],
-    }),
+  backups: databaseBackupRunsQuery,
 
   channels: () =>
     queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
@@ -201,15 +207,7 @@ export const queries = {
       queryKey: ["update-status"],
     }),
 
-  volumeBackupConfigs: (serviceId: string) =>
-    queryOptions({
-      queryFn: () => listVolumeBackupConfigs({ data: { serviceId } }),
-      queryKey: ["volume-backup-configs", serviceId],
-    }),
+  volumeBackupConfigs: volumeBackupConfigsQuery,
 
-  volumeBackups: (serviceId: string, configId: string) =>
-    queryOptions({
-      queryFn: () => getVolumeBackups({ data: { configId, serviceId } }),
-      queryKey: ["volume-backups", serviceId, configId],
-    }),
+  volumeBackups: volumeBackupRunsQuery,
 };

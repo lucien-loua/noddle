@@ -9,7 +9,11 @@
  */
 import { mutationOptions, type QueryClient } from "@tanstack/react-query";
 import type { DraftVar } from "@/components/features/env-vars/table";
-import type { BackupSubject } from "@/lib/backup-subject";
+import {
+  type BackupSubject,
+  databaseBackupSubject,
+  volumeBackupSubject,
+} from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
 import {
   deleteBackup,
@@ -48,26 +52,23 @@ export const mutations = {
     }),
 
   deleteBackup: (qc: QueryClient, databaseId: string, configId: string) =>
-    mutationOptions({
-      mutationFn: (backupId: string) => deleteBackup({ data: { backupId } }),
-      onSuccess: () => cache.backups(qc, databaseId, configId),
-    }),
+    mutations.deleteBackupRun(qc, databaseBackupSubject(databaseId), configId),
 
   deleteBackupRun: (
     qc: QueryClient,
     subject: BackupSubject,
     configId: string
   ) =>
-    subject.kind === "database"
-      ? mutations.deleteBackup(qc, subject.databaseId, configId)
-      : mutations.deleteVolumeBackup(qc, subject.serviceId, configId),
-
-  deleteVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
     mutationOptions({
       mutationFn: (backupId: string) =>
-        deleteVolumeBackup({ data: { backupId } }),
-      onSuccess: () => cache.volumeBackups(qc, serviceId, configId),
+        subject.kind === "database"
+          ? deleteBackup({ data: { backupId } })
+          : deleteVolumeBackup({ data: { backupId } }),
+      onSuccess: () => cache.backupRunsFor(qc, subject, configId),
     }),
+
+  deleteVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
+    mutations.deleteBackupRun(qc, volumeBackupSubject(serviceId), configId),
 
   saveEnvVars: (qc: QueryClient, target: EnvVarTarget) =>
     mutationOptions({
@@ -86,23 +87,24 @@ export const mutations = {
     }),
 
   triggerBackup: (qc: QueryClient, databaseId: string, configId: string) =>
-    mutationOptions({
-      mutationFn: () => triggerBackup({ data: { configId } }),
-      onSuccess: () => cache.backups(qc, databaseId, configId),
-    }),
+    mutations.triggerBackupRun(qc, databaseBackupSubject(databaseId), configId),
 
   triggerBackupRun: (
     qc: QueryClient,
     subject: BackupSubject,
     configId: string
   ) =>
-    subject.kind === "database"
-      ? mutations.triggerBackup(qc, subject.databaseId, configId)
-      : mutations.triggerVolumeBackup(qc, subject.serviceId, configId),
+    mutationOptions({
+      mutationFn: async () => {
+        if (subject.kind === "database") {
+          await triggerBackup({ data: { configId } });
+          return;
+        }
+        await triggerVolumeBackup({ data: { configId } });
+      },
+      onSuccess: () => cache.backupRunsFor(qc, subject, configId),
+    }),
 
   triggerVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
-    mutationOptions({
-      mutationFn: () => triggerVolumeBackup({ data: { configId } }),
-      onSuccess: () => cache.volumeBackups(qc, serviceId, configId),
-    }),
+    mutations.triggerBackupRun(qc, volumeBackupSubject(serviceId), configId),
 } as const;

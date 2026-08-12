@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { volumeBackupSubject } from "@/lib/backup-subject";
 import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,11 @@ export function VolumeBackupConfigCard({
 }) {
   const queryClient = useQueryClient();
   const run = useMutation(
-    mutations.triggerVolumeBackup(queryClient, config.serviceId, config.id)
+    mutations.triggerBackupRun(
+      queryClient,
+      volumeBackupSubject(config.serviceId),
+      config.id
+    )
   );
   const remove = useMutation({
     mutationFn: () =>
