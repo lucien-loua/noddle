@@ -26,7 +26,7 @@ import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);
 
@@ -106,10 +106,7 @@ try {
   ok("worker registered, pending (status=pending)");
 
   // ── THE provisioning: Docker, Swarm join, nixpacks ──────────────────────
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-multi-logs" };
 

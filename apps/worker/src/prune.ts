@@ -3,13 +3,12 @@ import { isPortableImage } from "@noddle/registry";
 import {
   type DockerApi,
   disconnect,
-  dockerClient,
   execArgv,
   type SshClient,
 } from "@noddle/ssh-executor";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { recordDiskUsage } from "#metrics";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /**
  * A Noddle node's two build caches, and both are genuinely needed.
@@ -240,8 +239,8 @@ export async function pruneDocker(ctx: DeployContext): Promise<PruneResult> {
       // sessions from a 2GB control plane for work that's bounded by each
       // target's disk anyway.
       // biome-ignore lint/performance/noAwaitInLoops: deliberately sequential
-      client = await connectTo(ctx, server);
-      const docker = dockerClient(client);
+      client = await ctx.connectTo(server);
+      const docker = ctx.createDockerApi(client);
 
       // `pruneEnabled=false` removes the DESTRUCTIVE half, not the
       // observing half. The node stays PROBED — its image list still feeds

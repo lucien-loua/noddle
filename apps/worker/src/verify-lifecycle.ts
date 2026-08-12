@@ -19,7 +19,7 @@ import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { runLifecycle } from "#lifecycle";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -161,10 +161,7 @@ try {
   const swarmName = swarmServiceName(svc);
   await removeService(docker, swarmName);
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-lifecycle-logs" };
 

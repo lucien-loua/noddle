@@ -17,12 +17,8 @@ import { recoverStaleVolumeBackups } from "#backup-run/subjects/volume";
 import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
 import { loadRegistryConfig } from "#registry";
-import type {
-  BuildOptions,
-  DeployContext,
-  RouteOptions,
-  WorkerDeps,
-} from "#runtime-context";
+import type { BuildOptions, RouteOptions, WorkerDeps } from "#runtime-context";
+import { createDeployContext } from "#runtime-context";
 import { schedules } from "#schedules";
 
 function required(name: string): string {
@@ -43,14 +39,14 @@ const connection = new IORedis(required("REDIS_URL"), {
 // process and on a different runtime.
 const logBus = createLogBus(connection);
 
-const ctx: DeployContext = {
+const ctx = createDeployContext({
   appKey: loadAppKey(process.env.APP_KEY),
   db: createDatabase({ url: required("DATABASE_URL") }),
   // Absent on an installation whose stack doesn't have the registry yet: the
   // worker then falls back exactly to the previous behavior, local build and
   // pinned service. This is what makes an update safe.
   registry: loadRegistryConfig(),
-};
+});
 
 const route: RouteOptions = {
   // Set by the installer ONLY when a domain is configured: without a name,

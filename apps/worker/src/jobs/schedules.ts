@@ -13,11 +13,7 @@ import {
 import { sweepBackups } from "#backup-sweep";
 import { collectMetrics } from "#metrics";
 import { sweepRegistryTrust } from "#registry";
-import {
-  connectTo,
-  type DeployContext,
-  type RouteOptions,
-} from "#runtime-context";
+import type { DeployContext, RouteOptions } from "#runtime-context";
 import { sweepWatch } from "#sweep";
 import { sweepVolumeBackups } from "#volume-backup-sweep";
 
@@ -83,7 +79,8 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     queue: "noddle-registry-trust",
     run: ({ ctx }) =>
       sweepRegistryTrust({
-        connectTo: (server) => connectTo(ctx, server),
+        connectTo: ctx.connectTo,
+        createDockerApi: ctx.createDockerApi,
         db: ctx.db,
         registry: ctx.registry,
       }),

@@ -1,7 +1,7 @@
 import { databases, servers, services, stacks } from "@noddle/db/schema";
 import { disconnect, execArgv } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /** What blocks a removal, in plain language. `null` = nothing stands in the way. */
 export async function serverRemovalBlocker(
@@ -74,7 +74,7 @@ export async function runServerTeardown(
 
   // ── 1. the node leaves the cluster, best-effort ────────────────────────
   try {
-    const client = await connectTo(ctx, server);
+    const client = await ctx.connectTo(server);
     try {
       await execArgv(client, ["sudo", "docker", "swarm", "leave", "--force"]);
     } finally {
@@ -88,7 +88,7 @@ export async function runServerTeardown(
   // ── 2. the manager forgets the node, best-effort ───────────────────────
   if (manager && server.swarmNodeId) {
     try {
-      const client = await connectTo(ctx, manager);
+      const client = await ctx.connectTo(manager);
       try {
         await execArgv(client, [
           "sudo",

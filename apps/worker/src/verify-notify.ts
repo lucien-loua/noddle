@@ -6,6 +6,7 @@ import { notificationChannels } from "@noddle/db/schema";
 import { encryptSecret, secretContext } from "@noddle/shared/crypto";
 import { eq } from "drizzle-orm";
 import { notify } from "#notify";
+import { verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -24,12 +25,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const ctx = {
-  appKey,
-  db,
-  logRoot: "/tmp/noddle-notify-logs",
-  networkName: "noddle-public",
-};
+const ctx = verifyCtx({ appKey, db });
 
 let hits = 0;
 const server = createServer((req, res) => {

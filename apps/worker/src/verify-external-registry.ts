@@ -27,7 +27,7 @@ import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -210,11 +210,7 @@ try {
   // No embedded registry in this context: if the code fell back to it, the
   // deploy would fail instead of silently going to the wrong place. A false
   // green is thus impossible.
-  const ctx = {
-    appKey,
-    db,
-    registry: undefined,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-ext-logs" };
 

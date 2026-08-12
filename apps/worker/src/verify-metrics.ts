@@ -22,7 +22,7 @@ import {
   parseDiskUsage,
   parseHostFacts,
 } from "#metrics";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -178,12 +178,7 @@ try {
     throw new Error("server insert failed");
   }
 
-  const ctx = {
-    appKey,
-    db,
-    logRoot: "/tmp/noddle-metrics-logs",
-    networkName: "noddle-public",
-  };
+  const ctx = verifyCtx({ appKey, db });
 
   const first = await collectMetrics(ctx);
   if (first.servers === 1 && first.skipped.length === 0) {

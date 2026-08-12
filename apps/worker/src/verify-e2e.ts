@@ -20,7 +20,7 @@ import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -157,7 +157,7 @@ try {
   );
 
   await runDeploy(
-    { appKey, db },
+    verifyCtx({ appKey, db }),
     { networkName: "noddle-public" },
     {
       logRoot: logDir,

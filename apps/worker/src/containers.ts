@@ -1,8 +1,8 @@
 import { servers } from "@noddle/db/schema";
-import { disconnect, dockerClient } from "@noddle/ssh-executor";
+import { disconnect } from "@noddle/ssh-executor";
 import { restartService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /**
  * Restarts the Swarm service carrying this name.
@@ -27,9 +27,12 @@ export async function restartSwarmServiceByName(
     throw new Error("no Swarm manager registered");
   }
 
-  const client = await connectTo(ctx, manager);
+  const client = await ctx.connectTo(manager);
   try {
-    const restarted = await restartService(dockerClient(client), serviceName);
+    const restarted = await restartService(
+      ctx.createDockerApi(client),
+      serviceName
+    );
     if (!restarted) {
       throw new Error(`no Swarm service named ${serviceName}`);
     }

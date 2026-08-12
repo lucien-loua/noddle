@@ -9,22 +9,44 @@ import type { Database } from "@noddle/db";
 import { servers } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
 import { credentialsFor } from "@noddle/ssh-credentials";
-import { connect } from "@noddle/ssh-executor";
+import {
+  connect,
+  type DockerApi,
+  dockerClient,
+  type SshClient,
+} from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
 export type ServerRow = typeof servers.$inferSelect;
+
+export interface ConnectForDeployResult {
+  buildClient: SshClient;
+  managerClient: SshClient;
+  sameConnection: boolean;
+}
+
+/**
+ * Injected connection factories — the ports & adapters seam (architecture
+ * review C4). Production uses SSH + dockerode; tests swap in-memory Docker.
+ */
+export interface DeployConnectors {
+  /** Build node + Swarm manager pair for deploy/database paths. */
+  connectForDeploy: (server: ServerRow) => Promise<ConnectForDeployResult>;
+  /** Opens one SSH session to a server. */
+  connectTo: (server: ServerRow) => Promise<SshClient>;
+  /** Wraps an SSH session as a remote Docker API. Override in tests. */
+  createDockerApi: (client: SshClient) => DockerApi;
+}
 
 /**
  * What every job needs: the database, the key that opens secrets, and the
  * registry when the installation has one.
  *
- * These three are shared because they genuinely are — `db` by all 19
- * modules, `appKey` by the 9 that decrypt something, `registry` by the 5
- * that place or purge an image. The four ship-only fields that used to sit
- * here moved to {@link RouteOptions} and {@link BuildOptions}: they were
- * read by three modules and visible to nineteen.
+ * Connection factories live on the context so orchestration (status
+ * transitions, notify fan-out) can be tested without a VM — the same pattern
+ * as `sweepRegistryTrust` taking `connectTo` as a parameter.
  */
-export interface DeployContext {
+export interface DeployContext extends DeployConnectors {
   appKey: Buffer;
   db: Database;
   /**
@@ -37,6 +59,59 @@ export interface DeployContext {
    * as before.
    */
   registry?: RegistryConfig;
+}
+
+type DeployCore = Pick<DeployContext, "appKey" | "db" | "registry">;
+
+function defaultConnectTo(
+  core: Pick<DeployContext, "appKey" | "db">
+): DeployContext["connectTo"] {
+  return async (server) =>
+    connect(await credentialsFor(core.db, core.appKey, server));
+}
+
+function defaultConnectForDeploy(
+  core: Pick<DeployContext, "db">,
+  connectToFn: DeployContext["connectTo"]
+): DeployContext["connectForDeploy"] {
+  return async (server) => {
+    const manager = await core.db.query.servers.findFirst({
+      where: eq(servers.role, "manager"),
+    });
+    if (!manager) {
+      throw new Error(
+        "no Swarm manager registered — the installer should have created one"
+      );
+    }
+
+    const buildClient = await connectToFn(server);
+    if (manager.id === server.id) {
+      return { buildClient, managerClient: buildClient, sameConnection: true };
+    }
+    const managerClient = await connectToFn(manager);
+    return { buildClient, managerClient, sameConnection: false };
+  };
+}
+
+export interface CreateDeployContextOverrides {
+  connectForDeploy?: DeployContext["connectForDeploy"];
+  connectTo?: DeployContext["connectTo"];
+  createDockerApi?: DeployContext["createDockerApi"];
+}
+
+/** Wires production SSH/dockerode adapters unless overrides are passed. */
+export function createDeployContext(
+  core: DeployCore,
+  overrides?: CreateDeployContextOverrides
+): DeployContext {
+  const connectToFn = overrides?.connectTo ?? defaultConnectTo(core);
+  return {
+    ...core,
+    connectForDeploy:
+      overrides?.connectForDeploy ?? defaultConnectForDeploy(core, connectToFn),
+    connectTo: connectToFn,
+    createDockerApi: overrides?.createDockerApi ?? dockerClient,
+  };
 }
 
 /**
@@ -92,48 +167,3 @@ export interface WorkerDeps {
  * `/var/lib/noddle` follows the convention already set by `LOG_ROOT`.
  */
 export const BUILD_ROOT = "/var/lib/noddle/builds";
-
-/** Opens an SSH connection to a server, key read from the library. */
-export async function connectTo(
-  ctx: DeployContext,
-  server: ServerRow
-): ReturnType<typeof connect> {
-  return await connect(await credentialsFor(ctx.db, ctx.appKey, server));
-}
-
-/**
- * Two distinct connections: build on the service's server, Swarm commands on
- * the manager — found by `role`, not by `isSelf`. The machine hosting Noddle
- * is display-only by settled decision, never a code branch; `role` is the
- * field that carries the orchestration fact, even though in Phase 2 the two
- * columns always point to the same row — because only one machine ran
- * `docker swarm init`, never because one is derived from the other.
- *
- * Reuses the SAME connection when the two coincide (the single-server case),
- * so as not to open a needless SSH session to a machine we've already just
- * reached.
- */
-export async function connectForDeploy(
-  ctx: DeployContext,
-  server: ServerRow
-): Promise<{
-  buildClient: Awaited<ReturnType<typeof connect>>;
-  managerClient: Awaited<ReturnType<typeof connect>>;
-  sameConnection: boolean;
-}> {
-  const manager = await ctx.db.query.servers.findFirst({
-    where: eq(servers.role, "manager"),
-  });
-  if (!manager) {
-    throw new Error(
-      "no Swarm manager registered — the installer should have created one"
-    );
-  }
-
-  const buildClient = await connectTo(ctx, server);
-  if (manager.id === server.id) {
-    return { buildClient, managerClient: buildClient, sameConnection: true };
-  }
-  const managerClient = await connectTo(ctx, manager);
-  return { buildClient, managerClient, sameConnection: false };
-}

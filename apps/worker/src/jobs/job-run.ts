@@ -7,10 +7,9 @@ import type { servers } from "@noddle/db/schema";
 import {
   type DockerApi,
   disconnect,
-  dockerClient,
   type SshClient,
 } from "@noddle/ssh-executor";
-import { connectForDeploy, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 type ServerRow = typeof servers.$inferSelect;
 
@@ -26,20 +25,21 @@ export interface DeployClients {
  * Open the build/manager pair for `server`, run `fn`, always disconnect.
  * Manager is closed first when distinct (matches the dominant teardown
  * order across deploy/compose/database paths).
+ *
+ * Uses `ctx.connectForDeploy` and `ctx.createDockerApi` so tests can swap
+ * adapters without touching handler code (architecture review C4).
  */
 export async function withDeployClients<T>(
   ctx: DeployContext,
   server: ServerRow,
   fn: (clients: DeployClients) => Promise<T>
 ): Promise<T> {
-  const { buildClient, managerClient, sameConnection } = await connectForDeploy(
-    ctx,
-    server
-  );
-  const buildDocker = dockerClient(buildClient);
+  const { buildClient, managerClient, sameConnection } =
+    await ctx.connectForDeploy(server);
+  const buildDocker = ctx.createDockerApi(buildClient);
   const managerDocker = sameConnection
     ? buildDocker
-    : dockerClient(managerClient);
+    : ctx.createDockerApi(managerClient);
 
   try {
     return await fn({

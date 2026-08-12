@@ -7,14 +7,9 @@ import {
   services,
 } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import {
-  type DockerApi,
-  disconnect,
-  dockerClient,
-  exec,
-} from "@noddle/ssh-executor";
+import { type DockerApi, disconnect, exec } from "@noddle/ssh-executor";
 import { desc, eq, lt } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /** Seven days. Beyond that, aggregation would be needed, so a time-series basis. */
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -507,7 +502,7 @@ async function sampleServer(
   server: typeof servers.$inferSelect,
   result: CollectResult
 ): Promise<void> {
-  const client = await connectTo(ctx, server);
+  const client = await ctx.connectTo(server);
   try {
     const facts = await exec(client, HOST_FACTS);
     const host = facts.code === 0 ? parseHostFacts(facts.stdout) : null;
@@ -519,7 +514,7 @@ async function sampleServer(
       networkOutBytes: 0,
     };
 
-    const docker = dockerClient(client);
+    const docker = ctx.createDockerApi(client);
     // A SINGLE `listContainers` per node, shared by both readings: it's the
     // container's presence HERE that decides, for a database as for a
     // service, and querying it twice would learn nothing more.

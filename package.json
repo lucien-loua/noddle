@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "verify:unit": "bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/backup/src/verify.ts && bun run packages/proxy-config/src/verify.ts && bun run packages/ssh-credentials/src/verify.ts && bun run packages/compose-engine/src/verify.ts && bun run packages/database-spec/src/verify.ts && bun run packages/deploy-contract/src/verify.ts && bun run packages/notifier/src/verify.ts && bun run apps/worker/src/verify-dispatch.ts && bun run apps/web/src/verify-permissions.ts && bun run apps/web/src/verify-run-read.ts && bun run apps/web/src/verify-webhook-payloads.ts && bun run apps/web/src/verify-backup-subject.ts && bun run apps/web/src/verify-cache-backup.ts"
+    "verify:unit": "bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/backup/src/verify.ts && bun run packages/proxy-config/src/verify.ts && bun run packages/ssh-credentials/src/verify.ts && bun run packages/compose-engine/src/verify.ts && bun run packages/database-spec/src/verify.ts && bun run packages/deploy-contract/src/verify.ts && bun run packages/notifier/src/verify.ts && bun run apps/worker/src/verify-dispatch.ts && bun run apps/worker/src/verify-docker-seam.ts && bun run apps/web/src/verify-permissions.ts && bun run apps/web/src/verify-run-read.ts && bun run apps/web/src/verify-webhook-payloads.ts && bun run apps/web/src/verify-backup-subject.ts && bun run apps/web/src/verify-cache-backup.ts"
   },
   "type": "module",
   "workspaces": {
@@ -23,7 +23,7 @@
     "catalog": {
       "@aws-sdk/client-s3": "^3.1102.0",
       "@aws-sdk/lib-storage": "^3.1102.0",
-      "@biomejs/biome": "2.5.6",
+      "@biomejs/biome": "2.5.8",
       "@tanstack/react-query": "^5.101.4",
       "@tanstack/react-router": "^1.170.18",
       "@tanstack/react-start": "^1.168.34",

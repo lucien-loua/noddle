@@ -31,7 +31,7 @@ import { runBackup } from "#backup";
 import { legacyDatabaseServiceName } from "#backup-run/subjects/database";
 import { pruneBackups, sweepBackups } from "#backup-sweep";
 import { provisionDatabase } from "#database";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -133,10 +133,7 @@ try {
     })
     .where(eq(s3Destinations.id, dest.id));
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
   ssh = await connect({ host: HOST, privateKey, user: USER });

@@ -29,7 +29,7 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 import { runVolumeBackup } from "#volume-backup";
 import { runVolumeRestore } from "#volume-restore";
 
@@ -181,7 +181,7 @@ try {
     })
     .where(eq(s3Destinations.id, dest.id));
 
-  const ctx = { appKey, db };
+  const ctx = verifyCtx({ appKey, db });
 
   ssh = await connect({ host: HOST, privateKey, user: USER });
   const docker = dockerClient(ssh);

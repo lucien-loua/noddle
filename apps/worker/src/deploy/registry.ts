@@ -7,7 +7,12 @@ import {
   type RegistryConfig,
 } from "@noddle/registry";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
-import { disconnect, dockerClient, type SshClient } from "@noddle/ssh-executor";
+import {
+  type DockerApi,
+  disconnect,
+  dockerClient,
+  type SshClient,
+} from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
@@ -131,11 +136,13 @@ export async function sweepRegistryTrust(opts: {
    * at compile time, function imports don't.
    */
   connectTo: (server: ServerRow) => Promise<SshClient>;
+  createDockerApi?: (client: SshClient) => DockerApi;
   db: Database;
   registry?: RegistryConfig;
 }): Promise<{ skipped: number; trusted: number }> {
   const result = { skipped: 0, trusted: 0 };
   const { registry } = opts;
+  const createDockerApi = opts.createDockerApi ?? dockerClient;
   if (!registry) {
     return result;
   }
@@ -158,7 +165,7 @@ export async function sweepRegistryTrust(opts: {
       }
       if (!server.swarmNodeId) {
         // Catches up servers provisioned before the column existed.
-        const nodeId = await getSwarmNodeId(dockerClient(client));
+        const nodeId = await getSwarmNodeId(createDockerApi(client));
         await opts.db
           .update(servers)
           .set({ swarmNodeId: nodeId })

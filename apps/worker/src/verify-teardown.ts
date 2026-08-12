@@ -39,7 +39,7 @@ import { eq } from "drizzle-orm";
 import { provisionDatabase } from "#database";
 import { runServerTeardown, serverRemovalBlocker } from "#teardown-server";
 import { runDatabaseTeardown } from "#teardown-stack";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -132,10 +132,7 @@ try {
     .values({ name: "production", projectId: proj?.id ?? "" })
     .returning();
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
   // ── a DATABASE, really provisioned ───────────────────────────────────────

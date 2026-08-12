@@ -21,7 +21,6 @@ import {
 } from "@noddle/db/schema";
 import { markCrashed, markRunning, settle } from "@noddle/shared/lifecycle";
 import {
-  dockerClient,
   execArgv,
   type SshClient,
   writeRemoteFile,
@@ -96,18 +95,19 @@ interface DeployStackResult {
 async function writeAndDeployStack(
   route: RouteOptions,
   opts: {
+    createDockerApi: DeployContext["createDockerApi"];
     doc: ComposeFile;
     managerClient: SshClient;
     stackName: string;
     stream?: { onStderr: (s: string) => void; onStdout: (s: string) => void };
   }
 ): Promise<DeployStackResult> {
-  const { managerClient, stackName, doc } = opts;
+  const { createDockerApi, managerClient, stackName, doc } = opts;
   const stream = opts.stream ?? {
     onStderr: () => undefined,
     onStdout: () => undefined,
   };
-  const managerDocker = dockerClient(managerClient);
+  const managerDocker = createDockerApi(managerClient);
   await ensureOverlayNetwork(managerDocker, route.networkName);
 
   const serviceKeys = Object.keys(doc.services ?? {});
@@ -330,6 +330,7 @@ async function buildAndDeployStack(
 
   sink.write("▸ Swarm rollout (docker stack deploy)\n");
   const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
+    createDockerApi: ctx.createDockerApi,
     doc,
     managerClient,
     stackName: stack.swarmName,
@@ -533,6 +534,7 @@ export async function redeployStack(
       });
 
       const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
+        createDockerApi: ctx.createDockerApi,
         doc,
         managerClient,
         stackName: stack.swarmName,

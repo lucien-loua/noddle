@@ -29,7 +29,7 @@ import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { redeployStack, runStackDeploy } from "#compose";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);
 
@@ -119,10 +119,7 @@ try {
   }
   ok("server registered");
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-stack-logs" };
 

@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { databases, stacks } from "@noddle/db/schema";
-import { dockerClient, execArgv } from "@noddle/ssh-executor";
+import type { DockerApi } from "@noddle/ssh-executor";
+import { execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { removeSecretIfExists } from "#database";
@@ -43,7 +44,7 @@ async function teardownStack(
 ): Promise<void> {
   // Swarm commands go through the MANAGER; only it holds the cluster's
   // replicated state.
-  const { managerClient } = clients;
+  const { managerClient, managerDocker } = clients;
 
   // ── 1. Swarm — must succeed ────────────────────────────────────────────
   const removed = await execArgv(managerClient, [
@@ -67,7 +68,7 @@ async function teardownStack(
   // trap as `docker service update`, already paid on stack deploy. Wait for
   // their real disappearance, otherwise the row would leave while Traefik
   // is still routing.
-  await waitForStackGone(managerClient, stack.swarmName);
+  await waitForStackGone(managerDocker, stack.swarmName);
 
   // ── 2. the database ─────────────────────────────────────────────────────
   // `stack_deployments` and `stack_deployment_logs` go in cascade.
@@ -113,11 +114,10 @@ export async function runStackTeardown(
 
 /** Wait until no service still carries the stack's prefix. */
 async function waitForStackGone(
-  client: Parameters<typeof dockerClient>[0],
+  docker: DockerApi,
   swarmName: string,
   seconds = 60
 ): Promise<void> {
-  const docker = dockerClient(client);
   const deadline = Date.now() + seconds * 1000;
   while (Date.now() < deadline) {
     // biome-ignore lint/performance/noAwaitInLoops: deliberate polling

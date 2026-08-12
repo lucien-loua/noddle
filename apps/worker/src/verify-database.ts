@@ -16,7 +16,7 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { provisionDatabase, removeSecretIfExists } from "#database";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -66,10 +66,7 @@ try {
   }
   ok("server registered");
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
   managerSsh = await connect({ host: HOST, privateKey, user: USER });
@@ -376,7 +373,7 @@ try {
     where: eq(databases.name, "probe-postgres"),
   });
   if (again) {
-    await provisionDatabase({ appKey, db }, route, again.id);
+    await provisionDatabase(ctx, route, again.id);
     ok("second provision replayable without error (idempotent)");
   }
 

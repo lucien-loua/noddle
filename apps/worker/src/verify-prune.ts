@@ -69,8 +69,7 @@ import {
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { pruneDocker } from "#prune";
-import type { DeployContext } from "#runtime-context";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -300,7 +299,7 @@ try {
   const portableDep = await seedDeployment(PORTABLE);
   const alreadyDep = await seedDeployment(VANISHED, true);
 
-  const ctx: DeployContext = { appKey, db, registry };
+  const ctx = verifyCtx({ appKey, db, registry });
 
   const purgedOf = async (id: string): Promise<boolean> => {
     const row = await db.query.deployments.findFirst({

@@ -26,7 +26,8 @@
     "#teardown-server": "./src/target/teardown-server.ts",
     "#handlers": "./src/jobs/handlers.ts",
     "#job-run": "./src/jobs/job-run.ts",
-    "#schedules": "./src/jobs/schedules.ts"
+    "#schedules": "./src/jobs/schedules.ts",
+    "#testing/*": "./src/testing/*.ts"
   },
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.ts",

@@ -8,7 +8,7 @@ import {
 } from "@noddle/registry";
 import { disconnect } from "@noddle/ssh-executor";
 import { desc, eq, inArray } from "drizzle-orm";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /** The registry container's name in the control plane's Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";
@@ -139,7 +139,7 @@ export async function sweepRegistry(
   if (!manager) {
     return result;
   }
-  const client = await connectTo(ctx, manager);
+  const client = await ctx.connectTo(manager);
   try {
     await garbageCollect(client, opts.containerName ?? REGISTRY_CONTAINER);
     result.collected = true;

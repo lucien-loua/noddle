@@ -22,7 +22,7 @@ import {
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, dockerClient } from "@noddle/ssh-executor";
+import { disconnect } from "@noddle/ssh-executor";
 import { watchUntilFor } from "@noddle/swarm-ops";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
 import { type DeployClients, withDeployClients } from "#job-run";
@@ -32,7 +32,6 @@ import { resolveRegistry } from "#registry";
 import {
   BUILD_ROOT,
   type BuildOptions,
-  connectTo,
   type DeployContext,
   type RouteOptions,
 } from "#runtime-context";
@@ -459,9 +458,9 @@ export async function refreshServerFacts(
   if (!server) {
     return;
   }
-  const client = await connectTo(ctx, server);
+  const client = await ctx.connectTo(server);
   try {
-    const docker = dockerClient(client);
+    const docker = ctx.createDockerApi(client);
     const info = (await docker.info()) as { MemTotal?: number };
     const version = (await docker.version()) as {
       ApiVersion?: string;

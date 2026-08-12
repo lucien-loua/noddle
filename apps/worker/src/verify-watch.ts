@@ -33,13 +33,9 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { desc, eq } from "drizzle-orm";
 import { runDeploy } from "#deploy";
-import type {
-  BuildOptions,
-  DeployContext,
-  RouteOptions,
-} from "#runtime-context";
+import type { BuildOptions, RouteOptions } from "#runtime-context";
 import { sweepWatch } from "#sweep";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -148,7 +144,7 @@ try {
   }
 
   const logRoot = await mkdtemp(join(tmpdir(), "noddle-watch-logs-"));
-  const ctx: DeployContext = { appKey, db };
+  const ctx = verifyCtx({ appKey, db });
   const route: RouteOptions = { networkName: "noddle-public" };
   const build: BuildOptions = { logRoot };
 

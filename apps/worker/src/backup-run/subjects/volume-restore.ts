@@ -25,7 +25,7 @@ import {
   ensureAlpineImage,
 } from "#backup-run/subjects/volume";
 import { withDeployClients } from "#job-run";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 import { runVolumeBackup } from "#volume-backup";
 
 export interface VolumeRestoreRequest {
@@ -107,7 +107,7 @@ async function applyVolumeRestore(
     async ({ managerDocker }) => {
       await scaleServiceAndWait(managerDocker, swarmName, 0);
 
-      const client = await connectTo(ctx, loaded.service.server);
+      const client = await ctx.connectTo(loaded.service.server);
       try {
         await ensureAlpineImage(client);
         await restoreVolumeStream(client, loaded.targetVolume, body);

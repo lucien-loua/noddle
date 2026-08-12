@@ -36,7 +36,7 @@ import {
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { pruneDocker } from "#prune";
-import type { DeployContext } from "#runtime-context";
+import { verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -105,7 +105,7 @@ try {
     .set({ pruneEnabled: false })
     .where(eq(servers.id, server.id));
 
-  const ctx: DeployContext = { appKey, db };
+  const ctx = verifyCtx({ appKey, db });
 
   const before = await db.query.serverDiskUsage.findMany({
     where: eq(serverDiskUsage.serverId, server.id),

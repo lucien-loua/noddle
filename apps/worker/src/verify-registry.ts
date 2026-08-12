@@ -53,7 +53,7 @@ import { redeployImage, runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
 import { sweepRegistry } from "#registry-sweep";
 import { runServiceTeardown } from "#teardown";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);
 
@@ -275,11 +275,7 @@ try {
     throw new Error("worker insertion failed");
   }
 
-  const ctx = {
-    appKey,
-    db,
-    registry,
-  };
+  const ctx = verifyCtx({ appKey, db, registry });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-reg-logs" };
 

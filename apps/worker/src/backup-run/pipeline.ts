@@ -8,7 +8,7 @@ import {
 import type { servers } from "@noddle/db/schema";
 import { disconnect, execStream, type SshClient } from "@noddle/ssh-executor";
 import { notify } from "#notify";
-import { connectTo, type DeployContext } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 type ServerRow = typeof servers.$inferSelect;
 
@@ -79,7 +79,7 @@ export async function runBackupPipeline<T extends BackupRunRow>(
   );
 
   await subject.markRunning(ctx, runId, destinationId);
-  const client = await connectTo(ctx, subject.server(run));
+  const client = await ctx.connectTo(subject.server(run));
 
   try {
     const { code, stderr } = await subject.capture(

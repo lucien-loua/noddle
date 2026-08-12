@@ -25,7 +25,7 @@ import { eq, inArray } from "drizzle-orm";
 import { runBackup } from "#backup";
 import { legacyDatabaseServiceName } from "#backup-run/subjects/database";
 import { provisionDatabase } from "#database";
-import { seedSshKey } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL =
   process.env.DATABASE_URL ??
@@ -140,10 +140,7 @@ try {
   });
   ok(`bucket "${S3_BUCKET}" reachable for writes`);
 
-  const ctx = {
-    appKey,
-    db,
-  };
+  const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
   // ── The refusal: two destinations, no choice ────────────────────────────

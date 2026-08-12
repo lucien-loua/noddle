@@ -1,13 +1,7 @@
 import { servers } from "@noddle/db/schema";
 import { ensureRegistryTrust } from "@noddle/registry";
 import { credentialsFor } from "@noddle/ssh-credentials";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import type { DeployContext } from "#runtime-context";
@@ -81,7 +75,7 @@ export async function provisionServer(
 
     if (swarmState.stdout.trim() !== "active") {
       managerClient = await connectAsRow(ctx, manager);
-      const managerDocker = dockerClient(managerClient);
+      const managerDocker = ctx.createDockerApi(managerClient);
 
       const swarmInfo = (await managerDocker.swarmInspect()) as {
         JoinTokens?: { Worker?: string };
@@ -119,7 +113,7 @@ export async function provisionServer(
       await ensureRegistryTrust(client, ctx.registry);
     }
 
-    const docker = dockerClient(client);
+    const docker = ctx.createDockerApi(client);
     const info = (await docker.info()) as { MemTotal?: number };
     const version = (await docker.version()) as {
       MinAPIVersion?: string;
