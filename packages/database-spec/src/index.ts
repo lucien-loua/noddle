@@ -1,9 +1,34 @@
-import {
-  DATABASE_PORT,
-  type DatabaseEngine,
-  DEFAULT_DATABASE_IMAGE,
-  DEFAULT_DATABASE_VOLUME_PATH,
-} from "@noddle/shared/database-engines";
+import type { DatabaseEngine } from "@noddle/shared/database-engine-types";
+
+/**
+ * The default, pinned image — frozen on the row at creation time.
+ * See the comment on `DEFAULT_DATABASE_IMAGE` in the architecture review (C5).
+ */
+export const DEFAULT_DATABASE_IMAGE: Record<DatabaseEngine, string> = {
+  mariadb: "mariadb:11",
+  mongo: "mongo:7",
+  mysql: "mysql:8",
+  postgres: "postgres:17-alpine",
+  redis: "redis:7-alpine",
+};
+
+/** The port the engine listens on, in its official image. */
+export const DATABASE_PORT: Record<DatabaseEngine, number> = {
+  mariadb: 3306,
+  mongo: 27_017,
+  mysql: 3306,
+  postgres: 5432,
+  redis: 6379,
+};
+
+/** Default container path for the primary named volume. */
+export const DEFAULT_DATABASE_VOLUME_PATH: Record<DatabaseEngine, string> = {
+  mariadb: "/var/lib/mysql",
+  mongo: "/data/db",
+  mysql: "/var/lib/mysql",
+  postgres: "/var/lib/postgresql/data",
+  redis: "/data",
+};
 
 export interface EngineParams {
   /** `null` for engines without a notion of a named database (Redis). */
@@ -14,10 +39,19 @@ export interface EngineParams {
   secretPath: string;
 }
 
+export interface ConnectionUrlParams {
+  databaseName: string | null;
+  host: string;
+  password: string;
+  portOverride?: number;
+  rootUser: string | null;
+}
+
 export interface EngineSpec {
   // Receives the mounted secret's PATH (/run/secrets/…), never the plaintext
   // password — that alone would end up in `docker service inspect`.
   command?: (params: EngineParams) => string[];
+  connectionUrl: (params: ConnectionUrlParams) => string;
   env: (params: EngineParams) => string[];
   /**
    * ABSENT when the image contains NO binary capable of probing the engine.
@@ -88,6 +122,17 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
   // already don't ship the same binaries, and factoring them together would
   // give the false impression they'll move in lockstep.
   mariadb: {
+    connectionUrl: ({
+      databaseName,
+      host,
+      password,
+      portOverride,
+      rootUser,
+    }) => {
+      const port = portOverride ?? DATABASE_PORT.mariadb;
+      const dbName = databaseName ?? rootUser;
+      return `mysql://${rootUser}:${password}@${host}:${port}/${dbName}`;
+    },
     // `_FILE` is read NATIVELY by the entrypoint. Measured end to end on
     // mariadb:11: container started with a secret file, password from the
     // FILE accepted, wrong password rejected, and nothing in `docker top`.
@@ -124,6 +169,17 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mariadb,
   },
   mongo: {
+    connectionUrl: ({
+      databaseName,
+      host,
+      password,
+      portOverride,
+      rootUser,
+    }) => {
+      const port = portOverride ?? DATABASE_PORT.mongo;
+      const dbName = databaseName ?? rootUser;
+      return `mongodb://${rootUser}:${password}@${host}:${port}/${dbName}?authSource=admin`;
+    },
     // The `_FILE` suffix is declared by the entrypoint's `file_env` for
     // `MONGO_INITDB_ROOT_PASSWORD` and `MONGO_INITDB_ROOT_USERNAME` — verified
     // in the image's script, not assumed from documentation.
@@ -146,6 +202,17 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mongo,
   },
   mysql: {
+    connectionUrl: ({
+      databaseName,
+      host,
+      password,
+      portOverride,
+      rootUser,
+    }) => {
+      const port = portOverride ?? DATABASE_PORT.mysql;
+      const dbName = databaseName ?? rootUser;
+      return `mysql://${rootUser}:${password}@${host}:${port}/${dbName}`;
+    },
     env: ({ databaseName, rootUser, secretPath }) => [
       `MYSQL_ROOT_PASSWORD_FILE=${secretPath}`,
       `MYSQL_DATABASE=${databaseName}`,
@@ -176,6 +243,17 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mysql,
   },
   postgres: {
+    connectionUrl: ({
+      databaseName,
+      host,
+      password,
+      portOverride,
+      rootUser,
+    }) => {
+      const port = portOverride ?? DATABASE_PORT.postgres;
+      const dbName = databaseName ?? rootUser;
+      return `postgresql://${rootUser}:${password}@${host}:${port}/${dbName}`;
+    },
     // `_FILE` is the suffix the official image reads NATIVELY: the
     // entrypoint reads the file itself, no extra script to write.
     env: ({ databaseName, rootUser, secretPath }) => [
@@ -210,6 +288,10 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       "-c",
       `{ printf 'requirepass '; cat ${secretPath}; printf '\\nappendonly yes\\n'; } > /tmp/redis.conf && exec redis-server /tmp/redis.conf`,
     ],
+    connectionUrl: ({ host, password, portOverride }) => {
+      const port = portOverride ?? DATABASE_PORT.redis;
+      return `redis://default:${password}@${host}:${port}`;
+    },
     env: () => [],
     // `REDISCLI_AUTH`, never `-a`: the same rule already applied for the
     // backup dump — `-a` exposes the password in the process's argv.
@@ -223,6 +305,13 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.redis,
   },
 };
+
+export function connectionUrlFor(
+  engine: DatabaseEngine,
+  params: ConnectionUrlParams
+): string {
+  return ENGINE_SPECS[engine].connectionUrl(params);
+}
 
 /**
  * Where the password is mounted INSIDE the container.
