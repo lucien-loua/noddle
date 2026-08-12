@@ -2,7 +2,7 @@ import { auditLog } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { desc } from "drizzle-orm";
 import { db } from "@/lib/db.server";
-import { requirePermission } from "@/lib/permission.server";
+import { runRead } from "@/lib/permission.server";
 
 /** Enough to answer "what happened recently", with no pagination — which
  *  would be one more screen for a question rarely asked. */
@@ -20,26 +20,24 @@ export interface AuditRow {
 }
 
 export const getAuditLog = createServerFn({ method: "GET" }).handler(
-  async (): Promise<AuditRow[]> => {
-    // A GET, so OUTSIDE the scope of `verify-permissions.ts`, which only
-    // enumerates mutating functions. This is exactly the hole `getEnvVars`
-    // slipped through in Phase 3 — noted here so the guard doesn't
-    // disappear on the next review.
-    await requirePermission({ action: "read", resource: "audit" });
-
-    const rows = await db.query.auditLog.findMany({
-      limit: LIMIT,
-      orderBy: desc(auditLog.createdAt),
-    });
-    return rows.map((r) => ({
-      action: r.action,
-      actorEmail: r.actorEmail,
-      createdAt: r.createdAt.toISOString(),
-      id: r.id,
-      ipAddress: r.ipAddress,
-      outcome: r.outcome,
-      resource: r.resource,
-      role: r.role,
-    }));
-  }
+  async (): Promise<AuditRow[]> =>
+    runRead({
+      permission: { action: "read", resource: "audit" },
+      read: async () => {
+        const rows = await db.query.auditLog.findMany({
+          limit: LIMIT,
+          orderBy: desc(auditLog.createdAt),
+        });
+        return rows.map((r) => ({
+          action: r.action,
+          actorEmail: r.actorEmail,
+          createdAt: r.createdAt.toISOString(),
+          id: r.id,
+          ipAddress: r.ipAddress,
+          outcome: r.outcome,
+          resource: r.resource,
+          role: r.role,
+        }));
+      },
+    })
 );

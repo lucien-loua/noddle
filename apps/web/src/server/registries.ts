@@ -14,7 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission, runGuarded } from "@/lib/permission.server";
+import { runGuarded, runRead } from "@/lib/permission.server";
 
 export interface RegistryView {
   createdAt: string;
@@ -116,22 +116,24 @@ async function pingRegistry(
 }
 
 export const getRegistries = createServerFn({ method: "GET" }).handler(
-  async (): Promise<RegistryView[]> => {
-    await requirePermission({ action: "read", resource: "registry" });
+  async (): Promise<RegistryView[]> =>
+    runRead({
+      permission: { action: "read", resource: "registry" },
+      read: async () => {
+        const rows = await db.query.registries.findMany({
+          orderBy: desc(registries.createdAt),
+        });
 
-    const rows = await db.query.registries.findMany({
-      orderBy: desc(registries.createdAt),
-    });
-
-    return rows.map((row) => ({
-      createdAt: row.createdAt.toISOString(),
-      id: row.id,
-      imagePrefix: row.imagePrefix,
-      name: row.name,
-      registryUrl: row.registryUrl,
-      username: row.username,
-    }));
-  }
+        return rows.map((row) => ({
+          createdAt: row.createdAt.toISOString(),
+          id: row.id,
+          imagePrefix: row.imagePrefix,
+          name: row.name,
+          registryUrl: row.registryUrl,
+          username: row.username,
+        }));
+      },
+    })
 );
 
 async function resolvePassword(data: {
@@ -252,14 +254,17 @@ export const deleteRegistry = createServerFn({ method: "POST" })
  * URL, no username, no password.
  */
 export const getRegistryOptions = createServerFn({ method: "GET" }).handler(
-  async (): Promise<Array<{ id: string; name: string }>> => {
-    await requirePermission({ action: "create", resource: "service" });
-    const rows = await db.query.registries.findMany({
-      columns: { id: true, name: true },
-      orderBy: desc(registries.createdAt),
-    });
-    return rows;
-  }
+  async (): Promise<Array<{ id: string; name: string }>> =>
+    runRead({
+      permission: { action: "create", resource: "service" },
+      read: async () => {
+        const rows = await db.query.registries.findMany({
+          columns: { id: true, name: true },
+          orderBy: desc(registries.createdAt),
+        });
+        return rows;
+      },
+    })
 );
 
 export const setServiceRegistry = createServerFn({ method: "POST" })

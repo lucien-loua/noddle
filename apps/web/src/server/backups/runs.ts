@@ -16,7 +16,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission, runGuarded } from "@/lib/permission.server";
+import { runGuarded, runRead } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -108,22 +108,26 @@ export const triggerBackup = createServerFn({ method: "POST" })
 
 export const listBackupObjects = createServerFn({ method: "GET" })
   .validator(listBackupObjectsSchema)
-  .handler(async ({ data }): Promise<BackupObjectRow[]> => {
-    await requirePermission({ action: "restore", resource: "backup" });
-
-    const { destination } = await resolveDestination(
-      db,
-      env.appKey,
-      data.destinationId
-    );
-    // Destination prefix is already applied inside listObjects; pass only
-    // the optional extra path from the picker.
-    const listed = await listObjects(
-      { ...destination, prefix: destination.prefix },
-      { prefix: data.prefix }
-    );
-    return listed;
-  });
+  .handler(
+    async ({ data }): Promise<BackupObjectRow[]> =>
+      runRead({
+        permission: { action: "restore", resource: "backup" },
+        read: async () => {
+          const { destination } = await resolveDestination(
+            db,
+            env.appKey,
+            data.destinationId
+          );
+          // Destination prefix is already applied inside listObjects; pass only
+          // the optional extra path from the picker.
+          const listed = await listObjects(
+            { ...destination, prefix: destination.prefix },
+            { prefix: data.prefix }
+          );
+          return listed;
+        },
+      })
+  );
 
 /**
  * Deletes one completed/failed run and its S3 object.

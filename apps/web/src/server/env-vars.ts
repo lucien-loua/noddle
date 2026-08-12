@@ -13,7 +13,7 @@ import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
-import { requirePermission, runGuarded } from "@/lib/permission.server";
+import { runGuarded, runRead } from "@/lib/permission.server";
 
 /**
  * WHO owns these variables: a service, or a database.
@@ -61,37 +61,35 @@ export interface EnvVarView {
 
 export const getEnvVars = createServerFn({ method: "GET" })
   .validator((data: EnvVarTarget) => envVarTargetSchema.parse(data))
-  .handler(async ({ data }): Promise<EnvVarView[]> => {
-    // GET, so out of reach of verify-permissions.ts (which only enumerates
-    // mutating functions) — this was the real hole: any logged-in account,
-    // including an operator, could read non-secret variables in the clear.
-    // `isSecret` only protects the values, not the LIST, and
-    // permissions.ts is explicit on this point: "someone who only needs to
-    // be able to deploy shouldn't get to see them".
-    await requirePermission({ action: "read", resource: "envVar" });
+  .handler(
+    async ({ data }): Promise<EnvVarView[]> =>
+      runRead({
+        permission: { action: "read", resource: "envVar" },
+        read: async () => {
+          const rows = await db.query.envVars.findMany({
+            orderBy: envVars.key,
+            where: ownedBy(data),
+          });
 
-    const rows = await db.query.envVars.findMany({
-      orderBy: envVars.key,
-      where: ownedBy(data),
-    });
-
-    return rows.map((row) => ({
-      id: row.id,
-      isSecret: row.isSecret,
-      key: row.key,
-      // Non-secret values are encrypted at rest too — a single code path,
-      // so no oversight is possible — but nothing forbids returning them to
-      // an authenticated administrator. It's `isSecret` that decides, not
-      // the storage mode.
-      value: row.isSecret
-        ? null
-        : decryptSecret(
-            row.valueEncrypted,
-            env.appKey,
-            secretContext.envVar(row.id)
-          ),
-    }));
-  });
+          return rows.map((row) => ({
+            id: row.id,
+            isSecret: row.isSecret,
+            key: row.key,
+            // Non-secret values are encrypted at rest too — a single code path,
+            // so no oversight is possible — but nothing forbids returning them to
+            // an authenticated administrator. It's `isSecret` that decides, not
+            // the storage mode.
+            value: row.isSecret
+              ? null
+              : decryptSecret(
+                  row.valueEncrypted,
+                  env.appKey,
+                  secretContext.envVar(row.id)
+                ),
+          }));
+        },
+      })
+  );
 
 const envVarWriteSchema = z.object({
   isSecret: z.boolean(),

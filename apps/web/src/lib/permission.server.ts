@@ -52,6 +52,39 @@ export async function requirePermission(
   return session;
 }
 
+/**
+ * The one way to run a restricted GET server function.
+ *
+ * Same permission gate as `runGuarded`, without the mutation audit line:
+ * logging every successful read of env vars or the audit log would bury
+ * the signal those screens exist to show. Denials still go through
+ * `requirePermission` → `record`.
+ *
+ * Use `requireSession` alone when every signed-in role may see the data
+ * (dashboard rows, deployment history). Use `runRead` when at least one
+ * role lacks the permission — the verify-permissions restricted markers
+ * exist to catch the gap between those two.
+ */
+export async function runRead<TRow = undefined, TResult = void>(opts: {
+  load?: () => Promise<TRow | null | undefined>;
+  notFoundMessage?: string;
+  permission: Permission;
+  read: (ctx: { row: TRow; session: Session }) => TResult | Promise<TResult>;
+}): Promise<TResult> {
+  const session = await requirePermission(opts.permission);
+
+  let row = undefined as TRow;
+  if (opts.load) {
+    const loaded = (await opts.load()) ?? null;
+    if (loaded === null) {
+      throw new Error(opts.notFoundMessage ?? "not found");
+    }
+    row = loaded;
+  }
+
+  return await opts.read({ row, session });
+}
+
 export interface AuditTarget {
   id: string;
   name?: string | null;

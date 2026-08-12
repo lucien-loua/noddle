@@ -9,7 +9,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { requirePermission, runGuarded } from "@/lib/permission.server";
+import { runGuarded, runRead } from "@/lib/permission.server";
 
 export interface SshKeyView {
   createdAt: string;
@@ -25,28 +25,26 @@ export interface SshKeyView {
 }
 
 export const getSshKeys = createServerFn({ method: "GET" }).handler(
-  async (): Promise<SshKeyView[]> => {
-    // `requirePermission` and not `requireSession`, unlike the other reads:
-    // here the test "does a role exist that does NOT have this permission"
-    // answers YES — `viewer` and `deployer` don't have it. So it's a real
-    // check, not a gratuitous audit line.
-    await requirePermission({ action: "read", resource: "sshKey" });
+  async (): Promise<SshKeyView[]> =>
+    runRead({
+      permission: { action: "read", resource: "sshKey" },
+      read: async () => {
+        const rows = await db.query.sshKeys.findMany({
+          orderBy: desc(sshKeys.createdAt),
+        });
+        const machines = await db.query.servers.findMany({
+          columns: { sshKeyId: true },
+        });
 
-    const rows = await db.query.sshKeys.findMany({
-      orderBy: desc(sshKeys.createdAt),
-    });
-    const machines = await db.query.servers.findMany({
-      columns: { sshKeyId: true },
-    });
-
-    return rows.map((row) => ({
-      createdAt: row.createdAt.toISOString(),
-      id: row.id,
-      name: row.name,
-      publicKey: row.publicKey,
-      serverCount: machines.filter((m) => m.sshKeyId === row.id).length,
-    }));
-  }
+        return rows.map((row) => ({
+          createdAt: row.createdAt.toISOString(),
+          id: row.id,
+          name: row.name,
+          publicKey: row.publicKey,
+          serverCount: machines.filter((m) => m.sshKeyId === row.id).length,
+        }));
+      },
+    })
 );
 
 /**

@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "verify:unit": "bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/backup/src/verify.ts && bun run packages/proxy-config/src/verify.ts && bun run packages/ssh-credentials/src/verify.ts && bun run packages/compose-engine/src/verify.ts && bun run packages/database-spec/src/verify.ts && bun run packages/deploy-contract/src/verify.ts && bun run packages/notifier/src/verify.ts && bun run apps/worker/src/verify-dispatch.ts && bun run apps/web/src/verify-permissions.ts && bun run apps/web/src/verify-webhook-payloads.ts && bun run apps/web/src/verify-backup-subject.ts"
+    "verify:unit": "bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/backup/src/verify.ts && bun run packages/proxy-config/src/verify.ts && bun run packages/ssh-credentials/src/verify.ts && bun run packages/compose-engine/src/verify.ts && bun run packages/database-spec/src/verify.ts && bun run packages/deploy-contract/src/verify.ts && bun run packages/notifier/src/verify.ts && bun run apps/worker/src/verify-dispatch.ts && bun run apps/web/src/verify-permissions.ts && bun run apps/web/src/verify-run-read.ts && bun run apps/web/src/verify-webhook-payloads.ts && bun run apps/web/src/verify-backup-subject.ts"
   },
   "type": "module",
   "workspaces": {
