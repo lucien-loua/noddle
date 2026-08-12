@@ -15,9 +15,10 @@ import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { databaseBackupSubject } from "@/lib/backup-subject";
-import { errorMessage, errorMessage } from "@/lib/format";
-import { mutations,/mutations lib/ut
-ls";mutationsonfig } from "@/server/backups";
+import { errorMessage } from "@/lib/format";
+import { mutations } from "@/lib/mutations";
+import { cn } from "@/lib/utils";
+import { type BackupConfigRow, deleteBackupConfig } from "@/server/backups";
 
 export function BackupConfigCard({
   canCreate,
