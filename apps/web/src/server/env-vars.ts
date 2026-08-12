@@ -4,7 +4,7 @@ import {
   encryptSecret,
   isRetainedSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import { ENGINE_ENV_PREFIX } from "@noddle/shared/database-engines";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
 import { createServerFn } from "@tanstack/react-start";

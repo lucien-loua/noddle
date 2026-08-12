@@ -1,10 +1,6 @@
 // bun run packages/ssh-credentials/src/verify.ts
-import {
-  encryptSecret,
-  loadAppKey,
-  secretContext,
-} from "@noddle/shared/crypto";
-import { check, expectThrows, runVerify } from "@noddle/shared/verify-harness";
+import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
+import { check, expectThrows, runVerify } from "@noddle/testing";
 import { credentialsFromKey } from "./index.ts";
 
 const KEY = loadAppKey(Buffer.alloc(32).toString("base64"));

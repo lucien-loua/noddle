@@ -1,12 +1,12 @@
 import type { BackupDestination } from "@noddle/backup-store";
 import { backupObjectKey, volumeBackupObjectKey } from "@noddle/backup-store";
-import type { Database } from "@noddle/db";
-import { s3Destinations } from "@noddle/db/schema";
 import {
   decryptSecret,
   resolveRetainedSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
+import type { Database } from "@noddle/db";
+import { s3Destinations } from "@noddle/db/schema";
 import type { DatabaseEngine } from "@noddle/shared/database-engines";
 import { eq } from "drizzle-orm";
 

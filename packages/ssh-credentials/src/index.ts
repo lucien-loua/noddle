@@ -1,6 +1,6 @@
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { sshKeys } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import type { ServerCredentials } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 

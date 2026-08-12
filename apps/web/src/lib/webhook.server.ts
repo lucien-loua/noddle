@@ -1,15 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-
-function timingSafeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  // A different length would already leak information through
-  // `timingSafeEqual` itself, which requires buffers of the same length.
-  if (bufA.length !== bufB.length) {
-    return false;
-  }
-  return timingSafeEqual(bufA, bufB);
-}
+import { createHmac } from "node:crypto";
+import { safeEqual } from "@noddle/crypto";
 
 export function verifyWebhookSignature(
   headers: Headers,
@@ -19,12 +9,12 @@ export function verifyWebhookSignature(
   const githubSignature = headers.get("x-hub-signature-256");
   if (githubSignature) {
     const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
-    return timingSafeCompare(expected, githubSignature);
+    return safeEqual(expected, githubSignature);
   }
 
   const gitlabToken = headers.get("x-gitlab-token");
   if (gitlabToken) {
-    return timingSafeCompare(gitlabToken, secret);
+    return safeEqual(gitlabToken, secret);
   }
 
   return false;

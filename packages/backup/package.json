@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@noddle/backup-store": "workspace:*",
+    "@noddle/crypto": "workspace:*",
     "@noddle/db": "workspace:*",
     "@noddle/shared": "workspace:*",
     "croner": "^10.0.1",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

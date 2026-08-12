@@ -20,6 +20,7 @@
         "@fontsource-variable/inter": "^5.3.0",
         "@noddle/backup": "workspace:*",
         "@noddle/backup-store": "workspace:*",
+        "@noddle/crypto": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
@@ -54,6 +55,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
         "@tailwindcss/vite": "catalog:",
         "@types/d3-scale": "catalog:",
@@ -71,6 +73,7 @@
         "@noddle/backup-store": "workspace:*",
         "@noddle/build-engine": "workspace:*",
         "@noddle/compose-engine": "workspace:*",
+        "@noddle/crypto": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
@@ -88,6 +91,7 @@
         "yaml": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -95,12 +99,14 @@
       "name": "@noddle/backup",
       "dependencies": {
         "@noddle/backup-store": "workspace:*",
+        "@noddle/crypto": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/shared": "workspace:*",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -131,6 +137,14 @@
         "yaml": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/crypto": {
+      "name": "@noddle/crypto",
+      "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -140,6 +154,7 @@
         "@noddle/shared": "workspace:*",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -157,29 +172,25 @@
     "packages/deploy-contract": {
       "name": "@noddle/deploy-contract",
       "dependencies": {
-        "@noddle/shared": "workspace:*",
         "bullmq": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/notifier": {
       "name": "@noddle/notifier",
-      "dependencies": {
-        "@noddle/shared": "workspace:*",
-      },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/proxy-config": {
       "name": "@noddle/proxy-config",
-      "dependencies": {
-        "@noddle/shared": "workspace:*",
-      },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -199,18 +210,20 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/ssh-credentials": {
       "name": "@noddle/ssh-credentials",
       "dependencies": {
+        "@noddle/crypto": "workspace:*",
         "@noddle/db": "workspace:*",
-        "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {
+        "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -233,6 +246,12 @@
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
       },
+      "devDependencies": {
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/testing": {
+      "name": "@noddle/testing",
       "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
       },
@@ -573,6 +592,8 @@
 
     "@noddle/compose-engine": ["@noddle/compose-engine@workspace:packages/compose-engine"],
 
+    "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
+
     "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
@@ -592,6 +613,8 @@
     "@noddle/ssh-executor": ["@noddle/ssh-executor@workspace:packages/ssh-executor"],
 
     "@noddle/swarm-ops": ["@noddle/swarm-ops@workspace:packages/swarm-ops"],
+
+    "@noddle/testing": ["@noddle/testing@workspace:packages/testing"],
 
     "@noddle/tsconfig": ["@noddle/tsconfig@workspace:packages/tsconfig"],
 

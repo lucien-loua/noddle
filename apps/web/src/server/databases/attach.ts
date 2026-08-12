@@ -3,7 +3,7 @@ import {
   decryptSecret,
   encryptSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";

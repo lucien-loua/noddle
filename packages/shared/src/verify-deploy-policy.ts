@@ -1,4 +1,6 @@
 // bun run packages/shared/src/verify-deploy-policy.ts
+
+import { check, runVerify } from "@noddle/testing";
 import {
   DeployPolicy,
   httpHealthcheckTest,
@@ -9,7 +11,6 @@ import {
   renderDockerodeUpdateConfig,
   SECOND_NS,
 } from "#deploy-policy";
-import { check, runVerify } from "#verify-harness";
 
 await runVerify("deploy policy renderers", () => {
   check("ADR-0012 monitor is 45s", MONITOR_SECONDS === 45);

@@ -1,6 +1,6 @@
 // bun run packages/backup/src/verify.ts
 // node packages/backup/src/verify.ts
-import { check, expectThrows, runVerify } from "@noddle/shared/verify-harness";
+import { check, expectThrows, runVerify } from "@noddle/testing";
 import {
   BACKUP_EXTENSION,
   buildBackupInsert,

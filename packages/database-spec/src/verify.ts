@@ -1,5 +1,5 @@
 // bun run packages/database-spec/src/verify.ts
-import { check, runVerify } from "@noddle/shared/verify-harness";
+import { check, runVerify } from "@noddle/testing";
 import { ENGINE_SPECS, reservedEnvKeys, secretPathFor } from "./index.ts";
 
 await runVerify("database-spec", () => {

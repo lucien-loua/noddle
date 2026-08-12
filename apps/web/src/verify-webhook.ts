@@ -29,7 +29,7 @@ import {
   encryptSecret,
   loadAppKey,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import { Queue } from "bullmq";
 import { eq, isNotNull } from "drizzle-orm";
 import IORedis from "ioredis";

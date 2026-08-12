@@ -17,7 +17,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import {
   connect,

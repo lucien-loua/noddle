@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { services, stacks } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

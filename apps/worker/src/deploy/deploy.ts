@@ -5,6 +5,7 @@ import {
   ensureCappedBuilder,
   fetchSource,
 } from "@noddle/build-engine";
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import {
   deploymentLogs,
@@ -18,7 +19,6 @@ import {
   type RegistryConfig,
   registryImageTag,
 } from "@noddle/registry";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";

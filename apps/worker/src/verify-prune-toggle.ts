@@ -27,7 +27,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createDatabase } from "@noddle/db";
 import { serverDiskUsage, servers } from "@noddle/db/schema";
-import { loadAppKey } from "@noddle/shared/crypto";
+import { loadAppKey } from "@noddle/crypto";
 import {
   connect,
   disconnect,

@@ -15,6 +15,7 @@
     "@noddle/shared": "workspace:*"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

@@ -1,5 +1,5 @@
 import { servers, sshKeys } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   deleteSshKeySchema,
   sshKeyInputSchema,

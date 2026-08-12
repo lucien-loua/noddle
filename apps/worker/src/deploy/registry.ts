@@ -6,7 +6,7 @@ import {
   REGISTRY_USER,
   type RegistryConfig,
 } from "@noddle/registry";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
   type DockerApi,
   disconnect,

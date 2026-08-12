@@ -4,7 +4,7 @@ import {
   encryptSecret,
   resolveRetainedSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import {
   registryIdSchema,
   registrySchema,

@@ -1,5 +1,5 @@
 import { databases } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import { DATABASE_PORT } from "@noddle/shared/database-engines";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";

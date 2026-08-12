@@ -8,7 +8,7 @@ import {
   ENGINE_SPECS,
   passwordChangeFor,
 } from "@noddle/database-spec";
-import { check, runVerify } from "#verify-harness";
+import { check, runVerify } from "@noddle/testing";
 
 const REPO = join(import.meta.dirname, "../..");
 

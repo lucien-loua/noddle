@@ -9,7 +9,7 @@
 import type { Database } from "@noddle/db";
 import { sshKeys } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { eq } from "drizzle-orm";
 import { createDeployContext, type DeployContext } from "#runtime-context";
 

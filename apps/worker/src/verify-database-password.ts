@@ -9,7 +9,7 @@ import {
   decryptSecret,
   encryptSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import {
   DATABASE_PORT,
   type DatabaseEngine,

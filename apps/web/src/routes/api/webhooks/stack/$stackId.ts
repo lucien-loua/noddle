@@ -1,5 +1,5 @@
 import { stacks } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

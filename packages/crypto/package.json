@@ -1,12 +1,12 @@
 {
-  "name": "@noddle/proxy-config",
+  "name": "@noddle/crypto",
   "private": true,
   "type": "module",
-  "imports": {
-    "#*": "./src/*.ts"
-  },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "scripts": {
+    "verify": "bun run src/verify.ts"
   },
   "devDependencies": {
     "@noddle/testing": "workspace:*",

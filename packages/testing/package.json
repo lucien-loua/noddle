@@ -1,15 +1,11 @@
 {
-  "name": "@noddle/proxy-config",
+  "name": "@noddle/testing",
   "private": true,
   "type": "module",
-  "imports": {
-    "#*": "./src/*.ts"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

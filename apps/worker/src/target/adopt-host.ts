@@ -10,7 +10,7 @@ import {
   encryptSecret,
   loadAppKey,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { publicKeyOf } from "@noddle/ssh-executor/keys";
 import { getSwarmNodeId } from "@noddle/swarm-ops";

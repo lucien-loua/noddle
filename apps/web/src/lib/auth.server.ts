@@ -1,6 +1,7 @@
 // biome-ignore lint/performance/noNamespaceImport: drizzleAdapter wants the schema object
+
+import { deriveSubkey } from "@noddle/crypto";
 import * as schema from "@noddle/db/schema";
-import { deriveSubkey } from "@noddle/shared/crypto";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";

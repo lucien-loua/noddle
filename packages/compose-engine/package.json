@@ -17,6 +17,7 @@
     "yaml": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

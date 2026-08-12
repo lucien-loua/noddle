@@ -6,7 +6,6 @@
     "#*": "./src/*.ts"
   },
   "exports": {
-    "./crypto": "./src/crypto.ts",
     "./database-engine-types": "./src/database-engine-types.ts",
     "./database-engines": "./src/database-engines.ts",
     "./deploy-policy": "./src/deploy-policy.ts",
@@ -16,14 +15,14 @@
     "./password": "./src/password.ts",
     "./swarm-names": "./src/swarm-names.ts",
     "./workload": "./src/workload.ts",
-    "./validation/*": "./src/validation/*.ts",
-    "./verify-harness": "./src/verify-harness.ts"
+    "./validation/*": "./src/validation/*.ts"
   },
   "dependencies": {
     "@noddle/database-spec": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

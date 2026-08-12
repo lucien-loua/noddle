@@ -1,4 +1,6 @@
 // bun run packages/shared/src/verify-lifecycle.ts
+
+import { check, expectThrows, runVerify } from "@noddle/testing";
 import {
   assertTransition,
   canTransition,
@@ -10,7 +12,6 @@ import {
   markRunning,
   settle,
 } from "#lifecycle";
-import { check, expectThrows, runVerify } from "#verify-harness";
 
 await runVerify("lifecycle transitions", () => {
   check(

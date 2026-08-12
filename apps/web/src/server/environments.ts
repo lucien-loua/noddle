@@ -10,7 +10,7 @@ import {
   decryptSecret,
   encryptSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import {
   createEnvironmentSchema,

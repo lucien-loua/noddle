@@ -19,7 +19,7 @@ import {
   services,
   volumeBackups,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,

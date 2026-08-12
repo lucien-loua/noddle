@@ -35,7 +35,7 @@ import {
   decryptSecret,
   encryptSecret,
   secretContext,
-} from "@noddle/shared/crypto";
+} from "@noddle/crypto";
 import {
   connect,
   disconnect,

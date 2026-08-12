@@ -1,13 +1,13 @@
 // bun run packages/shared/src/verify-workload.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { check, runVerify } from "@noddle/testing";
 import {
   MONITOR_SECONDS,
   renderComposeUpdateConfig,
   renderDockerodeUpdateConfig,
   SECOND_NS,
 } from "#deploy-policy";
-import { check, runVerify } from "#verify-harness";
 import {
   composeWorkloadDeploy,
   dockerodeWorkloadPolicy,

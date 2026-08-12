@@ -1,14 +1,10 @@
+import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import {
   environments,
   envVars,
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import {
-  decryptSecret,
-  encryptSecret,
-  secretContext,
-} from "@noddle/shared/crypto";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";

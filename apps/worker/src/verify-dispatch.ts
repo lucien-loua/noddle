@@ -4,7 +4,7 @@ import type {
   JobKind,
   PayloadOf,
 } from "@noddle/deploy-contract";
-import { check, runVerify, suite } from "@noddle/shared/verify-harness";
+import { check, runVerify, suite } from "@noddle/testing";
 import { dispatch, type Handlers, handlerModules } from "#handlers";
 import type { WorkerDeps } from "#runtime-context";
 

@@ -13,7 +13,7 @@ import {
   s3Destinations,
   servers,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   connect,
   disconnect,

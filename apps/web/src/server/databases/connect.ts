@@ -1,5 +1,5 @@
 import { databases, environments, projects } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,

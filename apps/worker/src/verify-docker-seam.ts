@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { servers } from "@noddle/db/schema";
-import { check, runVerify } from "@noddle/shared/verify-harness";
+import { check, runVerify } from "@noddle/testing";
 import type { SshClient } from "@noddle/ssh-executor";
 import { withDeployClients } from "#job-run";
 import { createDeployContext } from "#runtime-context";

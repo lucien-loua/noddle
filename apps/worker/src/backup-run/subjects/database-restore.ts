@@ -1,7 +1,7 @@
 import { pipeline } from "node:stream/promises";
 import { buildBackupInsert } from "@noddle/backup";
 import { backups, databases, type servers } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
   execArgv,
   execStream,
@@ -305,13 +305,7 @@ const RESTORE_SPECS: Record<
   DatabaseRow["engine"],
   (opts: RestoreApplyOpts) => Promise<void>
 > = {
-  mariadb: async ({
-    body,
-    buildClient,
-    containerId,
-    database,
-    password,
-  }) => {
+  mariadb: async ({ body, buildClient, containerId, database, password }) => {
     const databaseName =
       database.databaseName ?? database.rootUser ?? database.name;
     await restoreMysqlFamily(buildClient, {

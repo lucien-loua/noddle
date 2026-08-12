@@ -1,4 +1,4 @@
-import { loadAppKey } from "@noddle/shared/crypto";
+import { loadAppKey } from "@noddle/crypto";
 
 function required(name: string): string {
   const value = process.env[name];

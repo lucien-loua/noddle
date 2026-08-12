@@ -32,7 +32,7 @@ import {
   services,
   stacks,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";

@@ -15,7 +15,7 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/shared/crypto";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";

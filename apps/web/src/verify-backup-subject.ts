@@ -1,5 +1,5 @@
 // bun run apps/web/src/verify-backup-subject.ts
-import { check, expectThrows, runVerify } from "@noddle/shared/verify-harness";
+import { check, expectThrows, runVerify } from "@noddle/testing";
 import {
   backupSubjectSchema,
   backupSubjectScopeId,

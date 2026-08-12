@@ -1,9 +1,9 @@
 /**
  * Shared interface for every `verify*.ts` script.
  *
- * Counting, exit policy, target resolution and cleanup live here so a
- * forgotten `else` cannot silently pass, and so VM-free suites can run in
- * CI under one command.
+ * Counting, exit policy and cleanup live here so a forgotten `else`
+ * cannot silently pass, and so VM-free suites can run in CI under one
+ * command.
  */
 
 let pass = 0;
@@ -112,15 +112,6 @@ export async function suite(
  */
 export function cleanup(fn: () => void | Promise<void>): void {
   cleanups.push(fn);
-}
-
-/**
- * Resolve the spike / verify target host once.
- * Override with `NODDLE_VERIFY_HOST`; default matches the historical
- * hardcoded value used across worker verifies.
- */
-export function target(): { host: string } {
-  return { host: process.env.NODDLE_VERIFY_HOST ?? "192.168.252.3" };
 }
 
 export function counts(): { fail: number; pass: number } {

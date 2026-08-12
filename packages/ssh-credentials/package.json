@@ -12,12 +12,13 @@
     "verify": "bun run src/verify.ts"
   },
   "dependencies": {
+    "@noddle/crypto": "workspace:*",
     "@noddle/db": "workspace:*",
-    "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

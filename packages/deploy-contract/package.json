@@ -11,11 +11,11 @@
     "./schedule": "./src/schedule.ts"
   },
   "dependencies": {
-    "@noddle/shared": "workspace:*",
     "bullmq": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"
   }
 }

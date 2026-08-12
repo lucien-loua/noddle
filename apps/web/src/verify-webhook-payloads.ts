@@ -5,7 +5,7 @@
 // preview runs a pull request's code with the parent service's variables;
 // getting that boolean wrong hands production secrets to anyone who opens
 // a PR.
-import { check, runVerify } from "@noddle/shared/verify-harness";
+import { check, runVerify } from "@noddle/testing";
 import { parseWebhookPullRequest } from "@/lib/webhook.server";
 
 const gh = (action: string, sameRepo = true) =>
