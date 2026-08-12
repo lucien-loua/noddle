@@ -12,6 +12,7 @@ import {
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
+import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
 import { type DockerApi, execArgv } from "@noddle/ssh-executor";
 import {
   ensureOverlayNetwork,
@@ -207,71 +208,6 @@ function resolveHealthcheck(
   return out;
 }
 
-function resolveRestartPolicy(
-  restartOverride: DatabaseSwarmSettings["restartPolicy"]
-) {
-  const defaultRestart = {
-    Condition: "on-failure" as const,
-    MaxAttempts: 3,
-    Window: 120 * SECOND_NS,
-  };
-  if (isNullish(restartOverride)) {
-    return defaultRestart;
-  }
-  const out: {
-    Condition?: "any" | "none" | "on-failure";
-    Delay?: number;
-    MaxAttempts?: number;
-    Window?: number;
-  } = {};
-  if (restartOverride.Condition) {
-    out.Condition = restartOverride.Condition;
-  }
-  if (!isNullish(restartOverride.Delay)) {
-    out.Delay = restartOverride.Delay;
-  }
-  if (!isNullish(restartOverride.MaxAttempts)) {
-    out.MaxAttempts = restartOverride.MaxAttempts;
-  }
-  if (!isNullish(restartOverride.Window)) {
-    out.Window = restartOverride.Window;
-  }
-  return out;
-}
-
-function sanitizeServiceUpdateConfig(
-  config:
-    | DatabaseSwarmSettings["updateConfig"]
-    | DatabaseSwarmSettings["rollbackConfig"]
-) {
-  if (!config) {
-    return;
-  }
-  const out: Record<string, number | string> = {};
-  if (!isNullish(config.Delay)) {
-    out.Delay = config.Delay;
-  }
-  if (config.FailureAction) {
-    out.FailureAction = config.FailureAction;
-  }
-  if (!isNullish(config.MaxFailureRatio)) {
-    out.MaxFailureRatio = config.MaxFailureRatio;
-  }
-  if (!isNullish(config.Monitor)) {
-    out.Monitor = config.Monitor;
-  }
-  if (config.Order) {
-    out.Order = config.Order;
-  }
-  if (!isNullish(config.Parallelism)) {
-    out.Parallelism = config.Parallelism;
-  }
-  if (Object.keys(out).length === 0) {
-    return;
-  }
-  return out;
-}
-
 function buildEndpointSpec(opts: {
   endpointMode: "dnsrr" | "vip" | undefined;
   externalPort: number | null;
@@ -371,7 +307,6 @@ function databaseServiceSpec(opts: {
     defaultHealthcheck,
     swarmSettings?.healthCheck
   );
-  const restartPolicy = resolveRestartPolicy(swarmSettings?.restartPolicy);
 
   const placement =
     swarmSettings?.placement ??
@@ -407,10 +342,11 @@ function databaseServiceSpec(opts: {
     targetPort: spec.port,
   });
 
-  const rollbackConfig = sanitizeServiceUpdateConfig(
-    swarmSettings?.rollbackConfig
-  );
-  const updateConfig = sanitizeServiceUpdateConfig(swarmSettings?.updateConfig);
+  const workloadPolicy = dockerodeWorkloadPolicy({
+    restartPolicy: swarmSettings?.restartPolicy,
+    rollbackConfig: swarmSettings?.rollbackConfig,
+    updateConfig: swarmSettings?.updateConfig,
+  });
 
   return {
     ...(Object.keys(endpointSpec).length > 0
@@ -420,8 +356,7 @@ function databaseServiceSpec(opts: {
     Mode: mode,
     Name: name,
     Networks: networks,
-    ...(rollbackConfig ? { RollbackConfig: rollbackConfig } : {}),
-    ...(updateConfig ? { UpdateConfig: updateConfig } : {}),
+    RollbackConfig: workloadPolicy.RollbackConfig,
     TaskTemplate: {
       ...(placement ? { Placement: placement } : {}),
       ContainerSpec: {
@@ -455,8 +390,9 @@ function databaseServiceSpec(opts: {
       ...(Object.keys(resourceSpec).length > 0
         ? { Resources: resourceSpec }
         : {}),
-      RestartPolicy: restartPolicy,
+      RestartPolicy: workloadPolicy.RestartPolicy,
     },
+    UpdateConfig: workloadPolicy.UpdateConfig,
   };
 }
 

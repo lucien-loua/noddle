@@ -2,10 +2,8 @@ import type { TraefikLabels } from "@noddle/proxy-config";
 import {
   MONITOR_SECONDS,
   renderDockerodeHttpHealthcheck,
-  renderDockerodeRestartPolicy,
-  renderDockerodeRollbackConfig,
-  renderDockerodeUpdateConfig,
 } from "@noddle/shared/deploy-policy";
+import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
 import type { DockerApi } from "@noddle/ssh-executor";
 
 export interface DeploySpec {
@@ -60,17 +58,13 @@ export type SwarmUpdateState =
   | (string & {});
 
 function serviceSpec(s: DeploySpec) {
+  const policy = dockerodeWorkloadPolicy();
   return {
     Labels: s.labels,
     Mode: { Replicated: { Replicas: 1 } },
     Name: s.serviceName,
     Networks: [{ Target: s.networkName }],
-    RollbackConfig: {
-      // `pause` and not `rollback`: a rollback that fails must not trigger a
-      // rollback of the rollback. We stop and let Noddle decide from its
-      // history. Numbers live in DeployPolicy (ADR-0012).
-      ...renderDockerodeRollbackConfig(),
-    },
+    RollbackConfig: policy.RollbackConfig,
     TaskTemplate: {
       // Absent (not `{ Constraints: [] }`) on a single node: an empty list
       // is already valid for the API, but the distinction stays more honest
@@ -88,13 +82,9 @@ function serviceSpec(s: DeploySpec) {
         Image: s.image,
       },
       Networks: [{ Target: s.networkName }],
-      RestartPolicy: renderDockerodeRestartPolicy(),
+      RestartPolicy: policy.RestartPolicy,
     },
-    UpdateConfig: {
-      // The health gate: if the task never becomes healthy, Swarm rolls
-      // back on its own and the old version never stopped serving.
-      ...renderDockerodeUpdateConfig(),
-    },
+    UpdateConfig: policy.UpdateConfig,
   };
 }
 

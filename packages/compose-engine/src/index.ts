@@ -1,10 +1,6 @@
 import { routeLabels } from "@noddle/proxy-config";
-import {
-  renderComposeHttpHealthcheck,
-  renderComposeRestartPolicy,
-  renderComposeRollbackConfig,
-  renderComposeUpdateConfig,
-} from "@noddle/shared/deploy-policy";
+import { renderComposeHttpHealthcheck } from "@noddle/shared/deploy-policy";
+import { composeWorkloadDeploy } from "@noddle/shared/workload";
 import { parse } from "yaml";
 
 /** Typed just enough for what Noddle reads and rewrites. */
@@ -91,17 +87,15 @@ export function injectDeployConfig(
     }
     const deploy = { ...(svc.deploy ?? {}) } as Record<string, unknown>;
 
+    const deployPolicy = composeWorkloadDeploy();
     if (opts.placementNodeId) {
       deploy.placement = {
         constraints: [`node.id==${opts.placementNodeId}`],
       };
     }
-    deploy.update_config = renderComposeUpdateConfig();
-    // `pause`, not `rollback`: a rollback that fails must not trigger
-    // another one — same reason as the single-service path. Numbers live
-    // in DeployPolicy (ADR-0012).
-    deploy.rollback_config = renderComposeRollbackConfig();
-    deploy.restart_policy = renderComposeRestartPolicy();
+    deploy.update_config = deployPolicy.update_config;
+    deploy.rollback_config = deployPolicy.rollback_config;
+    deploy.restart_policy = deployPolicy.restart_policy;
     svc.deploy = deploy;
   }
 

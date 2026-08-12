@@ -3,7 +3,8 @@
  *
  * Swarm (dockerode), Compose YAML and database specs used to restate the
  * same rule in two notations. Drift between them was invisible until a
- * deploy hung. Values live here; callers only pick a renderer.
+ * deploy hung. Values live here; callers pick a renderer or use
+ * `@noddle/shared/workload` to apply them in each builder.
  */
 
 export const MONITOR_SECONDS = 45;
