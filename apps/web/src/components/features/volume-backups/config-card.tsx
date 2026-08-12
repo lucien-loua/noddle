@@ -14,12 +14,11 @@ import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
+import { mutations } from "@/lib/mutations";
 import { cn } from "@/lib/utils";
 import {
   deleteVolumeBackupConfig,
-  triggerVolumeBackup,
   type VolumeBackupConfigRow,
 } from "@/server/volume-backups";
 
@@ -37,19 +36,9 @@ export function VolumeBackupConfigCard({
   onHistory: () => void;
 }) {
   const queryClient = useQueryClient();
-  const run = useMutation({
-    mutationFn: () => triggerVolumeBackup({ data: { configId: config.id } }),
-    onError: (err) =>
-      toast.add({
-        description: errorMessage(err, "backup failed"),
-        title: "Could not queue volume backup",
-        type: "error",
-      }),
-    onSuccess: async () => {
-      toast.add({ title: "Volume backup queued", type: "success" });
-      await cache.volumeBackups(queryClient, config.serviceId, config.id);
-    },
-  });
+  const run = useMutation(
+    mutations.triggerVolumeBackup(queryClient, config.serviceId, config.id)
+  );
   const remove = useMutation({
     mutationFn: () =>
       deleteVolumeBackupConfig({ data: { configId: config.id } }),
@@ -108,7 +97,23 @@ export function VolumeBackupConfigCard({
             <Button
               aria-label="Run backup now"
               disabled={run.isPending}
-              onClick={() => run.mutate()}
+              onClick={() => {
+                run
+                  .mutateAsync()
+                  .then(() => {
+                    toast.add({
+                      title: "Volume backup queued",
+                      type: "success",
+                    });
+                  })
+                  .catch((err) => {
+                    toast.add({
+                      description: errorMessage(err, "backup failed"),
+                      title: "Could not queue volume backup",
+                      type: "error",
+                    });
+                  });
+              }}
               size="icon-sm"
               variant="ghost"
             >

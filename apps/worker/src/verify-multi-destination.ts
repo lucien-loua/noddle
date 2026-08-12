@@ -22,7 +22,8 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
-import { legacyDatabaseServiceName, runBackup } from "#backup";
+import { runBackup } from "#backup";
+import { legacyDatabaseServiceName } from "#backup-run/subjects/database";
 import { provisionDatabase } from "#database";
 import { seedSshKey } from "#verify-seed";
 

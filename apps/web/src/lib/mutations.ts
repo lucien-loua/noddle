@@ -9,13 +9,18 @@
  */
 import { mutationOptions, type QueryClient } from "@tanstack/react-query";
 import type { DraftVar } from "@/components/features/env-vars/table";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
-import { deleteBackup, triggerBackup } from "@/server/backups";
+import {
+  deleteBackup,
+  deleteVolumeBackup,
+  triggerBackup,
+  triggerVolumeBackup,
+} from "@/server/backups";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { saveEnvVars } from "@/server/env-vars";
 import { addServer } from "@/server/servers";
 import { createSshKey } from "@/server/ssh-keys";
-import { deleteVolumeBackup } from "@/server/volume-backups";
 
 export type CreateSshKeyInput =
   | { mode: "generate"; name: string; type: "ed25519" | "rsa" }
@@ -48,6 +53,15 @@ export const mutations = {
       onSuccess: () => cache.backups(qc, databaseId, configId),
     }),
 
+  deleteBackupRun: (
+    qc: QueryClient,
+    subject: BackupSubject,
+    configId: string
+  ) =>
+    subject.kind === "database"
+      ? mutations.deleteBackup(qc, subject.databaseId, configId)
+      : mutations.deleteVolumeBackup(qc, subject.serviceId, configId),
+
   deleteVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
     mutationOptions({
       mutationFn: (backupId: string) =>
@@ -75,5 +89,20 @@ export const mutations = {
     mutationOptions({
       mutationFn: () => triggerBackup({ data: { configId } }),
       onSuccess: () => cache.backups(qc, databaseId, configId),
+    }),
+
+  triggerBackupRun: (
+    qc: QueryClient,
+    subject: BackupSubject,
+    configId: string
+  ) =>
+    subject.kind === "database"
+      ? mutations.triggerBackup(qc, subject.databaseId, configId)
+      : mutations.triggerVolumeBackup(qc, subject.serviceId, configId),
+
+  triggerVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
+    mutationOptions({
+      mutationFn: () => triggerVolumeBackup({ data: { configId } }),
+      onSuccess: () => cache.volumeBackups(qc, serviceId, configId),
     }),
 } as const;

@@ -4,7 +4,7 @@ import {
 } from "@noddle/shared/validation/backup";
 import { dockerVolumeNameSchema } from "@noddle/shared/validation/volume-backup";
 import { z } from "zod";
-import { DEFAULT_CRON } from "@/components/features/backups/schedule";
+import { DEFAULT_CRON } from "@/components/features/backup-shared/schedule";
 import type { VolumeBackupConfigRow } from "@/server/volume-backups";
 
 const keepLatestCountFormSchema = z.string().refine(

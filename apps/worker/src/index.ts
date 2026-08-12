@@ -12,6 +12,8 @@ import { loadAppKey } from "@noddle/shared/crypto";
 import { UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
+import { recoverStaleDatabaseBackups } from "#backup-run/subjects/database";
+import { recoverStaleVolumeBackups } from "#backup-run/subjects/volume";
 import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
 import { loadRegistryConfig } from "#registry";
@@ -22,7 +24,6 @@ import type {
   WorkerDeps,
 } from "#runtime-context";
 import { schedules } from "#schedules";
-import { recoverStaleVolumeBackups } from "./volume/recover.ts";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -69,10 +70,12 @@ const deps: WorkerDeps = { build, ctx, route };
 const { enqueue: enqueueDeploy, queue: deployQueue } =
   createDeployQueue(connection);
 
-const recovered = await recoverStaleVolumeBackups(ctx);
+const recoveredVolume = await recoverStaleVolumeBackups(ctx);
+const recoveredDatabase = await recoverStaleDatabaseBackups(ctx);
+const recovered = recoveredVolume + recoveredDatabase;
 if (recovered > 0) {
   process.stderr.write(
-    `recovered ${recovered} stale volume backup(s) stuck in running\n`
+    `recovered ${recovered} stale backup(s) stuck in running (${recoveredDatabase} database, ${recoveredVolume} volume)\n`
   );
 }
 

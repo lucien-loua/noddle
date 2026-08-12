@@ -1,5 +1,5 @@
+import { DEFAULT_CRON } from "@/components/features/backup-shared/schedule";
 import type { BackupConfigRow } from "@/server/backups";
-import { DEFAULT_CRON } from "./schedule";
 
 export function configFormDefaults(
   editing: BackupConfigRow | null,

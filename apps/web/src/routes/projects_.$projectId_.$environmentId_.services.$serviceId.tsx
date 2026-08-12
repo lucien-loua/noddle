@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { BuildLogsDialog } from "@/components/build-logs-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
+import { BackupTab } from "@/components/features/backup-shared/backup-tab";
 import { ContainerLogs } from "@/components/features/database/database-logs";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ServiceBuild } from "@/components/features/services/service-build";
@@ -14,7 +15,6 @@ import { ServiceDeploySettings } from "@/components/features/services/service-de
 import { ServiceDomains } from "@/components/features/services/service-domains";
 import { ServiceProvider } from "@/components/features/services/service-provider";
 import { ServiceStatusLine } from "@/components/features/services/service-status-line";
-import { ServiceVolumeBackupsTab } from "@/components/features/services/service-volume-backups-tab";
 import { WebhookPanel } from "@/components/features/webhooks/panel";
 import { RelativeTime } from "@/components/relative-time";
 import { ServiceRegistry } from "@/components/service-registry";
@@ -625,11 +625,11 @@ function ServiceDetail() {
           </TabsContent>
 
           <TabsContent className={TAB_PANEL} value="volume-backups">
-            <ServiceVolumeBackupsTab
+            <BackupTab
               canCreate={canCreateVolumeBackup}
               canRestore={canRestoreVolumeBackup}
-              serviceId={service.id}
-              serviceName={service.name}
+              resourceName={service.name}
+              subject={{ kind: "volume", serviceId: service.id }}
             />
           </TabsContent>
 

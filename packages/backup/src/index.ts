@@ -10,6 +10,9 @@ import {
 import type { DatabaseEngine } from "@noddle/shared/database-engines";
 import { eq } from "drizzle-orm";
 
+export { isConfigDue } from "./schedule.ts";
+export { uploadedSize } from "./uploaded-size.ts";
+
 /**
  * Dump file extension for an engine.
  *

@@ -3,27 +3,12 @@
  * extracting every setState wrapper adds noise without shared children.
  */
 
-import { ArchiveIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { ArchiveIcon } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import { IconStack } from "@/components/icon-stack";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { ConfigsListBody } from "@/components/features/backup-shared/configs-list-body";
+import { NoDestinationEmpty } from "@/components/features/backup-shared/no-destination-empty";
+import { ScheduleActions } from "@/components/features/backup-shared/schedule-actions";
 import {
   Frame,
   FrameDescription,
@@ -31,7 +16,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
 import type { BackupConfigRow, DestinationRow } from "@/server/backups";
@@ -75,7 +59,9 @@ export function BackupPanel({
   }, [databaseId, queryClient]);
 
   if (destinations.length === 0) {
-    return <NoDestinationEmpty />;
+    return (
+      <NoDestinationEmpty description="Noddle needs somewhere to push dumps before a schedule can run. Add one under" />
+    );
   }
 
   const rows = configs.data ?? [];
@@ -93,10 +79,12 @@ export function BackupPanel({
             </FrameDescription>
           </div>
           {showHeaderActions ? (
-            <BackupActions
+            <ScheduleActions
               canRestore={canRestore}
+              createLabel="Add schedule"
               onCreate={() => setEditor("new")}
               onRestoreS3={() => setRestoreOpen(true)}
+              restoreLabel="Restore dump"
             />
           ) : null}
         </FrameHeader>
@@ -113,14 +101,18 @@ export function BackupPanel({
           ))
         ) : (
           <FramePanel>
-            <ConfigsBody
+            <ConfigsListBody
               canCreate={canCreate}
               canRestore={canRestore}
               configsLoading={configs.isLoading}
-              databaseName={databaseName}
+              createLabel="Add schedule"
+              emptyDescription={`Nothing dumps ${databaseName} on a cadence yet. Add a schedule, or restore from a dump already sitting in a destination.`}
+              emptyIcon={ArchiveIcon}
+              emptyTitle="No schedules yet"
               onCreate={() => setEditor("new")}
               onRestoreS3={() => setRestoreOpen(true)}
-              rows={rows}
+              restoreLabel="Restore dump"
+              rowCount={rows.length}
             />
           </FramePanel>
         )}
@@ -148,12 +140,17 @@ export function BackupPanel({
       {historyConfig ? (
         <BackupHistoryDialog
           canCreate={canCreate}
+          canRestore={canRestore}
           config={historyConfig}
           databaseId={databaseId}
           onOpenChange={(open) => {
             if (!open) {
               setHistoryConfig(null);
             }
+          }}
+          onRestore={(backup) => {
+            setHistoryConfig(null);
+            onRestore({ backup, kind: "run" });
           }}
           open
         />
@@ -172,129 +169,4 @@ export function BackupPanel({
       ) : null}
     </div>
   );
-}
-
-function NoDestinationEmpty() {
-  return (
-    <Empty>
-      <EmptyMedia>
-        <IconStack>
-          <ArchiveIcon className="size-5" weight="duotone" />
-        </IconStack>
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>No S3 destination</EmptyTitle>
-        <EmptyDescription>
-          Noddle needs somewhere to push dumps before a schedule can run. Add
-          one under{" "}
-          <Link className="text-foreground underline" to="/destinations">
-            S3 destinations
-          </Link>
-          .
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
-}
-
-function BackupActions({
-  canRestore,
-  onCreate,
-  onRestoreS3,
-}: {
-  canRestore: boolean;
-  onCreate: () => void;
-  onRestoreS3: () => void;
-}) {
-  if (!canRestore) {
-    return (
-      <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
-        Add schedule
-      </Button>
-    );
-  }
-
-  return (
-    <ButtonGroup>
-      <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
-        Add schedule
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button size="icon-sm" variant="outline">
-              <CaretDownIcon />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={onRestoreS3}>
-            Restore dump
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </ButtonGroup>
-  );
-}
-
-function ConfigsBody({
-  canCreate,
-  canRestore,
-  configsLoading,
-  databaseName,
-  onCreate,
-  onRestoreS3,
-  rows,
-}: {
-  canCreate: boolean;
-  canRestore: boolean;
-  configsLoading: boolean;
-  databaseName: string;
-  onCreate: () => void;
-  onRestoreS3: () => void;
-  rows: BackupConfigRow[];
-}) {
-  if (configsLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <Empty>
-        <EmptyMedia>
-          <IconStack>
-            <ArchiveIcon className="size-5" weight="duotone" />
-          </IconStack>
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>No schedules yet</EmptyTitle>
-          <EmptyDescription>
-            Nothing dumps {databaseName} on a cadence yet. Add a schedule, or
-            restore from a dump already sitting in a destination.
-          </EmptyDescription>
-        </EmptyHeader>
-        {canCreate ? (
-          <EmptyContent className="flex flex-row flex-wrap gap-2">
-            <Button onClick={onCreate}>
-              <PlusIcon data-icon="inline-start" />
-              Add schedule
-            </Button>
-            {canRestore ? (
-              <Button onClick={onRestoreS3} variant="outline">
-                Restore dump
-              </Button>
-            ) : null}
-          </EmptyContent>
-        ) : null}
-      </Empty>
-    );
-  }
-
-  return null;
 }

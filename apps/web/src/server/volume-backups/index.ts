@@ -1,18 +1,19 @@
+/** @deprecated Import from `@/server/backups` instead. */
 export {
   createVolumeBackupConfig,
   deleteVolumeBackupConfig,
   listVolumeBackupConfigs,
   updateVolumeBackupConfig,
   type VolumeBackupConfigRow,
-} from "./configs";
+} from "../backups/volume/configs";
 export {
   deleteVolumeBackup,
   getVolumeBackups,
   triggerVolumeBackup,
   triggerVolumeRestore,
   type VolumeBackupRow,
-} from "./runs";
+} from "../backups/volume/runs";
 export {
   listServiceVolumes,
   type ServiceVolumeRow,
-} from "./volumes";
+} from "../backups/volume/volumes";

@@ -7,6 +7,7 @@
  * architecture review asked for once GET already went through `queries`.
  */
 import type { QueryClient } from "@tanstack/react-query";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { queries } from "@/lib/queries";
 import type { EnvVarTarget } from "@/server/env-vars";
 
@@ -17,6 +18,16 @@ export const cache = {
   backupConfigs: (qc: QueryClient, databaseId: string) =>
     qc.invalidateQueries({
       queryKey: queries.backupConfigs(databaseId).queryKey,
+    }),
+
+  backupConfigsFor: (qc: QueryClient, subject: BackupSubject) =>
+    qc.invalidateQueries({
+      queryKey: queries.backupConfigsFor(subject).queryKey,
+    }),
+
+  backupRunsFor: (qc: QueryClient, subject: BackupSubject, configId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.backupRunsFor(subject, configId).queryKey,
     }),
 
   backups: (qc: QueryClient, databaseId: string, configId: string) =>

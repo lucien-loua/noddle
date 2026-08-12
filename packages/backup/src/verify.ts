@@ -7,6 +7,7 @@ import {
   joinBackupPrefix,
   pickDestination,
 } from "#index";
+import { isConfigDue } from "#schedule";
 
 await runVerify("backup domain", () => {
   const a = { id: "a", prefix: "dest-a" };
@@ -105,5 +106,24 @@ await runVerify("backup domain", () => {
     insertC.configId === "cfg-1" &&
       insertC.objectKey.startsWith("dest-a/nightly/shop_db/"),
     JSON.stringify(insertC)
+  );
+
+  const hourly = "0 * * * *";
+  const now = new Date("2026-08-12T12:30:00.000Z");
+  check(
+    "isConfigDue: first run when nothing completed yet",
+    isConfigDue(hourly, null, now)
+  );
+  check(
+    "isConfigDue: not due when last completed after previous cron fire",
+    !isConfigDue(hourly, new Date("2026-08-12T12:05:00.000Z"), now)
+  );
+  check(
+    "isConfigDue: due when last completed before previous cron fire",
+    isConfigDue(hourly, new Date("2026-08-12T11:05:00.000Z"), now)
+  );
+  check(
+    "isConfigDue: invalid cron returns false",
+    !isConfigDue("not a cron", null, now)
   );
 });

@@ -3,32 +3,12 @@
  * extracting every setState wrapper adds noise without shared children.
  */
 
-import {
-  ArchiveIcon,
-  CaretDownIcon,
-  HardDrivesIcon,
-  PlusIcon,
-} from "@phosphor-icons/react";
+import { HardDrivesIcon } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import { IconStack } from "@/components/icon-stack";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { ConfigsListBody } from "@/components/features/backup-shared/configs-list-body";
+import { NoDestinationEmpty } from "@/components/features/backup-shared/no-destination-empty";
+import { ScheduleActions } from "@/components/features/backup-shared/schedule-actions";
 import {
   Frame,
   FrameDescription,
@@ -36,7 +16,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
 import type { DestinationRow } from "@/server/backups";
@@ -85,7 +64,9 @@ export function VolumeBackupPanel({
   }, [queryClient, serviceId]);
 
   if (destinations.length === 0) {
-    return <NoDestinationEmpty />;
+    return (
+      <NoDestinationEmpty description="Noddle needs somewhere to push volume archives before a schedule can run. Add one under" />
+    );
   }
 
   const rows = configs.data ?? [];
@@ -103,13 +84,15 @@ export function VolumeBackupPanel({
             </FrameDescription>
           </div>
           {showHeaderActions ? (
-            <VolumeBackupActions
+            <ScheduleActions
               canRestore={canRestore}
+              createLabel="Add volume backup"
               onCreate={() => setEditor("new")}
               onRestoreS3={() => {
                 setDefaultVolumeName(rows[0]?.volumeName);
                 setRestoreOpen(true);
               }}
+              restoreLabel="Restore volume backup"
             />
           ) : null}
         </FrameHeader>
@@ -126,14 +109,18 @@ export function VolumeBackupPanel({
           ))
         ) : (
           <FramePanel>
-            <ConfigsBody
+            <ConfigsListBody
               canCreate={canCreate}
               canRestore={canRestore}
               configsLoading={configs.isLoading}
+              createLabel="Add volume backup"
+              emptyDescription={`Nothing archives volumes for ${serviceName} yet. Add a schedule, or restore from an archive already sitting in a destination.`}
+              emptyIcon={HardDrivesIcon}
+              emptyTitle="No volume backups"
               onCreate={() => setEditor("new")}
               onRestoreS3={() => setRestoreOpen(true)}
-              rows={rows}
-              serviceName={serviceName}
+              restoreLabel="Restore volume backup"
+              rowCount={rows.length}
             />
           </FramePanel>
         )}
@@ -196,129 +183,4 @@ export function VolumeBackupPanel({
       ) : null}
     </div>
   );
-}
-
-function NoDestinationEmpty() {
-  return (
-    <Empty>
-      <EmptyMedia>
-        <IconStack>
-          <ArchiveIcon className="size-5" weight="duotone" />
-        </IconStack>
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>No S3 destination</EmptyTitle>
-        <EmptyDescription>
-          Noddle needs somewhere to push volume archives before a schedule can
-          run. Add one under{" "}
-          <Link className="text-foreground underline" to="/destinations">
-            S3 destinations
-          </Link>
-          .
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
-}
-
-function VolumeBackupActions({
-  canRestore,
-  onCreate,
-  onRestoreS3,
-}: {
-  canRestore: boolean;
-  onCreate: () => void;
-  onRestoreS3: () => void;
-}) {
-  if (!canRestore) {
-    return (
-      <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
-        Add volume backup
-      </Button>
-    );
-  }
-
-  return (
-    <ButtonGroup>
-      <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
-        Add volume backup
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button size="icon-sm" variant="outline">
-              <CaretDownIcon />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={onRestoreS3}>
-            Restore volume backup
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </ButtonGroup>
-  );
-}
-
-function ConfigsBody({
-  canCreate,
-  canRestore,
-  configsLoading,
-  onCreate,
-  onRestoreS3,
-  rows,
-  serviceName,
-}: {
-  canCreate: boolean;
-  canRestore: boolean;
-  configsLoading: boolean;
-  onCreate: () => void;
-  onRestoreS3: () => void;
-  rows: VolumeBackupConfigRow[];
-  serviceName: string;
-}) {
-  if (configsLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <Empty>
-        <EmptyMedia>
-          <IconStack>
-            <HardDrivesIcon className="size-5" weight="duotone" />
-          </IconStack>
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>No volume backups</EmptyTitle>
-          <EmptyDescription>
-            Nothing archives volumes for {serviceName} yet. Add a schedule, or
-            restore from an archive already sitting in a destination.
-          </EmptyDescription>
-        </EmptyHeader>
-        {canCreate ? (
-          <EmptyContent className="flex flex-row flex-wrap gap-2">
-            <Button onClick={onCreate}>
-              <PlusIcon data-icon="inline-start" />
-              Add volume backup
-            </Button>
-            {canRestore ? (
-              <Button onClick={onRestoreS3} variant="outline">
-                Restore volume backup
-              </Button>
-            ) : null}
-          </EmptyContent>
-        ) : null}
-      </Empty>
-    );
-  }
-
-  return null;
 }

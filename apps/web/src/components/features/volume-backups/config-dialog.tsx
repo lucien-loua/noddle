@@ -10,7 +10,7 @@ import {
   DEFAULT_CRON,
   type ScheduleMode,
   scheduleModeFor,
-} from "@/components/features/backups/schedule";
+} from "@/components/features/backup-shared/schedule";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

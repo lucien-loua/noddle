@@ -10,15 +10,13 @@ import {
   TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { BackupPanel } from "@/components/features/backups/panel";
-import { RestoreDialog } from "@/components/features/backups/restore-dialog";
-import type { RestoreTarget } from "@/components/features/backups/types";
+import { BackupTab } from "@/components/features/backup-shared/backup-tab";
 import { DatabaseAdvanced } from "@/components/features/database/database-advanced";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
@@ -52,7 +50,6 @@ import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import { getDestinations, triggerRestore } from "@/server/backups";
 import { type DatabaseRow, getDatabase } from "@/server/databases";
 
 /**
@@ -139,16 +136,14 @@ export const Route = createFileRoute(
   },
   component: DatabaseDetail,
   loader: async ({ context, params }) => {
-    const [database, destinations] = await Promise.all([
-      getDatabase({ data: { databaseId: params.databaseId } }),
-      getDestinations(),
-    ]);
+    const database = await getDatabase({
+      data: { databaseId: params.databaseId },
+    });
     if (!database) {
       throw notFound();
     }
     return {
       database,
-      destinations,
       email: context.email,
       role: context.role,
     };
@@ -303,12 +298,7 @@ function DatabaseHeaderActions({
 }
 
 function DatabaseDetail() {
-  const {
-    database: initialDatabase,
-    destinations,
-    email,
-    role,
-  } = Route.useLoaderData();
+  const { database: initialDatabase, email, role } = Route.useLoaderData();
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
   const queryClient = useQueryClient();
@@ -372,45 +362,7 @@ function DatabaseDetail() {
     [navigate]
   );
 
-  const [restoreTarget, setRestoreTarget] = useState<RestoreTarget | null>(
-    null
-  );
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const restore = useMutation({
-    mutationFn: (confirmName: string) => {
-      if (!restoreTarget) {
-        throw new Error("no restore target");
-      }
-      if (restoreTarget.kind === "run") {
-        return triggerRestore({
-          data: {
-            backupId: restoreTarget.backup.id,
-            confirmName,
-            databaseId: database.id,
-          },
-        });
-      }
-      return triggerRestore({
-        data: {
-          confirmName,
-          databaseId: database.id,
-          destinationId: restoreTarget.destinationId,
-          objectKey: restoreTarget.objectKey,
-        },
-      });
-    },
-    onSuccess: () => setRestoreTarget(null),
-  });
-
-  const handleClose = useCallback((open: boolean) => {
-    if (!open) {
-      setRestoreTarget(null);
-    }
-  }, []);
-  const handleConfirm = useCallback(
-    (confirmName: string) => restore.mutate(confirmName),
-    [restore]
-  );
 
   // We LEAVE the page once the teardown has started, as for a service: the
   // database is disappearing, staying on it would show a detail view
@@ -580,34 +532,15 @@ function DatabaseDetail() {
           ) : null}
 
           <TabsContent className={TAB_PANEL} value="backups">
-            <BackupPanel
+            <BackupTab
               canCreate={canCreateBackup}
               canRestore={canRestoreBackup}
-              databaseId={database.id}
-              databaseName={database.name}
               defaultDatabaseName={database.databaseName ?? database.name}
-              destinations={destinations}
-              onRestore={setRestoreTarget}
+              resourceName={database.name}
+              subject={{ databaseId: database.id, kind: "database" }}
             />
-            {restore.isError ? (
-              <Alert className="mt-3" variant="destructive">
-                <AlertDescription>
-                  {restore.error instanceof Error
-                    ? restore.error.message
-                    : "restore refused"}
-                </AlertDescription>
-              </Alert>
-            ) : null}
           </TabsContent>
         </Tabs>
-
-        <RestoreDialog
-          databaseName={database.name}
-          onConfirm={handleConfirm}
-          onOpenChange={handleClose}
-          pending={restore.isPending}
-          target={restoreTarget}
-        />
       </div>
       {terminal}
     </AppShell>

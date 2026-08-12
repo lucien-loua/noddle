@@ -1,32 +1,14 @@
-/**
- * One `queryOptions()` per cache domain: the key and the fetcher that
- * fills it, co-located so they can't drift apart.
- *
- * A bare key factory (this module's previous shape) still let a caller
- * pair the right key with the wrong `queryFn`, or vice versa — nothing
- * tied the two together. `queryOptions()` returns both as one typed
- * object; spreading it into `useQuery()` also infers the data type
- * without a manual generic, and the same object works with
- * `queryClient.prefetchQuery()` / `ensureQueryData()` later if the need
- * comes up.
- *
- * Writes go through `cache` / `mutations` so call sites invalidate via
- * those adapters instead of re-typing query keys. Options that vary by
- * call site — `enabled`, `initialData`, `refetchInterval` driven by
- * local render state — are NOT here: they are call-site concerns, not
- * identity concerns, and stay spread on top at the `useQuery()` call.
- * `["servers"]` used to be hand-typed in three separate files with
- * nothing tying them together — the same shape as the silent `default:`
- * that fell through to Redis in the engine switches: a string standing
- * in for a fact the compiler could otherwise check.
- */
 import { queryOptions } from "@tanstack/react-query";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { getAccounts } from "@/server/accounts";
 import {
   getBackups,
   getDestinations,
+  getVolumeBackups,
   listBackupConfigs,
   listBackupObjects,
+  listServiceVolumes,
+  listVolumeBackupConfigs,
 } from "@/server/backups";
 import {
   getDeployments,
@@ -44,11 +26,6 @@ import { getServers } from "@/server/servers";
 import { getSshKeys } from "@/server/ssh-keys";
 import { getStackDeployments } from "@/server/stacks";
 import { getUpdateStatus } from "@/server/updates";
-import {
-  getVolumeBackups,
-  listServiceVolumes,
-  listVolumeBackupConfigs,
-} from "@/server/volume-backups";
 
 export const queries = {
   accounts: () =>
@@ -60,11 +37,41 @@ export const queries = {
       queryKey: ["backup-configs", databaseId],
     }),
 
+  backupConfigsFor: (subject: BackupSubject) => {
+    if (subject.kind === "database") {
+      return queryOptions({
+        queryFn: () =>
+          listBackupConfigs({ data: { databaseId: subject.databaseId } }),
+        queryKey: ["backup-configs", subject.databaseId],
+      });
+    }
+    return queryOptions({
+      queryFn: () =>
+        listVolumeBackupConfigs({ data: { serviceId: subject.serviceId } }),
+      queryKey: ["volume-backup-configs", subject.serviceId],
+    });
+  },
+
   backupObjects: (destinationId: string) =>
     queryOptions({
       queryFn: () => listBackupObjects({ data: { destinationId } }),
       queryKey: ["backup-objects", destinationId],
     }),
+
+  backupRunsFor: (subject: BackupSubject, configId: string) => {
+    if (subject.kind === "database") {
+      return queryOptions({
+        queryFn: () =>
+          getBackups({ data: { configId, databaseId: subject.databaseId } }),
+        queryKey: ["backups", subject.databaseId, configId],
+      });
+    }
+    return queryOptions({
+      queryFn: () =>
+        getVolumeBackups({ data: { configId, serviceId: subject.serviceId } }),
+      queryKey: ["volume-backups", subject.serviceId, configId],
+    });
+  },
 
   backups: (databaseId: string, configId: string) =>
     queryOptions({

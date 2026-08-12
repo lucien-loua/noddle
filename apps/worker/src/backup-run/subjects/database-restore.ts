@@ -1,84 +1,34 @@
 import { pipeline } from "node:stream/promises";
-import { buildBackupInsert, resolveDestination } from "@noddle/backup";
-import { downloadStream, objectExists } from "@noddle/backup-store";
-import { backups, databases } from "@noddle/db/schema";
+import { buildBackupInsert } from "@noddle/backup";
+import { backups, databases, type servers } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
-import type { DockerApi } from "@noddle/ssh-executor";
 import {
   execArgv,
   execStream,
   quoteArg,
   type SshClient,
 } from "@noddle/ssh-executor";
-import { waitForRunningTask } from "@noddle/swarm-ops";
+import { scaleServiceAndWait } from "@noddle/swarm-ops";
 import { and, eq } from "drizzle-orm";
+import { runBackup } from "#backup";
+import {
+  type RestoreSubject,
+  runRestorePipeline,
+} from "#backup-run/restore-pipeline";
 import {
   assertSafeIdentifier,
   findDatabaseContainer,
-  runBackup,
-} from "#backup";
+} from "#backup-run/subjects/database";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 
 const SETTLE_MS = 1500;
-const SCALE_TIMEOUT_MS = 120_000;
 
 export interface RestoreRequest {
   backupId?: string;
   databaseId: string;
   destinationId?: string;
   objectKey?: string;
-}
-
-/**
- * Sets a service's replica count and waits until it's actually true.
- *
- * `docker service update` returns control BEFORE convergence — the same
- * trap as for a deployment, and here it counts double: writing to the
- * volume while the container is still running would corrupt exactly what
- * we're restoring.
- */
-async function scaleServiceAndWait(
-  docker: DockerApi,
-  serviceName: string,
-  replicas: number
-): Promise<void> {
-  const list = await docker.listServices({
-    filters: JSON.stringify({ name: [serviceName] }),
-  });
-  const existing = list.find((s) => s.Spec?.Name === serviceName);
-  if (!existing) {
-    throw new Error(`Swarm service not found: ${serviceName}`);
-  }
-
-  const spec = existing.Spec as Record<string, unknown>;
-  await docker.getService(existing.ID as string).update({
-    ...spec,
-    Mode: { Replicated: { Replicas: replicas } },
-    version: existing.Version?.Index,
-  });
-
-  if (replicas === 0) {
-    const deadline = Date.now() + SCALE_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-      // biome-ignore lint/performance/noAwaitInLoops: deliberate polling loop
-      const tasks = await docker.listTasks({
-        filters: JSON.stringify({ service: [serviceName] }),
-      });
-      const alive = tasks.filter((t) => {
-        const state = (t as { Status?: { State?: string } }).Status?.State;
-        return (
-          state !== "shutdown" && state !== "failed" && state !== "complete"
-        );
-      });
-      if (alive.length === 0) {
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    throw new Error(`service ${serviceName} did not scale down to 0 replicas`);
-  }
-  await waitForRunningTask(docker, serviceName);
 }
 
 /**
@@ -326,6 +276,18 @@ async function restoreRedis(
   }
 }
 
+type DatabaseRow = NonNullable<
+  Awaited<ReturnType<DeployContext["db"]["query"]["databases"]["findFirst"]>>
+> & {
+  server: typeof servers.$inferSelect;
+};
+
+interface DatabaseRestoreLoaded {
+  database: DatabaseRow;
+  password: string;
+  request: RestoreRequest;
+}
+
 async function resolveRestoreSource(
   ctx: DeployContext,
   req: RestoreRequest
@@ -359,86 +321,21 @@ async function resolveRestoreSource(
   throw new Error("restore requires backupId, or destinationId and objectKey");
 }
 
-export async function runRestore(
+async function applyDatabaseRestore(
   ctx: DeployContext,
-  req: RestoreRequest
+  loaded: DatabaseRestoreLoaded,
+  body: NodeJS.ReadableStream
 ): Promise<void> {
-  const database = await ctx.db.query.databases.findFirst({
-    where: eq(databases.id, req.databaseId),
-    with: { server: true },
-  });
-  if (!database) {
-    throw new Error(`database not found: ${req.databaseId}`);
-  }
-
-  const { destinationId, objectKey } = await resolveRestoreSource(ctx, req);
-
-  // Decrypted HERE and not at the call site: three of the five engines need
-  // it to restore (the MySQL/MariaDB SQL client, `mongorestore`), and
-  // Postgres doesn't want it — its local socket is set to `trust`.
-  const password = decryptSecret(
-    database.rootPasswordEncrypted,
-    ctx.appKey,
-    secretContext.databasePassword(database.id)
-  );
-  // THE ONE the object actually went to — never re-picked from "current"
-  // database prefs.
-  const { destination, id: resolvedDestinationId } = await resolveDestination(
-    ctx.db,
-    ctx.appKey,
-    destinationId
-  );
-
-  // BEFORE any destructive action. The database row is not proof that the
-  // object is still there.
-  if (!(await objectExists(destination, objectKey))) {
-    throw new Error(
-      `object ${objectKey} is missing from the bucket — restore refused before touching the database`
-    );
-  }
-
-  // The safety net: the restore becomes reversible. Same builder as
-  // `triggerBackup`/`sweepBackups`: the safety net goes into the SAME
-  // bucket as what we're restoring, with the extension of the REAL dumper —
-  // never a ternary that would guess `.rdb` for a MySQL SQL dump.
-  const [safety] = await ctx.db
-    .insert(backups)
-    .values(
-      buildBackupInsert({
-        database,
-        kind: "pre_restore",
-        resolved: { id: resolvedDestinationId, prefix: destination.prefix },
-      })
-    )
-    .returning();
-  if (!safety) {
-    throw new Error("could not create the safety backup");
-  }
-  await runBackup(ctx, safety.id);
-
+  const { database, password } = loaded;
   const serviceName = database.swarmName;
 
   await withDeployClients(
     ctx,
     database.server,
     async ({ buildClient, managerDocker }) => {
-      const body = await downloadStream(destination, objectKey);
-
-      // AN EXHAUSTIVE SWITCH, never an `if postgres / else`. The previous
-      // shape made EVERY non-Postgres engine fall through to the REDIS path:
-      // measured on a real MySQL database, the restore wrote a `dump.rdb`
-      // into `/var/lib/mysql`, started a disposable Redis container on that
-      // volume, and reported SUCCESS without having restored anything. The
-      // volume survived by luck — MySQL ignores a file it doesn't recognize —
-      // but the deleted marker never came back.
-      //
-      // `default` THROWS: an engine added tomorrow without a restore path
-      // fails loudly, it doesn't silently restore into the wrong one.
       const containerId = await findDatabaseContainer(buildClient, serviceName);
       const databaseName =
         database.databaseName ?? database.rootUser ?? database.name;
-      // Checked HERE, once, for all five engines: they end up as positionals
-      // and as options for remote clients.
       assertSafeIdentifier(databaseName, "database name");
       if (database.rootUser) {
         assertSafeIdentifier(database.rootUser, "database user");
@@ -449,10 +346,6 @@ export async function runRestore(
           await restorePostgres(buildClient, {
             body,
             containerId,
-            // `-d` targets the DATABASE, `-U` the user: two distinct things
-            // since migration 0029. Confusing them would restore into a
-            // database that doesn't exist — or, worse, into another one that
-            // does.
             databaseName,
             rootUser: database.rootUser ?? "postgres",
           });
@@ -478,16 +371,9 @@ export async function runRestore(
           });
           break;
         case "redis": {
-          // Swarm commands go through the MANAGER — a worker refuses
-          // `docker service update`, it doesn't hold the cluster's state. The
-          // volume, on the other hand, only exists on the database's node.
           await scaleServiceAndWait(managerDocker, serviceName, 0);
-          // Swarm returns control as soon as the task is marked stopped; give
-          // the daemon a few moments to actually release the volume.
           await new Promise((r) => setTimeout(r, SETTLE_MS));
-
           await restoreRedis(buildClient, { body, volume: serviceName });
-
           await scaleServiceAndWait(
             managerDocker,
             serviceName,
@@ -502,4 +388,55 @@ export async function runRestore(
       }
     }
   );
+}
+
+const databaseRestoreSubject: RestoreSubject<
+  RestoreRequest,
+  DatabaseRestoreLoaded
+> = {
+  apply: applyDatabaseRestore,
+  load: async (ctx, request) => {
+    const database = await ctx.db.query.databases.findFirst({
+      where: eq(databases.id, request.databaseId),
+      with: { server: true },
+    });
+    if (!database) {
+      throw new Error(`database not found: ${request.databaseId}`);
+    }
+    const password = decryptSecret(
+      database.rootPasswordEncrypted,
+      ctx.appKey,
+      secretContext.databasePassword(database.id)
+    );
+    return { database, password, request };
+  },
+  missingObjectTarget: "database",
+  resolveSource: async (ctx, request) =>
+    await resolveRestoreSource(ctx, request),
+  safetyBackup: async (ctx, loaded, resolved) => {
+    const [safety] = await ctx.db
+      .insert(backups)
+      .values(
+        buildBackupInsert({
+          database: loaded.database,
+          kind: "pre_restore",
+          resolved: {
+            id: resolved.id,
+            prefix: resolved.destination.prefix,
+          },
+        })
+      )
+      .returning();
+    if (!safety) {
+      throw new Error("could not create the safety backup");
+    }
+    await runBackup(ctx, safety.id);
+  },
+};
+
+export async function runRestore(
+  ctx: DeployContext,
+  req: RestoreRequest
+): Promise<void> {
+  await runRestorePipeline(databaseRestoreSubject, ctx, req);
 }

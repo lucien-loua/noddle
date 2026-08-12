@@ -362,6 +362,49 @@ export async function scaleService(
   return true;
 }
 
+const SCALE_DOWN_TIMEOUT_MS = 120_000;
+
+/**
+ * Sets a service's replica count and waits until Swarm has converged.
+ *
+ * Scale-down waits until no task is alive; scale-up waits for a running task.
+ * Used before volume/database restore so nothing writes to the data path.
+ */
+export async function scaleServiceAndWait(
+  docker: DockerApi,
+  serviceName: string,
+  replicas: number,
+  timeoutMs = SCALE_DOWN_TIMEOUT_MS
+): Promise<void> {
+  const scaled = await scaleService(docker, serviceName, replicas);
+  if (!scaled) {
+    throw new Error(`Swarm service not found: ${serviceName}`);
+  }
+
+  if (replicas === 0) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      // biome-ignore lint/performance/noAwaitInLoops: deliberate polling loop
+      const tasks = (await docker.listTasks({
+        filters: JSON.stringify({ service: [serviceName] }),
+      })) as unknown as Array<{ Status?: { State?: string } }>;
+      const alive = tasks.filter((t) => {
+        const state = t.Status?.State;
+        return (
+          state !== "shutdown" && state !== "failed" && state !== "complete"
+        );
+      });
+      if (alive.length === 0) {
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    throw new Error(`service ${serviceName} did not scale down to 0 replicas`);
+  }
+
+  await waitForRunningTask(docker, serviceName);
+}
+
 /**
  * Restarts the tasks without changing the specification.
  *

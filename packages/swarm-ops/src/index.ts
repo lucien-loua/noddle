@@ -19,6 +19,7 @@ export {
   restartService,
   type SwarmUpdateState,
   scaleService,
+  scaleServiceAndWait,
   waitForRunningTask,
 } from "./swarm.ts";
 export {

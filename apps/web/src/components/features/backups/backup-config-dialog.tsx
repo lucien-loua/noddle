@@ -5,6 +5,11 @@
 
 import { BACKUP_CRON_PRESETS } from "@noddle/shared/validation/backup";
 import { useEffect, useState } from "react";
+import {
+  DEFAULT_CRON,
+  type ScheduleMode,
+  scheduleModeFor,
+} from "@/components/features/backup-shared/schedule";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,7 +55,6 @@ import {
   updateBackupConfig,
 } from "@/server/backups";
 import { configFormDefaults } from "./config-form";
-import { DEFAULT_CRON, type ScheduleMode, scheduleModeFor } from "./schedule";
 
 export function BackupConfigDialog({
   databaseId,

@@ -44,11 +44,11 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
+import { runBackup } from "#backup";
 import {
   findDatabaseContainer,
   legacyDatabaseServiceName,
-  runBackup,
-} from "#backup";
+} from "#backup-run/subjects/database";
 import { provisionDatabase } from "#database";
 import { runRestore } from "#restore";
 import { seedSshKey } from "#verify-seed";
