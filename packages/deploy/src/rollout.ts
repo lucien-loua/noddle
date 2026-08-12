@@ -1,4 +1,8 @@
-import { routeLabels } from "@noddle/proxy-config";
+import {
+  type DomainRoute,
+  routeLabels,
+  serviceRouteLabels,
+} from "@noddle/proxy-config";
 import type { RegistryConfig } from "@noddle/registry";
 import type { DockerApi } from "@noddle/ssh-executor";
 import {
@@ -13,7 +17,9 @@ import { authFor, placementFor } from "./placement.ts";
 export interface RolloutInput {
   buildDocker: DockerApi;
   certResolver?: string;
-  domain?: string;
+  domainRoutes?: DomainRoute[];
+  /** Plain hostnames — stacks and compose paths without per-domain TLS. */
+  domains?: string[];
   env: Record<string, string>;
   image: string;
   managerDocker: DockerApi;
@@ -52,14 +58,25 @@ export async function rolloutService(
   await ensureOverlayNetwork(input.managerDocker, input.networkName);
 
   const outcome = await deployService(input.managerDocker, {
-    env: input.env,
+    // The healthcheck and Traefik both target `port`. Apps that read
+    // `process.env.PORT` (Heroku, nixpacks, Express) must listen there —
+    // a user env var named PORT would otherwise desync the probe.
+    env: { ...input.env, PORT: String(input.port) },
     image: input.image,
-    labels: routeLabels({
-      certResolver: input.certResolver,
-      domain: input.domain,
-      port: input.port,
-      serviceName: input.serviceName,
-    }),
+    labels:
+      input.domainRoutes === undefined
+        ? routeLabels({
+            certResolver: input.certResolver,
+            domains: input.domains,
+            port: input.port,
+            serviceName: input.serviceName,
+          })
+        : serviceRouteLabels({
+            certResolver: input.certResolver,
+            domains: input.domainRoutes,
+            port: input.port,
+            serviceName: input.serviceName,
+          }),
     networkName: input.networkName,
     placementNodeId,
     port: input.port,

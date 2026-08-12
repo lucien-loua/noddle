@@ -17,6 +17,7 @@ import {
   envVars,
   projects,
   servers,
+  serviceDomains,
   services,
   session,
   sshKeys,
@@ -229,7 +230,6 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      domain: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -240,6 +240,12 @@ try {
     })
     .returning();
   const serviceId = svc?.id ?? "";
+  if (svc) {
+    await db.insert(serviceDomains).values({
+      host: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+      serviceId: svc.id,
+    });
+  }
 
   // The secret is set DIRECTLY here, encrypted with the same primitives as
   // `generateServiceWebhook` — this test targets the RECEIVER (signature,
@@ -456,6 +462,7 @@ try {
   const previews = async () =>
     await db.query.services.findMany({
       where: isNotNull(services.previewOfServiceId),
+      with: { domains: true },
     });
 
   // A FORK: no preview at all, and above all no secrets leaking out.
@@ -481,7 +488,9 @@ try {
   const opened = await postPr(githubPr("opened", 7, headSha, "feature/x"));
   const created = (await previews()).find((p) => p.prNumber === 7);
   if (opened.status === 200 && created) {
-    ok(`PR 7 → preview ${created.name}, domain ${created.domain}`);
+    ok(
+      `PR 7 → preview ${created.name}, domain ${created.domains[0]?.host ?? "none"}`
+    );
   } else {
     ko(`PR 7: status ${opened.status}, body ${JSON.stringify(opened.body)}`);
     throw new Error("aborting");

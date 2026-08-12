@@ -71,7 +71,7 @@ import { type DatabaseRow, getDatabase } from "@/server/databases";
  *                             screen.
  */
 const TAB_PANEL =
-  "scroll-fade no-scrollbar -mx-2 mt-3 min-h-0 flex-1 overflow-y-auto px-2 data-ending-style:hidden";
+  "scroll-fade no-scrollbar -mx-2 min-h-0 flex-1 overflow-y-auto px-2 data-ending-style:hidden";
 
 const DATABASE_TABS = [
   "general",
@@ -461,27 +461,6 @@ function DatabaseDetail() {
 
   return (
     <AppShell
-      actions={
-        <DatabaseHeaderActions
-          database={database}
-          known={known}
-          onDeleted={handleDeleted}
-          onDone={handleDone}
-          onError={setDeleteError}
-          onTerminal={
-            canShell
-              ? () =>
-                  openTerminal({
-                    id: database.id,
-                    kind: "container",
-                    target: "database",
-                    title: database.name,
-                  })
-              : null
-          }
-          pendingAction={awaiting?.action ?? null}
-        />
-      }
       breadcrumb={
         <DetailBreadcrumb
           environment={database.environment}
@@ -515,22 +494,44 @@ function DatabaseDetail() {
         ) : null}
 
         <Tabs
-          className="min-h-0 flex-1"
+          className="min-h-0 flex-1 gap-3"
           onValueChange={handleTabChange}
           value={tab}
         >
-          <TabRail>
-            <TabsTrigger value="general">General</TabsTrigger>
-            {canReadSecrets ? (
-              <TabsTrigger value="env">Environment</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-            <TabsTrigger value="backups">Backups</TabsTrigger>
-            {canEditConfig ? (
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-            ) : null}
-          </TabRail>
+          <div className="flex shrink-0 flex-col gap-3">
+            <TabRail>
+              <TabsTrigger value="general">General</TabsTrigger>
+              {canReadSecrets ? (
+                <TabsTrigger value="env">Environment</TabsTrigger>
+              ) : null}
+              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+              <TabsTrigger value="backups">Backups</TabsTrigger>
+              {canEditConfig ? (
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              ) : null}
+            </TabRail>
+
+            <DatabaseHeaderActions
+              database={database}
+              known={known}
+              onDeleted={handleDeleted}
+              onDone={handleDone}
+              onError={setDeleteError}
+              onTerminal={
+                canShell
+                  ? () =>
+                      openTerminal({
+                        id: database.id,
+                        kind: "container",
+                        target: "database",
+                        title: database.name,
+                      })
+                  : null
+              }
+              pendingAction={awaiting?.action ?? null}
+            />
+          </div>
 
           <TabsContent className={TAB_PANEL} value="general">
             <DatabaseCredentials

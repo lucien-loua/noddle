@@ -256,7 +256,6 @@ async function copyEnvironment(
       .insert(services)
       .values({
         buildMethod: s.buildMethod,
-        domain: null,
         environmentId: target.id,
         gitBranch: s.gitBranch,
         gitRepoUrl: s.gitRepoUrl,

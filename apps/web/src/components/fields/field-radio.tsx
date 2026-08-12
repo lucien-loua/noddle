@@ -25,7 +25,13 @@ export interface FieldRadioOption {
  * to the field like all `Field*` components — the primitive holds the
  * state, not the form.
  */
-export function FieldRadio({ options }: { options: FieldRadioOption[] }) {
+export function FieldRadio({
+  disabled,
+  options,
+}: {
+  disabled?: boolean;
+  options: FieldRadioOption[];
+}) {
   const field = useFieldContext<string>();
   const id = useId();
 
@@ -39,7 +45,11 @@ export function FieldRadio({ options }: { options: FieldRadioOption[] }) {
   );
 
   return (
-    <RadioGroup onValueChange={handleChange} value={field.state.value}>
+    <RadioGroup
+      disabled={disabled}
+      onValueChange={handleChange}
+      value={field.state.value}
+    >
       {options.map((option) => {
         const optionId = `${id}-${option.value}`;
         return (

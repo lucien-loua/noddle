@@ -56,6 +56,21 @@ export const cache = {
   servers: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.servers().queryKey }),
 
+  service: (qc: QueryClient, serviceId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.service(serviceId).queryKey,
+    }),
+
   sshKeys: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.sshKeys().queryKey }),
+
+  volumeBackupConfigs: (qc: QueryClient, serviceId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.volumeBackupConfigs(serviceId).queryKey,
+    }),
+
+  volumeBackups: (qc: QueryClient, serviceId: string, configId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.volumeBackups(serviceId, configId).queryKey,
+    }),
 } as const;

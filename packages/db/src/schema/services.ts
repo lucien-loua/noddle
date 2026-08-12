@@ -53,7 +53,6 @@ export const services = pgTable(
     // image from ITS OWN history, whereas Swarm only keeps one previous
     // spec.
     currentDeploymentId: uuid("current_deployment_id"),
-    domain: text("domain"),
     environmentId: uuid("environment_id")
       .notNull()
       .references(() => environments.id, { onDelete: "cascade" }),
@@ -87,6 +86,13 @@ export const services = pgTable(
       { onDelete: "cascade" }
     ),
     prNumber: integer("pr_number"),
+
+    /**
+     * Relative path to static build output (e.g. `dist`, `build`). When set,
+     * Nixpacks serves that folder as a static site via `NIXPACKS_SPA_OUT_DIR`.
+     * `null` = run the detected server process instead.
+     */
+    publishDirectory: text("publish_directory"),
 
     // `null` = the embedded registry, the one from the installation. Same
     // shape as `databases.s3_destination_id`: as long as no external

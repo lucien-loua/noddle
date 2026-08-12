@@ -19,6 +19,17 @@ type LifecycleTarget =
   | { databaseId: string; resource: "database" }
   | { resource: "service"; serviceId: string };
 
+function lifecyclePermission(target: LifecycleTarget): {
+  action: "deploy" | "operate";
+  resource: "database" | "service";
+} {
+  // Server-side, service stop/restart/start is guarded by `service:deploy`,
+  // not a separate `operate` action — same trust tier as rollback.
+  return target.resource === "database"
+    ? { action: "operate", resource: "database" }
+    : { action: "deploy", resource: "service" };
+}
+
 function runLifecycle(
   target: LifecycleTarget,
   action: LifecycleAction
@@ -43,7 +54,8 @@ export function useLifecycleActions({
   status: string;
   target: LifecycleTarget;
 }) {
-  const canOperate = useCan(role, target.resource, "operate");
+  const { action: permissionAction, resource } = lifecyclePermission(target);
+  const canRun = useCan(role, resource, permissionAction);
 
   const run = useMutation({
     mutationFn: (action: LifecycleAction) => runLifecycle(target, action),
@@ -59,7 +71,7 @@ export function useLifecycleActions({
   // `created` = never provisioned, `deploying` = Swarm still applying,
   // `deleting` = teardown: no stable service to operate.
   const available =
-    canOperate &&
+    canRun &&
     status !== "created" &&
     status !== "deploying" &&
     status !== "deleting";

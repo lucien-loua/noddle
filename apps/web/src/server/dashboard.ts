@@ -1,12 +1,13 @@
 import {
   deployments,
   environments,
+  serviceDomains,
   services,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray } from "drizzle-orm";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -41,8 +42,20 @@ export interface DeploymentSummary {
   trigger: string;
 }
 
+export interface ServiceDomainRow {
+  certificateType: "none" | "letsencrypt";
+  host: string;
+  https: boolean;
+  id: string;
+  internalPath: string | null;
+  path: string;
+  stripPath: boolean;
+  updatedAt: string;
+}
+
 export interface ServiceRow {
-  domain: string | null;
+  buildMethod: "nixpacks" | "dockerfile" | "image";
+  domains: ServiceDomainRow[];
   environment: string;
   environmentId: string;
   gitBranch: string | null;
@@ -66,8 +79,11 @@ export interface ServiceRow {
   prNumber: number | null;
   project: string;
   projectId: string;
+  /** Static build output, relative to the repo root. `null` = server process. */
+  publishDirectory: string | null;
   /** `null` = the built-in registry. */
   registryId: string | null;
+  serverHost: string;
   serverName: string;
   status: string;
   /** ISO timestamp — Restart stays `running`, so the project grid settles
@@ -135,6 +151,74 @@ function toSummary(
   };
 }
 
+interface ServiceJoined {
+  buildMethod: "nixpacks" | "dockerfile" | "image";
+  domains: {
+    certificateType: "none" | "letsencrypt";
+    host: string;
+    https: boolean;
+    id: string;
+    internalPath: string | null;
+    path: string;
+    stripPath: boolean;
+    updatedAt: Date;
+  }[];
+  environment: { name: string; project: { name: string }; projectId: string };
+  environmentId: string;
+  gitBranch: string | null;
+  gitRepoUrl: string | null;
+  id: string;
+  lastError: string | null;
+  name: string;
+  port: number;
+  prNumber: number | null;
+  publishDirectory: string | null;
+  registryId: string | null;
+  server: { host: string; name: string };
+  status: string;
+  updatedAt: Date;
+}
+
+function toServiceRow(
+  service: ServiceJoined,
+  last: typeof deployments.$inferSelect | undefined,
+  nodes: Map<string, string>,
+  watching: boolean
+): ServiceRow {
+  return {
+    buildMethod: service.buildMethod,
+    domains: service.domains.map((d) => ({
+      certificateType: d.certificateType,
+      host: d.host,
+      https: d.https,
+      id: d.id,
+      internalPath: d.internalPath,
+      path: d.path,
+      stripPath: d.stripPath,
+      updatedAt: d.updatedAt.toISOString(),
+    })),
+    environment: service.environment.name,
+    environmentId: service.environmentId,
+    gitBranch: service.gitBranch,
+    gitRepoUrl: service.gitRepoUrl,
+    id: service.id,
+    lastDeployment: last ? toSummary(last, nodes) : null,
+    lastError: service.lastError,
+    name: service.name,
+    port: service.port,
+    prNumber: service.prNumber,
+    project: service.environment.project.name,
+    projectId: service.environment.projectId,
+    publishDirectory: service.publishDirectory,
+    registryId: service.registryId,
+    serverHost: service.server.host,
+    serverName: service.server.name,
+    status: service.status,
+    updatedAt: service.updatedAt.toISOString(),
+    watching,
+  };
+}
+
 function toStackSummary(
   row: typeof stackDeployments.$inferSelect
 ): DeploymentSummary {
@@ -171,6 +255,7 @@ async function loadServiceDashboard(
       ? eq(services.environmentId, environmentId)
       : undefined,
     with: {
+      domains: { orderBy: asc(serviceDomains.createdAt) },
       environment: { with: { project: true } },
       server: true,
     },
@@ -203,29 +288,14 @@ async function loadServiceDashboard(
     }
   }
 
-  return rows.map((service) => {
-    const last = latest.get(service.id);
-    return {
-      domain: service.domain,
-      environment: service.environment.name,
-      environmentId: service.environmentId,
-      gitBranch: service.gitBranch,
-      gitRepoUrl: service.gitRepoUrl,
-      id: service.id,
-      lastDeployment: last ? toSummary(last, nodes) : null,
-      lastError: service.lastError,
-      name: service.name,
-      port: service.port,
-      prNumber: service.prNumber,
-      project: service.environment.project.name,
-      projectId: service.environment.projectId,
-      registryId: service.registryId,
-      serverName: service.server.name,
-      status: service.status,
-      updatedAt: service.updatedAt.toISOString(),
-      watching: watched.has(service.id),
-    };
-  });
+  return rows.map((service) =>
+    toServiceRow(
+      service,
+      latest.get(service.id),
+      nodes,
+      watched.has(service.id)
+    )
+  );
 }
 
 export const getDashboard = createServerFn({ method: "GET" }).handler(
@@ -234,6 +304,33 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
     return loadServiceDashboard();
   }
 );
+
+export const getService = createServerFn({ method: "GET" })
+  .validator((data: { serviceId: string }) => data)
+  .handler(async ({ data }): Promise<ServiceRow | null> => {
+    await requireSession();
+    const row = await db.query.services.findFirst({
+      where: eq(services.id, data.serviceId),
+      with: {
+        domains: { orderBy: asc(serviceDomains.createdAt) },
+        environment: { with: { project: true } },
+        server: true,
+      },
+    });
+    if (!row) {
+      return null;
+    }
+
+    const last = await db.query.deployments.findFirst({
+      orderBy: desc(deployments.createdAt),
+      where: eq(deployments.serviceId, row.id),
+    });
+    const nodes = await nodeNames();
+    const watching = Boolean(
+      last?.watchUntil && last.watchUntil.getTime() > Date.now()
+    );
+    return toServiceRow(row, last ?? undefined, nodes, watching);
+  });
 
 async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
   const rows = await db.query.stacks.findMany({

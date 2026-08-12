@@ -15,6 +15,7 @@ import type { EnvVarTarget } from "@/server/env-vars";
 import { saveEnvVars } from "@/server/env-vars";
 import { addServer } from "@/server/servers";
 import { createSshKey } from "@/server/ssh-keys";
+import { deleteVolumeBackup } from "@/server/volume-backups";
 
 export type CreateSshKeyInput =
   | { mode: "generate"; name: string; type: "ed25519" | "rsa" }
@@ -45,6 +46,13 @@ export const mutations = {
     mutationOptions({
       mutationFn: (backupId: string) => deleteBackup({ data: { backupId } }),
       onSuccess: () => cache.backups(qc, databaseId, configId),
+    }),
+
+  deleteVolumeBackup: (qc: QueryClient, serviceId: string, configId: string) =>
+    mutationOptions({
+      mutationFn: (backupId: string) =>
+        deleteVolumeBackup({ data: { backupId } }),
+      onSuccess: () => cache.volumeBackups(qc, serviceId, configId),
     }),
 
   saveEnvVars: (qc: QueryClient, target: EnvVarTarget) =>

@@ -36,6 +36,8 @@ export const handlerModules = {
   teardown: () => import("#teardown"),
   "teardown-server": () => import("#teardown-server"),
   "teardown-stack": () => import("#teardown-stack"),
+  "volume-backup": () => import("#volume-backup"),
+  "volume-restore": () => import("#volume-restore"),
 };
 
 /**
@@ -143,6 +145,20 @@ export const handlers: Handlers = {
       sourceDeploymentId: data.sourceDeploymentId,
       stackId: data.stackId,
       trigger: "rollback",
+    });
+  },
+  "volume-backup": async ({ ctx }, data) => {
+    const { runVolumeBackup } = await handlerModules["volume-backup"]();
+    await runVolumeBackup(ctx, data.volumeBackupId);
+  },
+  "volume-restore": async ({ ctx }, data) => {
+    const { runVolumeRestore } = await handlerModules["volume-restore"]();
+    await runVolumeRestore(ctx, {
+      backupId: data.volumeBackupId,
+      destinationId: data.destinationId,
+      objectKey: data.objectKey,
+      serviceId: data.serviceId,
+      volumeName: data.volumeName,
     });
   },
 };

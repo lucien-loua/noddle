@@ -4,6 +4,7 @@ import {
   envVars,
   projects,
   servers,
+  serviceDomains,
   services,
   sshKeys,
 } from "@noddle/db/schema";
@@ -68,10 +69,6 @@ try {
   const [parent] = await db
     .insert(services)
     .values({
-      // A domain IS required: without it `ensurePreview` exits through a
-      // different `{ignored}`, and everything that follows would be
-      // measuring the wrong path.
-      domain: "app.192-0-2-10.sslip.io",
       environmentId: environment?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: "https://example.invalid/app.git",
@@ -84,6 +81,10 @@ try {
   if (!parent) {
     throw new Error("failed to insert the parent service");
   }
+  await db.insert(serviceDomains).values({
+    host: "app.192-0-2-10.sslip.io",
+    serviceId: parent.id,
+  });
 
   // ── filling up to the cap ─────────────────────────────────────────────────
   const madeIds: string[] = [];
@@ -216,7 +217,6 @@ try {
     const [parent2] = await db
       .insert(services)
       .values({
-        domain: "other.192-0-2-10.sslip.io",
         environmentId: env2?.id ?? "",
         gitBranch: "main",
         gitRepoUrl: "https://example.invalid/other.git",
@@ -226,6 +226,12 @@ try {
         sourceType: "git",
       })
       .returning();
+    if (parent2) {
+      await db.insert(serviceDomains).values({
+        host: "other.192-0-2-10.sslip.io",
+        serviceId: parent2.id,
+      });
+    }
     const r = await ensurePreview({
       commitSha: SHA,
       headBranch: "feature/x",

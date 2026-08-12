@@ -22,6 +22,7 @@ import type {
   WorkerDeps,
 } from "#runtime-context";
 import { schedules } from "#schedules";
+import { recoverStaleVolumeBackups } from "./volume/recover.ts";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -67,6 +68,13 @@ const deps: WorkerDeps = { build, ctx, route };
 
 const { enqueue: enqueueDeploy, queue: deployQueue } =
   createDeployQueue(connection);
+
+const recovered = await recoverStaleVolumeBackups(ctx);
+if (recovered > 0) {
+  process.stderr.write(
+    `recovered ${recovered} stale volume backup(s) stuck in running\n`
+  );
+}
 
 export { deployQueue };
 

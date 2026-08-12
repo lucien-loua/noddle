@@ -12,6 +12,11 @@ import {
   secretContext,
 } from "#crypto";
 import {
+  formatTestDomain,
+  generateTestDomain,
+  slugServerHost,
+} from "#generate-domain";
+import {
   backupCronSchema,
   bucketNameSchema,
   createBackupConfigSchema,
@@ -33,6 +38,7 @@ import { expectThrows, ko, ok, runVerify, suite } from "#verify-harness";
 const isCrypto = (e: unknown) => e instanceof CryptoError;
 const mustThrow = (label: string, fn: () => unknown) =>
   expectThrows(label, fn, isCrypto);
+const GENERATED_TEST_DOMAIN_PATTERN = /^api-[a-f0-9]{6}-10-0-0-1\.sslip\.io$/;
 
 function verifyCrypto(): void {
   const KEY = randomBytes(32);
@@ -389,6 +395,41 @@ async function verifySecretRetention(): Promise<void> {
   }
 }
 
+function verifyGenerateDomain(): void {
+  if (slugServerHost("192.168.1.10") === "192-168-1-10") {
+    ok("slugServerHost dots become dashes");
+  } else {
+    ko("slugServerHost dots");
+  }
+
+  if (slugServerHost("2001:db8::1") === "2001-db8--1") {
+    ok("slugServerHost colons become dashes");
+  } else {
+    ko("slugServerHost colons");
+  }
+
+  const domain = formatTestDomain({
+    appName: "hello",
+    hash: "abc123",
+    serverHost: "192.168.252.3",
+  });
+  if (domain === "hello-abc123-192-168-252-3.sslip.io") {
+    ok("formatTestDomain builds sslip.io hostname");
+  } else {
+    ko(`formatTestDomain: ${domain}`);
+  }
+
+  const generated = generateTestDomain({
+    appName: "api",
+    serverHost: "10.0.0.1",
+  });
+  if (GENERATED_TEST_DOMAIN_PATTERN.test(generated)) {
+    ok("generateTestDomain randomizes hash segment");
+  } else {
+    ko(`generateTestDomain: ${generated}`);
+  }
+}
+
 await runVerify("shared crypto + validation", async () => {
   await suite("crypto", verifyCrypto);
   await suite("name schemas", verifyNameSchemas);
@@ -396,4 +437,5 @@ await runVerify("shared crypto + validation", async () => {
   await suite("s3 bucket and cron", verifyS3BucketAndCron);
   await suite("s3 destination", verifyS3Destination);
   await suite("secret retention", verifySecretRetention);
+  await suite("generate domain", verifyGenerateDomain);
 });

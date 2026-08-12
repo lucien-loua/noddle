@@ -63,7 +63,7 @@ export function listComposeServiceKeys(composeSource: string): string[] {
 export interface InjectOptions {
   builtKeys: readonly string[];
   certResolver?: string;
-  domain?: string | null;
+  domains?: string[];
   networkName: string;
   placementNodeId?: string;
   port?: number | null;
@@ -117,7 +117,7 @@ export function injectDeployConfig(
   const deploy = { ...(pub.deploy ?? {}) } as Record<string, unknown>;
   deploy.labels = routeLabels({
     certResolver: opts.certResolver,
-    domain: opts.domain ?? undefined,
+    domains: opts.domains,
     port: opts.port,
     serviceName: swarmName,
   });

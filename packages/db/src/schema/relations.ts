@@ -6,8 +6,10 @@ import { envVars } from "#schema/env-vars";
 import { environments, projects } from "#schema/projects";
 import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
+import { serviceDomains } from "#schema/service-domains";
 import { services } from "#schema/services";
 import { stackDeploymentLogs, stackDeployments, stacks } from "#schema/stacks";
+import { volumeBackupConfigs, volumeBackups } from "#schema/volume-backups";
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   environments: many(environments),
@@ -34,6 +36,7 @@ export const serversRelations = relations(servers, ({ many }) => ({
 
 export const servicesRelations = relations(services, ({ one, many }) => ({
   deployments: many(deployments),
+  domains: many(serviceDomains),
   environment: one(environments, {
     fields: [services.environmentId],
     references: [environments.id],
@@ -42,6 +45,15 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
   server: one(servers, {
     fields: [services.serverId],
     references: [servers.id],
+  }),
+  volumeBackupConfigs: many(volumeBackupConfigs),
+  volumeBackups: many(volumeBackups),
+}));
+
+export const serviceDomainsRelations = relations(serviceDomains, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceDomains.serviceId],
+    references: [services.id],
   }),
 }));
 
@@ -143,5 +155,35 @@ export const backupsRelations = relations(backups, ({ one }) => ({
   destination: one(s3Destinations, {
     fields: [backups.destinationId],
     references: [s3Destinations.id],
+  }),
+}));
+
+export const volumeBackupConfigsRelations = relations(
+  volumeBackupConfigs,
+  ({ one, many }) => ({
+    backups: many(volumeBackups),
+    destination: one(s3Destinations, {
+      fields: [volumeBackupConfigs.destinationId],
+      references: [s3Destinations.id],
+    }),
+    service: one(services, {
+      fields: [volumeBackupConfigs.serviceId],
+      references: [services.id],
+    }),
+  })
+);
+
+export const volumeBackupsRelations = relations(volumeBackups, ({ one }) => ({
+  config: one(volumeBackupConfigs, {
+    fields: [volumeBackups.configId],
+    references: [volumeBackupConfigs.id],
+  }),
+  destination: one(s3Destinations, {
+    fields: [volumeBackups.destinationId],
+    references: [s3Destinations.id],
+  }),
+  service: one(services, {
+    fields: [volumeBackups.serviceId],
+    references: [services.id],
   }),
 }));

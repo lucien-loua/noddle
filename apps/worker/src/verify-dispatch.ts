@@ -51,6 +51,12 @@ const samples: { [K in JobKind]: PayloadOf<K> } = {
     sourceDeploymentId: ID,
     stackId: ID,
   },
+  "volume-backup": { kind: "volume-backup", volumeBackupId: ID },
+  "volume-restore": {
+    kind: "volume-restore",
+    serviceId: ID,
+    volumeBackupId: ID,
+  },
 };
 
 await runVerify("worker dispatch", async () => {
@@ -90,7 +96,7 @@ await runVerify("worker dispatch", async () => {
     const entries = Object.entries(handlerModules);
     check(
       "the map covers every module",
-      entries.length === 14,
+      entries.length === 16,
       `${entries.length}`
     );
 

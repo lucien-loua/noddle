@@ -363,7 +363,7 @@ export function ResourceGrid({
     () => [
       ...scope.services.map(
         (s): GridItem => ({
-          domain: s.domain,
+          domain: s.domains[0]?.host ?? null,
           id: s.id,
           kind: "service",
           lastError: s.lastError,

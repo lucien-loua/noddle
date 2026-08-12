@@ -26,6 +26,7 @@ import { Route as ServersServerIdRouteImport } from './routes/servers_.$serverId
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDatabaseLogsDatabaseIdRouteImport } from './routes/api/database-logs/$databaseId'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
+import { Route as ApiServiceLogsServiceIdRouteImport } from './routes/api/service-logs/$serviceId'
 import { Route as ProjectsProjectIdEnvironmentIdRouteImport } from './routes/projects_.$projectId_.$environmentId'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
 import { Route as ApiWebhooksStackStackIdRouteImport } from './routes/api/webhooks/stack/$stackId'
@@ -119,6 +120,11 @@ const ApiLogsDeploymentIdRoute = ApiLogsDeploymentIdRouteImport.update({
   path: '/api/logs/$deploymentId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiServiceLogsServiceIdRoute = ApiServiceLogsServiceIdRouteImport.update({
+  id: '/api/service-logs/$serviceId',
+  path: '/api/service-logs/$serviceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdEnvironmentIdRoute =
   ProjectsProjectIdEnvironmentIdRouteImport.update({
     id: '/projects_/$projectId_/$environmentId',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
+  '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
   '/projects_/$projectId_/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
+    | '/api/service-logs/$serviceId'
     | '/projects/$projectId/$environmentId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
+    | '/api/service-logs/$serviceId'
     | '/projects/$projectId/$environmentId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
+    | '/api/service-logs/$serviceId'
     | '/projects_/$projectId_/$environmentId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -327,6 +339,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDatabaseLogsDatabaseIdRoute: typeof ApiDatabaseLogsDatabaseIdRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
+  ApiServiceLogsServiceIdRoute: typeof ApiServiceLogsServiceIdRoute
   ProjectsProjectIdEnvironmentIdRoute: typeof ProjectsProjectIdEnvironmentIdRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
   ApiWebhooksStackStackIdRoute: typeof ApiWebhooksStackStackIdRoute
@@ -456,6 +469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogsDeploymentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/service-logs/$serviceId': {
+      id: '/api/service-logs/$serviceId'
+      path: '/api/service-logs/$serviceId'
+      fullPath: '/api/service-logs/$serviceId'
+      preLoaderRoute: typeof ApiServiceLogsServiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects_/$projectId_/$environmentId': {
       id: '/projects_/$projectId_/$environmentId'
       path: '/projects/$projectId/$environmentId'
@@ -519,6 +539,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDatabaseLogsDatabaseIdRoute: ApiDatabaseLogsDatabaseIdRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
+  ApiServiceLogsServiceIdRoute: ApiServiceLogsServiceIdRoute,
   ProjectsProjectIdEnvironmentIdRoute: ProjectsProjectIdEnvironmentIdRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
   ApiWebhooksStackStackIdRoute: ApiWebhooksStackStackIdRoute,

@@ -320,7 +320,7 @@ async function buildAndDeployStack(
   injectDeployConfig(doc, {
     builtKeys: Object.keys(serviceImages),
     certResolver: route.certResolver,
-    domain: stack.domain,
+    domains: stack.domain ? [stack.domain] : undefined,
     networkName: route.networkName,
     placementNodeId,
     port: stack.port,
@@ -405,32 +405,39 @@ export async function runStackDeploy(
     .set({ startedAt, status: "building" })
     .where(eq(stackDeployments.id, deployment.id));
 
-  const sink = await createLogSink({
-    deploymentId: deployment.id,
-    onChunk: (c) => build.onLog?.(deployment.id, c),
-    root: build.logRoot,
-  });
-  const stream = { onStderr: sink.write, onStdout: sink.write };
-
+  let sink: LogSink | undefined;
   try {
+    sink = await createLogSink({
+      deploymentId: deployment.id,
+      onChunk: (c) => build.onLog?.(deployment.id, c),
+      root: build.logRoot,
+    });
+    const log = sink;
+    const stream = { onStderr: log.write, onStdout: log.write };
     // The connection lives inside `withDeployClients`; a failure to connect
     // is caught the same way as any other failure below.
     await withDeployClients(ctx, stack.server, (clients) =>
-      buildAndDeployStack(ctx, route, deployment, sink, stream, clients)
+      buildAndDeployStack(ctx, route, deployment, log, stream, clients)
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    sink.write(`✗ ${message}\n`);
+    sink?.write(`✗ ${message}\n`);
     await db
       .update(stackDeployments)
       .set({ errorMessage: message, finishedAt: new Date(), status: "failed" })
       .where(eq(stackDeployments.id, deployment.id));
+    await db
+      .update(stacks)
+      .set(markCrashed(null, message))
+      .where(eq(stacks.id, stack.id));
     throw err;
   } finally {
-    const { byteSize, storageUrl } = await sink.close();
-    await db
-      .insert(stackDeploymentLogs)
-      .values({ byteSize, stackDeploymentId: deployment.id, storageUrl });
+    if (sink) {
+      const { byteSize, storageUrl } = await sink.close();
+      await db
+        .insert(stackDeploymentLogs)
+        .values({ byteSize, stackDeploymentId: deployment.id, storageUrl });
+    }
   }
 }
 
@@ -517,7 +524,7 @@ export async function redeployStack(
       injectDeployConfig(doc, {
         builtKeys: Object.keys(serviceImages),
         certResolver: route.certResolver,
-        domain: stack.domain,
+        domains: stack.domain ? [stack.domain] : undefined,
         networkName: route.networkName,
         placementNodeId,
         port: stack.port,

@@ -1,5 +1,5 @@
 import type { ReactNode, UIEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { TerminalLogs } from "@/components/terminal-logs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,9 +15,6 @@ import {
  * DOM can't hold up, and nobody reads the ten-thousandth one.
  */
 export const MAX_LINES = 4000;
-
-/** Below this, a noise group costs more to collapse than to display. */
-export const MIN_NOISE_GROUP = 4;
 
 /** Distance from the bottom below which we consider the user is following along. */
 const PIN_THRESHOLD_PX = 40;
@@ -38,8 +35,6 @@ export interface Line {
   kind: LineKind;
   text: string;
 }
-
-export type Block = Line | { id: number; kind: "group"; lines: Line[] };
 
 const ERROR_PATTERN = /\berror\b|\bfailed\b|\bERR!|^✗|\bfatal\b/i;
 
@@ -77,38 +72,9 @@ export function classifyPlain(text: string): LineKind {
   return ERROR_PATTERN.test(text) ? "error" : "noise";
 }
 
-/** Groups sequences of noise into collapsible blocks. */
-export function groupNoise(lines: Line[]): Block[] {
-  const out: Block[] = [];
-  let run: Line[] = [];
-
-  const flush = () => {
-    if (run.length === 0) {
-      return;
-    }
-    if (run.length >= MIN_NOISE_GROUP) {
-      out.push({ id: run[0]?.id ?? 0, kind: "group", lines: run });
-    } else {
-      out.push(...run);
-    }
-    run = [];
-  };
-
-  for (const line of lines) {
-    if (line.kind === "noise") {
-      run.push(line);
-      continue;
-    }
-    flush();
-    out.push(line);
-  }
-  flush();
-  return out;
-}
-
 interface LogViewProps {
   /** The lines already split and classified by the caller. */
-  blocks: Block[];
+  blocks: Line[];
   /** Optional subtitle under the title. */
   description?: string;
   /** The badge label when the stream is closed. Omitted with no `title`. */
@@ -116,6 +82,11 @@ interface LogViewProps {
   live?: boolean;
   /** What's shown as long as no line has arrived. */
   placeholder: string;
+  /**
+   * Skip the Frame chrome — the stream fills a FocusModal body, which
+   * already has a header.
+   */
+  plain?: boolean;
   /** What follows the title on the right — a selector, an action. */
   right?: ReactNode;
   /** Frame title. Omit to hide the title row (and live badge). */
@@ -131,14 +102,6 @@ function renderLine(line: Line) {
       line={{ id: String(line.id), text: line.text }}
     />
   );
-}
-
-export function countLines(blocks: Block[]): number {
-  let total = 0;
-  for (const block of blocks) {
-    total += block.kind === "group" ? block.lines.length : 1;
-  }
-  return total;
 }
 
 function LogViewHeader({
@@ -182,23 +145,12 @@ function LogViewHeader({
   );
 }
 
-function renderBlocks(blocks: Block[], placeholder: string) {
+function renderBlocks(blocks: Line[], placeholder: string) {
   if (blocks.length === 0) {
     return <span className="text-muted-foreground text-sm">{placeholder}</span>;
   }
 
-  return blocks.map((block) =>
-    block.kind === "group" ? (
-      <details key={block.id}>
-        <summary className="cursor-pointer py-1 text-muted-foreground text-xs">
-          {block.lines.length} build lines
-        </summary>
-        {block.lines.map(renderLine)}
-      </details>
-    ) : (
-      renderLine(block)
-    )
-  );
+  return blocks.map(renderLine);
 }
 
 export function LogView({
@@ -207,6 +159,7 @@ export function LogView({
   idleLabel,
   live,
   placeholder,
+  plain,
   right,
   title,
   toolbar,
@@ -236,6 +189,20 @@ export function LogView({
       el.scrollHeight - el.scrollTop - el.clientHeight < PIN_THRESHOLD_PX;
   }, []);
 
+  const stream = (
+    <div
+      className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-4"
+      onScroll={handleScroll}
+      ref={viewRef}
+    >
+      {renderBlocks(blocks, placeholder)}
+    </div>
+  );
+
+  if (plain) {
+    return <div className="flex h-full min-h-0 flex-col">{stream}</div>;
+  }
+
   return (
     <Frame className="flex h-full min-h-0 flex-col" stacked variant="ghost">
       <LogViewHeader
@@ -251,19 +218,8 @@ export function LogView({
           background and radius of whatever carries it. The FramePanel
           keeps the border; only the scrolling body is masked. */}
       <FramePanel className="flex min-h-0 flex-1 flex-col p-0">
-        <div
-          className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-3"
-          onScroll={handleScroll}
-          ref={viewRef}
-        >
-          {renderBlocks(blocks, placeholder)}
-        </div>
+        {stream}
       </FramePanel>
     </Frame>
   );
-}
-
-/** The raw text of a stream, split and classified without grouping. */
-export function usePlainBlocks(text: string): Block[] {
-  return useMemo(() => parse(text, classifyPlain), [text]);
 }

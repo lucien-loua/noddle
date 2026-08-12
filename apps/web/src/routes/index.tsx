@@ -250,7 +250,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
                           projectId: row.projectId,
                           serviceId: row.serviceId,
                         }}
-                        search={{ deployment: row.id }}
+                        search={{ deployment: row.id, tab: "deployments" }}
                         to="/projects/$projectId/$environmentId/services/$serviceId"
                       >
                         {row.serviceName}

@@ -10,6 +10,7 @@ import {
   environments,
   projects,
   servers,
+  serviceDomains,
   services,
 } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
@@ -141,7 +142,6 @@ try {
     .insert(services)
     .values({
       buildMethod: "nixpacks",
-      domain: `${NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -154,6 +154,10 @@ try {
   if (!svc) {
     throw new Error("service insert failed");
   }
+  await db.insert(serviceDomains).values({
+    host: `${NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+    serviceId: svc.id,
+  });
   const swarmName = swarmServiceName(svc);
   await removeService(docker, swarmName);
 

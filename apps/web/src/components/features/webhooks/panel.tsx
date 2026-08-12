@@ -1,7 +1,21 @@
+import { ArrowClockwiseIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useCallback, useMemo } from "react";
+import { useCopyFeedback } from "@/components/copyable-value";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 
 export interface WebhookStatus {
@@ -9,22 +23,16 @@ export interface WebhookStatus {
   path: string;
 }
 
-interface Revealed {
-  path: string;
-  secret: string;
-}
-
 interface Props {
   /** `service:create` — the server requires the same permission as a
    *  connected repository, a webhook secret being just as much a way to
    *  trigger a deploy. */
   canManage: boolean;
-  generateWebhook: () => Promise<Revealed>;
+  generateWebhook: () => Promise<{ path: string; secret: string }>;
   getWebhook: () => Promise<WebhookStatus>;
   queryKey: readonly unknown[];
 }
 
-// SSR has no origin to offer; the client fills it in after hydration.
 const origin = typeof window === "undefined" ? "" : window.location.origin;
 
 export function WebhookPanel({
@@ -34,72 +42,152 @@ export function WebhookPanel({
   queryKey,
 }: Props) {
   const queryClient = useQueryClient();
-  const [revealed, setRevealed] = useState<Revealed | null>(null);
-
   const status = useQuery({ queryFn: getWebhook, queryKey });
 
   const generate = useMutation({
     mutationFn: generateWebhook,
-    onSuccess: async (result) => {
-      setRevealed(result);
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
     },
   });
 
   const handleGenerate = useCallback(() => generate.mutate(), [generate]);
 
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-medium text-sm">Webhook</h2>
-        {canManage ? (
-          <Button
-            disabled={generate.isPending}
-            onClick={handleGenerate}
-            size="sm"
-            variant="outline"
-          >
-            {generate.isPending ? <Spinner data-icon="inline-start" /> : null}
-            {status.data?.configured ? "Regenerate" : "Generate"}
-          </Button>
-        ) : null}
-      </div>
+  const webhookUrl = useMemo(() => {
+    if (!status.data?.configured) {
+      return "";
+    }
+    return `${origin}${status.data.path}`;
+  }, [status.data]);
 
-      {revealed ? (
-        <Alert>
-          <AlertDescription className="flex flex-col gap-1">
-            <span className="font-medium">
-              Copy the secret now — it will never be shown again.
-            </span>
-            <span className="break-all font-mono text-xs">
-              URL: {origin}
-              {revealed.path}
-            </span>
-            <span className="break-all font-mono text-xs">
-              Secret: {revealed.secret}
-            </span>
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <WebhookStatusLine status={status.data} />
-      )}
-    </div>
+  if (status.isPending) {
+    return (
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader>
+          <FrameTitle>Webhook URL</FrameTitle>
+        </FrameHeader>
+        <FramePanel>
+          <Spinner />
+        </FramePanel>
+      </Frame>
+    );
+  }
+
+  return (
+    <Frame className="w-full" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>Webhook URL</FrameTitle>
+        <FrameDescription>
+          Use this URL in your git provider or CI to trigger a deploy on push.
+        </FrameDescription>
+      </FrameHeader>
+      <FramePanel>
+        <Field>
+          <FieldLabel htmlFor="webhook-url">Webhook URL</FieldLabel>
+          <WebhookUrlInput
+            canManage={canManage}
+            generatePending={generate.isPending}
+            onGenerate={handleGenerate}
+            url={webhookUrl}
+          />
+          {status.data?.configured ? null : (
+            <FieldDescription>
+              Generate a webhook URL to deploy automatically on every GitHub or
+              GitLab push.
+            </FieldDescription>
+          )}
+        </Field>
+      </FramePanel>
+    </Frame>
   );
 }
 
-function WebhookStatusLine({ status }: { status: WebhookStatus | undefined }) {
-  if (status?.configured) {
+function WebhookManageButton({
+  configured,
+  generatePending,
+  onGenerate,
+}: {
+  configured: boolean;
+  generatePending: boolean;
+  onGenerate: () => void;
+}) {
+  if (configured) {
     return (
-      <p className="break-all text-muted-foreground text-xs">
-        Configured: {origin}
-        {status.path}
-      </p>
+      <InputGroupButton
+        aria-label="Regenerate webhook URL"
+        disabled={generatePending}
+        onClick={onGenerate}
+        size="icon-xs"
+        variant="outline"
+      >
+        {generatePending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <ArrowClockwiseIcon />
+        )}
+      </InputGroupButton>
     );
   }
+
   return (
-    <p className="text-muted-foreground text-xs">
-      No webhook yet. Generate one to trigger a deploy on every GitHub or GitLab
-      push.
-    </p>
+    <InputGroupButton
+      disabled={generatePending}
+      onClick={onGenerate}
+      size="xs"
+      variant="outline"
+    >
+      {generatePending ? <Spinner data-icon="inline-start" /> : null}
+      Generate
+    </InputGroupButton>
+  );
+}
+
+function WebhookUrlInput({
+  canManage,
+  generatePending,
+  onGenerate,
+  url,
+}: {
+  canManage: boolean;
+  generatePending: boolean;
+  onGenerate: () => void;
+  url: string;
+}) {
+  const { copied, handleCopy } = useCopyFeedback(url);
+  const configured = url.length > 0;
+
+  return (
+    <>
+      <InputGroup>
+        <InputGroupInput
+          id="webhook-url"
+          placeholder={configured ? undefined : "No webhook configured yet"}
+          readOnly
+          value={configured ? url : ""}
+        />
+        <InputGroupAddon align="inline-end">
+          {configured ? (
+            <InputGroupButton
+              aria-label="Copy webhook URL"
+              onClick={handleCopy}
+              size="icon-xs"
+              variant="outline"
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </InputGroupButton>
+          ) : null}
+          {canManage ? (
+            <WebhookManageButton
+              configured={configured}
+              generatePending={generatePending}
+              onGenerate={onGenerate}
+            />
+          ) : null}
+        </InputGroupAddon>
+      </InputGroup>
+      <span aria-live="polite" className="sr-only">
+        {copied ? "Webhook URL copied" : ""}
+      </span>
+    </>
   );
 }

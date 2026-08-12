@@ -1,11 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { LineKind } from "@/components/log-view";
-import { groupNoise, LogView, parse } from "@/components/log-view";
+import {
+  createContext,
+  type ReactNode,
+  use,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { CopyButton } from "@/components/copyable-value";
+import type { Line, LineKind } from "@/components/log-view";
+import { LogView, parse } from "@/components/log-view";
 
 interface LogStreamProps {
   deploymentId: string;
   /** Called when the deployment reaches a terminal status. */
   onEnd?: (status: string) => void;
+  /** Skip Frame chrome when the stream fills a FocusModal. */
+  plain?: boolean;
 }
 
 const ERROR_PATTERN = /\berror\b|\bfailed\b|\bERR!|^✗|\bfatal\b/i;
@@ -18,7 +29,26 @@ function classifyBuild(text: string): LineKind {
   return ERROR_PATTERN.test(text) ? "error" : "noise";
 }
 
-export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
+interface LogStreamValue {
+  blocks: Line[];
+  live: boolean;
+  text: string;
+}
+
+const LogStreamContext = createContext<LogStreamValue | null>(null);
+
+function useLogStream(): LogStreamValue {
+  const value = use(LogStreamContext);
+  if (!value) {
+    throw new Error("LogStream.Copy must be used inside LogStream.Session");
+  }
+  return value;
+}
+
+function useBuildLogSource(
+  deploymentId: string,
+  onEnd: LogStreamProps["onEnd"]
+): { live: boolean; text: string } {
   const [text, setText] = useState("");
   const [live, setLive] = useState(true);
 
@@ -57,7 +87,32 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
     return () => source.close();
   }, [deploymentId]);
 
-  const blocks = useMemo(() => groupNoise(parse(text, classifyBuild)), [text]);
+  return { live, text };
+}
+
+function LogStreamSession({
+  children,
+  deploymentId,
+  onEnd,
+}: {
+  children: ReactNode;
+  deploymentId: string;
+  onEnd?: (status: string) => void;
+}) {
+  const { live, text } = useBuildLogSource(deploymentId, onEnd);
+  const blocks = useMemo(() => parse(text, classifyBuild), [text]);
+  const value = useMemo(() => ({ blocks, live, text }), [blocks, live, text]);
+
+  return <LogStreamContext value={value}>{children}</LogStreamContext>;
+}
+
+function LogStreamCopy() {
+  const { text } = useLogStream();
+  return <CopyButton label="logs" value={text} />;
+}
+
+function LogStreamView({ plain }: { plain?: boolean }) {
+  const { blocks, live, text } = useLogStream();
 
   return (
     <LogView
@@ -65,7 +120,21 @@ export function LogStream({ deploymentId, onEnd }: LogStreamProps) {
       idleLabel="finished"
       live={live}
       placeholder="Waiting for the first line…"
-      title="Build logs"
+      plain={plain}
+      right={plain ? undefined : <CopyButton label="logs" value={text} />}
+      title={plain ? undefined : "Build logs"}
     />
   );
 }
+
+export function LogStream({ deploymentId, onEnd, plain }: LogStreamProps) {
+  return (
+    <LogStreamSession deploymentId={deploymentId} onEnd={onEnd}>
+      <LogStreamView plain={plain} />
+    </LogStreamSession>
+  );
+}
+
+LogStream.Session = LogStreamSession;
+LogStream.Copy = LogStreamCopy;
+LogStream.View = LogStreamView;

@@ -288,6 +288,55 @@
       "when": 1786441975594,
       "tag": "0040_magenta_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1786504771928,
+      "tag": "0041_sleepy_typhoid_mary",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1786509000000,
+      "tag": "0042_service_domains",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1786513000000,
+      "tag": "0043_domain_https",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1786517000000,
+      "tag": "0044_domain_paths",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1786521000000,
+      "tag": "0045_drop_domain_enabled",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1786525000000,
+      "tag": "0046_volume_backups",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1786533000000,
+      "tag": "0047_volume_backups_volume_name",
+      "breakpoints": true
     }
   ]
 }

@@ -2,10 +2,10 @@
  * biome-ignore-all lint/performance/noJsxPropsBind: filter controls;
  * extracting every setState wrapper adds noise without shared children.
  *
- * Database container logs — same LogView chrome as build streams (Frame +
- * stream panel), with Dokploy-style filters (time range, line limit, level,
- * search, pause, copy) in Noddle UI language. Flat lines — no collapsible
- * noise groups; those are a build-log concern.
+ * Runtime container logs — same LogView chrome as build streams (Frame +
+ * stream panel), with time range, line limit, level, search, pause and
+ * copy. Flat lines. Databases and applications share this: only the SSE
+ * path changes.
  */
 
 import { PauseIcon, PlayIcon } from "@phosphor-icons/react";
@@ -33,14 +33,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface ContainerLogsProps {
+  /**
+   * Remounts the SSE follow when the container is replaced (start /
+   * restart bump `status` or `updatedAt`). Without this the stream stays
+   * on the dead container until a full reload.
+   */
+  generation: string;
+  name: string;
+  streamUrl: string;
+}
+
 interface DatabaseLogsProps {
   databaseId: string;
   databaseName: string;
-  /**
-   * Remounts the SSE follow when the database's container is replaced
-   * (start / restart bump `status` or `updatedAt`). Without this the
-   * stream stays on the dead container until a full reload.
-   */
   generation: string;
 }
 
@@ -72,7 +78,7 @@ const LEVEL_OPTIONS: Array<{ label: string; value: "all" | TerminalLogLevel }> =
   ];
 
 function emptyPlaceholder(
-  databaseName: string,
+  name: string,
   live: boolean,
   hasText: boolean
 ): string {
@@ -80,7 +86,7 @@ function emptyPlaceholder(
     return "No logs match these filters.";
   }
   if (live) {
-    return `Waiting for ${databaseName} to say something…`;
+    return `Waiting for ${name} to say something…`;
   }
   return "No logs yet.";
 }
@@ -101,11 +107,11 @@ function filterLines(
   return next;
 }
 
-export function DatabaseLogs({
-  databaseId,
-  databaseName,
+export function ContainerLogs({
   generation,
-}: DatabaseLogsProps) {
+  name,
+  streamUrl,
+}: ContainerLogsProps) {
   const [text, setText] = useState("");
   const [live, setLive] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -132,9 +138,8 @@ export function DatabaseLogs({
     // `generation` is a client remount key (status/updatedAt). Unused by
     // the handler; putting it on the URL makes the dependency real.
     params.set("g", generation);
-    const source = new EventSource(
-      `/api/database-logs/${databaseId}?${params}`
-    );
+    const separator = streamUrl.includes("?") ? "&" : "?";
+    const source = new EventSource(`${streamUrl}${separator}${params}`);
 
     source.addEventListener("chunk", (event: MessageEvent<string>) => {
       const payload = JSON.parse(event.data);
@@ -155,7 +160,7 @@ export function DatabaseLogs({
     };
 
     return () => source.close();
-  }, [databaseId, generation, since, tail]);
+  }, [generation, since, streamUrl, tail]);
 
   const handlePauseToggle = useCallback(() => {
     setPaused((wasPaused) => {
@@ -184,7 +189,7 @@ export function DatabaseLogs({
   return (
     <LogView
       blocks={blocks}
-      placeholder={emptyPlaceholder(databaseName, live, text.length > 0)}
+      placeholder={emptyPlaceholder(name, live, text.length > 0)}
       toolbar={
         <div className="flex flex-wrap items-center gap-2">
           <Select
@@ -279,6 +284,20 @@ export function DatabaseLogs({
           </div>
         </div>
       }
+    />
+  );
+}
+
+export function DatabaseLogs({
+  databaseId,
+  databaseName,
+  generation,
+}: DatabaseLogsProps) {
+  return (
+    <ContainerLogs
+      generation={generation}
+      name={databaseName}
+      streamUrl={`/api/database-logs/${databaseId}`}
     />
   );
 }

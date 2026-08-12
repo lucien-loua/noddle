@@ -1,12 +1,8 @@
-import {
-  connectRepoSchema,
-  domainSchema,
-} from "@noddle/shared/validation/service";
+import { connectRepoSchema } from "@noddle/shared/validation/service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect } from "react";
-import { z } from "zod";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -41,23 +37,12 @@ interface Props {
   servers: ServerView[];
 }
 
-const connectRepoFormSchema = connectRepoSchema.extend({
-  domain: z
-    .string()
-    .refine(
-      (v) => v === "" || domainSchema.safeParse(v).success,
-      "Enter a valid domain, or leave empty."
-    ),
-  port: z
-    .number()
-    .int()
-    .min(1)
-    .max(65_535)
-    .nullable()
-    .refine((v) => v !== null, "Port is required."),
-});
-
-type ConnectRepoFormValues = z.input<typeof connectRepoFormSchema>;
+interface ConnectRepoFormValues {
+  environmentName: string;
+  name: string;
+  projectName: string;
+  serverId: string;
+}
 
 export function ConnectRepoDialog({
   environmentName: lockedEnvironment,
@@ -66,6 +51,7 @@ export function ConnectRepoDialog({
   projectName: lockedProject,
   servers,
 }: Props) {
+  const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -73,33 +59,33 @@ export function ConnectRepoDialog({
     mutationFn: (value: ConnectRepoFormValues) =>
       connectRepo({
         data: {
-          domain: value.domain || undefined,
           environmentName: value.environmentName,
-          gitBranch: value.gitBranch,
-          gitRepoUrl: value.gitRepoUrl,
           name: value.name,
-          port: value.port ?? 3000,
           projectName: value.projectName,
           serverId: value.serverId,
         },
       }),
-    onSuccess: async () => {
+    onSuccess: async (created) => {
       onOpenChange(false);
       await queryClient.invalidateQueries({
         queryKey: queries.servers().queryKey,
       });
       await router.invalidate();
+      await navigate({
+        params: {
+          environmentId: created.environmentId,
+          projectId: created.projectId,
+          serviceId: created.serviceId,
+        },
+        to: "/projects/$projectId/$environmentId/services/$serviceId",
+      });
     },
   });
   // biome-ignore lint/suspicious/noUnnecessaryConditions: false positive, servers can be empty
   const defaultServerId = servers[0]?.id ?? "";
   const defaultValues: ConnectRepoFormValues = {
-    domain: "",
     environmentName: lockedEnvironment ?? "production",
-    gitBranch: "main",
-    gitRepoUrl: "",
     name: "",
-    port: 3000,
     projectName: lockedProject ?? "default",
     serverId: defaultServerId,
   };
@@ -107,7 +93,7 @@ export function ConnectRepoDialog({
   const form = useAppForm({
     defaultValues,
     onSubmit: ({ value }) => connect.mutateAsync(value),
-    validators: { onDynamic: connectRepoFormSchema },
+    validators: { onDynamic: connectRepoSchema },
   });
 
   useEffect(() => {
@@ -130,17 +116,17 @@ export function ConnectRepoDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connect a repository</DialogTitle>
+          <DialogTitle>Create</DialogTitle>
           <DialogDescription>
-            Noddle clones the repository, detects the stack with nixpacks, and
-            builds the image on the chosen server.
+            Assign a name to your application. The git source and build are
+            configured on the next screen, then Deploy.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              No servers registered. Add one before connecting a repository — a
+              No servers registered. Add one before creating an application — a
               service needs a machine to build and run on.
             </AlertDescription>
           </Alert>
@@ -163,11 +149,7 @@ export function ConnectRepoDialog({
 
                   <form.AppField name="name">
                     {(f) => (
-                      <f.FieldText
-                        label="Service name"
-                        placeholder="my-app"
-                        required
-                      />
+                      <f.FieldText label="Name" placeholder="my-app" required />
                     )}
                   </form.AppField>
 
@@ -200,51 +182,10 @@ export function ConnectRepoDialog({
                   </form.AppField>
                 </FieldSet>
 
-                <FieldSet>
-                  <FieldLegend variant="label">Source</FieldLegend>
-                  <form.AppField name="gitRepoUrl">
-                    {(f) => (
-                      <f.FieldText
-                        label="Git repository URL"
-                        placeholder="https://github.com/me/my-app.git"
-                        required
-                      />
-                    )}
-                  </form.AppField>
-
-                  <form.AppField name="gitBranch">
-                    {(f) => <f.FieldText label="Branch" />}
-                  </form.AppField>
-                </FieldSet>
-
-                <FieldSet>
-                  <FieldLegend variant="label">Public access</FieldLegend>
-                  <div className="grid grid-cols-[1fr_1fr] gap-4">
-                    <form.AppField name="port">
-                      {(f) => (
-                        <f.FieldNumber
-                          description="The port your app listens on."
-                          label="Port"
-                          min={1}
-                        />
-                      )}
-                    </form.AppField>
-                    <form.AppField name="domain">
-                      {(f) => (
-                        <f.FieldText
-                          description="Without a domain, the service isn't reachable from outside."
-                          label="Domain"
-                          placeholder="my-app.example.com"
-                        />
-                      )}
-                    </form.AppField>
-                  </div>
-                </FieldSet>
-
                 {connect.isError ? (
                   <Alert variant="destructive">
                     <AlertDescription>
-                      {errorMessage(connect.error, "could not connect")}
+                      {errorMessage(connect.error, "could not create")}
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -256,7 +197,7 @@ export function ConnectRepoDialog({
                 {connect.isPending ? (
                   <Spinner data-icon="inline-start" />
                 ) : null}
-                Connect
+                Create
               </Button>
             </DialogFooter>
           </DialogForm>

@@ -1,5 +1,6 @@
 import {
   buildImage,
+  buildImageFromDockerfile,
   computeBuildCap,
   ensureCappedBuilder,
   fetchSource,
@@ -12,12 +13,14 @@ import {
   services,
 } from "@noddle/db/schema";
 import { rolloutService } from "@noddle/deploy";
+import type { DomainRoute } from "@noddle/proxy-config";
 import {
   pushImage,
   type RegistryConfig,
   registryImageTag,
 } from "@noddle/registry";
 import { decryptSecret, secretContext } from "@noddle/shared/crypto";
+import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect, dockerClient } from "@noddle/ssh-executor";
 import { watchUntilFor } from "@noddle/swarm-ops";
@@ -68,8 +71,30 @@ type RunDeployment = NonNullable<
 function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
   return ctx.db.query.deployments.findFirst({
     where: eq(deployments.id, deploymentId),
-    with: { service: { with: { envVars: true, server: true } } },
+    with: {
+      service: { with: { domains: true, envVars: true, server: true } },
+    },
   });
+}
+
+function routeHosts(
+  domains: {
+    certificateType: "none" | "letsencrypt";
+    host: string;
+    https: boolean;
+    internalPath: string | null;
+    path: string;
+    stripPath: boolean;
+  }[]
+): DomainRoute[] {
+  return domains.map((d) => ({
+    certificateType: d.certificateType,
+    host: d.host,
+    https: d.https,
+    internalPath: d.internalPath,
+    path: d.path,
+    stripPath: d.stripPath,
+  }));
 }
 
 /**
@@ -131,12 +156,27 @@ async function buildAndDeployService(
     .set({ commitSha: sha, imageTag, status: "deploying" })
     .where(eq(deployments.id, deployment.id));
 
-  await buildImage(buildClient, {
-    builderName: "noddle-builder",
-    dir: workDir,
-    imageTag,
-    ...stream,
-  });
+  if (service.buildMethod === "dockerfile") {
+    sink.write("▸ building from Dockerfile\n");
+    await buildImageFromDockerfile(buildClient, {
+      builderName: "noddle-builder",
+      contextDir: workDir,
+      dockerfilePath: "Dockerfile",
+      imageTag,
+      ...stream,
+    });
+  } else {
+    if (service.publishDirectory) {
+      sink.write(`▸ static output: ${service.publishDirectory}\n`);
+    }
+    await buildImage(buildClient, {
+      builderName: "noddle-builder",
+      dir: workDir,
+      imageTag,
+      publishDirectory: service.publishDirectory,
+      ...stream,
+    });
+  }
 
   if (registry) {
     sink.write("▸ pushing image to the registry\n");
@@ -163,7 +203,7 @@ async function buildAndDeployService(
   const outcome = await rolloutService({
     buildDocker,
     certResolver: route.certResolver,
-    domain: service.domain ?? undefined,
+    domainRoutes: routeHosts(service.domains),
     env,
     image: imageTag,
     managerDocker,
@@ -260,14 +300,15 @@ export async function runDeploy(
     .set({ startedAt, status: "building" })
     .where(eq(deployments.id, deployment.id));
 
-  const sink = await createLogSink({
-    deploymentId: deployment.id,
-    onChunk: (c) => build.onLog?.(deployment.id, c),
-    root: build.logRoot,
-  });
-  const stream = { onStderr: sink.write, onStdout: sink.write };
-
+  let sink: Awaited<ReturnType<typeof createLogSink>> | undefined;
   try {
+    sink = await createLogSink({
+      deploymentId: deployment.id,
+      onChunk: (c) => build.onLog?.(deployment.id, c),
+      root: build.logRoot,
+    });
+    const log = sink;
+    const stream = { onStderr: log.write, onStdout: log.write };
     // The connection lives inside `withDeployClients`; a failure to connect
     // is caught the same way as any other failure below.
     await withDeployClients(ctx, service.server, (clients) =>
@@ -276,14 +317,14 @@ export async function runDeploy(
         route,
         registry,
         deployment,
-        sink,
+        log,
         stream,
         clients
       )
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    sink.write(`✗ ${message}\n`);
+    sink?.write(`✗ ${message}\n`);
     await db
       .update(deployments)
       .set({
@@ -292,6 +333,10 @@ export async function runDeploy(
         status: "failed",
       })
       .where(eq(deployments.id, deployment.id));
+    await db
+      .update(services)
+      .set(markFailed(null, message))
+      .where(eq(services.id, service.id));
     await notify(ctx, {
       detail: message,
       resource: service.name,
@@ -299,10 +344,12 @@ export async function runDeploy(
     });
     throw err;
   } finally {
-    const { byteSize, storageUrl } = await sink.close();
-    await db
-      .insert(deploymentLogs)
-      .values({ byteSize, deploymentId: deployment.id, storageUrl });
+    if (sink) {
+      const { byteSize, storageUrl } = await sink.close();
+      await db
+        .insert(deploymentLogs)
+        .values({ byteSize, deploymentId: deployment.id, storageUrl });
+    }
   }
 }
 
@@ -318,7 +365,7 @@ export async function redeployImage(
 ): Promise<string> {
   const service = await ctx.db.query.services.findFirst({
     where: eq(services.id, opts.serviceId),
-    with: { envVars: true, server: true },
+    with: { domains: true, envVars: true, server: true },
   });
   if (!service) {
     throw new Error(`service not found: ${opts.serviceId}`);
@@ -367,7 +414,7 @@ export async function redeployImage(
       const outcome = await rolloutService({
         buildDocker,
         certResolver: route.certResolver,
-        domain: service.domain ?? undefined,
+        domainRoutes: routeHosts(service.domains),
         env,
         image: opts.imageTag,
         managerDocker,

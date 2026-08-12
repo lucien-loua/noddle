@@ -48,7 +48,7 @@ const ko = (m: string) => {
 // ── labels (pure) ───────────────────────────────────────────────────────────
 {
   const withDomain = routeLabels({
-    domain: "app.example.com",
+    domains: ["app.example.com"],
     port: 3000,
     serviceName: SERVICE,
   });

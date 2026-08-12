@@ -4,81 +4,147 @@ import {
   connectRepoSchema,
   deleteServiceSchema,
   moveServiceSchema,
+  updateServiceSettingsSchema,
 } from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
+import type { z } from "zod";
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
+interface ServiceSettingsPatch {
+  buildMethod?: "nixpacks" | "dockerfile";
+  gitBranch?: string;
+  gitRepoUrl?: string | null;
+  publishDirectory?: string | null;
+}
+
+function serviceSettingsPatch(
+  data: z.infer<typeof updateServiceSettingsSchema>
+): ServiceSettingsPatch {
+  const patch: ServiceSettingsPatch = {};
+  if (data.buildMethod !== undefined) {
+    patch.buildMethod = data.buildMethod;
+  }
+  if (data.gitBranch !== undefined) {
+    patch.gitBranch = data.gitBranch;
+  }
+  if (data.gitRepoUrl !== undefined) {
+    patch.gitRepoUrl = data.gitRepoUrl === "" ? null : data.gitRepoUrl;
+  }
+  if (data.publishDirectory !== undefined) {
+    patch.publishDirectory =
+      data.publishDirectory === "" ? null : data.publishDirectory;
+  }
+  return patch;
+}
+
 export const connectRepo = createServerFn({ method: "POST" })
   .validator(connectRepoSchema)
-  .handler(async ({ data }): Promise<{ serviceId: string }> => {
-    // The Service is the object recorded, not the Project or Environment
-    // this may also have created: those are find-or-create side effects,
-    // the Service is what the user asked for.
-    const guarded = await runGuarded({
-      permission: { action: "create", resource: "service" },
-      run: async () => {
-        // Find-or-create BY NAME: a lone administrator at their dashboard types
-        // the same project name to file a second service under it, they
-        // shouldn't need to know a hidden id to land back on the same row.
-        let project = await db.query.projects.findFirst({
-          where: eq(projects.name, data.projectName),
-        });
-        if (!project) {
-          const [created] = await db
-            .insert(projects)
-            .values({ name: data.projectName })
-            .returning();
-          if (!created) {
-            throw new Error("could not create project");
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      environmentId: string;
+      projectId: string;
+      serviceId: string;
+    }> => {
+      // The Service is the object recorded, not the Project or Environment
+      // this may also have created: those are find-or-create side effects,
+      // the Service is what the user asked for.
+      const guarded = await runGuarded({
+        permission: { action: "create", resource: "service" },
+        run: async () => {
+          // Find-or-create BY NAME: a lone administrator at their dashboard types
+          // the same project name to file a second service under it, they
+          // shouldn't need to know a hidden id to land back on the same row.
+          let project = await db.query.projects.findFirst({
+            where: eq(projects.name, data.projectName),
+          });
+          if (!project) {
+            const [created] = await db
+              .insert(projects)
+              .values({ name: data.projectName })
+              .returning();
+            if (!created) {
+              throw new Error("could not create project");
+            }
+            project = created;
           }
-          project = created;
-        }
 
-        let environment = await db.query.environments.findFirst({
-          where: and(
-            eq(environments.projectId, project.id),
-            eq(environments.name, data.environmentName)
-          ),
-        });
-        if (!environment) {
-          const [created] = await db
-            .insert(environments)
-            .values({ name: data.environmentName, projectId: project.id })
-            .returning();
-          if (!created) {
-            throw new Error("could not create environment");
+          let environment = await db.query.environments.findFirst({
+            where: and(
+              eq(environments.projectId, project.id),
+              eq(environments.name, data.environmentName)
+            ),
+          });
+          if (!environment) {
+            const [created] = await db
+              .insert(environments)
+              .values({ name: data.environmentName, projectId: project.id })
+              .returning();
+            if (!created) {
+              throw new Error("could not create environment");
+            }
+            environment = created;
           }
-          environment = created;
-        }
 
-        const [service] = await db
-          .insert(services)
-          .values({
-            buildMethod: "nixpacks",
-            domain: data.domain,
+          const [service] = await db
+            .insert(services)
+            .values({
+              buildMethod: "nixpacks",
+              environmentId: environment.id,
+              gitBranch: "main",
+              name: data.name,
+              port: 3000,
+              serverId: data.serverId,
+              sourceType: "git",
+            })
+            .returning();
+          if (!service) {
+            throw new Error("could not create service");
+          }
+
+          return {
             environmentId: environment.id,
-            gitBranch: data.gitBranch,
-            gitRepoUrl: data.gitRepoUrl,
-            name: data.name,
-            port: data.port,
-            serverId: data.serverId,
-            sourceType: "git",
-          })
-          .returning();
-        if (!service) {
-          throw new Error("could not create service");
-        }
+            name: service.name,
+            projectId: project.id,
+            serviceId: service.id,
+          };
+        },
+        target: ({ result }) => ({ id: result.serviceId, name: result.name }),
+      });
 
-        return { name: service.name, serviceId: service.id };
-      },
-      target: ({ result }) => ({ id: result.serviceId, name: result.name }),
-    });
+      return {
+        environmentId: guarded.environmentId,
+        projectId: guarded.projectId,
+        serviceId: guarded.serviceId,
+      };
+    }
+  );
 
-    return { serviceId: guarded.serviceId };
-  });
+export const updateServiceSettings = createServerFn({ method: "POST" })
+  .validator(updateServiceSettingsSchema)
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.services.findFirst({
+            where: eq(services.id, data.serviceId),
+          }),
+        notFoundMessage: "service not found",
+        permission: { action: "deploy", resource: "service" },
+        run: async ({ row }) => {
+          const patch = serviceSettingsPatch(data);
+          if (Object.keys(patch).length > 0) {
+            await db.update(services).set(patch).where(eq(services.id, row.id));
+          }
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
 
 /**
  * Delete a service — the path the product was missing.

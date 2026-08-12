@@ -27,6 +27,7 @@ import {
   environments,
   projects,
   servers,
+  serviceDomains,
   services,
 } from "@noddle/db/schema";
 import {
@@ -347,7 +348,6 @@ try {
     .insert(services)
     .values({
       buildMethod: "nixpacks",
-      domain,
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -360,6 +360,7 @@ try {
   if (!svc) {
     throw new Error("service insertion failed");
   }
+  await db.insert(serviceDomains).values({ host: domain, serviceId: svc.id });
   // The Swarm name is no longer `services.name`: database uniqueness is per
   // environment, Swarm's is global. The registry repository follows suit.
   const swarmName = swarmServiceName(svc);

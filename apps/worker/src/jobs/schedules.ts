@@ -19,6 +19,7 @@ import {
   type RouteOptions,
 } from "#runtime-context";
 import { sweepWatch } from "#sweep";
+import { sweepVolumeBackups } from "#volume-backup-sweep";
 
 export interface SweepDeps {
   ctx: DeployContext;
@@ -58,8 +59,14 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     every: 5 * MINUTE,
     id: "backup-sweep",
     queue: "noddle-backup-sweep",
-    run: ({ ctx, enqueue }) =>
-      sweepBackups(ctx, (backupId) => enqueue({ backupId, kind: "backup" })),
+    run: async ({ ctx, enqueue }) => {
+      await sweepBackups(ctx, (backupId) =>
+        enqueue({ backupId, kind: "backup" })
+      );
+      await sweepVolumeBackups(ctx, (volumeBackupId) =>
+        enqueue({ kind: "volume-backup", volumeBackupId })
+      );
+    },
   }),
 
   // Every node must carry the registry's CA, otherwise its daemon refuses to

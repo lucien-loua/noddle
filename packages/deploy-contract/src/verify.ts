@@ -51,6 +51,12 @@ const samples: { [K in JobKind]: PayloadOf<K> } = {
     sourceDeploymentId: ID,
     stackId: ID,
   },
+  "volume-backup": { kind: "volume-backup", volumeBackupId: ID },
+  "volume-restore": {
+    kind: "volume-restore",
+    serviceId: ID,
+    volumeBackupId: ID,
+  },
 };
 
 await runVerify("deploy-contract job schema", async () => {

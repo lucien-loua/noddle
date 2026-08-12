@@ -20,6 +20,7 @@ import { Upload } from "@aws-sdk/lib-storage";
  */
 const PART_SIZE = 8 * 1024 * 1024;
 const QUEUE_SIZE = 2;
+const VOLUME_NAME_FROM_OBJECT_KEY = /\/([^/]+)\/[^/]+\.tar\.gz$/;
 
 export interface BackupDestination {
   accessKeyId: string;
@@ -71,6 +72,27 @@ export function backupObjectKey(opts: {
   return parts.join("/");
 }
 
+export function volumeBackupObjectKey(opts: {
+  backupId: string;
+  prefix: string;
+  serviceName: string;
+  takenAt: Date;
+  volumeName: string;
+}): string {
+  const stamp = opts.takenAt.toISOString().replace(/[:.]/g, "-");
+  const name = `${stamp}-${opts.backupId}.tar.gz`;
+  const parts = [opts.prefix, opts.serviceName, opts.volumeName, name].filter(
+    (p) => p !== ""
+  );
+  return parts.join("/");
+}
+
+/** Last path segment before the `.tar.gz` filename — the Docker volume name. */
+export function parseVolumeNameFromObjectKey(objectKey: string): string | null {
+  const match = objectKey.match(VOLUME_NAME_FROM_OBJECT_KEY);
+  return match?.[1] ?? null;
+}
+
 /**
  * Proves a destination for real: a full write → read → delete round-trip, not
  * just a HEAD on the bucket.
@@ -91,11 +113,6 @@ export async function checkDestination(
   try {
     await client.send(new HeadBucketCommand({ Bucket: destination.bucket }));
   } catch (err) {
-    // HeadBucket responds WITHOUT a body: the SDK then has neither an S3 code
-    // nor message to surface and returns "UnknownError". As-is, a wrong secret
-    // key showed up as "bucket unreachable: Unknown: UnknownError", which
-    // blames the wrong field AND teaches nothing. The HTTP status, however, is
-    // always there. Observed in a real browser, not with curl.
     const status = httpStatus(err);
     if (status === 403) {
       throw new BackupStoreError(

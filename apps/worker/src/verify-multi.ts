@@ -12,6 +12,7 @@ import {
   environments,
   projects,
   servers,
+  serviceDomains,
   services,
 } from "@noddle/db/schema";
 import {
@@ -186,7 +187,6 @@ try {
     .insert(services)
     .values({
       buildMethod: "nixpacks",
-      domain,
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -199,6 +199,7 @@ try {
   if (!svc) {
     throw new Error("service insert failed");
   }
+  await db.insert(serviceDomains).values({ host: domain, serviceId: svc.id });
 
   const [dep] = await db
     .insert(deployments)

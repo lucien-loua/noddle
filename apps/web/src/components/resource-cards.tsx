@@ -45,7 +45,7 @@ export function ServiceCard({
           projectId: service.projectId,
           serviceId: service.id,
         },
-        search: { deployment: result.deploymentId },
+        search: { deployment: result.deploymentId, tab: "deployments" },
         to: "/projects/$projectId/$environmentId/services/$serviceId",
       });
     },
@@ -73,7 +73,9 @@ export function ServiceCard({
       secondary={
         <>
           {service.serverName}
-          {service.domain ? ` · ${service.domain}` : ""}
+          {service.domains.length > 0
+            ? ` · ${service.domains.map((d) => d.host).join(", ")}`
+            : ""}
           {service.lastError ? (
             <span className="block text-destructive" role="status">
               {service.lastError}

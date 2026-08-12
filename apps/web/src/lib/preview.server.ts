@@ -1,11 +1,16 @@
-import { environments, envVars, services } from "@noddle/db/schema";
+import {
+  environments,
+  envVars,
+  serviceDomains,
+  services,
+} from "@noddle/db/schema";
 import {
   decryptSecret,
   encryptSecret,
   secretContext,
 } from "@noddle/shared/crypto";
 import { markDeleting } from "@noddle/shared/lifecycle";
-import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
@@ -59,7 +64,11 @@ export async function ensurePreview(opts: {
 }): Promise<PreviewOutcome> {
   const parent = await db.query.services.findFirst({
     where: eq(services.id, opts.parentServiceId),
-    with: { environment: true, envVars: true },
+    with: {
+      domains: { orderBy: asc(serviceDomains.createdAt) },
+      environment: true,
+      envVars: true,
+    },
   });
   if (!parent) {
     return { ignored: "parent service not found" };
@@ -68,7 +77,7 @@ export async function ensurePreview(opts: {
   // Without a domain on the parent, the preview would have no URL — and a
   // preview you can't open is useless. We say so rather than deploying
   // something unreachable.
-  if (!parent.domain) {
+  if (parent.domains.length === 0) {
     return {
       ignored:
         "the parent service has no domain, so a preview would have no URL",
@@ -138,6 +147,7 @@ async function previewEnvironment(projectId: string) {
 }
 
 type ParentService = typeof services.$inferSelect & {
+  domains: (typeof serviceDomains.$inferSelect)[];
   envVars: (typeof envVars.$inferSelect)[];
 };
 
@@ -150,10 +160,6 @@ async function createPreview(
     .insert(services)
     .values({
       buildMethod: parent.buildMethod,
-      // `pr-<n>.` in front of the parent's domain. On a real domain this
-      // requires a wildcard DNS record that Noddle cannot set up; on
-      // sslip.io any subdomain already resolves.
-      domain: `pr-${opts.prNumber}.${parent.domain}`,
       environmentId,
       gitBranch: opts.headBranch,
       gitRepoUrl: parent.gitRepoUrl,
@@ -167,6 +173,14 @@ async function createPreview(
     .returning();
   if (!preview) {
     throw new Error("could not create the preview service");
+  }
+
+  const baseHost = parent.domains[0]?.host;
+  if (baseHost) {
+    await db.insert(serviceDomains).values({
+      host: `pr-${opts.prNumber}.${baseHost}`,
+      serviceId: preview.id,
+    });
   }
 
   await copyEnvVars(parent, preview.id);

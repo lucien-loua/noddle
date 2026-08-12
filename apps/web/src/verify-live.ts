@@ -17,6 +17,7 @@ import {
   envVars,
   projects,
   servers,
+  serviceDomains,
   services,
   session,
   sshKeys,
@@ -205,7 +206,6 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      domain: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -216,6 +216,12 @@ try {
     })
     .returning();
   const serviceId = svc?.id ?? "";
+  if (svc) {
+    await db.insert(serviceDomains).values({
+      host: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+      serviceId: svc.id,
+    });
+  }
   ok("server and service registered");
 
   // ── the three processes, for real ─────────────────────────────────────────

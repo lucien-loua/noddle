@@ -10,12 +10,6 @@ import { useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Frame,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
-import {
   Table,
   TableBody,
   TableCell,
@@ -225,38 +219,31 @@ export function DeploymentHistory(props: Props) {
   }
 
   return (
-    <Frame variant="ghost">
-      <FrameHeader>
-        <FrameTitle>Deployment history</FrameTitle>
-      </FrameHeader>
-      <FramePanel className="p-0">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
+    <Table>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead key={header.id}>
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext()
+                )}
+              </TableHead>
             ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <HistoryRow
-                key={row.id}
-                onSelect={onSelect}
-                row={row}
-                selected={row.original.id === selectedId}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </FramePanel>
-    </Frame>
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.map((row) => (
+          <HistoryRow
+            key={row.id}
+            onSelect={onSelect}
+            row={row}
+            selected={row.original.id === selectedId}
+          />
+        ))}
+      </TableBody>
+    </Table>
   );
 }

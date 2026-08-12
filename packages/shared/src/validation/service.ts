@@ -38,6 +38,20 @@ export const gitBranchSchema = z
   .refine((v) => !v.includes(".."), "`..` is not allowed in a branch name")
   .refine((v) => !v.endsWith(".lock"), "a branch name cannot end with .lock");
 
+/** Relative output folder inside the repo — no leading slash, no `..`. */
+export const publishDirectorySchema = z
+  .string()
+  .max(512)
+  .regex(
+    /^(?:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)?$/,
+    "expected a relative path such as dist or build/out"
+  );
+
+const optionalPublishDirectory = z.union([
+  z.literal(""),
+  publishDirectorySchema,
+]);
+
 export const domainSchema = z
   .string()
   .min(1)
@@ -58,27 +72,136 @@ export const serviceInputSchema = z.object({
 });
 
 /**
- * "Connect a repo" — the only deployment path the worker actually knows
- * how to run today: git repo, nixpacks build. `sourceType` is therefore
- * not a choice here, unlike in `serviceInputSchema`: offering
- * `docker_image` or `compose` in a form before the worker knows how to
- * build them would dangle a feature that would fail on the first
- * deployment.
+ * Create an application — name and server only. Git, build and domain
+ * are configured on the service page, then Deploy. `sourceType` stays
+ * `git`: the worker's only ship path today.
  */
 export const connectRepoSchema = z.object({
-  domain: domainSchema.optional(),
   environmentName: environmentNameSchema,
-  gitBranch: gitBranchSchema.default("main"),
-  gitRepoUrl: gitRepoUrlSchema,
   name: serviceNameSchema,
-  port: z.number().int().min(1).max(65_535).default(3000),
   projectName: projectNameSchema,
   serverId: z.uuid(),
 });
 
+/** Empty string from a form field means "clear", not "invalid". */
+const optionalGitRepoUrl = z.union([z.literal(""), gitRepoUrlSchema]);
+
+export const serviceProviderSchema = z.object({
+  gitBranch: gitBranchSchema,
+  gitRepoUrl: optionalGitRepoUrl,
+});
+
+export const serviceBuildSchema = z.object({
+  buildMethod: z.enum(["nixpacks", "dockerfile"]),
+  publishDirectory: optionalPublishDirectory,
+});
+
+export const certificateTypeSchema = z.enum(["none", "letsencrypt"]);
+
+/** URL path segment safe for Traefik rules and middleware prefixes. */
+export const routePathSchema = z.union([
+  z.literal(""),
+  z.literal("/"),
+  z
+    .string()
+    .max(512)
+    .regex(
+      /^\/[a-zA-Z0-9/._-]*$/,
+      "path must start with / and contain only safe characters"
+    ),
+]);
+
+const optionalInternalPath = z.union([
+  z.literal(""),
+  z
+    .string()
+    .max(512)
+    .regex(
+      /^\/[a-zA-Z0-9/._-]*$/,
+      "internal path must start with / and contain only safe characters"
+    ),
+]);
+
+const domainTlsRefine = (
+  value: {
+    certificateType: z.infer<typeof certificateTypeSchema>;
+    https: boolean;
+  },
+  ctx: z.RefinementCtx
+) => {
+  if (!value.https && value.certificateType === "letsencrypt") {
+    ctx.addIssue({
+      code: "custom",
+      message: "Let's Encrypt requires HTTPS to be enabled",
+      path: ["certificateType"],
+    });
+  }
+};
+
+const serviceDomainFieldsSchema = z.object({
+  certificateType: certificateTypeSchema,
+  host: domainSchema,
+  https: z.boolean(),
+  internalPath: optionalInternalPath.optional(),
+  path: routePathSchema.optional(),
+  port: z.number().int().min(1).max(65_535),
+  stripPath: z.boolean(),
+});
+
+export const serviceDomainsSchema =
+  serviceDomainFieldsSchema.superRefine(domainTlsRefine);
+
+export const createServiceDomainSchema = serviceDomainFieldsSchema
+  .extend({ serviceId: z.uuid() })
+  .superRefine(domainTlsRefine);
+
+export const updateServiceDomainSchema = serviceDomainFieldsSchema
+  .extend({ domainId: z.uuid() })
+  .superRefine(domainTlsRefine);
+
+export const deleteServiceDomainSchema = z.object({
+  domainId: z.uuid(),
+});
+
+export const generateServiceDomainHostSchema = z.object({
+  serviceId: z.uuid(),
+});
+
+/**
+ * Source, build and public access — saved from General / Domains, never
+ * at create time. A missing git URL blocks Deploy, it does not block Save.
+ */
+export const updateServiceSettingsSchema = z.object({
+  buildMethod: serviceBuildSchema.shape.buildMethod.optional(),
+  gitBranch: gitBranchSchema.optional(),
+  gitRepoUrl: optionalGitRepoUrl.optional(),
+  publishDirectory: optionalPublishDirectory.optional(),
+  serviceId: z.uuid(),
+});
+
 export type ConnectRepoInput = z.infer<typeof connectRepoSchema>;
 
+export type ServiceBuildInput = z.infer<typeof serviceBuildSchema>;
+
+export type ServiceDomainsInput = z.infer<typeof serviceDomainsSchema>;
+
+export type CertificateTypeInput = z.infer<typeof certificateTypeSchema>;
+
+export type CreateServiceDomainInput = z.infer<
+  typeof createServiceDomainSchema
+>;
+
+export type UpdateServiceDomainInput = z.infer<
+  typeof updateServiceDomainSchema
+>;
+
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
+
+export type ServiceProviderInput = z.infer<typeof serviceProviderSchema>;
+
+export type UpdateServiceSettingsInput = z.infer<
+  typeof updateServiceSettingsSchema
+>;
 
 export const deployRequestSchema = z.object({
   /** Absent = HEAD of the configured branch. */

@@ -27,6 +27,10 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
     kind: z.literal("backup"),
   }),
   z.strictObject({
+    kind: z.literal("volume-backup"),
+    volumeBackupId: z.uuid(),
+  }),
+  z.strictObject({
     databaseId: z.uuid(),
     kind: z.literal("change-database-password"),
     password: z.string().min(1),
@@ -97,6 +101,14 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
     destinationId: z.uuid().optional(),
     kind: z.literal("restore"),
     objectKey: z.string().min(1).optional(),
+  }),
+  z.strictObject({
+    destinationId: z.uuid().optional(),
+    kind: z.literal("volume-restore"),
+    objectKey: z.string().min(1).optional(),
+    serviceId: z.uuid(),
+    volumeBackupId: z.uuid().optional(),
+    volumeName: z.string().min(1).optional(),
   }),
   z.strictObject({
     imageTag: z.string().min(1),

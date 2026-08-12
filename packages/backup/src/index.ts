@@ -1,5 +1,5 @@
 import type { BackupDestination } from "@noddle/backup-store";
-import { backupObjectKey } from "@noddle/backup-store";
+import { backupObjectKey, volumeBackupObjectKey } from "@noddle/backup-store";
 import type { Database } from "@noddle/db";
 import { s3Destinations } from "@noddle/db/schema";
 import {
@@ -225,5 +225,43 @@ export function buildBackupInsert(opts: {
       prefix,
       takenAt: opts.takenAt ?? new Date(),
     }),
+  };
+}
+
+export interface VolumeBackupInsertValues {
+  configId?: string | null;
+  destinationId: string;
+  kind: BackupKind;
+  objectKey: string;
+  serviceId: string;
+  volumeName: string;
+}
+
+export function buildVolumeBackupInsert(opts: {
+  configId?: string | null;
+  configPrefix?: string;
+  kind: BackupKind;
+  resolved: DestinationCandidate;
+  service: { id: string; name: string };
+  takenAt?: Date;
+  volumeName: string;
+}): VolumeBackupInsertValues {
+  const prefix = joinBackupPrefix(
+    opts.resolved.prefix,
+    opts.configPrefix ?? ""
+  );
+  return {
+    configId: opts.configId ?? null,
+    destinationId: opts.resolved.id,
+    kind: opts.kind,
+    objectKey: volumeBackupObjectKey({
+      backupId: crypto.randomUUID(),
+      prefix,
+      serviceName: opts.service.name,
+      takenAt: opts.takenAt ?? new Date(),
+      volumeName: opts.volumeName,
+    }),
+    serviceId: opts.service.id,
+    volumeName: opts.volumeName,
   };
 }

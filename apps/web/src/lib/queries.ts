@@ -28,7 +28,11 @@ import {
   listBackupConfigs,
   listBackupObjects,
 } from "@/server/backups";
-import { getDeployments, getEnvironmentScope } from "@/server/dashboard";
+import {
+  getDeployments,
+  getEnvironmentScope,
+  getService,
+} from "@/server/dashboard";
 import { getDatabase, getDatabaseCredentials } from "@/server/databases";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
@@ -40,6 +44,11 @@ import { getServers } from "@/server/servers";
 import { getSshKeys } from "@/server/ssh-keys";
 import { getStackDeployments } from "@/server/stacks";
 import { getUpdateStatus } from "@/server/updates";
+import {
+  getVolumeBackups,
+  listServiceVolumes,
+  listVolumeBackupConfigs,
+} from "@/server/volume-backups";
 
 export const queries = {
   accounts: () =>
@@ -146,10 +155,28 @@ export const queries = {
   servers: () =>
     queryOptions({ queryFn: () => getServers(), queryKey: ["servers"] }),
 
+  service: (serviceId: string) =>
+    queryOptions({
+      queryFn: async () => {
+        const row = await getService({ data: { serviceId } });
+        if (!row) {
+          throw new Error(`service not found: ${serviceId}`);
+        }
+        return row;
+      },
+      queryKey: ["service", serviceId],
+    }),
+
   serviceMetrics: (serviceId: string) =>
     queryOptions({
       queryFn: () => getServiceMetrics({ data: { serviceId } }),
       queryKey: ["service-metrics", serviceId],
+    }),
+
+  serviceVolumes: (serviceId: string) =>
+    queryOptions({
+      queryFn: () => listServiceVolumes({ data: { serviceId } }),
+      queryKey: ["service-volumes", serviceId],
     }),
 
   sshKeys: () =>
@@ -165,5 +192,17 @@ export const queries = {
     queryOptions({
       queryFn: () => getUpdateStatus(),
       queryKey: ["update-status"],
+    }),
+
+  volumeBackupConfigs: (serviceId: string) =>
+    queryOptions({
+      queryFn: () => listVolumeBackupConfigs({ data: { serviceId } }),
+      queryKey: ["volume-backup-configs", serviceId],
+    }),
+
+  volumeBackups: (serviceId: string, configId: string) =>
+    queryOptions({
+      queryFn: () => getVolumeBackups({ data: { configId, serviceId } }),
+      queryKey: ["volume-backups", serviceId, configId],
     }),
 };

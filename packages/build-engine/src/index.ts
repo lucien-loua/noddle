@@ -301,6 +301,8 @@ export interface BuildOptions extends ExecOptions {
   builderName: string;
   dir: string;
   imageTag: string;
+  /** Relative path passed to Nixpacks as `NIXPACKS_SPA_OUT_DIR`. */
+  publishDirectory?: string | null;
 }
 
 /**
@@ -323,11 +325,17 @@ export async function buildImage(
   client: SshClient,
   o: BuildOptions
 ): Promise<void> {
+  const publishDirectory = o.publishDirectory?.trim();
+  const spaOut =
+    publishDirectory && publishDirectory.length > 0
+      ? `NIXPACKS_SPA_OUT_DIR=${quoteArg(publishDirectory)} `
+      : "";
+
   check(
     "nixpacks",
     await exec(
       client,
-      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && nixpacks build . --out .`,
+      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${spaOut}nixpacks build . --out .`,
       o
     )
   );
