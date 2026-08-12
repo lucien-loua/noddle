@@ -1,6 +1,6 @@
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { BuildLogsDialog } from "@/components/build-logs-dialog";
@@ -17,6 +17,7 @@ import { ServiceProvider } from "@/components/features/services/service-provider
 import { ServiceStatusLine } from "@/components/features/services/service-status-line";
 import { WebhookPanel } from "@/components/features/webhooks/panel";
 import { RelativeTime } from "@/components/relative-time";
+import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import { ServiceRegistry } from "@/components/service-registry";
 import { ServiceResources } from "@/components/service-resources";
 import { TabRail } from "@/components/tab-rail";
@@ -37,8 +38,17 @@ import { cache } from "@/lib/cache";
 import { shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
+import { DETAIL_POLL_MS } from "@/lib/resource-detail/constants";
+import {
+  type AwaitingLifecycle,
+  isLifecycleSettled,
+  lifecyclePollInterval,
+} from "@/lib/resource-detail/lifecycle-poll";
+import { parseDetailTab } from "@/lib/resource-detail/parse-tab";
+import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
+import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
-import { getAuthState } from "@/server/auth";
 import {
   type DeploymentSummary,
   getService,
@@ -71,45 +81,6 @@ const LEGACY_TABS: Record<string, ServiceTab> = {
   webhook: "deployments",
 };
 
-const DETAIL_POLL_MS = 2000;
-const AWAITING_TIMEOUT_MS = 60_000;
-
-interface AwaitingLifecycle {
-  action: LifecycleAction;
-  since: number;
-  status: string;
-  updatedAt: string;
-}
-
-function isLifecycleSettled(
-  row: ServiceRow,
-  awaiting: AwaitingLifecycle
-): boolean {
-  if (Date.now() - awaiting.since > AWAITING_TIMEOUT_MS) {
-    return true;
-  }
-  if (awaiting.action === "restart") {
-    return row.updatedAt !== awaiting.updatedAt;
-  }
-  return row.status !== awaiting.status;
-}
-
-function servicePollMs(
-  row: ServiceRow | undefined,
-  awaiting: AwaitingLifecycle | null
-): number | false {
-  if (!row) {
-    return false;
-  }
-  if (row.status === "deleting" || row.status === "deploying") {
-    return DETAIL_POLL_MS;
-  }
-  if (!awaiting) {
-    return false;
-  }
-  return isLifecycleSettled(row, awaiting) ? false : DETAIL_POLL_MS;
-}
-
 interface DetailSearch {
   deployment?: string;
   /** Active panel. Omitted when `general` so the default URL stays clean. */
@@ -117,25 +88,13 @@ interface DetailSearch {
 }
 
 function parseServiceTab(value: unknown): ServiceTab | undefined {
-  if (typeof value !== "string") {
-    return;
-  }
-  if ((SERVICE_TABS as readonly string[]).includes(value)) {
-    return value as ServiceTab;
-  }
-  return LEGACY_TABS[value];
+  return parseDetailTab(value, SERVICE_TABS, LEGACY_TABS);
 }
 
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/services/$serviceId"
 )({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
+  beforeLoad: resourceDetailBeforeLoad,
   component: ServiceDetail,
   loader: async ({ context, params }) => {
     const service = await getService({ data: { serviceId: params.serviceId } });
@@ -150,9 +109,6 @@ export const Route = createFileRoute(
     tab: parseServiceTab(search.tab),
   }),
 });
-
-const TAB_PANEL =
-  "scroll-fade no-scrollbar -mx-2 min-h-0 flex-1 overflow-y-auto px-2 data-ending-style:hidden";
 
 function Fact({ children, label }: { children: ReactNode; label: string }) {
   return (
@@ -342,7 +298,12 @@ function ServiceDetail() {
   const serviceQuery = useQuery({
     ...queries.service(initialService.id),
     initialData: initialService,
-    refetchInterval: (q) => servicePollMs(q.state.data, awaiting),
+    refetchInterval: (q) =>
+      lifecyclePollInterval(q.state.data, awaiting, {
+        forcePoll:
+          q.state.data?.status === "deleting" ||
+          q.state.data?.status === "deploying",
+      }),
   });
   const service = serviceQuery.data ?? initialService;
 
@@ -359,18 +320,9 @@ function ServiceDetail() {
   const tab =
     requestedTab === "env" && !canReadEnvVar ? "general" : requestedTab;
 
-  const handleTabChange = useCallback(
-    (value: string) => {
-      navigate({
-        replace: true,
-        search: (prev) => ({
-          ...prev,
-          tab: value === "general" ? undefined : (value as ServiceTab),
-        }),
-      });
-    },
-    [navigate]
-  );
+  const handleTabChange = useDetailTabChange<ServiceTab>(navigate, "general", {
+    preserveSearch: true,
+  });
 
   const deployments = useQuery({
     ...queries.deployments(service.id),
@@ -404,21 +356,13 @@ function ServiceDetail() {
     ]
   );
 
-  const handleDeleted = useCallback(async () => {
-    await cache.environmentScope(
-      queryClient,
-      service.projectId,
-      service.environmentId
-    );
-    await navigate({
-      params: {
-        environmentId: service.environmentId,
-        projectId: service.projectId,
-      },
-      search: {},
-      to: "/projects/$projectId/$environmentId",
-    });
-  }, [navigate, queryClient, service.environmentId, service.projectId]);
+  const handleDeleted = useLeaveOnDelete({
+    environmentId: service.environmentId,
+    navigate,
+    projectId: service.projectId,
+    queryClient,
+    resetSearch: true,
+  });
 
   const deploy = useMutation({
     mutationFn: () => triggerDeploy({ data: { serviceId: service.id } }),
@@ -582,7 +526,7 @@ function ServiceDetail() {
             />
           </div>
 
-          <TabsContent className={TAB_PANEL} value="general">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="general">
             <div className="flex flex-col gap-4">
               <ServiceProvider canEdit={canDeploy} service={service} />
               <ServiceBuild canEdit={canDeploy} service={service} />
@@ -595,7 +539,7 @@ function ServiceDetail() {
           </TabsContent>
 
           {canReadEnvVar ? (
-            <TabsContent className={TAB_PANEL} value="env">
+            <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="env">
               <EnvVarPanel
                 effect="Takes effect on the next deploy."
                 serviceId={service.id}
@@ -603,11 +547,11 @@ function ServiceDetail() {
             </TabsContent>
           ) : null}
 
-          <TabsContent className={TAB_PANEL} value="domains">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="domains">
             <ServiceDomains canEdit={canDeploy} service={service} />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="deployments">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="deployments">
             <ServiceDeploymentsPanel
               canManageWebhook={canManageWebhook}
               canRollback={canRollback}
@@ -624,7 +568,10 @@ function ServiceDetail() {
             />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="volume-backups">
+          <TabsContent
+            className={DETAIL_TAB_PANEL_CLASS}
+            value="volume-backups"
+          >
             <BackupTab
               canCreate={canCreateVolumeBackup}
               canRestore={canRestoreVolumeBackup}
@@ -633,7 +580,7 @@ function ServiceDetail() {
             />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="logs">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="logs">
             <ContainerLogs
               generation={`${service.status}:${service.updatedAt}`}
               name={service.name}
@@ -641,11 +588,11 @@ function ServiceDetail() {
             />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="monitoring">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="monitoring">
             <ServiceResources serviceId={service.id} />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="advanced">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="advanced">
             <div className="flex flex-col gap-4">
               <ServiceFacts
                 role={known}

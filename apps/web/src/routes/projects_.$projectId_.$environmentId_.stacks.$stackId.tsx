@@ -1,10 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  notFound,
-  redirect,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { DeleteStackAction } from "@/components/delete-stack-action";
@@ -12,18 +7,21 @@ import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { WebhookPanel } from "@/components/features/webhooks/panel";
 import { LogStream } from "@/components/log-stream";
+import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
-import { TeardownError } from "@/components/teardown-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
+import { STACK_DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
+import { isDetailTab } from "@/lib/resource-detail/parse-tab";
+import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
+import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
-import { getAuthState } from "@/server/auth";
 import { getStackDashboard } from "@/server/dashboard";
 import { triggerStackRollback } from "@/server/stacks";
 import { generateStackWebhook, getStackWebhook } from "@/server/webhooks";
@@ -39,22 +37,13 @@ interface DetailSearch {
 }
 
 function isStackTab(value: unknown): value is StackTab {
-  return (
-    typeof value === "string" &&
-    (STACK_TABS as readonly string[]).includes(value)
-  );
+  return isDetailTab(value, STACK_TABS);
 }
 
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/stacks/$stackId"
 )({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
+  beforeLoad: resourceDetailBeforeLoad,
   component: StackDetail,
   loader: async ({ context, params }) => {
     const stacks = await getStackDashboard();
@@ -70,14 +59,6 @@ export const Route = createFileRoute(
     tab: isStackTab(search.tab) ? search.tab : undefined,
   }),
 });
-
-// `data-ending-style`: Base UI keeps the OUTGOING panel mounted for the
-// duration of its closing transition. With `flex-1`, that panel kept its
-// height during that time — both contents showed up one under the other,
-// and the new one ended up pushed down. Explicitly neutralizing it is what
-// makes the tab switch clean.
-const TAB_PANEL =
-  "scroll-fade no-scrollbar -mx-2 min-h-0 flex-1 overflow-y-auto px-2 pt-4 data-ending-style:hidden";
 
 function StackDetail() {
   const { email, role, stack } = Route.useLoaderData();
@@ -126,18 +107,9 @@ function StackDetail() {
     [navigate]
   );
 
-  const handleTabChange = useCallback(
-    (value: string) => {
-      navigate({
-        replace: true,
-        search: (prev) => ({
-          ...prev,
-          tab: value === "logs" ? undefined : (value as StackTab),
-        }),
-      });
-    },
-    [navigate]
-  );
+  const handleTabChange = useDetailTabChange(navigate, "logs", {
+    preserveSearch: true,
+  });
 
   const handleRollback = useCallback(
     (deploymentId: string) => rollback.mutate(deploymentId),
@@ -153,24 +125,13 @@ function StackDetail() {
     [stack.id]
   );
 
-  // We LEAVE the page once the teardown has started, as for a service: the
-  // stack is disappearing, staying on it would show a detail view emptying
-  // itself out.
-  const handleDeleted = useCallback(async () => {
-    await cache.environmentScope(
-      queryClient,
-      stack.projectId,
-      stack.environmentId
-    );
-    await navigate({
-      params: {
-        environmentId: stack.environmentId,
-        projectId: stack.projectId,
-      },
-      search: {},
-      to: "/projects/$projectId/$environmentId",
-    });
-  }, [navigate, queryClient, stack.environmentId, stack.projectId]);
+  const handleDeleted = useLeaveOnDelete({
+    environmentId: stack.environmentId,
+    navigate,
+    projectId: stack.projectId,
+    queryClient,
+    resetSearch: true,
+  });
 
   const currentDeploymentId = stack.lastDeployment
     ? stack.lastDeployment.id
@@ -219,18 +180,16 @@ function StackDetail() {
       role={role}
       title={stack.name}
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <p className="mb-3 truncate text-muted-foreground text-sm">
-          stack · {stack.serverName}
-          {stack.domain ? ` · ${stack.domain}` : ""}
-        </p>
-        <TeardownError message={stack.lastError} />
-        {deleteError ? (
-          <Alert className="mb-3" variant="destructive">
-            <AlertDescription>{deleteError}</AlertDescription>
-          </Alert>
-        ) : null}
-
+      <ResourceDetailFrame
+        deleteError={deleteError}
+        subtitle={
+          <>
+            stack · {stack.serverName}
+            {stack.domain ? ` · ${stack.domain}` : ""}
+          </>
+        }
+        teardownError={stack.lastError}
+      >
         <Tabs
           className="min-h-0 flex-1"
           onValueChange={handleTabChange}
@@ -242,7 +201,7 @@ function StackDetail() {
             <TabsTrigger value="webhook">Webhook</TabsTrigger>
           </TabRail>
 
-          <TabsContent className={TAB_PANEL} value="logs">
+          <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="logs">
             {shown ? (
               <LogStream deploymentId={shown} onEnd={handleEnd} />
             ) : (
@@ -252,7 +211,7 @@ function StackDetail() {
             )}
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="history">
+          <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="history">
             <p className="mb-2 truncate text-muted-foreground text-xs">
               {stack.gitRepoUrl}
               {stack.gitBranch ? ` · ${stack.gitBranch}` : ""}
@@ -277,7 +236,7 @@ function StackDetail() {
             ) : null}
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="webhook">
+          <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="webhook">
             <WebhookPanel
               canManage={canManageWebhook}
               generateWebhook={handleGenerateWebhook}
@@ -286,7 +245,7 @@ function StackDetail() {
             />
           </TabsContent>
         </Tabs>
-      </div>
+      </ResourceDetailFrame>
     </AppShell>
   );
 }

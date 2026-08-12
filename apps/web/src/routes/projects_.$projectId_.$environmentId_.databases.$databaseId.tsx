@@ -11,7 +11,7 @@ import {
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
@@ -24,10 +24,9 @@ import { DatabaseLogs } from "@/components/features/database/database-logs";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { DatabaseResources } from "@/components/features/database/database-resources";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
+import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
-import { TeardownError } from "@/components/teardown-error";
 import { useTerminalDialog } from "@/components/terminal-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
@@ -48,27 +47,18 @@ import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
+import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
+import {
+  type AwaitingLifecycle,
+  isLifecycleSettled,
+  lifecyclePollInterval,
+} from "@/lib/resource-detail/lifecycle-poll";
+import { isDetailTab } from "@/lib/resource-detail/parse-tab";
+import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
+import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
-import { getAuthState } from "@/server/auth";
 import { type DatabaseRow, getDatabase } from "@/server/databases";
-
-/**
- * The panel scrolls on its own: it's the page that stays fixed. The same as
- * a service page's, and the two additions compared to its earlier form are
- * the ones this file already documents:
- *
- *   `-mx-2 px-2`              `overflow-y-auto` CLIPS the focus ring of the
- *                             first and last fields; the negative margin
- *                             gives back the space without shifting a pixel.
- *   `data-ending-style:hidden` Base UI keeps the OUTGOING panel mounted for
- *                             the duration of its transition. Without its
- *                             own height that wasn't visible — since panels
- *                             now stretch with `flex-1`, the old content
- *                             would keep its place and push the new one off
- *                             screen.
- */
-const TAB_PANEL =
-  "scroll-fade no-scrollbar -mx-2 min-h-0 flex-1 overflow-y-auto px-2 data-ending-style:hidden";
 
 const DATABASE_TABS = [
   "general",
@@ -79,36 +69,11 @@ const DATABASE_TABS = [
   "advanced",
 ] as const;
 
-const DETAIL_POLL_MS = 2000;
-const AWAITING_TIMEOUT_MS = 60_000;
-
 const PENDING_LABEL: Record<LifecycleAction, string> = {
   restart: "Restarting",
   start: "Starting",
   stop: "Stopping",
 };
-
-interface AwaitingLifecycle {
-  action: LifecycleAction;
-  since: number;
-  status: string;
-  updatedAt: string;
-}
-
-function isLifecycleSettled(
-  database: DatabaseRow,
-  awaiting: AwaitingLifecycle
-): boolean {
-  if (Date.now() - awaiting.since > AWAITING_TIMEOUT_MS) {
-    return true;
-  }
-  // Restart stays `running`: the worker bumps `updatedAt` when Swarm
-  // accepted the force-update. Start/stop move `status`.
-  if (awaiting.action === "restart") {
-    return database.updatedAt !== awaiting.updatedAt;
-  }
-  return database.status !== awaiting.status;
-}
 
 type DatabaseTab = (typeof DATABASE_TABS)[number];
 
@@ -118,22 +83,13 @@ interface DetailSearch {
 }
 
 function isDatabaseTab(value: unknown): value is DatabaseTab {
-  return (
-    typeof value === "string" &&
-    (DATABASE_TABS as readonly string[]).includes(value)
-  );
+  return isDetailTab(value, DATABASE_TABS);
 }
 
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/databases/$databaseId"
 )({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
+  beforeLoad: resourceDetailBeforeLoad,
   component: DatabaseDetail,
   loader: async ({ context, params }) => {
     const database = await getDatabase({
@@ -310,16 +266,9 @@ function DatabaseDetail() {
     initialData: initialDatabase,
     refetchInterval: (q) => {
       const row = q.state.data;
-      if (!row) {
-        return false;
-      }
-      if (row.status === "deleting" || row.status === "deploying") {
-        return DETAIL_POLL_MS;
-      }
-      if (!awaiting) {
-        return false;
-      }
-      return isLifecycleSettled(row, awaiting) ? false : DETAIL_POLL_MS;
+      return lifecyclePollInterval(row, awaiting, {
+        forcePoll: row?.status === "deleting" || row?.status === "deploying",
+      });
     },
   });
   const database = databaseQuery.data ?? initialDatabase;
@@ -353,34 +302,16 @@ function DatabaseDetail() {
       ? "general"
       : requestedTab;
 
-  const handleTabChange = useCallback<(value: DatabaseTab) => void>(
-    (value) =>
-      navigate({
-        replace: true,
-        search: { tab: value === "general" ? undefined : value },
-      }),
-    [navigate]
-  );
+  const handleTabChange = useDetailTabChange<DatabaseTab>(navigate, "general");
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // We LEAVE the page once the teardown has started, as for a service: the
-  // database is disappearing, staying on it would show a detail view
-  // emptying itself out.
-  const handleDeleted = useCallback(async () => {
-    await cache.environmentScope(
-      queryClient,
-      database.projectId,
-      database.environmentId
-    );
-    await navigate({
-      params: {
-        environmentId: database.environmentId,
-        projectId: database.projectId,
-      },
-      to: "/projects/$projectId/$environmentId",
-    });
-  }, [database.environmentId, database.projectId, navigate, queryClient]);
+  const handleDeleted = useLeaveOnDelete({
+    environmentId: database.environmentId,
+    navigate,
+    projectId: database.projectId,
+    queryClient,
+  });
 
   const handleDone = useCallback(
     async (action: LifecycleAction) => {
@@ -432,19 +363,17 @@ function DatabaseDetail() {
       role={role}
       title={database.name}
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <p className="mb-3 flex items-center gap-2 truncate text-muted-foreground text-sm">
-          <DatabaseMark engine={database.engine} />
-          {DATABASE_ENGINE_LABEL[database.engine] ?? database.engine} ·{" "}
-          {database.serverName}
-        </p>
-        <TeardownError message={database.lastError} />
-        {deleteError ? (
-          <Alert className="mb-3" variant="destructive">
-            <AlertDescription>{deleteError}</AlertDescription>
-          </Alert>
-        ) : null}
-
+      <ResourceDetailFrame
+        deleteError={deleteError}
+        subtitle={
+          <span className="flex items-center gap-2 truncate">
+            <DatabaseMark engine={database.engine} />
+            {DATABASE_ENGINE_LABEL[database.engine] ?? database.engine} ·{" "}
+            {database.serverName}
+          </span>
+        }
+        teardownError={database.lastError}
+      >
         <Tabs
           className="min-h-0 flex-1 gap-3"
           onValueChange={handleTabChange}
@@ -485,7 +414,7 @@ function DatabaseDetail() {
             />
           </div>
 
-          <TabsContent className={TAB_PANEL} value="general">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="general">
             <DatabaseCredentials
               canChangePassword={canEditConfig}
               canRead={canReadSecrets}
@@ -503,7 +432,7 @@ function DatabaseDetail() {
           </TabsContent>
 
           {canReadSecrets ? (
-            <TabsContent className={TAB_PANEL} value="env">
+            <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="env">
               <EnvVarPanel
                 databaseId={database.id}
                 effect={`Restarts ${database.name} once saved.`}
@@ -513,7 +442,7 @@ function DatabaseDetail() {
             </TabsContent>
           ) : null}
 
-          <TabsContent className={TAB_PANEL} value="logs">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="logs">
             <DatabaseLogs
               databaseId={database.id}
               databaseName={database.name}
@@ -521,17 +450,17 @@ function DatabaseDetail() {
             />
           </TabsContent>
 
-          <TabsContent className={TAB_PANEL} value="monitoring">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="monitoring">
             <DatabaseResources databaseId={database.id} />
           </TabsContent>
 
           {canEditConfig ? (
-            <TabsContent className={TAB_PANEL} value="advanced">
+            <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="advanced">
               <DatabaseAdvanced canEdit={canEditConfig} database={database} />
             </TabsContent>
           ) : null}
 
-          <TabsContent className={TAB_PANEL} value="backups">
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="backups">
             <BackupTab
               canCreate={canCreateBackup}
               canRestore={canRestoreBackup}
@@ -541,7 +470,7 @@ function DatabaseDetail() {
             />
           </TabsContent>
         </Tabs>
-      </div>
+      </ResourceDetailFrame>
       {terminal}
     </AppShell>
   );
