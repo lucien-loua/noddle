@@ -73,7 +73,6 @@
         "@noddle/compose-engine": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
-        "@noddle/deploy": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/proxy-config": "workspace:*",
@@ -155,18 +154,6 @@
         "drizzle-kit": "catalog:",
       },
     },
-    "packages/deploy": {
-      "name": "@noddle/deploy",
-      "dependencies": {
-        "@noddle/proxy-config": "workspace:*",
-        "@noddle/registry": "workspace:*",
-        "@noddle/ssh-executor": "workspace:*",
-        "@noddle/swarm-ops": "workspace:*",
-      },
-      "devDependencies": {
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
     "packages/deploy-contract": {
       "name": "@noddle/deploy-contract",
       "dependencies": {
@@ -208,6 +195,7 @@
     "packages/shared": {
       "name": "@noddle/shared",
       "dependencies": {
+        "@noddle/database-spec": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -588,8 +576,6 @@
     "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
-
-    "@noddle/deploy": ["@noddle/deploy@workspace:packages/deploy"],
 
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
 

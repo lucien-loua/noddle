@@ -301,7 +301,7 @@ async function buildAndDeployStack(
     .set({ serviceImages, status: "deploying" })
     .where(eq(stackDeployments.id, deployment.id));
 
-  // ALWAYS pinned, unconditionally — see `placementFor` in @noddle/deploy for the
+  // ALWAYS pinned, unconditionally — see `placementFor` in deploy/placement.ts for the
   // full reasoning. A stack does NOT go through the registry: its images
   // stay local to the node that built them, so the constraint is never a
   // no-op once a second node has joined the cluster.

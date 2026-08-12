@@ -1,4 +1,0 @@
-{
-  "extends": "@noddle/tsconfig/base.json",
-  "include": ["src/**/*.ts"]
-}

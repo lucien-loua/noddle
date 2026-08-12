@@ -26,6 +26,7 @@ import { DatabaseResources } from "@/components/features/database/database-resou
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
+import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,6 @@ import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
-import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import {
   type AwaitingLifecycle,
   isLifecycleSettled,

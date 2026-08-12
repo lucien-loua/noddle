@@ -12,7 +12,7 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import { rolloutService } from "@noddle/deploy";
+import { rolloutService } from "#deploy/rollout";
 import type { DomainRoute } from "@noddle/proxy-config";
 import {
   pushImage,

@@ -12,7 +12,7 @@ import {
   readRunningNodeId,
   type SwarmUpdateState,
 } from "@noddle/swarm-ops";
-import { authFor, placementFor } from "./placement.ts";
+import { authFor, placementFor } from "#deploy/placement";
 
 export interface RolloutInput {
   buildDocker: DockerApi;
