@@ -11,9 +11,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
+import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
 import { requirePermission, runGuarded } from "@/lib/permission.server";
-import { enqueueDeploy } from "@/lib/queue.server";
 
 /**
  * WHO owns these variables: a service, or a database.
@@ -289,10 +289,7 @@ export const saveEnvVars = createServerFn({ method: "POST" })
               result.updated.length >
             0;
           if (data.databaseId && changed) {
-            await enqueueDeploy({
-              databaseId: data.databaseId,
-              kind: "provision-database",
-            });
+            await queueDatabaseProvision(data.databaseId);
           }
 
           return result;

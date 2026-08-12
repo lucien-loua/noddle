@@ -82,6 +82,12 @@ type LifecycleAction = "restart" | "start" | "stop";
 const SCOPE_POLL_MS = 2000;
 const AWAITING_TIMEOUT_MS = 60_000;
 
+const PENDING_LABEL: Record<LifecycleAction, string> = {
+  restart: "Restarting",
+  start: "Starting",
+  stop: "Stopping",
+};
+
 interface GridItem {
   domain: string | null;
   /** The engine, for databases only: it's what selects the mark. */
@@ -92,6 +98,9 @@ interface GridItem {
   name: string;
   serverName: string;
   status: string;
+  /** ISO timestamp. Restart doesn't move `status`; the pending badge
+   *  settles when this bumps. Empty on stacks — they have no lifecycle. */
+  updatedAt: string;
 }
 
 interface MoveTarget {
@@ -101,8 +110,15 @@ interface MoveTarget {
 }
 
 interface AwaitingEntry {
+  action: LifecycleAction;
   since: number;
   status: string;
+  updatedAt: string;
+}
+
+interface ResourceSnapshot {
+  status: string;
+  updatedAt: string;
 }
 
 /** The selection key: composite, because three tables can theoretically
@@ -111,30 +127,56 @@ function itemKey(item: { id: string; kind: Kind }): string {
   return `${item.kind}:${item.id}`;
 }
 
-function scopeHasDeleting(scope: Scope): boolean {
+/** Statuses that are in-flight: the grid polls until they leave. */
+const TRANSIENT_STATUS = new Set(["deleting", "deploying"]);
+
+function scopeIsTransient(scope: Scope): boolean {
+  const busy = (status: string) => TRANSIENT_STATUS.has(status);
   return (
-    scope.services.some((s) => s.status === "deleting") ||
-    scope.stacks.some((s) => s.status === "deleting") ||
-    scope.databases.some((d) => d.status === "deleting")
+    scope.services.some((s) => busy(s.status)) ||
+    scope.stacks.some((s) => busy(s.status)) ||
+    scope.databases.some((d) => busy(d.status))
   );
 }
 
-function statusInScope(scope: Scope, key: string): string | undefined {
+function snapshotInScope(
+  scope: Scope,
+  key: string
+): ResourceSnapshot | undefined {
   const colon = key.indexOf(":");
   const kind = key.slice(0, colon) as Kind;
   const id = key.slice(colon + 1);
   if (kind === "service") {
-    return scope.services.find((s) => s.id === id)?.status;
+    const row = scope.services.find((s) => s.id === id);
+    return row ? { status: row.status, updatedAt: row.updatedAt } : undefined;
   }
   if (kind === "stack") {
-    return scope.stacks.find((s) => s.id === id)?.status;
+    const row = scope.stacks.find((s) => s.id === id);
+    return row ? { status: row.status, updatedAt: "" } : undefined;
   }
-  return scope.databases.find((d) => d.id === id)?.status;
+  const row = scope.databases.find((d) => d.id === id);
+  return row ? { status: row.status, updatedAt: row.updatedAt } : undefined;
+}
+
+function isLifecycleSettled(
+  current: ResourceSnapshot | undefined,
+  entry: AwaitingEntry,
+  now: number
+): boolean {
+  if (current === undefined || now - entry.since > AWAITING_TIMEOUT_MS) {
+    return true;
+  }
+  // Restart stays `running`: the worker bumps `updatedAt` when Swarm
+  // accepted the force-update. Start/stop move `status`.
+  if (entry.action === "restart") {
+    return current.updatedAt !== entry.updatedAt;
+  }
+  return current.status !== entry.status;
 }
 
 /**
- * Drop awaiting entries once the resource status moved off the snapshot,
- * the row disappeared, or the timeout elapsed — no new statuses needed.
+ * Drop awaiting entries once the resource moved off the snapshot, the row
+ * disappeared, or the timeout elapsed — no new statuses needed.
  */
 function refineAwaiting(
   scope: Scope,
@@ -146,11 +188,7 @@ function refineAwaiting(
   const now = Date.now();
   const next = new Map<string, AwaitingEntry>();
   for (const [key, entry] of awaiting) {
-    if (now - entry.since > AWAITING_TIMEOUT_MS) {
-      continue;
-    }
-    const current = statusInScope(scope, key);
-    if (current === undefined || current !== entry.status) {
+    if (isLifecycleSettled(snapshotInScope(scope, key), entry, now)) {
       continue;
     }
     next.set(key, entry);
@@ -165,7 +203,7 @@ function shouldPoll(
   if (!scope) {
     return false;
   }
-  return awaiting.size > 0 || scopeHasDeleting(scope);
+  return awaiting.size > 0 || scopeIsTransient(scope);
 }
 
 /**
@@ -273,14 +311,35 @@ export function ResourceGrid({
     [queryClient, projectId, environmentId]
   );
 
-  const markSettling = useCallback((targets: GridItem[]) => {
+  const markSettling = useCallback(
+    (targets: GridItem[], action: LifecycleAction) => {
+      setAwaitingSettle((prev) => {
+        const next = new Map(prev);
+        const now = Date.now();
+        for (const item of targets) {
+          next.set(itemKey(item), {
+            action,
+            since: now,
+            status: item.status,
+            updatedAt: item.updatedAt,
+          });
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const unmarkSettling = useCallback((targets: GridItem[]) => {
     setAwaitingSettle((prev) => {
-      const next = new Map(prev);
-      const now = Date.now();
-      for (const item of targets) {
-        next.set(itemKey(item), { since: now, status: item.status });
+      if (prev.size === 0) {
+        return prev;
       }
-      return next;
+      const next = new Map(prev);
+      for (const item of targets) {
+        next.delete(itemKey(item));
+      }
+      return next.size === prev.size ? prev : next;
     });
   }, []);
 
@@ -311,6 +370,7 @@ export function ResourceGrid({
           name: s.name,
           serverName: s.serverName,
           status: s.status,
+          updatedAt: s.updatedAt,
         })
       ),
       ...scope.stacks.map(
@@ -322,6 +382,7 @@ export function ResourceGrid({
           name: s.name,
           serverName: s.serverName,
           status: s.status,
+          updatedAt: "",
         })
       ),
       ...scope.databases.map(
@@ -334,6 +395,7 @@ export function ResourceGrid({
           name: d.name,
           serverName: d.serverName,
           status: d.status,
+          updatedAt: d.updatedAt,
         })
       ),
     ],
@@ -484,7 +546,7 @@ export function ResourceGrid({
         type: "error",
       }),
     onSuccess: async (targets, action) => {
-      markSettling(targets);
+      markSettling(targets, action);
       await refreshScope();
       clearSelection();
       toast.add({
@@ -726,6 +788,8 @@ export function ResourceGrid({
               onOpen={openItem}
               onSettling={markSettling}
               onToggleSelect={toggleSelected}
+              onUnsettling={unmarkSettling}
+              pendingAction={awaitingSettle.get(itemKey(item))?.action ?? null}
               refreshScope={refreshScope}
               selected={selected.has(itemKey(item))}
             />
@@ -790,6 +854,8 @@ function ResourceGridCard({
   onOpen,
   onSettling,
   onToggleSelect,
+  onUnsettling,
+  pendingAction,
   refreshScope,
   selected,
 }: {
@@ -800,21 +866,29 @@ function ResourceGridCard({
   item: GridItem;
   onMove: ((item: GridItem) => void) | undefined;
   onOpen: (item: GridItem) => void;
-  onSettling: (items: GridItem[]) => void;
+  onSettling: (items: GridItem[], action: LifecycleAction) => void;
   onToggleSelect: (item: GridItem) => void;
+  onUnsettling: (items: GridItem[]) => void;
+  pendingAction: LifecycleAction | null;
   refreshScope: () => Promise<unknown>;
   selected: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const status = serviceLabel(item.status);
+  const status = pendingAction
+    ? { label: PENDING_LABEL[pendingAction], tone: "busy" as const }
+    : serviceLabel(item.status);
   // A database shows the mark of ITS OWN engine; a service and a stack
   // keep the generic icon for their type. It's the only one of the three
   // whose nature varies, and that's what the mark conveys at a glance.
   const Icon = KIND_ICON[item.kind];
   const stopped = item.status === "stopped";
-  // `created` = never deployed, `deleting` = teardown in progress: in both
-  // cases there's no stable Swarm service to operate.
-  const settled = item.status !== "created" && item.status !== "deleting";
+  // `created` = never deployed, `deploying` = provision in flight,
+  // `deleting` = teardown: no stable Swarm service to operate.
+  const settled =
+    item.status !== "created" &&
+    item.status !== "deploying" &&
+    item.status !== "deleting";
+  const inFlight = pendingAction !== null || TRANSIENT_STATUS.has(item.status);
   const mayOperate = item.kind === "database" ? canOperateDatabase : canDeploy;
   const lifecycleAvailable = hasLifecycle(item.kind) && mayOperate && settled;
 
@@ -872,6 +946,8 @@ function ResourceGridCard({
                 onDelete={openDelete}
                 onMove={onMove ? handleMove : undefined}
                 onSettling={onSettling}
+                onUnsettling={onUnsettling}
+                pendingAction={pendingAction}
                 refreshScope={refreshScope}
                 stopped={stopped}
               />
@@ -892,7 +968,12 @@ function ResourceGridCard({
             {item.serverName}
             {item.domain ? ` · ${item.domain}` : ""}
           </p>
-          <Badge className="w-fit" variant={badgeVariant(status.tone)}>
+          <Badge
+            aria-live="polite"
+            className="w-fit"
+            variant={badgeVariant(status.tone)}
+          >
+            {inFlight ? <Spinner data-icon="inline-start" /> : null}
             {status.label}
           </Badge>
           {item.lastError ? (
@@ -922,6 +1003,8 @@ function ResourceCardMenu({
   onDelete,
   onMove,
   onSettling,
+  onUnsettling,
+  pendingAction,
   refreshScope,
   stopped,
 }: {
@@ -932,7 +1015,9 @@ function ResourceCardMenu({
   lifecycleAvailable: boolean;
   onDelete: () => void;
   onMove: (() => void) | undefined;
-  onSettling: (items: GridItem[]) => void;
+  onSettling: (items: GridItem[], action: LifecycleAction) => void;
+  onUnsettling: (items: GridItem[]) => void;
+  pendingAction: LifecycleAction | null;
   refreshScope: () => Promise<unknown>;
   stopped: boolean;
 }) {
@@ -958,17 +1043,22 @@ function ResourceCardMenu({
 
   const lifecycle = useMutation({
     mutationFn: (action: LifecycleAction) => runLifecycleFor(item, action),
-    onError: (e: Error) =>
+    onError: (e: Error) => {
+      onUnsettling([item]);
       toast.add({
         description: errorMessage(e, "the action was refused"),
         title: "Action failed",
         type: "error",
-      }),
+      });
+    },
+    onMutate: (action) => {
+      onSettling([item], action);
+    },
     onSuccess: async () => {
-      onSettling([item]);
       await refreshScope();
     },
   });
+  const lifecycleBusy = lifecycle.isPending || pendingAction !== null;
   const handleToggleRun = useCallback(
     () => lifecycle.mutate(stopped ? "start" : "stop"),
     [lifecycle, stopped]
@@ -1000,19 +1090,13 @@ function ResourceCardMenu({
           </DropdownMenuItem>
         ) : null}
         {lifecycleAvailable ? (
-          <DropdownMenuItem
-            disabled={lifecycle.isPending}
-            onClick={handleToggleRun}
-          >
+          <DropdownMenuItem disabled={lifecycleBusy} onClick={handleToggleRun}>
             {stopped ? <PlayIcon weight="fill" /> : <StopIcon weight="fill" />}
             {stopped ? "Start" : "Stop"}
           </DropdownMenuItem>
         ) : null}
         {lifecycleAvailable && !stopped ? (
-          <DropdownMenuItem
-            disabled={lifecycle.isPending}
-            onClick={handleRestart}
-          >
+          <DropdownMenuItem disabled={lifecycleBusy} onClick={handleRestart}>
             <ArrowClockwiseIcon weight="fill" />
             Restart
           </DropdownMenuItem>

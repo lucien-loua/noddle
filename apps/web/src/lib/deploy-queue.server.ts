@@ -1,4 +1,5 @@
 import {
+  databases,
   deployments,
   type deploymentTrigger,
   services,
@@ -76,4 +77,20 @@ export async function queueStackDeploy(
 
   await enqueueDeploy({ kind: "deploy-stack", stackDeploymentId: created.id });
   return { stackDeploymentId: created.id };
+}
+
+/**
+ * A database has no Deploy button and no git source: creating it, or
+ * changing its spec, queues provision immediately. Write `deploying` here
+ * so the grid doesn't sit on "Never deployed" while the job is already
+ * in flight.
+ */
+export async function queueDatabaseProvision(
+  databaseId: string
+): Promise<void> {
+  await db
+    .update(databases)
+    .set(markDeploying(null))
+    .where(eq(databases.id, databaseId));
+  await enqueueDeploy({ databaseId, kind: "provision-database" });
 }

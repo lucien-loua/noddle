@@ -14,14 +14,17 @@ export function EnvVarPanel({
   databaseId,
   effect,
   note,
+  onSaved,
   serviceId,
 }: {
   /** Exactly one of the two — the same rule as in the database. */
   databaseId?: string;
   /** When the save takes effect, said in the right place. */
   effect: string;
-  /** What the save will trigger, when it isn't obvious. */
+  /** Persistent FrameFooter copy — not an Alert above the table. */
   note?: string;
+  /** After a successful write. A database save enqueues a restart. */
+  onSaved?: () => void;
   serviceId?: string;
 }) {
   const queryClient = useQueryClient();
@@ -38,9 +41,9 @@ export function EnvVarPanel({
   const handleSave = useCallback(
     (draft: DraftVar[]) => {
       setError(null);
-      save.mutate(draft);
+      save.mutate(draft, { onSuccess: () => onSaved?.() });
     },
-    [save]
+    [onSaved, save]
   );
 
   if (!vars.data) {
@@ -49,14 +52,10 @@ export function EnvVarPanel({
 
   return (
     <>
-      {note ? (
-        <Alert className="mb-3">
-          <AlertDescription>{note}</AlertDescription>
-        </Alert>
-      ) : null}
       <EnvVarTable
         effect={effect}
         key={vars.data.map((v) => `${v.id}:${v.key}`).join(",")}
+        note={note}
         onSave={handleSave}
         pending={save.isPending}
         saved={vars.data}

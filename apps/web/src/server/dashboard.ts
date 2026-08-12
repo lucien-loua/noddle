@@ -70,6 +70,9 @@ export interface ServiceRow {
   registryId: string | null;
   serverName: string;
   status: string;
+  /** ISO timestamp — Restart stays `running`, so the project grid settles
+   *  its pending "Restarting" badge off this bump instead. */
+  updatedAt: string;
   /** True as long as post-deploy monitoring is still watching this service. */
   watching: boolean;
 }
@@ -219,6 +222,7 @@ async function loadServiceDashboard(
       registryId: service.registryId,
       serverName: service.server.name,
       status: service.status,
+      updatedAt: service.updatedAt.toISOString(),
       watching: watched.has(service.id),
     };
   });

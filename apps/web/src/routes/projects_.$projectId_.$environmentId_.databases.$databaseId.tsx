@@ -202,7 +202,7 @@ function DatabaseHeaderActions({
   });
 
   const status = serviceLabel(database.status);
-  const pending = pendingAction !== null;
+  const pending = pendingAction !== null || database.status === "deploying";
   const headerLabel = pendingAction
     ? PENDING_LABEL[pendingAction]
     : status.label;
@@ -323,7 +323,7 @@ function DatabaseDetail() {
       if (!row) {
         return false;
       }
-      if (row.status === "deleting") {
+      if (row.status === "deleting" || row.status === "deploying") {
         return DETAIL_POLL_MS;
       }
       if (!awaiting) {
@@ -457,6 +457,8 @@ function DatabaseDetail() {
     ]
   );
 
+  const handleEnvSaved = useCallback(() => handleDone("restart"), [handleDone]);
+
   return (
     <AppShell
       actions={
@@ -552,7 +554,8 @@ function DatabaseDetail() {
               <EnvVarPanel
                 databaseId={database.id}
                 effect={`Restarts ${database.name} once saved.`}
-                note={`Saving restarts ${database.name}. Keys the engine owns are set by Noddle from this database's own settings and cannot be overridden here.`}
+                note="Keys the engine owns are set by Noddle from this database's own settings and cannot be overridden here."
+                onSaved={handleEnvSaved}
               />
             </TabsContent>
           ) : null}

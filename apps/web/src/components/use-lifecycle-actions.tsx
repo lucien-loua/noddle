@@ -56,10 +56,13 @@ export function useLifecycleActions({
   const restart = useCallback(() => run.mutate("restart"), [run]);
 
   const stopped = status === "stopped";
-  // `created` = never provisioned, `deleting` = teardown in progress: in
-  // both cases there is no stable Swarm service to operate, and offering
-  // the action would lie about what's possible.
-  const available = canOperate && status !== "created" && status !== "deleting";
+  // `created` = never provisioned, `deploying` = Swarm still applying,
+  // `deleting` = teardown: no stable service to operate.
+  const available =
+    canOperate &&
+    status !== "created" &&
+    status !== "deploying" &&
+    status !== "deleting";
 
   return {
     available,

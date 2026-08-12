@@ -1,23 +1,15 @@
-import { PlusIcon, SlidersIcon, TrashIcon } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ClipboardEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
-import { IconStack } from "@/components/icon-stack";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Frame,
   FrameFooter,
@@ -37,6 +29,11 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { EnvVarView } from "@/server/env-vars";
+import {
+  type EnvPair,
+  parseEnvPaste,
+  shouldInterceptEnvPaste,
+} from "./parse-env-paste";
 
 export interface DraftVar {
   isSecret: boolean;
@@ -54,6 +51,8 @@ interface Props {
    *  restarts right away. The hardcoded text here used to contradict a
    *  database's screen, which announced a restart right above it. */
   effect: string;
+  /** Persistent footer copy — lives in the Frame, not an Alert above it. */
+  note?: string;
   onSave: (vars: DraftVar[]) => void;
   pending: boolean;
   saved: EnvVarView[];
@@ -71,6 +70,7 @@ interface Change {
 
 type UpdateFn = (uid: string, patch: Partial<DraftVar>) => void;
 type RemoveFn = (uid: string) => void;
+type PasteFn = (uid: string, pairs: EnvPair[]) => void;
 
 const MASK = "••••••••";
 
@@ -80,13 +80,84 @@ const MARKS: Record<ChangeKind, string> = {
   remove: "−",
 };
 
+function blankRow(): DraftVar {
+  return { isSecret: false, key: "", uid: crypto.randomUUID(), value: "" };
+}
+
+function isBlank(row: DraftVar): boolean {
+  return row.key.length === 0 && (row.value === null || row.value.length === 0);
+}
+
+function ensureBlank(rows: DraftVar[]): DraftVar[] {
+  const last = rows.at(-1);
+  if (last && isBlank(last)) {
+    return rows;
+  }
+  return [...rows, blankRow()];
+}
+
 function toDraft(rows: EnvVarView[]): DraftVar[] {
-  return rows.map((row) => ({
-    isSecret: row.isSecret,
-    key: row.key,
-    uid: row.id,
-    value: row.value,
-  }));
+  return ensureBlank(
+    rows.map((row) => ({
+      isSecret: row.isSecret,
+      key: row.key,
+      uid: row.id,
+      value: row.value,
+    }))
+  );
+}
+
+/**
+ * Fill the focused row with the first pair, then insert the rest below —
+ * the Vercel paste: a whole `.env` blob becomes rows, not one giant value.
+ */
+function applyEnvPaste(
+  rows: DraftVar[],
+  uid: string,
+  pairs: EnvPair[]
+): DraftVar[] {
+  if (pairs.length === 0) {
+    return rows;
+  }
+
+  const next = [...rows];
+  const index = next.findIndex((row) => row.uid === uid);
+  if (index < 0) {
+    return rows;
+  }
+
+  const [first, ...rest] = pairs;
+  const current = next[index];
+  if (!(first && current)) {
+    return rows;
+  }
+
+  next[index] = { ...current, key: first.key, value: first.value };
+
+  let insertAt = index + 1;
+  for (const pair of rest) {
+    const existing = next.findIndex(
+      (row, rowIndex) => rowIndex !== index && row.key === pair.key
+    );
+    const existingRow = existing >= 0 ? next[existing] : undefined;
+    if (existingRow) {
+      next[existing] = {
+        ...existingRow,
+        key: pair.key,
+        value: pair.value,
+      };
+      continue;
+    }
+    next.splice(insertAt, 0, {
+      isSecret: false,
+      key: pair.key,
+      uid: crypto.randomUUID(),
+      value: pair.value,
+    });
+    insertAt += 1;
+  }
+
+  return ensureBlank(next);
 }
 
 /**
@@ -152,11 +223,31 @@ function display(value: string | null, isSecret: boolean): string {
   return value === null || value === "" ? "(empty)" : value;
 }
 
-function KeyCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
+function KeyCell({
+  onPasteEnv,
+  onUpdate,
+  row,
+}: {
+  onPasteEnv: PasteFn;
+  onUpdate: UpdateFn;
+  row: DraftVar;
+}) {
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) =>
       onUpdate(row.uid, { key: e.target.value }),
     [onUpdate, row.uid]
+  );
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!shouldInterceptEnvPaste(text, "key", row.key)) {
+        return;
+      }
+      e.preventDefault();
+      onPasteEnv(row.uid, parseEnvPaste(text));
+    },
+    [onPasteEnv, row.key, row.uid]
   );
 
   return (
@@ -164,6 +255,7 @@ function KeyCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
       aria-label="Variable name"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
+      onPaste={handlePaste}
       placeholder="VARIABLE_NAME"
       spellCheck={false}
       value={row.key}
@@ -171,11 +263,31 @@ function KeyCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
   );
 }
 
-function ValueCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
+function ValueCell({
+  onPasteEnv,
+  onUpdate,
+  row,
+}: {
+  onPasteEnv: PasteFn;
+  onUpdate: UpdateFn;
+  row: DraftVar;
+}) {
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) =>
       onUpdate(row.uid, { value: e.target.value }),
     [onUpdate, row.uid]
+  );
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLInputElement>) => {
+      const text = e.clipboardData.getData("text");
+      if (!shouldInterceptEnvPaste(text, "value", row.key)) {
+        return;
+      }
+      e.preventDefault();
+      onPasteEnv(row.uid, parseEnvPaste(text));
+    },
+    [onPasteEnv, row.key, row.uid]
   );
 
   return (
@@ -183,7 +295,8 @@ function ValueCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
       aria-label="Value"
       className="h-8 font-mono text-xs"
       onChange={handleChange}
-      placeholder={row.value === null ? MASK : ""}
+      onPaste={handlePaste}
+      placeholder={row.value === null ? MASK : "value"}
       spellCheck={false}
       type={row.isSecret ? "password" : "text"}
       value={row.value ?? ""}
@@ -224,7 +337,7 @@ function RemoveCell({ onRemove, row }: { onRemove: RemoveFn; row: DraftVar }) {
 
 const columnHelper = createColumnHelper<DraftVar>();
 
-export function EnvVarTable({ effect, onSave, pending, saved }: Props) {
+export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
   const [draft, setDraft] = useState<DraftVar[]>(() => toDraft(saved));
   const [confirming, setConfirming] = useState(false);
 
@@ -238,15 +351,17 @@ export function EnvVarTable({ effect, onSave, pending, saved }: Props) {
   }, []);
 
   const remove = useCallback<RemoveFn>((uid) => {
-    setDraft((rows) => rows.filter((row) => row.uid !== uid));
+    setDraft((rows) => ensureBlank(rows.filter((row) => row.uid !== uid)));
     setConfirming(false);
   }, []);
 
   const addRow = useCallback(() => {
-    setDraft((rows) => [
-      ...rows,
-      { isSecret: false, key: "", uid: crypto.randomUUID(), value: "" },
-    ]);
+    setDraft((rows) => [...rows, blankRow()]);
+    setConfirming(false);
+  }, []);
+
+  const pasteEnv = useCallback<PasteFn>((uid, pairs) => {
+    setDraft((rows) => applyEnvPaste(rows, uid, pairs));
     setConfirming(false);
   }, []);
 
@@ -267,11 +382,23 @@ export function EnvVarTable({ effect, onSave, pending, saved }: Props) {
   const columns = useMemo(
     () => [
       columnHelper.accessor("key", {
-        cell: (info) => <KeyCell onUpdate={update} row={info.row.original} />,
+        cell: (info) => (
+          <KeyCell
+            onPasteEnv={pasteEnv}
+            onUpdate={update}
+            row={info.row.original}
+          />
+        ),
         header: "Key",
       }),
       columnHelper.accessor("value", {
-        cell: (info) => <ValueCell onUpdate={update} row={info.row.original} />,
+        cell: (info) => (
+          <ValueCell
+            onPasteEnv={pasteEnv}
+            onUpdate={update}
+            row={info.row.original}
+          />
+        ),
         header: "Value",
       }),
       columnHelper.accessor("isSecret", {
@@ -288,7 +415,7 @@ export function EnvVarTable({ effect, onSave, pending, saved }: Props) {
         id: "actions",
       }),
     ],
-    [remove, update]
+    [pasteEnv, remove, update]
   );
 
   const table = useReactTable({
@@ -306,118 +433,103 @@ export function EnvVarTable({ effect, onSave, pending, saved }: Props) {
           Add variable
         </Button>
       </FrameHeader>
-
-      {draft.length === 0 ? (
-        <FramePanel>
-          <Empty className="min-h-40">
-            <EmptyHeader>
-              <EmptyMedia>
-                <IconStack>
-                  <SlidersIcon className="size-5" weight="duotone" />
-                </IconStack>
-              </EmptyMedia>
-              <EmptyTitle>No environment variables</EmptyTitle>
-              <EmptyDescription>
-                Add one to pass configuration without rebuilding.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </FramePanel>
-      ) : (
-        <FramePanel className="p-0">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </FramePanel>
-      )}
-
-      {changes.length > 0 ? (
-        <FrameFooter className="gap-3">
-          <div className="flex flex-col gap-1">
-            {changes.map((change) => (
-              <div
-                className="flex items-center gap-2 font-mono text-xs"
-                key={`${change.kind}-${change.key}`}
-              >
-                <span
-                  className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded-sm font-bold",
-                    change.kind === "add" && "bg-success/10 text-success",
-                    change.kind === "remove" &&
-                      "bg-destructive/10 text-destructive",
-                    change.kind === "change" && "bg-muted text-foreground"
-                  )}
-                >
-                  {MARKS[change.kind]}
-                </span>
-                <span className="min-w-0 break-all">
-                  <strong className="font-semibold">{change.key}</strong>{" "}
-                  <span
-                    className={cn(
-                      "text-muted-foreground",
-                      change.kind === "remove" && "line-through"
+      <FramePanel className="p-0">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
                     )}
-                  >
-                    {change.kind === "change"
-                      ? `${display(change.before, change.isSecret)} → ${display(change.after, change.isSecret)}`
-                      : display(
-                          change.kind === "remove"
-                            ? change.before
-                            : change.after,
-                          change.isSecret
-                        )}
-                  </span>
-                </span>
-              </div>
+                  </TableHead>
+                ))}
+              </TableRow>
             ))}
-          </div>
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </FramePanel>
+      {note || changes.length > 0 ? (
+        <FrameFooter className="gap-3">
+          {note ? (
+            <p className="text-muted-foreground text-xs">{note}</p>
+          ) : null}
 
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <Badge variant="outline">
-                {changes.length} change{changes.length > 1 ? "s" : ""}
-              </Badge>
-              <span className="truncate text-muted-foreground text-xs">
-                {effect}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button onClick={reset} size="sm" variant="ghost">
-                Cancel
-              </Button>
-              <Button disabled={pending} onClick={commit} size="sm">
-                {pending ? <Spinner data-icon="inline-start" /> : null}
-                {confirming ? "Confirm save" : "Save"}
-              </Button>
-            </div>
-          </div>
+          {changes.length > 0 ? (
+            <>
+              <div className="flex flex-col gap-1">
+                {changes.map((change) => (
+                  <div
+                    className="flex items-center gap-2 font-mono text-xs"
+                    key={`${change.kind}-${change.key}`}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-4 shrink-0 items-center justify-center rounded-sm font-bold",
+                        change.kind === "add" && "bg-success/10 text-success",
+                        change.kind === "remove" &&
+                          "bg-destructive/10 text-destructive",
+                        change.kind === "change" && "bg-muted text-foreground"
+                      )}
+                    >
+                      {MARKS[change.kind]}
+                    </span>
+                    <span className="min-w-0 break-all">
+                      <strong className="font-semibold">{change.key}</strong>{" "}
+                      <span
+                        className={cn(
+                          "text-muted-foreground",
+                          change.kind === "remove" && "line-through"
+                        )}
+                      >
+                        {change.kind === "change"
+                          ? `${display(change.before, change.isSecret)} → ${display(change.after, change.isSecret)}`
+                          : display(
+                              change.kind === "remove"
+                                ? change.before
+                                : change.after,
+                              change.isSecret
+                            )}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Badge variant="outline">
+                    {changes.length} change{changes.length > 1 ? "s" : ""}
+                  </Badge>
+                  <span className="truncate text-muted-foreground text-xs">
+                    {effect}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button onClick={reset} size="sm" variant="ghost">
+                    Cancel
+                  </Button>
+                  <Button disabled={pending} onClick={commit} size="sm">
+                    {pending ? <Spinner data-icon="inline-start" /> : null}
+                    {confirming ? "Confirm save" : "Save"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : null}
         </FrameFooter>
       ) : null}
     </Frame>

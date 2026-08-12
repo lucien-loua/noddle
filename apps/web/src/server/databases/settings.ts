@@ -15,6 +15,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
@@ -55,10 +56,7 @@ export const setDatabaseExternalPort = createServerFn({ method: "POST" })
             .set({ externalPort: data.externalPort })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -102,10 +100,7 @@ export const setDatabaseResources = createServerFn({ method: "POST" })
             })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -126,10 +121,7 @@ export const setDatabaseConfiguration = createServerFn({ method: "POST" })
             .set({ image: data.image })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -150,10 +142,7 @@ export const setDatabaseReplicas = createServerFn({ method: "POST" })
             .set({ replicas: data.replicas })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -188,10 +177,7 @@ export const setDatabaseSwarmSettings = createServerFn({ method: "POST" })
             .set({ swarmSettings: cleared })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -220,10 +206,7 @@ export const setDatabaseVolumePath = createServerFn({ method: "POST" })
             .set({ volumePath: data.volumePath })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -260,10 +243,7 @@ export const addDatabaseMount = createServerFn({ method: "POST" })
             .set({ extraMounts: [...database.extraMounts, mount] })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -313,10 +293,7 @@ export const updateDatabaseMount = createServerFn({ method: "POST" })
             .set({ extraMounts: next })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
@@ -344,10 +321,7 @@ export const deleteDatabaseMount = createServerFn({ method: "POST" })
             .set({ extraMounts: next })
             .where(eq(databases.id, database.id));
 
-          await enqueueDeploy({
-            databaseId: database.id,
-            kind: "provision-database",
-          });
+          await queueDatabaseProvision(database.id);
           return { queued: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),

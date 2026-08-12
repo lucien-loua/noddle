@@ -14,9 +14,9 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
 import { runGuarded } from "@/lib/permission.server";
-import { enqueueDeploy } from "@/lib/queue.server";
 
 const NON_IDENTIFIER = /[^a-z0-9_]/g;
 const STARTS_LEGALLY = /^[a-z_]/;
@@ -104,10 +104,10 @@ async function createDatabaseRows(
     })
     .where(eq(databases.id, database.id));
 
-  await enqueueDeploy({
-    databaseId: database.id,
-    kind: "provision-database",
-  });
+  // Provision is queued at create, not left for a later Deploy click:
+  // a database is an image, not a build. `queueDatabaseProvision` also
+  // writes `deploying` so the project page doesn't flash "Never deployed".
+  await queueDatabaseProvision(database.id);
   return { databaseId: database.id, name: database.name };
 }
 
