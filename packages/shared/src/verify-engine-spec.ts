@@ -6,6 +6,7 @@ import {
   DATABASE_PORT,
   DEFAULT_DATABASE_IMAGE,
   ENGINE_SPECS,
+  passwordChangeFor,
 } from "@noddle/database-spec";
 import { check, runVerify } from "#verify-harness";
 
@@ -51,6 +52,14 @@ await runVerify("EngineSpec ownership (C5)", () => {
     join(REPO, "../apps/web/src/server/databases/connection-url.ts"),
     "utf8"
   );
+  const password = readFileSync(
+    join(REPO, "../apps/worker/src/database/database-password.ts"),
+    "utf8"
+  );
+  const restore = readFileSync(
+    join(REPO, "../apps/worker/src/backup-run/subjects/database-restore.ts"),
+    "utf8"
+  );
 
   check(
     "database-engines re-exports ENGINE_SPECS",
@@ -67,5 +76,34 @@ await runVerify("EngineSpec ownership (C5)", () => {
   check(
     "web connection-url has no engine switch",
     !connectionUrl.includes("switch (engine)")
+  );
+
+  const pgChange = passwordChangeFor("postgres", {
+    password: "new-secret",
+    rootUser: "postgres",
+  });
+  check(
+    "passwordChange lives on ENGINE_SPECS",
+    pgChange.script.includes("psql") && pgChange.input.includes("ALTER USER")
+  );
+  check(
+    "worker password change has no engine switch",
+    !(
+      password.includes("switch (engine)") ||
+      password.includes("switch (database.engine)")
+    )
+  );
+  check(
+    "worker password change uses passwordChangeFor",
+    password.includes("passwordChangeFor")
+  );
+  check(
+    "restore dispatches via RESTORE_SPECS table",
+    restore.includes("RESTORE_SPECS") &&
+      !restore.includes("switch (database.engine)")
+  );
+  check(
+    "every engine owns a passwordChange path",
+    Object.values(ENGINE_SPECS).every((s) => Boolean(s.passwordChange))
   );
 });

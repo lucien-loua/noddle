@@ -47,6 +47,17 @@ export interface ConnectionUrlParams {
   rootUser: string | null;
 }
 
+/**
+ * In-container password rotation: the NEW password travels on stdin only.
+ * The script itself must never embed it — `docker top` / argv would leak it.
+ *
+ * `rootUser` is already constrained to a safe identifier by the caller.
+ */
+export interface PasswordChangeSpec {
+  input: (params: { password: string; rootUser: string }) => string;
+  script: (params: { rootUser: string; secretPath: string }) => string;
+}
+
 export interface EngineSpec {
   // Receives the mounted secret's PATH (/run/secrets/…), never the plaintext
   // password — that alone would end up in `docker service inspect`.
@@ -70,6 +81,11 @@ export interface EngineSpec {
   healthcheck?: (params: EngineParams) => string[];
   /** The default, pinned. Replaced by `databases.image` when it's set. */
   image: string;
+  /**
+   * How to rotate the root password INSIDE a running container.
+   * Owned here so a sixth engine can't compile without a rotation path.
+   */
+  passwordChange: PasswordChangeSpec;
   port: number;
   /** Name of the file in /run/secrets, INSIDE the container. */
   secretFile: string;
@@ -94,6 +110,44 @@ export interface EngineSpec {
    */
   secretMode?: number;
   volumePath: string;
+}
+
+/** Escapes a SQL string literal for MySQL/MariaDB (apostrophe AND backslash). */
+function mysqlLiteral(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("'", "''");
+}
+
+/** Escapes a value for psql's `\set` metacommand. */
+function psqlSetLiteral(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+function mysqlFamilyPasswordChange(
+  clientBinary: "mariadb" | "mysql"
+): PasswordChangeSpec {
+  return {
+    // THREE accounts, each with `IF EXISTS` — the official image creates
+    // `root@localhost` IN ADDITION TO `root@%`. A password change that
+    // leaves an account behind isn't a password change.
+    input: ({ password, rootUser }) => {
+      const literal = mysqlLiteral(password);
+      const accounts = [
+        `'${mysqlLiteral(rootUser)}'@'%'`,
+        "'root'@'%'",
+        "'root'@'localhost'",
+      ];
+      return `${accounts
+        .map(
+          (account) =>
+            `ALTER USER IF EXISTS ${account} IDENTIFIED BY '${literal}';`
+        )
+        .join("\n")}\nFLUSH PRIVILEGES;\n`;
+    },
+    // Current password from the mounted secret via a config file — never
+    // `-p` / `MYSQL_PWD` (argv / `/proc/<pid>/environ`).
+    script: ({ secretPath }) =>
+      `umask 077 && { printf '[client]\\npassword='; cat ${secretPath}; printf '\\n'; } > /tmp/np.cnf && ${clientBinary} --defaults-extra-file=/tmp/np.cnf --user=root; rc=$?; rm -f /tmp/np.cnf; exit $rc`,
+  };
 }
 
 export const SECRET_MODE_OWNER_READ_ONLY = 0o400;
@@ -164,6 +218,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       `umask 077 && printf '[client]\\npassword=%s\\n' "$(cat ${secretPath})" > /tmp/hc.cnf && healthcheck.sh --defaults-extra-file=/tmp/hc.cnf --connect; rc=$?; rm -f /tmp/hc.cnf; exit $rc`,
     ],
     image: DEFAULT_DATABASE_IMAGE.mariadb,
+    passwordChange: mysqlFamilyPasswordChange("mariadb"),
     port: DATABASE_PORT.mariadb,
     secretFile: "mariadb_password",
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mariadb,
@@ -196,6 +251,22 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' || exit 1",
     ],
     image: DEFAULT_DATABASE_IMAGE.mongo,
+    passwordChange: {
+      // JS on stdin written to a file: `--eval` would put the new password
+      // in argv. Current password stays in NODDLE_CUR for the one process.
+      input: ({ password, rootUser }) =>
+        [
+          'const conn = Mongo("mongodb://127.0.0.1:27017/admin");',
+          'const admin = conn.getDB("admin");',
+          `if (!admin.auth(${JSON.stringify(rootUser)}, process.env.NODDLE_CUR)) {`,
+          '  throw new Error("authentication with the current password failed");',
+          "}",
+          `admin.changeUserPassword(${JSON.stringify(rootUser)}, ${JSON.stringify(password)});`,
+          "",
+        ].join("\n"),
+      script: ({ secretPath }) =>
+        `umask 077 && cat > /tmp/np.js && NODDLE_CUR="$(cat ${secretPath})" mongosh --quiet --nodb --file /tmp/np.js; rc=$?; rm -f /tmp/np.js; exit $rc`,
+    },
     port: DATABASE_PORT.mongo,
     secretFile: "mongo_password",
     secretMode: SECRET_MODE_WORLD_READ_ONLY,
@@ -238,6 +309,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       `umask 077 && printf '[client]\\npassword=%s\\n' "$(cat ${secretPath})" > /tmp/hc.cnf && mysqladmin --defaults-extra-file=/tmp/hc.cnf ping -h 127.0.0.1 -u root; rc=$?; rm -f /tmp/hc.cnf; exit $rc`,
     ],
     image: DEFAULT_DATABASE_IMAGE.mysql,
+    passwordChange: mysqlFamilyPasswordChange("mysql"),
     port: DATABASE_PORT.mysql,
     secretFile: "mysql_password",
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mysql,
@@ -273,6 +345,16 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       `pg_isready -U ${rootUser} -d ${databaseName} || exit 1`,
     ],
     image: DEFAULT_DATABASE_IMAGE.postgres,
+    passwordChange: {
+      // No password: local socket is `trust` in the official image.
+      // `ON_ERROR_STOP=1`: without it psql exits 0 after a rejected ALTER.
+      // `\set` then `:'pw'`: psql quotes the value — no hand-stitched SQL.
+      // `rootUser` is asserted safe by the caller (letters/digits/_ only).
+      input: ({ password, rootUser }) =>
+        `\\set pw '${psqlSetLiteral(password)}'\nALTER USER "${rootUser}" WITH PASSWORD :'pw';\n`,
+      script: ({ rootUser }) =>
+        `exec psql -v ON_ERROR_STOP=1 -U ${rootUser} -d postgres`,
+    },
     port: DATABASE_PORT.postgres,
     secretFile: "postgres_password",
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.postgres,
@@ -300,11 +382,34 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       `REDISCLI_AUTH="$(cat ${secretPath})" redis-cli ping || exit 1`,
     ],
     image: DEFAULT_DATABASE_IMAGE.redis,
+    passwordChange: {
+      // `-x` reads the last argument from stdin — new password never in argv.
+      // No trailing newline: `-x` takes stdin as-is.
+      input: ({ password }) => password,
+      script: ({ secretPath }) =>
+        `REDISCLI_AUTH="$(cat ${secretPath})" exec redis-cli -x CONFIG SET requirepass`,
+    },
     port: DATABASE_PORT.redis,
     secretFile: "redis_password",
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.redis,
   },
 };
+
+/**
+ * Builds the in-container password-change script + stdin payload for an engine.
+ * A sixth engine fails to compile on ENGINE_SPECS, not at runtime here.
+ */
+export function passwordChangeFor(
+  engine: DatabaseEngine,
+  params: { password: string; rootUser: string }
+): { input: string; script: string } {
+  const secretPath = secretPathFor(engine);
+  const change = ENGINE_SPECS[engine].passwordChange;
+  return {
+    input: change.input(params),
+    script: change.script({ rootUser: params.rootUser, secretPath }),
+  };
+}
 
 export function connectionUrlFor(
   engine: DatabaseEngine,

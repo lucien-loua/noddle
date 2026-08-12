@@ -12,7 +12,6 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import { rolloutService } from "#deploy/rollout";
 import type { DomainRoute } from "@noddle/proxy-config";
 import {
   pushImage,
@@ -25,6 +24,7 @@ import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
 import { watchUntilFor } from "@noddle/swarm-ops";
 import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { rolloutService } from "#deploy/rollout";
 import { type DeployClients, withDeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";

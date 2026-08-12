@@ -13,6 +13,7 @@ import {
 import {
   DATABASE_PORT,
   type DatabaseEngine,
+  DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
   HAS_NAMED_DATABASE,
 } from "@noddle/shared/database-engines";
@@ -169,7 +170,69 @@ try {
    * Connect FROM ANOTHER CONTAINER, on the same overlay — exactly what an
    * attached application does. Returns `true` if authentication succeeds,
    * `false` if it is refused.
+   *
+   * Probe argv is a table keyed by engine (same shape as DUMP_SPECS /
+   * RESTORE_SPECS) so a sixth engine fails to compile here, not at runtime.
    */
+  const PROBE_ARGV: Record<
+    DatabaseEngine,
+    (opts: {
+      hostName: string;
+      password: string;
+      port: number;
+      user: string | null;
+    }) => string[]
+  > = {
+    mariadb: ({ hostName, password, user }) => [
+      "-e",
+      `MYSQL_PWD=${password}`,
+      DEFAULT_DATABASE_IMAGE.mariadb,
+      "mariadb",
+      "-h",
+      hostName,
+      "-u",
+      user ?? "root",
+      "-e",
+      "select 1",
+    ],
+    mongo: ({ hostName, password, port, user }) => [
+      DEFAULT_DATABASE_IMAGE.mongo,
+      "mongosh",
+      `mongodb://${user}:${encodeURIComponent(password)}@${hostName}:${port}/admin`,
+      "--quiet",
+      "--eval",
+      "db.runCommand({ ping: 1 }).ok",
+    ],
+    mysql: ({ hostName, password, user }) => [
+      "-e",
+      `MYSQL_PWD=${password}`,
+      DEFAULT_DATABASE_IMAGE.mysql,
+      "mysql",
+      "-h",
+      hostName,
+      "-u",
+      user ?? "root",
+      "-e",
+      "select 1",
+    ],
+    postgres: ({ hostName, password, port, user }) => [
+      DEFAULT_DATABASE_IMAGE.postgres,
+      "psql",
+      `postgresql://${user}:${encodeURIComponent(password)}@${hostName}:${port}/${dbNameOf("postgres")}`,
+      "-c",
+      "select 1",
+    ],
+    // Explicit `default:` for the user — without ACL, redis-cli's URI
+    // parser needs the name to recognize the password.
+    redis: ({ hostName, password, port }) => [
+      DEFAULT_DATABASE_IMAGE.redis,
+      "redis-cli",
+      "-u",
+      `redis://default:${encodeURIComponent(password)}@${hostName}:${port}`,
+      "ping",
+    ],
+  };
+
   const canConnect = async (
     engine: DatabaseEngine,
     user: string | null,
@@ -180,74 +243,15 @@ try {
     }
     const hostName = swarmNameOf(engine);
     const port = DATABASE_PORT[engine];
-    const base = [
+    const argv = [
       "sudo",
       "docker",
       "run",
       "--rm",
       "--network",
       "noddle-public",
+      ...PROBE_ARGV[engine]({ hostName, password, port, user }),
     ];
-
-    let argv: string[];
-    switch (engine) {
-      case "postgres":
-        argv = [
-          ...base,
-          "postgres:17-alpine",
-          "psql",
-          `postgresql://${user}:${encodeURIComponent(password)}@${hostName}:${port}/${dbNameOf(engine)}`,
-          "-c",
-          "select 1",
-        ];
-        break;
-      case "mysql":
-      case "mariadb": {
-        const image = engine === "mysql" ? "mysql:8" : "mariadb:11";
-        const binary = engine === "mysql" ? "mysql" : "mariadb";
-        argv = [
-          ...base,
-          "-e",
-          `MYSQL_PWD=${password}`,
-          image,
-          binary,
-          "-h",
-          hostName,
-          "-u",
-          user ?? "root",
-          "-e",
-          "select 1",
-        ];
-        break;
-      }
-      case "mongo":
-        argv = [
-          ...base,
-          "mongo:7",
-          "mongosh",
-          `mongodb://${user}:${encodeURIComponent(password)}@${hostName}:${port}/admin`,
-          "--quiet",
-          "--eval",
-          "db.runCommand({ ping: 1 }).ok",
-        ];
-        break;
-      case "redis":
-        // Explicit `default:` for the user — without ACL, redis-cli's URI
-        // parser needs the name to recognize the password.
-        argv = [
-          ...base,
-          "redis:7-alpine",
-          "redis-cli",
-          "-u",
-          `redis://default:${encodeURIComponent(password)}@${hostName}:${port}`,
-          "ping",
-        ];
-        break;
-      default: {
-        const jamais: never = engine;
-        throw new Error(`no verify probe for engine: ${jamais}`);
-      }
-    }
 
     const res = await execArgv(managerSsh, argv);
     if (engine === "redis") {

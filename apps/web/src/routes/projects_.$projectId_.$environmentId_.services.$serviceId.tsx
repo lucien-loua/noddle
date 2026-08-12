@@ -17,7 +17,6 @@ import { ServiceProvider } from "@/components/features/services/service-provider
 import { ServiceStatusLine } from "@/components/features/services/service-status-line";
 import { WebhookPanel } from "@/components/features/webhooks/panel";
 import { RelativeTime } from "@/components/relative-time";
-import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import { ServiceRegistry } from "@/components/service-registry";
 import { ServiceResources } from "@/components/service-resources";
 import { TabRail } from "@/components/tab-rail";
@@ -39,7 +38,10 @@ import { shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
-import { DETAIL_POLL_MS } from "@/lib/resource-detail/constants";
+import {
+  DETAIL_POLL_MS,
+  DETAIL_TAB_PANEL_CLASS,
+} from "@/lib/resource-detail/constants";
 import {
   type AwaitingLifecycle,
   isLifecycleSettled,

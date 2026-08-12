@@ -288,6 +288,83 @@ interface DatabaseRestoreLoaded {
   request: RestoreRequest;
 }
 
+interface RestoreApplyOpts {
+  body: NodeJS.ReadableStream;
+  buildClient: SshClient;
+  containerId: string;
+  database: DatabaseRow;
+  managerDocker: Parameters<typeof scaleServiceAndWait>[0];
+  password: string;
+}
+
+/**
+ * Per-engine restore path. A table, not a switch: a sixth engine fails to
+ * compile on this Record, same shape as DUMP_SPECS for backup.
+ */
+const RESTORE_SPECS: Record<
+  DatabaseRow["engine"],
+  (opts: RestoreApplyOpts) => Promise<void>
+> = {
+  mariadb: async ({
+    body,
+    buildClient,
+    containerId,
+    database,
+    password,
+  }) => {
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
+    await restoreMysqlFamily(buildClient, {
+      body,
+      clientBinary: "mariadb",
+      containerId,
+      databaseName,
+      password,
+      rootUser: database.rootUser ?? "root",
+    });
+  },
+  mongo: async ({ body, buildClient, containerId, database, password }) => {
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
+    await restoreMongo(buildClient, {
+      body,
+      containerId,
+      databaseName,
+      password,
+      rootUser: database.rootUser ?? "mongo",
+    });
+  },
+  mysql: async ({ body, buildClient, containerId, database, password }) => {
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
+    await restoreMysqlFamily(buildClient, {
+      body,
+      clientBinary: "mysql",
+      containerId,
+      databaseName,
+      password,
+      rootUser: database.rootUser ?? "root",
+    });
+  },
+  postgres: async ({ body, buildClient, containerId, database }) => {
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
+    await restorePostgres(buildClient, {
+      body,
+      containerId,
+      databaseName,
+      rootUser: database.rootUser ?? "postgres",
+    });
+  },
+  redis: async ({ body, buildClient, database, managerDocker }) => {
+    const serviceName = database.swarmName;
+    await scaleServiceAndWait(managerDocker, serviceName, 0);
+    await new Promise((r) => setTimeout(r, SETTLE_MS));
+    await restoreRedis(buildClient, { body, volume: serviceName });
+    await scaleServiceAndWait(managerDocker, serviceName, database.replicas);
+  },
+};
+
 async function resolveRestoreSource(
   ctx: DeployContext,
   req: RestoreRequest
@@ -327,13 +404,15 @@ async function applyDatabaseRestore(
   body: NodeJS.ReadableStream
 ): Promise<void> {
   const { database, password } = loaded;
-  const serviceName = database.swarmName;
 
   await withDeployClients(
     ctx,
     database.server,
     async ({ buildClient, managerDocker }) => {
-      const containerId = await findDatabaseContainer(buildClient, serviceName);
+      const containerId = await findDatabaseContainer(
+        buildClient,
+        database.swarmName
+      );
       const databaseName =
         database.databaseName ?? database.rootUser ?? database.name;
       assertSafeIdentifier(databaseName, "database name");
@@ -341,51 +420,14 @@ async function applyDatabaseRestore(
         assertSafeIdentifier(database.rootUser, "database user");
       }
 
-      switch (database.engine) {
-        case "postgres":
-          await restorePostgres(buildClient, {
-            body,
-            containerId,
-            databaseName,
-            rootUser: database.rootUser ?? "postgres",
-          });
-          break;
-        case "mariadb":
-        case "mysql":
-          await restoreMysqlFamily(buildClient, {
-            body,
-            clientBinary: database.engine === "mariadb" ? "mariadb" : "mysql",
-            containerId,
-            databaseName,
-            password,
-            rootUser: database.rootUser ?? "root",
-          });
-          break;
-        case "mongo":
-          await restoreMongo(buildClient, {
-            body,
-            containerId,
-            databaseName,
-            password,
-            rootUser: database.rootUser ?? "mongo",
-          });
-          break;
-        case "redis": {
-          await scaleServiceAndWait(managerDocker, serviceName, 0);
-          await new Promise((r) => setTimeout(r, SETTLE_MS));
-          await restoreRedis(buildClient, { body, volume: serviceName });
-          await scaleServiceAndWait(
-            managerDocker,
-            serviceName,
-            database.replicas
-          );
-          break;
-        }
-        default: {
-          const jamais: never = database.engine;
-          throw new Error(`no restore path for engine: ${jamais}`);
-        }
-      }
+      await RESTORE_SPECS[database.engine]({
+        body,
+        buildClient,
+        containerId,
+        database,
+        managerDocker,
+        password,
+      });
     }
   );
 }
