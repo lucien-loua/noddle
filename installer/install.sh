@@ -155,23 +155,49 @@ else
   echo "paire générée"
 fi
 
+# L'adresse par laquelle le worker joindra cette machine. Une IP réelle, pas
+# `localhost` : le conteneur ne partage pas la pile réseau de l'hôte.
+#
+# Calculée AVANT l'autorisation de la clé, qui s'en sert pour restreindre les
+# sources acceptées. Plus bas, elle y serait vide.
+HOST_IP="${HOST_IP:-$(hostname -I | awk '{print $1}')}"
+
 HOST_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
 [ -n "$HOST_HOME" ] || die "impossible de trouver le dossier de $TARGET_USER"
 $SUDO mkdir -p "$HOST_HOME/.ssh"
 $SUDO chmod 700 "$HOST_HOME/.ssh"
 PUBKEY="$($SUDO cat "$SSH_KEY.pub")"
-if $SUDO grep -qF "$PUBKEY" "$HOST_HOME/.ssh/authorized_keys" 2>/dev/null; then
+
+# Cette clé vaut root sur la machine : elle ouvre un compte du groupe `docker`,
+# et le socket Docker EST un accès root. Sans restriction de source, une copie
+# qui fuite — sauvegarde de la base, image disque — est rejouable depuis
+# n'importe où sur Internet. `from=` refuse tout ce qui n'est pas local.
+#
+# Les plages privées ne sont pas décoratives : le worker appelle depuis un
+# CONTENEUR, donc sshd voit son adresse sur le réseau Docker, ni 127.0.0.1 ni
+# $HOST_IP. Les retirer verrouillerait la porte sur le seul client légitime.
+#
+# `restrict` est volontairement absent : il coupe le forwarding, dont dockerode
+# a besoin pour atteindre le socket Docker à travers le tunnel. Tout déploiement
+# s'arrêterait.
+SSH_FROM="127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,$HOST_IP"
+AUTH_FILE="$HOST_HOME/.ssh/authorized_keys"
+AUTH_LINE="from=\"$SSH_FROM\" $PUBKEY"
+
+$SUDO touch "$AUTH_FILE"
+if $SUDO grep -qxF "$AUTH_LINE" "$AUTH_FILE"; then
   echo "déjà autorisée pour $TARGET_USER"
 else
-  echo "$PUBKEY" | $SUDO tee -a "$HOST_HOME/.ssh/authorized_keys" >/dev/null
-  $SUDO chmod 600 "$HOST_HOME/.ssh/authorized_keys"
+  # Une entrée antérieure — sans restriction, ou avec une liste de sources
+  # périmée après un changement d'IP — est REMPLACÉE, pas doublée. `sed` et non
+  # `grep -v` dans un pipe : grep sort en 1 quand il ne reste aucune ligne, et
+  # `set -o pipefail` transformerait ce cas normal en échec d'installation.
+  $SUDO sed -i "\|$PUBKEY|d" "$AUTH_FILE"
+  echo "$AUTH_LINE" | $SUDO tee -a "$AUTH_FILE" >/dev/null
+  $SUDO chmod 600 "$AUTH_FILE"
   $SUDO chown -R "$TARGET_USER" "$HOST_HOME/.ssh"
-  echo "autorisée pour $TARGET_USER"
+  echo "autorisée pour $TARGET_USER (sources : $SSH_FROM)"
 fi
-
-# L'adresse par laquelle le worker joindra cette machine. Une IP réelle, pas
-# `localhost` : le conteneur ne partage pas la pile réseau de l'hôte.
-HOST_IP="${HOST_IP:-$(hostname -I | awk '{print $1}')}"
 
 # Le worker construit sur la cible et a besoin de nixpacks LÀ-BAS. Cette
 # machine étant une cible, elle doit l'avoir.
