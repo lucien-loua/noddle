@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { RevealOnce } from "@/components/features/settings-list/reveal-once";
+import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { RelativeTime } from "@/components/relative-time";
 import { Alert, AlertDescription } from "@/components/ui/alert";
