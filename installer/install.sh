@@ -356,7 +356,7 @@ say "Adoption de cette machine comme serveur n°1"
   -e HOST_USER="$TARGET_USER" \
   -e HOST_SSH_KEY="$SSH_DIR/id_ed25519" \
   -e HOST_NAME="$(hostname)" \
-  worker node src/adopt-host.ts </dev/null
+  worker node src/target/adopt-host.ts </dev/null
 
 printf '\n\033[32m✓ Noddle est installé.\033[0m\n\n'
 if [ -n "$CONFIGURED_DOMAIN" ]; then
