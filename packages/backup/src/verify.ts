@@ -2,13 +2,13 @@
 // node packages/backup/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
 import { dumpSpecFor } from "#dump-spec";
-import { restoreSpecFor } from "#restore-spec";
 import {
   BACKUP_EXTENSION,
   buildBackupInsert,
   joinBackupPrefix,
   pickDestination,
 } from "#index";
+import { restoreSpecFor } from "#restore-spec";
 import { isConfigDue } from "#schedule";
 
 await runVerify("backup domain", () => {

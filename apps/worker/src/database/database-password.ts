@@ -8,10 +8,7 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
-import {
-  assertSafeIdentifier,
-  findDatabaseContainer,
-} from "#database-runtime";
+import { assertSafeIdentifier, findDatabaseContainer } from "#database-runtime";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 

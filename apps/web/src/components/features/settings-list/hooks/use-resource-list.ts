@@ -1,4 +1,5 @@
-import { type QueryKey, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 /**
@@ -14,7 +15,11 @@ export function useResourceList<TData extends readonly unknown[]>(
   // cleanly to a hand-written shape — accept the factory as opaque and
   // read queryKey / queryFn inside.
   createQuery: () => { queryKey: QueryKey; queryFn?: unknown },
-  initialData: TData
+  initialData: TData,
+  options?: Pick<
+    UseQueryOptions<TData, Error, TData, QueryKey>,
+    "refetchInterval"
+  >
 ): {
   data: TData;
   isEmpty: boolean;
@@ -30,6 +35,7 @@ export function useResourceList<TData extends readonly unknown[]>(
     initialData,
     queryFn: queryFn as () => Promise<TData>,
     queryKey,
+    refetchInterval: options?.refetchInterval,
   });
 
   const refresh = useCallback(async () => {

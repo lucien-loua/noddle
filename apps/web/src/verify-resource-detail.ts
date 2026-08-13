@@ -94,8 +94,9 @@ await runVerify("resource detail module (C6)", () => {
   );
   check(
     "deploy toolbar composes children (no showDeploy props)",
-    !deploySettings.includes("showDeploy") &&
-      !deploySettings.includes("showReload") &&
-      deploySettings.includes("DeploySettingsToolbar")
+    !(
+      deploySettings.includes("showDeploy") ||
+      deploySettings.includes("showReload")
+    ) && deploySettings.includes("DeploySettingsToolbar")
   );
 });

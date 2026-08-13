@@ -5,13 +5,15 @@ import {
   TagIcon,
   UserIcon,
 } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { DeleteServerAction } from "@/components/delete-server-action";
 import { useAppForm } from "@/components/fields/lib/form";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
+import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { IconStack } from "@/components/icon-stack";
 import { ResourceRow, RowGroup } from "@/components/resource-row";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -26,14 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
@@ -139,54 +133,55 @@ export function ServersList({
   role: RoleName | null;
 }) {
   const queryClient = useQueryClient();
-  const serversQuery = useQuery({
-    ...queries.servers(),
-    initialData: initial,
-    refetchInterval: (query) =>
-      query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
-  });
-  const servers = serversQuery.data ?? initial;
+  const { data: servers, isEmpty } = useResourceList(
+    queries.servers,
+    initial,
+    {
+      refetchInterval: (query) =>
+        query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
+    }
+  );
 
   const handleRemoved = useCallback(
     () => cache.servers(queryClient),
     [queryClient]
   );
 
-  if (servers.length === 0) {
-    return (
-      <Empty className="h-full">
-        <EmptyMedia>
+  return (
+    <SettingsList isEmpty={isEmpty}>
+      <SettingsList.Empty>
+        <SettingsList.EmptyMedia>
           <IconStack>
             <HardDrivesIcon className="size-5" weight="duotone" />
           </IconStack>
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>No servers yet</EmptyTitle>
-          <EmptyDescription>
+        </SettingsList.EmptyMedia>
+        <SettingsList.EmptyHeader>
+          <SettingsList.EmptyTitle>No servers yet</SettingsList.EmptyTitle>
+          <SettingsList.EmptyDescription>
             Noddle deploys onto machines you own. Add one before you can deploy
             anything.
-          </EmptyDescription>
-        </EmptyHeader>
+          </SettingsList.EmptyDescription>
+        </SettingsList.EmptyHeader>
         {onAdd ? (
-          <EmptyContent>
+          <SettingsList.EmptyContent>
             <Button onClick={onAdd}>Add a server</Button>
-          </EmptyContent>
+          </SettingsList.EmptyContent>
         ) : null}
-      </Empty>
-    );
-  }
+      </SettingsList.Empty>
 
-  return (
-    <RowGroup>
-      {servers.map((server) => (
-        <ServerRow
-          key={server.id}
-          onRemoved={handleRemoved}
-          role={role}
-          server={server}
-        />
-      ))}
-    </RowGroup>
+      <SettingsList.Body>
+        <RowGroup>
+          {servers.map((server) => (
+            <ServerRow
+              key={server.id}
+              onRemoved={handleRemoved}
+              role={role}
+              server={server}
+            />
+          ))}
+        </RowGroup>
+      </SettingsList.Body>
+    </SettingsList>
   );
 }
 

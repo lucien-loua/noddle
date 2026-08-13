@@ -1,10 +1,10 @@
 import { services } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, dockerClient } from "@noddle/ssh-executor";
+import { dockerClient } from "@noddle/ssh-executor";
 import { listServiceVolumeMounts } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
-import { connectToManager } from "@/lib/ssh.server";
+import { withManagerSession } from "@/lib/ssh.server";
 import type { ServiceVolumeRow } from "./volumes";
 
 export async function loadServiceVolumeMounts(
@@ -17,13 +17,10 @@ export async function loadServiceVolumeMounts(
     throw new Error("service not found");
   }
 
-  const client = await connectToManager();
-  try {
+  return await withManagerSession(async (client) => {
     const docker = dockerClient(client);
     return await listServiceVolumeMounts(docker, swarmServiceName(service));
-  } finally {
-    disconnect(client);
-  }
+  });
 }
 
 export async function assertVolumeAttachedToService(

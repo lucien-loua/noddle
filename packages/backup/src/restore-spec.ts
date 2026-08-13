@@ -1,6 +1,11 @@
 import { pipeline } from "node:stream/promises";
 import type { DatabaseEngine } from "@noddle/database-spec";
-import { execArgv, execStream, quoteArg, type SshClient } from "@noddle/ssh-executor";
+import {
+  execArgv,
+  execStream,
+  quoteArg,
+  type SshClient,
+} from "@noddle/ssh-executor";
 import { scaleServiceAndWait } from "@noddle/swarm-ops";
 
 const SETTLE_MS = 1500;

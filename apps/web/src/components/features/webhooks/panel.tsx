@@ -2,14 +2,8 @@ import { ArrowClockwiseIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useCopyFeedback } from "@/components/copyable-value";
+import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -60,45 +54,34 @@ export function WebhookPanel({
     return `${origin}${status.data.path}`;
   }, [status.data]);
 
-  if (status.isPending) {
-    return (
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader>
-          <FrameTitle>Webhook URL</FrameTitle>
-        </FrameHeader>
-        <FramePanel>
-          <Spinner />
-        </FramePanel>
-      </Frame>
-    );
-  }
-
   return (
-    <Frame className="w-full" variant="ghost">
-      <FrameHeader>
-        <FrameTitle>Webhook URL</FrameTitle>
-        <FrameDescription>
-          Use this URL in your git provider or CI to trigger a deploy on push.
-        </FrameDescription>
-      </FrameHeader>
-      <FramePanel>
-        <Field>
-          <FieldLabel htmlFor="webhook-url">Webhook URL</FieldLabel>
-          <WebhookUrlInput
-            canManage={canManage}
-            generatePending={generate.isPending}
-            onGenerate={handleGenerate}
-            url={webhookUrl}
-          />
-          {status.data?.configured ? null : (
-            <FieldDescription>
-              Generate a webhook URL to deploy automatically on every GitHub or
-              GitLab push.
-            </FieldDescription>
-          )}
-        </Field>
-      </FramePanel>
-    </Frame>
+    <SettingsList isEmpty={false}>
+      <SettingsList.Frame
+        description="Use this URL in your git provider or CI to trigger a deploy on push."
+        panelClassName="p-4"
+        title="Webhook URL"
+      >
+        {status.isPending ? (
+          <Spinner />
+        ) : (
+          <Field>
+            <FieldLabel htmlFor="webhook-url">Webhook URL</FieldLabel>
+            <WebhookUrlInput
+              canManage={canManage}
+              generatePending={generate.isPending}
+              onGenerate={handleGenerate}
+              url={webhookUrl}
+            />
+            {status.data?.configured ? null : (
+              <FieldDescription>
+                Generate a webhook URL to deploy automatically on every GitHub or
+                GitLab push.
+              </FieldDescription>
+            )}
+          </Field>
+        )}
+      </SettingsList.Frame>
+    </SettingsList>
   );
 }
 

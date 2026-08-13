@@ -1,6 +1,6 @@
 import { databases, servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, execArgv, type SshClient } from "@noddle/ssh-executor";
+import { execArgv, type SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
-import { connectToServer } from "@/lib/ssh.server";
+import { withServerSession, withServerSessionById } from "@/lib/ssh.server";
 
 /**
  * The capped builder's container, as buildx names it.
@@ -161,59 +161,36 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
     });
 
     for (const server of connected) {
-      let client: SshClient | undefined;
       try {
         // One machine at a time: parallelizing would open N SSH sessions
         // from a 2GB control plane just to read a list. Same discipline as
         // the worker's own passes.
         // biome-ignore lint/performance/noAwaitInLoops: deliberately sequential
-        client = await connectToServer(server);
-        // `-a`: a stopped container is precisely what we're looking for
-        // here, and it's the one the daily prune will remove.
-        const res = await execArgv(client, [
-          "sudo",
-          "docker",
-          "ps",
-          "-a",
-          "--format",
-          PS_FORMAT,
-        ]);
-        if (res.code !== 0) {
-          throw new Error(res.stderr.trim() || "docker ps failed");
-        }
-        view.containers.push(...parsePs(res.stdout, server));
+        await withServerSession(server, async (client) => {
+          const res = await execArgv(client, [
+            "sudo",
+            "docker",
+            "ps",
+            "-a",
+            "--format",
+            PS_FORMAT,
+          ]);
+          if (res.code !== 0) {
+            throw new Error(res.stderr.trim() || "docker ps failed");
+          }
+          view.containers.push(...parsePs(res.stdout, server));
+        });
       } catch (err) {
         view.unreachable.push({
           reason: err instanceof Error ? err.message : String(err),
           serverId: server.id,
           serverName: server.name,
         });
-      } finally {
-        if (client) {
-          disconnect(client);
-        }
       }
     }
     return view;
   }
 );
-
-/**
- * Opens a session to a given server, by its id.
- *
- * The actions target a SPECIFIC machine — the one the container runs on —
- * and not the manager: stopping a container is an operation local to its
- * daemon.
- */
-async function connectToServerById(serverId: string) {
-  const server = await db.query.servers.findFirst({
-    where: eq(servers.id, serverId),
-  });
-  if (!server) {
-    throw new Error("server not found");
-  }
-  return await connectToServer(server);
-}
 
 /**
  * Re-reads the container's KIND on the machine, right before acting.
@@ -277,9 +254,8 @@ export const containerAction = createServerFn({ method: "POST" })
     // back from the machine inside `run` and the target reads the result.
     const guarded = await runGuarded({
       permission,
-      run: async () => {
-        const client = await connectToServerById(data.serverId);
-        try {
+      run: async () =>
+        withServerSessionById(data.serverId, async (client) => {
           const found = await readKind(client, data.containerId);
           if (!found) {
             throw new Error("container not found");
@@ -292,9 +268,6 @@ export const containerAction = createServerFn({ method: "POST" })
             );
           }
 
-          // Never `-f` on `rm`: Docker refuses to remove a RUNNING container
-          // without it, and that refusal is a protection we keep rather than
-          // work around. It has to be stopped first, explicitly.
           const argv =
             data.action === "remove"
               ? ["sudo", "docker", "rm", data.containerId]
@@ -306,10 +279,7 @@ export const containerAction = createServerFn({ method: "POST" })
             );
           }
           return { containerName: found.name, done: true as const };
-        } finally {
-          disconnect(client);
-        }
-      },
+        }),
       target: ({ result }) => ({
         id: data.containerId,
         name: result.containerName,
@@ -385,12 +355,7 @@ export const restartSwarmService = createServerFn({ method: "POST" })
             );
           }
 
-          const client = await connectToServerById(data.serverId);
-          try {
-            // Re-read on the machine that reported the task: the page may be
-            // stale, and a forged serverId/serviceName pair must not skip the
-            // kind check that containerAction already applies to unmanaged
-            // containers.
+          await withServerSessionById(data.serverId, async (client) => {
             const res = await execArgv(client, [
               "sudo",
               "docker",
@@ -411,17 +376,13 @@ export const restartSwarmService = createServerFn({ method: "POST" })
                 `no running task for Swarm service ${data.serviceName} on that server`
               );
             }
-            // Swarm tasks classify as `swarm`. Anything else (control-plane
-            // compose leftovers mis-filtered, empty labels) is refused.
             const foreign = rows.find((r) => r.kind !== "swarm");
             if (foreign) {
               throw new Error(
                 `${foreign.name} is part of Noddle itself and cannot be changed from here.`
               );
             }
-          } finally {
-            disconnect(client);
-          }
+          });
 
           await enqueueDeploy({
             kind: "restart-swarm-service",

@@ -18,10 +18,7 @@ import {
   pruneBackupRuns,
   sweepBackupConfigs,
 } from "#backup-run/sweep";
-import {
-  assertSafeIdentifier,
-  findDatabaseContainer,
-} from "#database-runtime";
+import { assertSafeIdentifier, findDatabaseContainer } from "#database-runtime";
 import type { DeployContext } from "#runtime-context";
 
 interface DatabaseBackupRun extends BackupRunRow {

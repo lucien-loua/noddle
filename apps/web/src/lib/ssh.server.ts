@@ -1,6 +1,6 @@
 import { servers } from "@noddle/db/schema";
 import { credentialsFor } from "@noddle/ssh-credentials";
-import { connect, type SshClient } from "@noddle/ssh-executor";
+import { connect, disconnect, type SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
@@ -31,4 +31,43 @@ export async function connectToManager(): Promise<SshClient> {
     throw new Error("no Swarm manager registered");
   }
   return await connectToServer(manager);
+}
+
+/** Open one SSH session, run `fn`, always disconnect — web-side twin of worker `withDeployClients`. */
+export async function withServerSession<T>(
+  server: ServerRow,
+  fn: (client: SshClient) => Promise<T>
+): Promise<T> {
+  const client = await connectToServer(server);
+  try {
+    return await fn(client);
+  } finally {
+    disconnect(client);
+  }
+}
+
+/** Manager session with the same teardown guarantee as `withServerSession`. */
+export async function withManagerSession<T>(
+  fn: (client: SshClient) => Promise<T>
+): Promise<T> {
+  const client = await connectToManager();
+  try {
+    return await fn(client);
+  } finally {
+    disconnect(client);
+  }
+}
+
+/** Open a session by row id — for handlers that only know `serverId`. */
+export async function withServerSessionById<T>(
+  serverId: string,
+  fn: (client: SshClient) => Promise<T>
+): Promise<T> {
+  const server = await db.query.servers.findFirst({
+    where: eq(servers.id, serverId),
+  });
+  if (!server) {
+    throw new Error("server not found");
+  }
+  return withServerSession(server, fn);
 }

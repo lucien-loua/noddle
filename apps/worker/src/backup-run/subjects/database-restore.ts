@@ -8,10 +8,7 @@ import {
   type RestoreSubject,
   runRestorePipeline,
 } from "#backup-run/restore-pipeline";
-import {
-  assertSafeIdentifier,
-  findDatabaseContainer,
-} from "#database-runtime";
+import { assertSafeIdentifier, findDatabaseContainer } from "#database-runtime";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 

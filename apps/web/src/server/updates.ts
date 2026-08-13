@@ -1,8 +1,8 @@
-import { disconnect, execArgv, type SshClient } from "@noddle/ssh-executor";
+import { execArgv, type SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
-import { connectToManager } from "@/lib/ssh.server";
+import { withManagerSession } from "@/lib/ssh.server";
 
 /**
  * Where the installer puts the sources. This is `NODDLE_DIR`'s default, and
@@ -135,30 +135,25 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
       updatable: false,
     };
 
-    let client: SshClient | undefined;
+    let unreachable: string | null = null;
+
     try {
-      client = await connectToManager();
-      status.remoteCommit = await readRemoteCommit(client);
-      const log = await execArgv(client, [
-        "sudo",
-        "tail",
-        "-n",
-        String(LOG_LINES),
-        UPDATE_LOG,
-      ]);
-      // No log = no update has ever been launched from the interface yet.
-      // This isn't a failure, and the screen must not present it as one.
-      status.log = log.code === 0 ? log.stdout.trimEnd() || null : null;
+      await withManagerSession(async (client) => {
+        status.remoteCommit = await readRemoteCommit(client);
+        const log = await execArgv(client, [
+          "sudo",
+          "tail",
+          "-n",
+          String(LOG_LINES),
+          UPDATE_LOG,
+        ]);
+        status.log = log.code === 0 ? log.stdout.trimEnd() || null : null;
+      });
     } catch (err) {
-      // An unreachable machine is a FACT to display, not an exception that
-      // breaks the page: the rest of a server's screen stays useful, and
-      // "we don't know" can be said.
-      status.unreachable = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (client) {
-        disconnect(client);
-      }
+      unreachable = err instanceof Error ? err.message : String(err);
     }
+
+    status.unreachable = unreachable;
 
     const remote = status.remoteCommit;
     status.behind = Boolean(remote && running && remote !== running);
@@ -177,16 +172,8 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
     // No `target`: the object is the installation itself, which has no row.
     runGuarded({
       permission: { action: "update", resource: "installation" },
-      run: async () => {
-        const client = await connectToManager();
-        try {
-          // `setsid`: its own session, so no longer attached to the SSH
-          // terminal.
-          // `nohup`: survives the SIGHUP from the connection closing.
-          // All THREE descriptors redirected, and that's the key point: SSH
-          // keeps the session open as long as some process still holds stdout
-          // or stderr. Without `< /dev/null`, the script would also inherit the
-          // input.
+      run: async () =>
+        withManagerSession(async (client) => {
           const res = await execArgv(client, [
             "sudo",
             "sh",
@@ -198,10 +185,7 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
               `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`
             );
           }
-          return { started: true as const };
-        } finally {
-          disconnect(client);
-        }
-      },
+          return { started: true };
+        }),
     })
 );
