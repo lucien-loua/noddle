@@ -1,24 +1,23 @@
 #!/usr/bin/env bash
 #
-# Noddle — adopte la VM locale comme serveur n°1
+# Noddle — adopt the local VM as server #1
 #
-# En production, `installer/install.sh` enregistre la machine qui l'exécute
-# comme serveur n°1 : l'hôte EST la cible, il n'y a rien à ajouter à la main
-# (ADR-0006). En développement le plan de contrôle tourne sur ta machine et la
-# cible est une VM Multipass (ADR-0016) : personne ne joue ce rôle, la base
-# reste à zéro serveur, et l'interface ne peut pas rattraper le coup —
-# `provision.ts` exige un manager Swarm existant pour ajouter quoi que ce soit.
+# In production the installer registers the machine it runs on as server #1:
+# the host IS the target, there is nothing to add by hand (ADR-0006). In
+# development the control plane runs on your machine and the target is a
+# Multipass VM (ADR-0016), so nobody plays that role: the database sits at zero
+# servers, and the interface cannot recover from it — `provision.ts` requires an
+# existing Swarm manager before it will add anything.
 #
-# Ce script comble exactement ce trou, en réutilisant le MÊME `adopt-host.ts`
-# que l'installeur. Rien n'est dupliqué : le chemin de dev exerce celui de la
-# production.
+# This fills that gap, reusing the SAME `adopt-host.ts` the installer calls.
+# Nothing is duplicated: the development path exercises the production one.
 #
-# Prérequis : une VM lancée (voir `scripts/spike-local.sh`) et `apps/worker/.env`
-# renseigné — DATABASE_URL et APP_KEY.
+# Requires a running VM (see `scripts/spike-local.sh`) and `apps/worker/.env`
+# filled in — DATABASE_URL and APP_KEY.
 #
-# Usage :
+# Usage:
 #   ./scripts/adopt-local.sh
-#   VM_NAME=autre SSH_KEY=~/.ssh/autre ./scripts/adopt-local.sh
+#   VM_NAME=other SSH_KEY=~/.ssh/other ./scripts/adopt-local.sh
 #
 set -euo pipefail
 
@@ -36,46 +35,46 @@ fail() {
   exit 1
 }
 
-command -v multipass >/dev/null 2>&1 || fail "multipass absent"
-[ -f "$SSH_KEY" ] || fail "clé privée absente : $SSH_KEY"
-[ -f "$ENV_FILE" ] || fail "apps/worker/.env absent (DATABASE_URL et APP_KEY requis)"
-[ -f "$ADOPT" ] || fail "adopt-host.ts introuvable : $ADOPT"
+command -v multipass >/dev/null 2>&1 || fail "multipass is missing"
+[ -f "$SSH_KEY" ] || fail "private key missing: $SSH_KEY"
+[ -f "$ENV_FILE" ] || fail "apps/worker/.env missing (DATABASE_URL and APP_KEY required)"
+[ -f "$ADOPT" ] || fail "adopt-host.ts not found: $ADOPT"
 
-# `adopt-host.ts` parle à Docker via dockerode À TRAVERS le tunnel SSH, et c'est
-# exactement ce que Bun ne sait pas faire (ADR-0015). Node n'est pas une
-# préférence ici, c'est la seule option qui marche.
+# `adopt-host.ts` drives Docker through the SSH tunnel, which is exactly what
+# fails on Bun (ADR-0015). Node is not a preference here, it is the only option
+# that works.
 command -v node >/dev/null 2>&1 ||
-  fail "node absent — adopt-host ne tourne PAS sur Bun (ADR-0015)"
+  fail "node is missing — adopt-host does NOT run on Bun (ADR-0015)"
 
 VM_IP="$(multipass info "$VM_NAME" --format csv 2>/dev/null | tail -1 | cut -d, -f3)"
 [ -n "$VM_IP" ] ||
-  fail "VM $VM_NAME introuvable ou sans IP — lance d'abord scripts/spike-local.sh"
+  fail "VM $VM_NAME not found or has no IP — run scripts/spike-local.sh first"
 VPS="$HOST_USER@$VM_IP"
 
-log "Cible : $VPS"
+log "Target: $VPS"
 
-# La clé part en env sur la ligne de commande plutôt que par interpolation : le
-# heredoc reste quoté, donc aucun échappement à gérer dedans.
-log "Socle Docker et Swarm"
+# The address travels as an env assignment on the ssh command line rather than
+# by interpolation, so the heredoc stays quoted and needs no escaping.
+log "Docker and Swarm"
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "$VPS" \
   "env $(printf '%q' "VM_IP=$VM_IP") bash -euo pipefail -s" <<'REMOTE'
 if command -v docker >/dev/null 2>&1; then
-  echo "docker déjà installé"
+  echo "docker already installed"
 else
   curl -fsSL https://get.docker.com | sudo sh
-  # Le groupe est résolu à l'ouverture de session : c'est la connexion SSH
-  # SUIVANTE — celle d'adopt-host — qui en bénéficiera, et c'est celle qui en
-  # a besoin pour atteindre le socket.
+  # Group membership is resolved at login, so it is the NEXT SSH connection —
+  # the one adopt-host opens — that benefits, and that is the one needing the
+  # socket.
   sudo usermod -aG docker "$USER"
 fi
 
-# Surtout PAS `docker info | grep -q`. grep -q sort au premier match, docker
-# info prend un SIGPIPE (141), et `set -o pipefail` en fait un échec de
-# pipeline : on relancerait `swarm init` sur un nœud déjà en swarm, par
-# intermittence. On interroge l'état directement.
+# Never `docker info | grep -q`: grep exits at the first match, docker info
+# takes a SIGPIPE, and pipefail turns that into a failed pipeline — `swarm
+# init` would then rerun on an already-swarmed node, intermittently. Query the
+# state directly.
 SWARM_STATE="$(sudo docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null || echo unknown)"
 if [ "$SWARM_STATE" = "active" ]; then
-  echo "swarm déjà actif"
+  echo "swarm already active"
 else
   sudo docker swarm init --advertise-addr "$VM_IP"
 fi
@@ -83,15 +82,14 @@ fi
 sudo docker version --format 'Docker {{.Server.Version}}'
 REMOTE
 
-# HOST_SSH_KEY est un CHEMIN : adopt-host lit le fichier, chiffre la clé avec
-# APP_KEY et la range dans la bibliothèque, comme n'importe quelle clé saisie
-# depuis l'interface.
-log "Adoption comme serveur n°1"
+# HOST_SSH_KEY is a PATH: adopt-host reads the file, encrypts the key with
+# APP_KEY and files it in the library, like any key entered from the interface.
+log "Adopting as server #1"
 HOST_IP="$VM_IP" \
   HOST_USER="$HOST_USER" \
   HOST_SSH_KEY="$SSH_KEY" \
   HOST_NAME="$VM_NAME" \
   node --env-file="$ENV_FILE" "$ADOPT"
 
-printf '\n\033[32m✓ %s est le serveur n°1.\033[0m\n' "$VM_NAME"
-printf '  Recharge le dashboard : la machine doit apparaître connectée.\n\n'
+printf '\n\033[32m✓ %s is server #1.\033[0m\n' "$VM_NAME"
+printf '  Reload the dashboard: the machine should show as connected.\n\n'
