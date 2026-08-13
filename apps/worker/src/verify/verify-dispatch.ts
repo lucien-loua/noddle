@@ -1,4 +1,4 @@
-// bun run apps/worker/src/verify-dispatch.ts
+// bun run apps/worker/src/verify/verify-dispatch.ts
 import type {
   DeployJobData,
   JobKind,

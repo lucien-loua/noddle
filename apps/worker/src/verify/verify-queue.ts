@@ -6,7 +6,7 @@
 // the job fails fast. What's measured is that the worker PICKS IT UP, runs
 // it, and writes the result to the database — not that a deployment succeeds.
 //
-//   DATABASE_URL=… REDIS_URL=… node apps/worker/src/verify-queue.ts
+//   DATABASE_URL=… REDIS_URL=… node apps/worker/src/verify/verify-queue.ts
 import { randomBytes } from "node:crypto";
 import { createDatabase } from "@noddle/db";
 import {

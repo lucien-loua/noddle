@@ -1,18 +1,18 @@
-// STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify-database-password.ts
+// STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-database-password.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import { createDatabase } from "@noddle/db";
-import { databases, environments, projects, servers } from "@noddle/db/schema";
 import {
   DATABASE_PORT,
   type DatabaseEngine,
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
   HAS_NAMED_DATABASE,
-} from "@noddle/shared/database-engines";
+} from "@noddle/database-spec";
+import { createDatabase } from "@noddle/db";
+import { databases, environments, projects, servers } from "@noddle/db/schema";
 import {
   connect,
   disconnect,
@@ -167,7 +167,7 @@ try {
    * attached application does. Returns `true` if authentication succeeds,
    * `false` if it is refused.
    *
-   * Probe argv is a table keyed by engine (same shape as DUMP_SPECS /
+   * Probe argv is a table keyed by engine (same shape as dumpSpecFor /
    * RESTORE_SPECS) so a sixth engine fails to compile here, not at runtime.
    */
   const PROBE_ARGV: Record<
@@ -229,6 +229,22 @@ try {
     ],
   };
 
+  function probeArgvFor(
+    engine: DatabaseEngine,
+    opts: {
+      hostName: string;
+      password: string;
+      port: number;
+      user: string | null;
+    }
+  ): string[] {
+    const build = PROBE_ARGV[engine];
+    if (!build) {
+      throw new Error(`unsupported database engine for probe: ${engine}`);
+    }
+    return build(opts);
+  }
+
   const canConnect = async (
     engine: DatabaseEngine,
     user: string | null,
@@ -246,7 +262,7 @@ try {
       "--rm",
       "--network",
       "noddle-public",
-      ...PROBE_ARGV[engine]({ hostName, password, port, user }),
+      ...probeArgvFor(engine, { hostName, password, port, user }),
     ];
 
     const res = await execArgv(managerSsh, argv);

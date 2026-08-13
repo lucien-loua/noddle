@@ -89,7 +89,6 @@ function ProjectCard({
   project: ProjectView;
   role: RoleName | null;
 }) {
-  // biome-ignore lint/suspicious/noUnnecessaryConditions: false positive, `group` is absent for an empty project
   const scopes = group?.scopes ?? [];
   const services = scopes.reduce((n, s) => n + s.services.length, 0);
   const stacks = scopes.reduce((n, s) => n + s.stacks.length, 0);
@@ -103,7 +102,7 @@ function ProjectCard({
           <CardTitle className="min-w-0 truncate">
             {/* Stretched link: the whole card navigates, without nesting the
                 menu inside a clickable block — same pattern as
-                `resource-grid.tsx`. */}
+                `features/environment/resource-grid.tsx`. */}
             <Link
               className="truncate after:absolute after:inset-0"
               params={{ projectId: project.id }}

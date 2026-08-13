@@ -7,9 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { AppShell } from "@/components/app-shell";
-import { CreateServiceMenu } from "@/components/create-service-menu";
 import { EnvironmentSelector } from "@/components/environment-selector";
-import { ResourceGrid } from "@/components/resource-grid";
+import { CreateServiceMenu } from "@/components/features/environment/create-service-menu";
+import { ResourceGrid } from "@/components/features/environment/resource-grid";
 import {
   Breadcrumb,
   BreadcrumbItem,

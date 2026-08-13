@@ -1,4 +1,4 @@
-// STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify-database.ts
+// STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-database.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

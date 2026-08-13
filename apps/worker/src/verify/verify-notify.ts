@@ -1,4 +1,4 @@
-// node apps/worker/src/verify-notify.ts
+// node apps/worker/src/verify/verify-notify.ts
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { encryptSecret, secretContext } from "@noddle/crypto";

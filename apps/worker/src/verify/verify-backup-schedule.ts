@@ -1,4 +1,4 @@
-// STACK_HOST=192.168.252.3 node apps/worker/src/verify-backup-schedule.ts
+// STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-backup-schedule.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -28,7 +28,7 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { runBackup } from "#backup";
-import { legacyDatabaseServiceName } from "#backup-run/subjects/database";
+import { legacyDatabaseServiceName } from "#database-runtime";
 import { pruneBackups, sweepBackups } from "#backup-sweep";
 import { provisionDatabase } from "#database";
 import { seedSshKey, verifyCtx } from "#verify-seed";

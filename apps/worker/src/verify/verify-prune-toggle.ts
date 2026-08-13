@@ -1,6 +1,6 @@
 // The prune switch, against the REAL VM.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify-prune-toggle.ts
+//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune-toggle.ts
 //
 // Isolated from verify-prune.ts rather than added to it: this change WRAPS
 // code already covered 17/17 (pruneNode, imageTagsOn, recordDiskUsage) under

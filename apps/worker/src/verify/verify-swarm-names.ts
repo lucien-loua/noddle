@@ -10,7 +10,7 @@
 // Hence the assertion that matters: we WRITE a row in one and verify it's
 // INVISIBLE from the other. It would fail on the old code.
 //
-//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify-swarm-names.ts
+//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-swarm-names.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

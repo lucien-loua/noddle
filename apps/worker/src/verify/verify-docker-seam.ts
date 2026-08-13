@@ -1,4 +1,4 @@
-// bun run apps/worker/src/verify-docker-seam.ts
+// bun run apps/worker/src/verify/verify-docker-seam.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { servers } from "@noddle/db/schema";
@@ -8,7 +8,7 @@ import { withDeployClients } from "#job-run";
 import { createDeployContext } from "#runtime-context";
 import { createMemoryDockerApi } from "#testing/memory-docker";
 
-const WORKER_SRC = join(import.meta.dirname);
+const WORKER_SRC = join(import.meta.dirname, "..");
 const LEGACY_CONNECT = "connectTo(ctx,";
 const LEGACY_DEPLOY_CONNECT = "connectForDeploy(ctx,";
 const CONNECT_TO_PATTERN = /connectTo:\s*\(server/;

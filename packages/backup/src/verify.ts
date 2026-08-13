@@ -1,6 +1,7 @@
 // bun run packages/backup/src/verify.ts
 // node packages/backup/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
+import { dumpSpecFor } from "#dump-spec";
 import {
   BACKUP_EXTENSION,
   buildBackupInsert,
@@ -12,6 +13,25 @@ import { isConfigDue } from "#schedule";
 await runVerify("backup domain", () => {
   const a = { id: "a", prefix: "dest-a" };
   const b = { id: "b", prefix: "dest-b" };
+
+  check(
+    "postgres dump uses pg_dump",
+    dumpSpecFor("postgres")
+      .argv({
+        containerId: "c1",
+        databaseName: "app",
+        rootUser: "postgres",
+      })
+      .includes("pg_dump")
+  );
+  check(
+    "redis dump env carries REDISCLI_AUTH",
+    dumpSpecFor("redis").env({
+      databaseName: null,
+      password: "secret",
+      rootUser: null,
+    }).REDISCLI_AUTH === "secret"
+  );
 
   expectThrows(
     "zero destinations: refused with a clear message",

@@ -71,7 +71,10 @@ await runVerify("backup cache seam (C8)", () => {
   );
 
   const history = readFeature(HISTORY);
-  check(`${HISTORY} uses deleteBackupRun`, history.includes("deleteBackupRun("));
+  check(
+    `${HISTORY} uses deleteBackupRun`,
+    history.includes("deleteBackupRun(")
+  );
   check(
     `${HISTORY} queries via backupRunsFor(subject)`,
     history.includes("queries.backupRunsFor(subject")
@@ -84,7 +87,10 @@ await runVerify("backup cache seam (C8)", () => {
   );
 
   const card = readFeature(CONFIG_CARD);
-  check(`${CONFIG_CARD} uses triggerBackupRun`, card.includes("triggerBackupRun("));
+  check(
+    `${CONFIG_CARD} uses triggerBackupRun`,
+    card.includes("triggerBackupRun(")
+  );
   const cardLegacy = lacksLegacy(card, [...LEGACY_CACHE, ...LEGACY_MUTATIONS]);
   check(
     `${CONFIG_CARD} avoids legacy trigger/cache`,

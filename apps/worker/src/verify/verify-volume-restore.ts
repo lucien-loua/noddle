@@ -1,6 +1,6 @@
 // Volume restore, against REAL infrastructure.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify-volume-restore.ts
+//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-volume-restore.ts
 //
 // Same question as verify-restore: is the data from before back, and is
 // the data from after gone? Markers live in a Docker volume, not a database.

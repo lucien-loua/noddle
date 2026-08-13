@@ -16,6 +16,7 @@
     "#registry-sweep": "./src/deploy/registry-sweep.ts",
     "#database": "./src/database/database.ts",
     "#database-password": "./src/database/database-password.ts",
+    "#database-runtime": "./src/database/runtime.ts",
     "#backup": "./src/database/backup.ts",
     "#restore": "./src/backup-run/subjects/database-restore.ts",
     "#backup-sweep": "./src/database/backup-sweep.ts",
@@ -29,7 +30,8 @@
     "#handlers": "./src/jobs/handlers.ts",
     "#job-run": "./src/jobs/job-run.ts",
     "#schedules": "./src/jobs/schedules.ts",
-    "#testing/*": "./src/testing/*.ts"
+    "#testing/*": "./src/testing/*.ts",
+    "#verify-seed": "./src/verify/verify-seed.ts"
   },
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.ts",

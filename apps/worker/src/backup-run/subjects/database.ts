@@ -1,9 +1,10 @@
 import { buildBackupInsert } from "@noddle/backup";
+import { dumpSpecFor } from "@noddle/backup/dump-spec";
 import type { BackupDestination } from "@noddle/backup-store";
 import { decryptSecret, secretContext } from "@noddle/crypto";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import { backupConfigs, backups, type servers } from "@noddle/db/schema";
-import type { DatabaseEngine } from "@noddle/shared/database-engines";
-import { execStream, quoteArg, type SshClient } from "@noddle/ssh-executor";
+import { quoteArg, type SshClient } from "@noddle/ssh-executor";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   type BackupRunRow,
@@ -17,151 +18,11 @@ import {
   pruneBackupRuns,
   sweepBackupConfigs,
 } from "#backup-run/sweep";
+import {
+  assertSafeIdentifier,
+  findDatabaseContainer,
+} from "#database-runtime";
 import type { DeployContext } from "#runtime-context";
-
-type Engine = DatabaseEngine;
-
-interface DumpSpec {
-  argv: (opts: {
-    containerId: string;
-    databaseName: string | null;
-    rootUser: string | null;
-  }) => string[];
-  env: (opts: {
-    databaseName: string | null;
-    password: string;
-    rootUser: string | null;
-  }) => Record<string, string>;
-}
-
-const DUMP_SPECS: Record<Engine, DumpSpec> = {
-  mariadb: {
-    argv: ({ containerId, databaseName, rootUser }) => [
-      "docker",
-      "exec",
-      "-e",
-      "MYSQL_PWD",
-      containerId,
-      "mariadb-dump",
-      `--user=${rootUser ?? "root"}`,
-      "--single-transaction",
-      "--quick",
-      databaseName ?? "",
-    ],
-    env: ({ password }) => ({ MYSQL_PWD: password }),
-  },
-  mongo: {
-    argv: ({ containerId }) => [
-      "docker",
-      "exec",
-      "-e",
-      "MONGO_PWD",
-      "-e",
-      "MONGO_USER",
-      "-e",
-      "MONGO_DB",
-      containerId,
-      "sh",
-      "-c",
-      "umask 077 && printf 'password: %s\\n' \"$MONGO_PWD\" > /tmp/md.yaml && " +
-        'mongodump --config=/tmp/md.yaml -u "$MONGO_USER" ' +
-        '--authenticationDatabase admin -d "$MONGO_DB" ' +
-        "--archive --gzip; rc=$?; rm -f /tmp/md.yaml; exit $rc",
-    ],
-    env: ({ databaseName, password, rootUser }) => ({
-      MONGO_DB: databaseName ?? "",
-      MONGO_PWD: password,
-      MONGO_USER: rootUser ?? "mongo",
-    }),
-  },
-  mysql: {
-    argv: ({ containerId, databaseName, rootUser }) => [
-      "docker",
-      "exec",
-      "-e",
-      "MYSQL_PWD",
-      containerId,
-      "mysqldump",
-      `--user=${rootUser ?? "root"}`,
-      "--single-transaction",
-      "--no-tablespaces",
-      "--quick",
-      databaseName ?? "",
-    ],
-    env: ({ password }) => ({ MYSQL_PWD: password }),
-  },
-  postgres: {
-    argv: ({ containerId, databaseName, rootUser }) => [
-      "docker",
-      "exec",
-      containerId,
-      "pg_dump",
-      "-Fc",
-      "-U",
-      rootUser ?? "postgres",
-      databaseName ?? rootUser ?? "postgres",
-    ],
-    env: () => ({}),
-  },
-  redis: {
-    argv: ({ containerId }) => [
-      "docker",
-      "exec",
-      "-e",
-      "REDISCLI_AUTH",
-      containerId,
-      "redis-cli",
-      "--rdb",
-      "-",
-    ],
-    env: ({ password }) => ({ REDISCLI_AUTH: password }),
-  },
-};
-
-const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-export function assertSafeIdentifier(value: string, label: string): void {
-  if (!SAFE_IDENTIFIER.test(value)) {
-    throw new Error(
-      `${label} is not a safe identifier: "${value}" — letters, digits and underscores only, not starting with a digit`
-    );
-  }
-}
-
-export function legacyDatabaseServiceName(name: string): string {
-  return `noddle-db-${name}`;
-}
-
-export async function findDatabaseContainer(
-  client: SshClient,
-  serviceName: string
-): Promise<string> {
-  const { code, stderr, value } = await execStream(
-    client,
-    `docker ps --no-trunc --filter ${quoteArg(`label=com.docker.swarm.service.name=${serviceName}`)} --format ${quoteArg("{{.ID}}")}`,
-    async ({ stdout }) => {
-      let out = "";
-      stdout.setEncoding("utf8");
-      for await (const chunk of stdout) {
-        out += chunk as string;
-      }
-      return out;
-    }
-  );
-  if (code !== 0) {
-    throw new Error(`docker ps failed (code ${code}): ${stderr}`);
-  }
-  const id = value
-    .split("\n")
-    .map((l) => l.trim())
-    .find((l) => l !== "");
-  if (!id) {
-    throw new Error(
-      `no running container for ${serviceName} — is the database up?`
-    );
-  }
-  return id;
-}
 
 interface DatabaseBackupRun extends BackupRunRow {
   config?: { databaseName: string | null; destinationId: string } | null;
@@ -188,7 +49,7 @@ async function buildDumpCommand(
     ctx.appKey,
     secretContext.databasePassword(database.id)
   );
-  const spec = DUMP_SPECS[database.engine];
+  const spec = dumpSpecFor(database.engine);
   const dumpDatabaseName = run.config?.databaseName ?? database.databaseName;
   const containerId = await findDatabaseContainer(client, database.swarmName);
 

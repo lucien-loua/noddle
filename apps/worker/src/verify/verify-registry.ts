@@ -6,7 +6,7 @@
 // it requires a second Docker daemon that has never seen the image.
 //
 //   MANAGER_HOST=192.168.252.3 WORKER_HOST=192.168.252.5 \
-//     DATABASE_URL=… node apps/worker/src/verify-registry.ts
+//     DATABASE_URL=… node apps/worker/src/verify/verify-registry.ts
 //
 // The manager must ALREADY be in Swarm. The worker can be bare or already a
 // member: `provisionServer` is idempotent.

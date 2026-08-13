@@ -18,14 +18,9 @@ import { eq } from "drizzle-orm";
  * general engine property like its port or default image — so it does not
  * belong in `@noddle/database-spec`.
  *
- * Single table: `apps/worker/src/backup.ts` (DUMP_SPECS) IMPORTS it instead of
- * redefining its own `extension` field. Before, this fact lived ONLY there — a
- * file the web cannot import (it pulls `#deploy`, hence `dockerode`/`ssh2`) —
- * and two other places (`triggerBackup`, `sweepBackups`) re-guessed it with a
- * `postgres ? "dump" : "rdb"` ternary. That ternary already gave a `.rdb` to a
- * SQL dump once (fixed in `restore.ts`); the other two occurrences had the same
- * defect, just never shown because no engine other than postgres/redis had yet
- * taken that exact path.
+ * Paired with `@noddle/backup/dump-spec` (`dumpSpecFor`): extension + dump argv
+ * share one domain. Callers must not re-guess with a `postgres ? "dump" : "rdb"`
+ * ternary — that already wrote a `.rdb` onto a SQL dump once.
  */
 export const BACKUP_EXTENSION: Record<DatabaseEngine, string> = {
   mariadb: "sql",

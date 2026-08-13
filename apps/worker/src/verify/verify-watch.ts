@@ -8,7 +8,7 @@
 //
 // This test fails if Noddle doesn't take back control.
 //
-//   DATABASE_URL=… node apps/worker/src/verify-watch.ts
+//   DATABASE_URL=… node apps/worker/src/verify/verify-watch.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";

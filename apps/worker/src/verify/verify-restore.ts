@@ -1,7 +1,7 @@
 // Restore, against REAL infrastructure — this is the test that decides
 // whether backups are good for anything.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify-restore.ts
+//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-restore.ts
 //
 // "The job finishes without error" proves nothing. The only question that
 // matters is: **is the data from before back, and is the data from after
@@ -41,11 +41,11 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { eq, inArray } from "drizzle-orm";
 import { runBackup } from "#backup";
+import { provisionDatabase } from "#database";
 import {
   findDatabaseContainer,
   legacyDatabaseServiceName,
-} from "#backup-run/subjects/database";
-import { provisionDatabase } from "#database";
+} from "#database-runtime";
 import { runRestore } from "#restore";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 

@@ -2,6 +2,7 @@
   "extends": "@noddle/tsconfig/base.json",
   "compilerOptions": {
     "paths": {
+      "#verify-seed": ["./src/verify/verify-seed.ts"],
       "#*": ["./src/*"]
     }
   },

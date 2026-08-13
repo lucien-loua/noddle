@@ -1,4 +1,4 @@
-// MANAGER_HOST=192.168.252.3 WORKER_HOST=192.168.252.5 DATABASE_URL=… node apps/worker/src/verify-external-registry.ts
+// MANAGER_HOST=192.168.252.3 WORKER_HOST=192.168.252.5 DATABASE_URL=… node apps/worker/src/verify/verify-external-registry.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

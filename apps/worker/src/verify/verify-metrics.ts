@@ -1,4 +1,4 @@
-// STACK_HOST=192.168.252.3 node apps/worker/src/verify-metrics.ts
+// STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-metrics.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

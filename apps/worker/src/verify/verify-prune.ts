@@ -1,6 +1,6 @@
 // Docker pruning, against a REAL VM and a real Postgres.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify-prune.ts
+//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune.ts
 //
 // Pruning is the only operation in this product that destroys without being
 // asked — a timer, on a machine the user owns. The bench's question is

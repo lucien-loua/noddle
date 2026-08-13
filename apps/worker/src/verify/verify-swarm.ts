@@ -5,7 +5,7 @@
 // worker that trusts the exit code shows a green deployment while the old
 // version is still serving. This test fails if we fall back into that trap.
 //
-//   node apps/worker/src/verify-swarm.ts
+//   node apps/worker/src/verify/verify-swarm.ts
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";

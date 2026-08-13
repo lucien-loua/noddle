@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import {
   assertSafeIdentifier,
   findDatabaseContainer,
-} from "#backup-run/subjects/database";
+} from "#database-runtime";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 

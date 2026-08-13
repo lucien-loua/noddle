@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { ChangeDatabasePasswordDialog } from "@/components/change-database-password-dialog";
 import { CopyButton } from "@/components/copyable-value";
+import { ChangeDatabasePasswordDialog } from "@/components/features/database/change-password-dialog";
 import {
   RevealToggleButton,
   useReveal,

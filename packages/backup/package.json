@@ -7,6 +7,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./dump-spec": "./src/dump-spec.ts",
     "./schedule": "./src/schedule.ts",
     "./uploaded-size": "./src/uploaded-size.ts"
   },

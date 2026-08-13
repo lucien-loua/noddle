@@ -1,6 +1,6 @@
 // Deleting a stack, a database, a server — against a REAL VM.
 //
-//   TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify-teardown.ts
+//   TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-teardown.ts
 //
 // WHAT WOULD MAKE THIS TEST PASS FOR THE WRONG REASON, laid out before
 // writing the assertions:

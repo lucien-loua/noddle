@@ -5,7 +5,7 @@
 // does `docker stack deploy` do what compose.ts asks it to do, and does
 // rollback really replay a past version without touching the repo?
 //
-//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify-stack.ts
+//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-stack.ts
 //
 // The manager must ALREADY be in Swarm (any VM used for a Phase 0/1/2 test
 // already is).
