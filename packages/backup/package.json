@@ -6,13 +6,15 @@
     "#*": "./src/*.ts"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schedule": "./src/schedule.ts",
+    "./uploaded-size": "./src/uploaded-size.ts"
   },
   "dependencies": {
     "@noddle/backup-store": "workspace:*",
     "@noddle/crypto": "workspace:*",
+    "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
-    "@noddle/shared": "workspace:*",
     "croner": "^10.0.1",
     "drizzle-orm": "catalog:"
   },

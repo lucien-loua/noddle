@@ -1,3 +1,4 @@
+import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { deployments, stackDeployments } from "@noddle/db/schema";
 import {
@@ -8,7 +9,6 @@ import {
 } from "@noddle/deploy-contract";
 import { createDeployQueue } from "@noddle/deploy-contract/queue";
 import { startSchedule } from "@noddle/deploy-contract/schedule";
-import { loadAppKey } from "@noddle/crypto";
 import { UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";

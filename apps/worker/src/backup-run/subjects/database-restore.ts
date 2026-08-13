@@ -1,7 +1,7 @@
 import { pipeline } from "node:stream/promises";
 import { buildBackupInsert } from "@noddle/backup";
-import { backups, databases, type servers } from "@noddle/db/schema";
 import { decryptSecret, secretContext } from "@noddle/crypto";
+import { backups, databases, type servers } from "@noddle/db/schema";
 import {
   execArgv,
   execStream,

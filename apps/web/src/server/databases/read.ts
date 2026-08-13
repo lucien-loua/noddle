@@ -3,7 +3,7 @@ import {
   type DatabaseSwarmSettings,
   databases,
 } from "@noddle/db/schema";
-import type { DatabaseEngine } from "@noddle/shared/database-engines";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";

@@ -1,4 +1,4 @@
-import { DATABASE_ENGINE_LABEL } from "@noddle/shared/database-engines";
+import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";

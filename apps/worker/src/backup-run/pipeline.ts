@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
-import { resolveDestination, uploadedSize } from "@noddle/backup";
+import { resolveDestination } from "@noddle/backup";
+import { uploadedSize } from "@noddle/backup/uploaded-size";
 import {
   type BackupDestination,
   deleteObject,

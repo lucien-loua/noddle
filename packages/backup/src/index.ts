@@ -5,13 +5,10 @@ import {
   resolveRetainedSecret,
   secretContext,
 } from "@noddle/crypto";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import type { Database } from "@noddle/db";
 import { s3Destinations } from "@noddle/db/schema";
-import type { DatabaseEngine } from "@noddle/shared/database-engines";
 import { eq } from "drizzle-orm";
-
-export { isConfigDue } from "./schedule.ts";
-export { uploadedSize } from "./uploaded-size.ts";
 
 /**
  * Dump file extension for an engine.
@@ -19,7 +16,7 @@ export { uploadedSize } from "./uploaded-size.ts";
  * Belongs to the BACKUP domain, not the database domain: it is a dumper choice
  * (`pg_dump -Fc`, `mysqldump`, `mongodump --archive`, `redis-cli --rdb`), not a
  * general engine property like its port or default image — so it does not
- * belong in `@noddle/shared/database-engines`.
+ * belong in `@noddle/database-spec`.
  *
  * Single table: `apps/worker/src/backup.ts` (DUMP_SPECS) IMPORTS it instead of
  * redefining its own `extension` field. Before, this fact lived ONLY there — a

@@ -10,6 +10,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { buildVolumeBackupInsert } from "@noddle/backup";
 import { type BackupDestination, deleteObject } from "@noddle/backup-store";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   environments,
@@ -19,7 +20,6 @@ import {
   services,
   volumeBackups,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,

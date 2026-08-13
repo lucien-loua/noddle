@@ -6,8 +6,6 @@
     "#*": "./src/*.ts"
   },
   "exports": {
-    "./database-engine-types": "./src/database-engine-types.ts",
-    "./database-engines": "./src/database-engines.ts",
     "./deploy-policy": "./src/deploy-policy.ts",
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",

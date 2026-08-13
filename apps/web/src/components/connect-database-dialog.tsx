@@ -5,7 +5,7 @@ import {
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
   HAS_NAMED_DATABASE,
-} from "@noddle/shared/database-engines";
+} from "@noddle/database-spec";
 import { generateDatabasePassword } from "@noddle/shared/password";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";

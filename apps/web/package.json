@@ -16,6 +16,7 @@
     "@noddle/backup": "workspace:*",
     "@noddle/backup-store": "workspace:*",
     "@noddle/crypto": "workspace:*",
+    "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
     "@noddle/deploy-contract": "workspace:*",
     "@noddle/notifier": "workspace:*",

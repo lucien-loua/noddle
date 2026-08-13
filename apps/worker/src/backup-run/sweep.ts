@@ -1,8 +1,5 @@
-import {
-  isConfigDue,
-  resolveDestination,
-  resolveDestinationRow,
-} from "@noddle/backup";
+import { resolveDestination, resolveDestinationRow } from "@noddle/backup";
+import { isConfigDue } from "@noddle/backup/schedule";
 import { deleteObject } from "@noddle/backup-store";
 import type { DeployContext } from "#runtime-context";
 

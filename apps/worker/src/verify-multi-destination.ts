@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { resolveDestination } from "@noddle/backup";
 import { checkDestination, objectExists } from "@noddle/backup-store";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   backups,
@@ -13,7 +14,6 @@ import {
   s3Destinations,
   servers,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   connect,
   disconnect,

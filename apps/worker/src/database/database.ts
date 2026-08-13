@@ -1,3 +1,4 @@
+import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
   ENGINE_SPECS,
   type EngineParams,
@@ -9,7 +10,6 @@ import {
   databases,
   envVars,
 } from "@noddle/db/schema";
-import { decryptSecret, secretContext } from "@noddle/crypto";
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
 import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";

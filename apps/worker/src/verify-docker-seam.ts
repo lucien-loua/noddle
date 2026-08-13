@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { servers } from "@noddle/db/schema";
-import { check, runVerify } from "@noddle/testing";
 import type { SshClient } from "@noddle/ssh-executor";
+import { check, runVerify } from "@noddle/testing";
 import { withDeployClients } from "#job-run";
 import { createDeployContext } from "#runtime-context";
 import { createMemoryDockerApi } from "#testing/memory-docker";

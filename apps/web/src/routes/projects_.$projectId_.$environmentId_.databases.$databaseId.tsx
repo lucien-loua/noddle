@@ -1,7 +1,7 @@
 import {
   DATABASE_ENGINE_LABEL,
   DATABASE_PORT,
-} from "@noddle/shared/database-engines";
+} from "@noddle/database-spec";
 import {
   ArrowClockwiseIcon,
   CaretDownIcon,

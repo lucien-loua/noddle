@@ -11,9 +11,6 @@
   "scripts": {
     "verify": "bun run src/verify.ts"
   },
-  "dependencies": {
-    "@noddle/shared": "workspace:*"
-  },
   "devDependencies": {
     "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"

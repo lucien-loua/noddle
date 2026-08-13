@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   deploymentLogs,
@@ -15,7 +16,6 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";

@@ -3,14 +3,10 @@
 //
 // Idempotent: rerunning the installer does not create a second server.
 import { readFileSync } from "node:fs";
+import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { servers, sshKeys } from "@noddle/db/schema";
 import { ensureRegistryTrust } from "@noddle/registry";
-import {
-  encryptSecret,
-  loadAppKey,
-  secretContext,
-} from "@noddle/crypto";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { publicKeyOf } from "@noddle/ssh-executor/keys";
 import { getSwarmNodeId } from "@noddle/swarm-ops";

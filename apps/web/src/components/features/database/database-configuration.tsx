@@ -1,4 +1,4 @@
-import { DEFAULT_DATABASE_IMAGE } from "@noddle/shared/database-engines";
+import { DEFAULT_DATABASE_IMAGE } from "@noddle/database-spec";
 import { imageRefSchema } from "@noddle/shared/validation/database";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";

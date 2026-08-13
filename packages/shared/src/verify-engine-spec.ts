@@ -1,5 +1,5 @@
 // bun run packages/shared/src/verify-engine-spec.ts
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   connectionUrlFor,
@@ -44,10 +44,6 @@ await runVerify("EngineSpec ownership (C5)", () => {
     join(REPO, "database-spec/src/index.ts"),
     "utf8"
   );
-  const sharedEngines = readFileSync(
-    join(REPO, "shared/src/database-engines.ts"),
-    "utf8"
-  );
   const connectionUrl = readFileSync(
     join(REPO, "../apps/web/src/server/databases/connection-url.ts"),
     "utf8"
@@ -62,8 +58,16 @@ await runVerify("EngineSpec ownership (C5)", () => {
   );
 
   check(
-    "database-engines re-exports ENGINE_SPECS",
-    sharedEngines.includes('from "@noddle/database-spec"')
+    "shared has no database-engines facade",
+    !existsSync(join(REPO, "shared/src/database-engines.ts"))
+  );
+  check(
+    "DatabaseEngine lives on database-spec",
+    engines.includes("export type DatabaseEngine")
+  );
+  check(
+    "DATABASE_ENGINES lives on database-spec",
+    engines.includes("export const DATABASE_ENGINES")
   );
   check(
     "ENGINE_SPECS owns DEFAULT_DATABASE_IMAGE",

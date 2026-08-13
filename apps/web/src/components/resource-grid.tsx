@@ -1,4 +1,4 @@
-import type { DatabaseEngine } from "@noddle/shared/database-engines";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import {
   ArrowClockwiseIcon,
   CodeIcon,

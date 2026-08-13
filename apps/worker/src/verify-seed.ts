@@ -6,10 +6,11 @@
 // `install.sh`'s openssl commands instead of sharing them. There's nothing
 // to test here, just thirteen scripts that needed the same bit of fixture
 // setup.
+
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { sshKeys } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import { eq } from "drizzle-orm";
 import { createDeployContext, type DeployContext } from "#runtime-context";
 

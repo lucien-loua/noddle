@@ -7,7 +7,7 @@ import type { DatabaseExtraMount } from "@noddle/db/schema";
 import {
   type DatabaseEngine,
   DEFAULT_DATABASE_VOLUME_PATH,
-} from "@noddle/shared/database-engines";
+} from "@noddle/database-spec";
 import { PencilSimpleIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";

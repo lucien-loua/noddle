@@ -21,6 +21,7 @@
         "@noddle/backup": "workspace:*",
         "@noddle/backup-store": "workspace:*",
         "@noddle/crypto": "workspace:*",
+        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/notifier": "workspace:*",
@@ -100,8 +101,8 @@
       "dependencies": {
         "@noddle/backup-store": "workspace:*",
         "@noddle/crypto": "workspace:*",
+        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
-        "@noddle/shared": "workspace:*",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
       },
@@ -150,9 +151,6 @@
     },
     "packages/database-spec": {
       "name": "@noddle/database-spec",
-      "dependencies": {
-        "@noddle/shared": "workspace:*",
-      },
       "devDependencies": {
         "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",

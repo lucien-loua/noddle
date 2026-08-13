@@ -23,6 +23,7 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   databases,
@@ -32,7 +33,6 @@ import {
   services,
   stacks,
 } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";

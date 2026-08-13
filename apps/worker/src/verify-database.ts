@@ -3,9 +3,9 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   connect,
   disconnect,

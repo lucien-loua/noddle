@@ -1,5 +1,4 @@
 import { createHmac } from "node:crypto";
-import { safeEqual } from "@noddle/crypto";
 
 export function verifyWebhookSignature(
   headers: Headers,
@@ -9,12 +8,12 @@ export function verifyWebhookSignature(
   const githubSignature = headers.get("x-hub-signature-256");
   if (githubSignature) {
     const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
-    return safeEqual(expected, githubSignature);
+    return timingSafeCompare(expected, githubSignature);
   }
 
   const gitlabToken = headers.get("x-gitlab-token");
   if (gitlabToken) {
-    return safeEqual(gitlabToken, secret);
+    return timingSafeCompare(gitlabToken, secret);
   }
 
   return false;

@@ -1,5 +1,5 @@
+import { DATABASE_ENGINES } from "@noddle/database-spec";
 import { z } from "zod";
-import { DATABASE_ENGINES } from "#database-engines";
 import { envVarKeySchema } from "./env-var.ts";
 import { environmentNameSchema, projectNameSchema } from "./project.ts";
 import { serviceNameSchema } from "./service.ts";

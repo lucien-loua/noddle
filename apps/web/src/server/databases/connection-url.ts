@@ -1,7 +1,7 @@
 import {
   connectionUrlFor,
   type DatabaseEngine,
-} from "@noddle/shared/database-engines";
+} from "@noddle/database-spec";
 
 const MASK = "••••••••";
 
