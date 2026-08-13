@@ -74,8 +74,8 @@ export function WebhookPanel({
             />
             {status.data?.configured ? null : (
               <FieldDescription>
-                Generate a webhook URL to deploy automatically on every GitHub or
-                GitLab push.
+                Generate a webhook URL to deploy automatically on every GitHub
+                or GitLab push.
               </FieldDescription>
             )}
           </Field>

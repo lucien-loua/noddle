@@ -92,30 +92,14 @@ export function AccountsPanel({
         open={open}
       />
 
-      {/* A real table, like the backup history and the deployment history:
-          accounts are homogeneous tabular data, and the header gives the
-          role selector the VISIBLE label that an `aria-label` alone only
-          provides to screen readers.
-
-          `Frame`/`FramePanel` rather than a hand-rolled frame: the same
-          pattern as the Containers page, a preset panel rather than a
-          `border rounded-2xl` rewritten line by line. */}
-      <Frame variant="ghost">
-        <FrameHeader>
-          <FrameTitle>Accounts</FrameTitle>
-          <FrameDescription>
-            A role decides what an account can do, never what it can see —
-            everyone reads the same dashboard.
-          </FrameDescription>
-        </FrameHeader>
-        <FramePanel className="p-0">
+      {/* Accounts always render the table — at least the signed-in row. */}
+      <SettingsList isEmpty={false}>
+        <SettingsList.Frame
+          description="A role decides what an account can do, never what it can see — everyone reads the same dashboard."
+          title="Accounts"
+        >
           <Table>
             <TableHeader>
-              {/* Only the Account column is left without a width: it
-                absorbs the remaining space, and Created/Role/the action
-                huddle together on the right instead of spreading across the
-                whole row — a table of two accounts doesn't need its four
-                columns stretched to the edge. */}
               <TableRow className="hover:bg-transparent">
                 <TableHead>Account</TableHead>
                 <TableHead className="hidden w-32 sm:table-cell">
@@ -136,8 +120,8 @@ export function AccountsPanel({
               ))}
             </TableBody>
           </Table>
-        </FramePanel>
-      </Frame>
+        </SettingsList.Frame>
+      </SettingsList>
     </div>
   );
 }

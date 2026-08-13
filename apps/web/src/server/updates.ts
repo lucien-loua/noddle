@@ -185,7 +185,7 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
               `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`
             );
           }
-          return { started: true };
+          return { started: true as const };
         }),
     })
 );

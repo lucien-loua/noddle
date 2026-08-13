@@ -11,9 +11,9 @@ import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { DeleteServerAction } from "@/components/delete-server-action";
-import { useAppForm } from "@/components/fields/lib/form";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { SettingsList } from "@/components/features/settings-list/settings-list";
+import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { ResourceRow, RowGroup } from "@/components/resource-row";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -133,14 +133,10 @@ export function ServersList({
   role: RoleName | null;
 }) {
   const queryClient = useQueryClient();
-  const { data: servers, isEmpty } = useResourceList(
-    queries.servers,
-    initial,
-    {
-      refetchInterval: (query) =>
-        query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
-    }
-  );
+  const { data: servers, isEmpty } = useResourceList(queries.servers, initial, {
+    refetchInterval: (query) =>
+      query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
+  });
 
   const handleRemoved = useCallback(
     () => cache.servers(queryClient),

@@ -34,7 +34,10 @@ await runVerify("settings seams (SSH factory + SettingsList)", () => {
     updates.includes("withManagerSession") &&
       !updates.includes("connectToManager()")
   );
-  check("volume mounts use withManagerSession", volumes.includes("withManagerSession"));
+  check(
+    "volume mounts use withManagerSession",
+    volumes.includes("withManagerSession")
+  );
 
   const servers = readFileSync(
     join(FEATURES, "servers/servers-panel.tsx"),
@@ -53,10 +56,12 @@ await runVerify("settings seams (SSH factory + SettingsList)", () => {
   );
   check(
     "accounts panel uses SettingsList.Frame",
-    accounts.includes("SettingsList.Frame") && !accounts.includes("<Frame variant")
+    accounts.includes("SettingsList.Frame") &&
+      !accounts.includes("<Frame variant")
   );
   check(
     "webhook panel uses SettingsList.Frame",
-    webhooks.includes("SettingsList.Frame") && !webhooks.includes("<Frame variant")
+    webhooks.includes("SettingsList.Frame") &&
+      !webhooks.includes("<Frame variant")
   );
 });
