@@ -2,6 +2,7 @@
 // node packages/backup/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
 import { dumpSpecFor } from "#dump-spec";
+import { restoreSpecFor } from "#restore-spec";
 import {
   BACKUP_EXTENSION,
   buildBackupInsert,
@@ -31,6 +32,16 @@ await runVerify("backup domain", () => {
       password: "secret",
       rootUser: null,
     }).REDISCLI_AUTH === "secret"
+  );
+
+  const ENGINES = ["postgres", "mysql", "mariadb", "mongo", "redis"] as const;
+  check(
+    "postgres restore spec exposes apply",
+    typeof restoreSpecFor("postgres").apply === "function"
+  );
+  check(
+    "restore spec table covers all five engines",
+    ENGINES.every((e) => typeof restoreSpecFor(e).apply === "function")
   );
 
   expectThrows(
@@ -64,7 +75,6 @@ await runVerify("backup domain", () => {
     (e) => e instanceof Error && e.message.includes("no longer exists")
   );
 
-  const ENGINES = ["postgres", "mysql", "mariadb", "mongo", "redis"] as const;
   const missing = ENGINES.filter((e) => !(e in BACKUP_EXTENSION));
   check(
     "BACKUP_EXTENSION covers all five engines",

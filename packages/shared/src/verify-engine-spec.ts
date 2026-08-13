@@ -45,6 +45,10 @@ await runVerify("EngineSpec ownership (C5)", () => {
     "utf8"
   );
   const dumpSpec = readFileSync(join(REPO, "backup/src/dump-spec.ts"), "utf8");
+  const restoreSpec = readFileSync(
+    join(REPO, "backup/src/restore-spec.ts"),
+    "utf8"
+  );
   const connectionUrl = readFileSync(
     join(REPO, "../apps/web/src/server/databases/connection-url.ts"),
     "utf8"
@@ -133,8 +137,14 @@ await runVerify("EngineSpec ownership (C5)", () => {
       !backupSubject.includes("const DUMP_SPECS")
   );
   check(
-    "restore dispatches via RESTORE_SPECS table",
-    restore.includes("RESTORE_SPECS") &&
+    "restore specs live in @noddle/backup/restore-spec",
+    restoreSpec.includes("export function restoreSpecFor") &&
+      restoreSpec.includes("pg_restore")
+  );
+  check(
+    "worker restore uses restoreSpecFor",
+    restore.includes("restoreSpecFor") &&
+      !restore.includes("const RESTORE_SPECS") &&
       !restore.includes("switch (database.engine)")
   );
   check(

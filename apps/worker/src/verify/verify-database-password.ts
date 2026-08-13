@@ -168,7 +168,7 @@ try {
    * `false` if it is refused.
    *
    * Probe argv is a table keyed by engine (same shape as dumpSpecFor /
-   * RESTORE_SPECS) so a sixth engine fails to compile here, not at runtime.
+   * restoreSpecFor) so a sixth engine fails to compile here, not at runtime.
    */
   const PROBE_ARGV: Record<
     DatabaseEngine,

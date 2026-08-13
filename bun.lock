@@ -103,6 +103,8 @@
         "@noddle/crypto": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
+        "@noddle/ssh-executor": "workspace:*",
+        "@noddle/swarm-ops": "workspace:*",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
       },

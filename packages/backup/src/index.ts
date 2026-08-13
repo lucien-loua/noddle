@@ -18,9 +18,9 @@ import { eq } from "drizzle-orm";
  * general engine property like its port or default image — so it does not
  * belong in `@noddle/database-spec`.
  *
- * Paired with `@noddle/backup/dump-spec` (`dumpSpecFor`): extension + dump argv
- * share one domain. Callers must not re-guess with a `postgres ? "dump" : "rdb"`
- * ternary — that already wrote a `.rdb` onto a SQL dump once.
+ * Paired with `@noddle/backup/dump-spec` (`dumpSpecFor`) and
+ * `@noddle/backup/restore-spec` (`restoreSpecFor`): extension + dump/restore
+ * argv share one domain.
  */
 export const BACKUP_EXTENSION: Record<DatabaseEngine, string> = {
   mariadb: "sql",
