@@ -1,21 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { lazy, useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { DeleteStackAction } from "@/components/delete-stack-action";
-import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { WebhookPanel } from "@/components/features/webhooks/panel";
-import { LogStream } from "@/components/log-stream";
 import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
 import { STACK_DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import { isDetailTab } from "@/lib/resource-detail/parse-tab";
@@ -25,6 +21,20 @@ import { useCan } from "@/lib/use-permission";
 import { getStackDashboard } from "@/server/dashboard";
 import { triggerStackRollback } from "@/server/stacks";
 import { generateStackWebhook, getStackWebhook } from "@/server/webhooks";
+
+const LogStream = lazy(() =>
+  import("@/components/log-stream").then((m) => ({ default: m.LogStream }))
+);
+const StackHistoryPanel = lazy(() =>
+  import("@/components/features/stacks/stack-history-panel").then((m) => ({
+    default: m.StackHistoryPanel,
+  }))
+);
+const WebhookPanel = lazy(() =>
+  import("@/components/features/webhooks/panel").then((m) => ({
+    default: m.WebhookPanel,
+  }))
+);
 
 const STACK_TABS = ["logs", "history", "webhook"] as const;
 
@@ -107,6 +117,7 @@ function StackDetail() {
     [navigate]
   );
 
+  const tab = search.tab ?? "logs";
   const handleTabChange = useDetailTabChange(navigate, "logs", {
     preserveSearch: true,
   });
@@ -165,8 +176,6 @@ function StackDetail() {
         <DetailBreadcrumb
           environment={stack.environment}
           name={stack.name}
-          // The parent is the ENVIRONMENT, not a global screen: it's where
-          // you come from and where the resource is listed.
           parent={{
             environmentId: stack.environmentId,
             label: stack.environment,
@@ -193,7 +202,7 @@ function StackDetail() {
         <Tabs
           className="min-h-0 flex-1"
           onValueChange={handleTabChange}
-          value={search.tab ?? "logs"}
+          value={tab}
         >
           <TabRail>
             <TabsTrigger value="logs">Logs</TabsTrigger>
@@ -202,47 +211,43 @@ function StackDetail() {
           </TabRail>
 
           <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="logs">
-            {shown ? (
-              <LogStream deploymentId={shown} onEnd={handleEnd} />
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                No deploys yet — logs will appear on the first build.
-              </p>
-            )}
+            <ActiveTabPanel active={tab} value="logs">
+              {shown ? (
+                <LogStream deploymentId={shown} onEnd={handleEnd} />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No deploys yet — logs will appear on the first build.
+                </p>
+              )}
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="history">
-            <p className="mb-2 truncate text-muted-foreground text-xs">
-              {stack.gitRepoUrl}
-              {stack.gitBranch ? ` · ${stack.gitBranch}` : ""}
-            </p>
-            {deployments.data ? (
-              <DeploymentHistory
+            <ActiveTabPanel active={tab} value="history">
+              <StackHistoryPanel
                 canRollback={canRollback}
                 currentDeploymentId={currentDeploymentId}
                 deployments={deployments.data}
+                gitBranch={stack.gitBranch}
+                gitRepoUrl={stack.gitRepoUrl}
                 onRollback={handleRollback}
                 onSelect={handleFocus}
                 pending={rollback.isPending}
+                rollbackError={rollback.error?.message ?? null}
                 selectedId={shown}
               />
-            ) : (
-              <Spinner />
-            )}
-            {rollback.error ? (
-              <Alert className="mt-3" variant="destructive">
-                <AlertDescription>{rollback.error.message}</AlertDescription>
-              </Alert>
-            ) : null}
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={STACK_DETAIL_TAB_PANEL_CLASS} value="webhook">
-            <WebhookPanel
-              canManage={canManageWebhook}
-              generateWebhook={handleGenerateWebhook}
-              getWebhook={handleGetWebhook}
-              queryKey={["webhook", "stack", stack.id]}
-            />
+            <ActiveTabPanel active={tab} value="webhook">
+              <WebhookPanel
+                canManage={canManageWebhook}
+                generateWebhook={handleGenerateWebhook}
+                getWebhook={handleGetWebhook}
+                queryKey={["webhook", "stack", stack.id]}
+              />
+            </ActiveTabPanel>
           </TabsContent>
         </Tabs>
       </ResourceDetailFrame>

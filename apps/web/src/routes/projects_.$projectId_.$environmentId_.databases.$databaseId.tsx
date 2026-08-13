@@ -1,43 +1,20 @@
 import { DATABASE_ENGINE_LABEL, DATABASE_PORT } from "@noddle/database-spec";
-import {
-  ArrowClockwiseIcon,
-  CaretDownIcon,
-  PlayIcon,
-  StopIcon,
-  TerminalIcon,
-  TrashIcon,
-} from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { lazy, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
+import { DatabaseHeaderActions } from "@/components/features/database/database-header-actions";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
 import { useTerminalDialog } from "@/components/terminal-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import {
-  type LifecycleAction,
-  useLifecycleActions,
-} from "@/components/use-lifecycle-actions";
+import type { LifecycleAction } from "@/components/use-lifecycle-actions";
 import { cache } from "@/lib/cache";
-import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
@@ -52,7 +29,7 @@ import { isDetailTab } from "@/lib/resource-detail/parse-tab";
 import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
 import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
-import { type DatabaseRow, getDatabase } from "@/server/databases";
+import { getDatabase } from "@/server/databases";
 
 const BackupTab = lazy(() =>
   import("@/components/features/backups/backup-tab").then((m) => ({
@@ -73,7 +50,7 @@ const DatabaseResources = lazy(() =>
   import("@/components/features/database/database-resources").then((m) => ({
     default: m.DatabaseResources,
   }))
-)
+);
 
 const DATABASE_TABS = [
   "general",
@@ -83,12 +60,6 @@ const DATABASE_TABS = [
   "backups",
   "advanced",
 ] as const;
-
-const PENDING_LABEL: Record<LifecycleAction, string> = {
-  restart: "Restarting",
-  start: "Starting",
-  stop: "Stopping",
-};
 
 type DatabaseTab = (typeof DATABASE_TABS)[number];
 
@@ -123,150 +94,6 @@ export const Route = createFileRoute(
     tab: isDatabaseTab(search.tab) ? search.tab : undefined,
   }),
 });
-
-/**
- * A database's action bar — the SAME as a service's.
- *
- * It used to be a status `Badge` followed by three loose buttons (Stop,
- * Restart, Delete), while a service's page carries a `ButtonGroup`: the
- * status glued to a single trigger, and the actions in its menu. Two
- * screens doing the same thing shouldn't present it in two different ways.
- *
- * The branch with no lifecycle (a database never provisioned, or being torn
- * down) keeps the Delete button in plain sight rather than a one-entry menu.
- */
-function DatabaseHeaderActions({
-  database,
-  known,
-  onDeleted,
-  onDone,
-  onError,
-  onTerminal,
-  pendingAction,
-}: {
-  database: DatabaseRow;
-  known: RoleName | null;
-  onDeleted: () => void;
-  onDone: (action: LifecycleAction) => void;
-  onError: (message: string) => void;
-  onTerminal: (() => void) | null;
-  pendingAction: LifecycleAction | null;
-}) {
-  const lifecycle = useLifecycleActions({
-    onDone,
-    onError,
-    role: known,
-    status: database.status,
-    target: { databaseId: database.id, resource: "database" },
-  });
-  const del = useDeleteDatabaseAction({
-    databaseId: database.id,
-    databaseName: database.name,
-    onDeleted,
-    onError,
-    role: known,
-  });
-
-  const status = serviceLabel(database.status);
-  const pending = pendingAction !== null || database.status === "deploying";
-  const headerLabel = pendingAction
-    ? PENDING_LABEL[pendingAction]
-    : status.label;
-  const actionsBusy = lifecycle.busy || pending;
-
-  if (!(lifecycle.available || del.canDelete || onTerminal)) {
-    return <Badge variant="outline">{headerLabel}</Badge>;
-  }
-
-  if (!lifecycle.available) {
-    return (
-      <>
-        <ButtonGroup>
-          <ButtonGroupText>
-            {pending ? <Spinner /> : null}
-            {headerLabel}
-          </ButtonGroupText>
-          {onTerminal ? (
-            <Button onClick={onTerminal} variant="outline">
-              <TerminalIcon weight="bold" />
-              Terminal
-            </Button>
-          ) : null}
-          <Button onClick={del.handleOpen} variant="outline">
-            Delete
-          </Button>
-        </ButtonGroup>
-        {del.dialog}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <ButtonGroup>
-        <ButtonGroupText>
-          {pending ? <Spinner /> : null}
-          {headerLabel}
-        </ButtonGroupText>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                aria-label={`Actions for ${database.name}`}
-                size="icon"
-                variant="outline"
-              >
-                <CaretDownIcon weight="bold" />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            {onTerminal ? (
-              <DropdownMenuItem onClick={onTerminal}>
-                <TerminalIcon weight="bold" />
-                Terminal
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuItem
-              disabled={actionsBusy}
-              onClick={lifecycle.handleStopStart}
-            >
-              {lifecycle.stopped ? (
-                <PlayIcon weight="fill" />
-              ) : (
-                <StopIcon weight="fill" />
-              )}
-              {lifecycle.stopped ? "Start" : "Stop"}
-            </DropdownMenuItem>
-            {lifecycle.showRestart ? (
-              <DropdownMenuItem
-                disabled={actionsBusy}
-                onClick={lifecycle.handleRestart}
-              >
-                <ArrowClockwiseIcon weight="fill" />
-                Restart
-              </DropdownMenuItem>
-            ) : null}
-            {del.canDelete ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={del.handleOpen}
-                  variant="destructive"
-                >
-                  <TrashIcon />
-                  Delete
-                </DropdownMenuItem>
-              </>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ButtonGroup>
-
-      {del.canDelete ? del.dialog : null}
-    </>
-  );
-}
 
 function DatabaseDetail() {
   const { database: initialDatabase, email, role } = Route.useLoaderData();

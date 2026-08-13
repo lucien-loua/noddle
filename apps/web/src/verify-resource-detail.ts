@@ -66,12 +66,26 @@ await runVerify("resource detail module (C6)", () => {
     )
   );
   check(
-    "service/database mount heavy tabs via ActiveTabPanel",
-    service.includes("ActiveTabPanel") && database.includes("ActiveTabPanel")
+    "service/database/stack mount heavy tabs via ActiveTabPanel",
+    service.includes("ActiveTabPanel") &&
+      database.includes("ActiveTabPanel") &&
+      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes(
+        "ActiveTabPanel"
+      )
   );
   check(
-    "service lazy-loads heavy tab panels",
-    service.includes("lazy(") && service.includes("ContainerLogs")
+    "service/stack lazy-load heavy tab panels",
+    service.includes("lazy(") &&
+      service.includes("ContainerLogs") &&
+      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes("lazy(")
+  );
+  check(
+    "database header actions live in feature module",
+    !database.includes("function DatabaseHeaderActions") &&
+      readFileSync(
+        join(FEATURES, "database/database-header-actions.tsx"),
+        "utf8"
+      ).includes("export function DatabaseHeaderActions")
   );
 
   const deploySettings = readFileSync(
