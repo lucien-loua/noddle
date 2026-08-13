@@ -9,17 +9,13 @@ import {
 } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { BackupTab } from "@/components/features/backups/backup-tab";
-import { DatabaseAdvanced } from "@/components/features/database/database-advanced";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
-import { DatabaseLogs } from "@/components/features/database/database-logs";
 import { DatabaseMark } from "@/components/features/database/database-mark";
-import { DatabaseResources } from "@/components/features/database/database-resources";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
@@ -44,6 +40,7 @@ import { cache } from "@/lib/cache";
 import { serviceLabel } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
 import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import {
@@ -56,6 +53,27 @@ import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
 import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
 import { type DatabaseRow, getDatabase } from "@/server/databases";
+
+const BackupTab = lazy(() =>
+  import("@/components/features/backups/backup-tab").then((m) => ({
+    default: m.BackupTab,
+  }))
+);
+const DatabaseAdvanced = lazy(() =>
+  import("@/components/features/database/database-advanced").then((m) => ({
+    default: m.DatabaseAdvanced,
+  }))
+);
+const DatabaseLogs = lazy(() =>
+  import("@/components/features/database/database-logs").then((m) => ({
+    default: m.DatabaseLogs,
+  }))
+);
+const DatabaseResources = lazy(() =>
+  import("@/components/features/database/database-resources").then((m) => ({
+    default: m.DatabaseResources,
+  }))
+)
 
 const DATABASE_TABS = [
   "general",
@@ -440,31 +458,39 @@ function DatabaseDetail() {
           ) : null}
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="logs">
-            <DatabaseLogs
-              databaseId={database.id}
-              databaseName={database.name}
-              generation={`${database.status}:${database.updatedAt}`}
-            />
+            <ActiveTabPanel active={tab} value="logs">
+              <DatabaseLogs
+                databaseId={database.id}
+                databaseName={database.name}
+                generation={`${database.status}:${database.updatedAt}`}
+              />
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="monitoring">
-            <DatabaseResources databaseId={database.id} />
+            <ActiveTabPanel active={tab} value="monitoring">
+              <DatabaseResources databaseId={database.id} />
+            </ActiveTabPanel>
           </TabsContent>
 
           {canEditConfig ? (
             <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="advanced">
-              <DatabaseAdvanced canEdit={canEditConfig} database={database} />
+              <ActiveTabPanel active={tab} value="advanced">
+                <DatabaseAdvanced canEdit={canEditConfig} database={database} />
+              </ActiveTabPanel>
             </TabsContent>
           ) : null}
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="backups">
-            <BackupTab
-              canCreate={canCreateBackup}
-              canRestore={canRestoreBackup}
-              defaultDatabaseName={database.databaseName ?? database.name}
-              resourceName={database.name}
-              subject={{ databaseId: database.id, kind: "database" }}
-            />
+            <ActiveTabPanel active={tab} value="backups">
+              <BackupTab
+                canCreate={canCreateBackup}
+                canRestore={canRestoreBackup}
+                defaultDatabaseName={database.databaseName ?? database.name}
+                resourceName={database.name}
+                subject={{ databaseId: database.id, kind: "database" }}
+              />
+            </ActiveTabPanel>
           </TabsContent>
         </Tabs>
       </ResourceDetailFrame>

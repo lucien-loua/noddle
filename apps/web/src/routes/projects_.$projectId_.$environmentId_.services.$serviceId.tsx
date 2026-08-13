@@ -1,42 +1,25 @@
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { lazy, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { BuildLogsDialog } from "@/components/build-logs-dialog";
-import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { BackupTab } from "@/components/features/backups/backup-tab";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
-import { ContainerLogs } from "@/components/features/logs/container-logs";
-import { ServiceBuild } from "@/components/features/services/service-build";
 import { ServiceDangerZone } from "@/components/features/services/service-danger-zone";
 import { ServiceDeploySettings } from "@/components/features/services/service-deploy-settings";
 import { ServiceDomains } from "@/components/features/services/service-domains";
-import { ServiceProvider } from "@/components/features/services/service-provider";
-import { ServiceRegistry } from "@/components/features/services/service-registry";
-import { ServiceResources } from "@/components/features/services/service-resources";
+import { ServiceFacts } from "@/components/features/services/service-facts";
+import { ServiceOverview } from "@/components/features/services/service-overview";
 import { ServiceStatusLine } from "@/components/features/services/service-status-line";
-import { WebhookPanel } from "@/components/features/webhooks/panel";
-import { RelativeTime } from "@/components/relative-time";
+import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
-import { TeardownError } from "@/components/teardown-error";
 import { useTerminalDialog } from "@/components/terminal-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
-import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
 import { cache } from "@/lib/cache";
-import { shortSha } from "@/lib/format";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
 import {
   DETAIL_POLL_MS,
@@ -51,13 +34,30 @@ import { parseDetailTab } from "@/lib/resource-detail/parse-tab";
 import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
 import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
-import {
-  type DeploymentSummary,
-  getService,
-  type ServiceRow,
-} from "@/server/dashboard";
+import { getService } from "@/server/dashboard";
 import { triggerDeploy, triggerRollback } from "@/server/deployments";
 import { generateServiceWebhook, getServiceWebhook } from "@/server/webhooks";
+
+const BackupTab = lazy(() =>
+  import("@/components/features/backups/backup-tab").then((m) => ({
+    default: m.BackupTab,
+  }))
+);
+const ContainerLogs = lazy(() =>
+  import("@/components/features/logs/container-logs").then((m) => ({
+    default: m.ContainerLogs,
+  }))
+);
+const ServiceDeploymentsPanel = lazy(() =>
+  import("@/components/features/services/service-deployments-panel").then(
+    (m) => ({ default: m.ServiceDeploymentsPanel })
+  )
+);
+const ServiceResources = lazy(() =>
+  import("@/components/features/services/service-resources").then((m) => ({
+    default: m.ServiceResources,
+  }))
+);
 
 /**
  * Application rail: General (source + build), Environment, Domains,
@@ -111,172 +111,6 @@ export const Route = createFileRoute(
     tab: parseServiceTab(search.tab),
   }),
 });
-
-function Fact({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
-      <dd className="truncate text-sm">{children}</dd>
-    </div>
-  );
-}
-
-function ServiceFacts({
-  role,
-  runningOn,
-  service,
-}: {
-  role: RoleName | null;
-  runningOn: string | null;
-  service: ServiceRow;
-}) {
-  return (
-    <Frame variant="ghost">
-      <FrameHeader>
-        <FrameTitle>Details</FrameTitle>
-        <FrameDescription>
-          Where this application runs and which commit is currently served.
-        </FrameDescription>
-      </FrameHeader>
-      <FramePanel>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-          <Fact label="Domains">
-            {service.domains.length > 0 ? (
-              <ul className="space-y-1">
-                {service.domains.map((d) => {
-                  const scheme = d.https ? "https" : "http";
-                  return (
-                    <li key={d.id}>
-                      <a
-                        className="flex items-center gap-1 underline underline-offset-4 hover:text-foreground"
-                        href={`${scheme}://${d.host}`}
-                        rel="noreferrer noopener"
-                        target="_blank"
-                      >
-                        <span className="min-w-0 truncate">{d.host}</span>
-                        <ArrowSquareOutIcon className="size-3.5 shrink-0" />
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <span className="text-muted-foreground">Not reachable</span>
-            )}
-          </Fact>
-
-          <Fact label="Commit">
-            {service.lastDeployment?.commitSha ? (
-              <span className="font-mono">
-                {shortSha(service.lastDeployment.commitSha)}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </Fact>
-
-          <Fact label="Last deploy">
-            {service.lastDeployment ? (
-              <RelativeTime iso={service.lastDeployment.createdAt} />
-            ) : (
-              <span className="text-muted-foreground">Never</span>
-            )}
-          </Fact>
-
-          <Fact label={runningOn ? "Running on" : "Server"}>
-            {runningOn && runningOn !== service.serverName
-              ? `${runningOn} (built on ${service.serverName})`
-              : service.serverName}
-          </Fact>
-
-          <Fact label="Registry">
-            <ServiceRegistry
-              registryId={service.registryId}
-              role={role}
-              serviceId={service.id}
-            />
-          </Fact>
-        </dl>
-      </FramePanel>
-    </Frame>
-  );
-}
-
-function ServiceDeploymentsPanel({
-  canManageWebhook,
-  canRollback,
-  currentDeploymentId,
-  deployments,
-  onGenerateWebhook,
-  onGetWebhook,
-  onRollback,
-  onSelect,
-  pending,
-  rollbackError,
-  serviceId,
-  shown,
-}: {
-  canManageWebhook: boolean;
-  canRollback: boolean;
-  currentDeploymentId: string | null;
-  deployments: DeploymentSummary[] | undefined;
-  onGenerateWebhook: () => Promise<{ path: string; secret: string }>;
-  onGetWebhook: () => Promise<{ configured: boolean; path: string }>;
-  onRollback: (deploymentId: string) => void;
-  onSelect: (deploymentId: string) => void;
-  pending: boolean;
-  rollbackError: string | null;
-  serviceId: string;
-  shown: string | null;
-}) {
-  const recentDeployments = deployments?.slice(0, 10);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <Frame variant="ghost">
-        <FrameHeader>
-          <FrameTitle>Deployments</FrameTitle>
-          <FrameDescription>
-            See the last 10 deployments for this application.
-          </FrameDescription>
-        </FrameHeader>
-        <FramePanel
-          className={
-            recentDeployments && recentDeployments.length > 0
-              ? "p-0"
-              : undefined
-          }
-        >
-          {recentDeployments ? (
-            <DeploymentHistory
-              canRollback={canRollback}
-              currentDeploymentId={currentDeploymentId}
-              deployments={recentDeployments}
-              onRollback={onRollback}
-              onSelect={onSelect}
-              pending={pending}
-              selectedId={shown}
-            />
-          ) : (
-            <Spinner />
-          )}
-          {rollbackError ? (
-            <Alert className="m-3" variant="destructive">
-              <AlertDescription>{rollbackError}</AlertDescription>
-            </Alert>
-          ) : null}
-        </FramePanel>
-      </Frame>
-
-      <WebhookPanel
-        canManage={canManageWebhook}
-        generateWebhook={onGenerateWebhook}
-        getWebhook={onGetWebhook}
-        queryKey={["webhook", "service", serviceId]}
-      />
-    </div>
-  );
-}
 
 function ServiceDetail() {
   const { email, role, service: initialService } = Route.useLoaderData();
@@ -485,18 +319,16 @@ function ServiceDetail() {
       role={role}
       title={service.name}
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <ServiceStatusLine
-          pendingAction={awaiting?.action ?? null}
-          service={service}
-        />
-        <TeardownError message={service.lastError} />
-        {actionError ? (
-          <Alert className="mb-3" variant="destructive">
-            <AlertDescription>{actionError}</AlertDescription>
-          </Alert>
-        ) : null}
-
+      <ResourceDetailFrame
+        deleteError={actionError}
+        subtitle={
+          <ServiceStatusLine
+            pendingAction={awaiting?.action ?? null}
+            service={service}
+          />
+        }
+        teardownError={service.lastError}
+      >
         <Tabs
           className="min-h-0 flex-1 gap-3"
           onValueChange={handleTabChange}
@@ -529,15 +361,7 @@ function ServiceDetail() {
           </div>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="general">
-            <div className="flex flex-col gap-4">
-              <ServiceProvider canEdit={canDeploy} service={service} />
-              <ServiceBuild canEdit={canDeploy} service={service} />
-              {service.status === "created" ? (
-                <p className="text-muted-foreground text-sm">
-                  Nothing is running yet. Save the repository, then Deploy.
-                </p>
-              ) : null}
-            </div>
+            <ServiceOverview canEdit={canDeploy} service={service} />
           </TabsContent>
 
           {canReadEnvVar ? (
@@ -554,44 +378,52 @@ function ServiceDetail() {
           </TabsContent>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="deployments">
-            <ServiceDeploymentsPanel
-              canManageWebhook={canManageWebhook}
-              canRollback={canRollback}
-              currentDeploymentId={currentDeploymentId}
-              deployments={deployments.data}
-              onGenerateWebhook={handleGenerateWebhook}
-              onGetWebhook={handleGetWebhook}
-              onRollback={handleRollback}
-              onSelect={handleFocus}
-              pending={rollback.isPending}
-              rollbackError={rollback.error?.message ?? null}
-              serviceId={service.id}
-              shown={shown}
-            />
+            <ActiveTabPanel active={tab} value="deployments">
+              <ServiceDeploymentsPanel
+                canManageWebhook={canManageWebhook}
+                canRollback={canRollback}
+                currentDeploymentId={currentDeploymentId}
+                deployments={deployments.data}
+                onGenerateWebhook={handleGenerateWebhook}
+                onGetWebhook={handleGetWebhook}
+                onRollback={handleRollback}
+                onSelect={handleFocus}
+                pending={rollback.isPending}
+                rollbackError={rollback.error?.message ?? null}
+                serviceId={service.id}
+                shown={shown}
+              />
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent
             className={DETAIL_TAB_PANEL_CLASS}
             value="volume-backups"
           >
-            <BackupTab
-              canCreate={canCreateVolumeBackup}
-              canRestore={canRestoreVolumeBackup}
-              resourceName={service.name}
-              subject={{ kind: "volume", serviceId: service.id }}
-            />
+            <ActiveTabPanel active={tab} value="volume-backups">
+              <BackupTab
+                canCreate={canCreateVolumeBackup}
+                canRestore={canRestoreVolumeBackup}
+                resourceName={service.name}
+                subject={{ kind: "volume", serviceId: service.id }}
+              />
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="logs">
-            <ContainerLogs
-              generation={`${service.status}:${service.updatedAt}`}
-              name={service.name}
-              streamUrl={`/api/service-logs/${service.id}`}
-            />
+            <ActiveTabPanel active={tab} value="logs">
+              <ContainerLogs
+                generation={`${service.status}:${service.updatedAt}`}
+                name={service.name}
+                streamUrl={`/api/service-logs/${service.id}`}
+              />
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="monitoring">
-            <ServiceResources serviceId={service.id} />
+            <ActiveTabPanel active={tab} value="monitoring">
+              <ServiceResources serviceId={service.id} />
+            </ActiveTabPanel>
           </TabsContent>
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="advanced">
@@ -611,7 +443,7 @@ function ServiceDetail() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+      </ResourceDetailFrame>
       {terminal}
       <BuildLogsDialog
         deployment={focused}

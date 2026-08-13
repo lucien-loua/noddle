@@ -61,7 +61,7 @@ export function ServiceStatusLine({
   const tone = pending ? "busy" : status.tone;
 
   return (
-    <p className="mb-3 flex min-w-0 items-center gap-2 truncate text-muted-foreground text-sm">
+    <p className="flex min-w-0 items-center gap-2 truncate text-muted-foreground text-sm">
       <span
         aria-label={status.label}
         className={cn("size-2 shrink-0 rounded-full", dotClass(tone))}

@@ -6,6 +6,7 @@ import { check, runVerify } from "@noddle/testing";
 const WEB_SRC = join(import.meta.dirname);
 const ROUTES = join(WEB_SRC, "routes");
 const LIB = join(WEB_SRC, "lib/resource-detail");
+const FEATURES = join(WEB_SRC, "components/features");
 
 const DETAIL_ROUTES = [
   "projects_.$projectId_.$environmentId_.services.$serviceId.tsx",
@@ -18,6 +19,12 @@ await runVerify("resource detail module (C6)", () => {
   check(
     "shared constants export tab panel class",
     workload.includes("DETAIL_TAB_PANEL_CLASS")
+  );
+  check(
+    "ActiveTabPanel helper exists",
+    readFileSync(join(LIB, "active-tab.tsx"), "utf8").includes(
+      "export function ActiveTabPanel"
+    )
   );
 
   for (const file of DETAIL_ROUTES) {
@@ -45,6 +52,10 @@ await runVerify("resource detail module (C6)", () => {
       database.includes("lifecyclePollInterval")
   );
   check(
+    "service uses ResourceDetailFrame",
+    service.includes("ResourceDetailFrame")
+  );
+  check(
     "database uses ResourceDetailFrame",
     database.includes("ResourceDetailFrame")
   );
@@ -53,5 +64,24 @@ await runVerify("resource detail module (C6)", () => {
     readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes(
       "ResourceDetailFrame"
     )
+  );
+  check(
+    "service/database mount heavy tabs via ActiveTabPanel",
+    service.includes("ActiveTabPanel") && database.includes("ActiveTabPanel")
+  );
+  check(
+    "service lazy-loads heavy tab panels",
+    service.includes("lazy(") && service.includes("ContainerLogs")
+  );
+
+  const deploySettings = readFileSync(
+    join(FEATURES, "services/service-deploy-settings.tsx"),
+    "utf8"
+  );
+  check(
+    "deploy toolbar composes children (no showDeploy props)",
+    !deploySettings.includes("showDeploy") &&
+      !deploySettings.includes("showReload") &&
+      deploySettings.includes("DeploySettingsToolbar")
   );
 });

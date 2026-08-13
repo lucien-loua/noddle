@@ -6,7 +6,7 @@ import {
   StopIcon,
   TerminalIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -48,110 +48,9 @@ const CONFIRM_COPY: Record<
   },
 };
 
-function DeploySettingsToolbar({
-  actionsBusy,
-  deployDisabled,
-  deployPending,
-  hasGit,
-  onRequestDeploy,
-  onRequestRebuild,
-  onRequestReload,
-  onRequestStartStop,
-  onTerminal,
-  pending,
-  showDeploy,
-  showReload,
-  showRebuild,
-  showStartStop,
-  stopped,
-}: {
-  actionsBusy: boolean;
-  deployDisabled: boolean;
-  deployPending: boolean;
-  hasGit: boolean;
-  onRequestDeploy: () => void;
-  onRequestRebuild: () => void;
-  onRequestReload: () => void;
-  onRequestStartStop: () => void;
-  onTerminal: (() => void) | null;
-  pending: boolean;
-  showDeploy: boolean;
-  showReload: boolean;
-  showRebuild: boolean;
-  showStartStop: boolean;
-  stopped: boolean;
-}) {
+function DeploySettingsToolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {showDeploy ? (
-        <Button
-          disabled={deployDisabled}
-          onClick={onRequestDeploy}
-          title={
-            hasGit
-              ? undefined
-              : "Set a git repository on General before deploying"
-          }
-        >
-          {deployPending ? <Spinner data-icon="inline-start" /> : null}
-          <RocketLaunchIcon data-icon="inline-start" weight="fill" />
-          Deploy
-        </Button>
-      ) : null}
-
-      {showReload ? (
-        <Button
-          disabled={actionsBusy}
-          onClick={onRequestReload}
-          variant="outline"
-        >
-          <ArrowClockwiseIcon data-icon="inline-start" weight="fill" />
-          Reload
-        </Button>
-      ) : null}
-
-      {showRebuild ? (
-        <Button
-          disabled={deployDisabled}
-          onClick={onRequestRebuild}
-          title={
-            hasGit
-              ? undefined
-              : "Set a git repository on General before rebuilding"
-          }
-          variant="outline"
-        >
-          <HammerIcon data-icon="inline-start" weight="fill" />
-          Rebuild
-        </Button>
-      ) : null}
-
-      {showStartStop ? (
-        <Button
-          disabled={actionsBusy}
-          onClick={onRequestStartStop}
-          variant={stopped ? "outline" : "destructive"}
-        >
-          {stopped ? (
-            <PlayIcon data-icon="inline-start" weight="fill" />
-          ) : (
-            <StopIcon data-icon="inline-start" weight="fill" />
-          )}
-          {stopped ? "Start" : "Stop"}
-        </Button>
-      ) : null}
-
-      {onTerminal ? (
-        <Button onClick={onTerminal} variant="outline">
-          <TerminalIcon data-icon="inline-start" weight="bold" />
-          Open Terminal
-        </Button>
-      ) : null}
-
-      {pending && !showDeploy ? (
-        <Spinner className="text-muted-foreground" />
-      ) : null}
-    </div>
+    <div className="flex flex-wrap items-center gap-2">{children}</div>
   );
 }
 
@@ -186,7 +85,7 @@ export function ServiceDeploySettings({
   });
 
   const pending = pendingAction !== null || service.status === "deploying";
-  const showDeploy =
+  const deployAllowed =
     canDeploy &&
     service.status !== "deleting" &&
     service.status !== "deploying";
@@ -226,7 +125,7 @@ export function ServiceDeploySettings({
   const copy = confirm ? CONFIRM_COPY[confirm] : null;
 
   if (
-    !(showDeploy || showLifecycle || onTerminal) &&
+    !(deployAllowed || showLifecycle || onTerminal) &&
     service.status === "deleting"
   ) {
     return null;
@@ -234,23 +133,76 @@ export function ServiceDeploySettings({
 
   return (
     <>
-      <DeploySettingsToolbar
-        actionsBusy={actionsBusy}
-        deployDisabled={deployDisabled}
-        deployPending={deployPending}
-        hasGit={hasGit}
-        onRequestDeploy={requestDeploy}
-        onRequestRebuild={requestRebuild}
-        onRequestReload={requestReload}
-        onRequestStartStop={requestStartStop}
-        onTerminal={onTerminal}
-        pending={pending}
-        showDeploy={showDeploy}
-        showRebuild={showDeploy}
-        showReload={showLifecycle && lifecycle.showRestart}
-        showStartStop={showLifecycle}
-        stopped={lifecycle.stopped}
-      />
+      <DeploySettingsToolbar>
+        {deployAllowed ? (
+          <Button
+            disabled={deployDisabled}
+            onClick={requestDeploy}
+            title={
+              hasGit
+                ? undefined
+                : "Set a git repository on General before deploying"
+            }
+          >
+            {deployPending ? <Spinner data-icon="inline-start" /> : null}
+            <RocketLaunchIcon data-icon="inline-start" weight="fill" />
+            Deploy
+          </Button>
+        ) : null}
+
+        {showLifecycle && lifecycle.showRestart ? (
+          <Button
+            disabled={actionsBusy}
+            onClick={requestReload}
+            variant="outline"
+          >
+            <ArrowClockwiseIcon data-icon="inline-start" weight="fill" />
+            Reload
+          </Button>
+        ) : null}
+
+        {deployAllowed ? (
+          <Button
+            disabled={deployDisabled}
+            onClick={requestRebuild}
+            title={
+              hasGit
+                ? undefined
+                : "Set a git repository on General before rebuilding"
+            }
+            variant="outline"
+          >
+            <HammerIcon data-icon="inline-start" weight="fill" />
+            Rebuild
+          </Button>
+        ) : null}
+
+        {showLifecycle ? (
+          <Button
+            disabled={actionsBusy}
+            onClick={requestStartStop}
+            variant={lifecycle.stopped ? "outline" : "destructive"}
+          >
+            {lifecycle.stopped ? (
+              <PlayIcon data-icon="inline-start" weight="fill" />
+            ) : (
+              <StopIcon data-icon="inline-start" weight="fill" />
+            )}
+            {lifecycle.stopped ? "Start" : "Stop"}
+          </Button>
+        ) : null}
+
+        {onTerminal ? (
+          <Button onClick={onTerminal} variant="outline">
+            <TerminalIcon data-icon="inline-start" weight="bold" />
+            Open Terminal
+          </Button>
+        ) : null}
+
+        {pending && !deployAllowed ? (
+          <Spinner className="text-muted-foreground" />
+        ) : null}
+      </DeploySettingsToolbar>
 
       {copy ? (
         <ConfirmActionDialog
