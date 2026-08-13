@@ -1,5 +1,3 @@
-ALTER TABLE "audit_log" ADD COLUMN "resource_id" text;--> statement-breakpoint
-ALTER TABLE "audit_log" ADD COLUMN "resource_name" text;--> statement-breakpoint
 ALTER TABLE "server_metrics" ADD COLUMN "block_read_bytes" bigint NOT NULL;--> statement-breakpoint
 ALTER TABLE "server_metrics" ADD COLUMN "block_write_bytes" bigint NOT NULL;--> statement-breakpoint
 ALTER TABLE "server_metrics" ADD COLUMN "network_in_bytes" bigint NOT NULL;--> statement-breakpoint
