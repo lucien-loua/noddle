@@ -3,12 +3,17 @@
  * extracting every setState wrapper adds noise without shared children.
  */
 
-import { ArchiveIcon } from "@phosphor-icons/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { ConfigsListBody } from "@/components/features/backup-shared/configs-list-body";
-import { NoDestinationEmpty } from "@/components/features/backup-shared/no-destination-empty";
-import { ScheduleActions } from "@/components/features/backup-shared/schedule-actions";
+import { BackupConfigCard } from "@/components/features/backups/config-card";
+import { BackupConfigDialog } from "@/components/features/backups/config-dialog";
+import { ConfigsListBody } from "@/components/features/backups/configs-list-body";
+import { copyFor } from "@/components/features/backups/copy";
+import { BackupHistoryDialog } from "@/components/features/backups/history";
+import { NoDestinationEmpty } from "@/components/features/backups/no-destination-empty";
+import { RestoreFromS3Dialog } from "@/components/features/backups/restore-from-s3-dialog";
+import type { BackupRestoreTarget } from "@/components/features/backups/restore-types";
+import { ScheduleActions } from "@/components/features/backups/schedule-actions";
 import {
   Frame,
   FrameDescription,
@@ -16,55 +21,86 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { databaseBackupSubject } from "@/lib/backup-subject";
+import {
+  type BackupSubject,
+  backupSubjectScopeId,
+  type DatabaseBackupSubject,
+  type VolumeBackupSubject,
+} from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
-import type { BackupConfigRow, DestinationRow } from "@/server/backups";
-import { BackupConfigCard } from "./backup-config-card";
-import { BackupConfigDialog } from "./backup-config-dialog";
-import { BackupHistoryDialog } from "./backup-history";
-import { RestoreFromS3Dialog } from "./restore-from-s3-dialog";
-import type { RestoreTarget } from "./types";
+import type { BackupConfigRow } from "@/server/backups/configs";
+import type { DestinationRow } from "@/server/backups/destinations";
+import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
 
-interface Props {
+type ScheduleRow = BackupConfigRow | VolumeBackupConfigRow;
+
+type DatabasePanelProps = {
   canCreate: boolean;
   canRestore: boolean;
-  databaseId: string;
-  databaseName: string;
-  /** Prefill for the schedule form (engine DB name or resource name). */
   defaultDatabaseName: string;
   destinations: DestinationRow[];
-  onRestore: (target: RestoreTarget) => void;
+  onRestore: (target: BackupRestoreTarget) => void;
+  resourceName: string;
+  subject: DatabaseBackupSubject;
+};
+
+type VolumePanelProps = {
+  canCreate: boolean;
+  canRestore: boolean;
+  destinations: DestinationRow[];
+  onRestore: (target: BackupRestoreTarget) => void;
+  resourceName: string;
+  subject: VolumeBackupSubject;
+};
+
+type BackupPanelProps = DatabasePanelProps | VolumePanelProps;
+
+function isDatabasePanel(props: BackupPanelProps): props is DatabasePanelProps {
+  return props.subject.kind === "database";
 }
 
-export function BackupPanel({
-  canCreate,
-  canRestore,
-  databaseId,
-  databaseName,
-  defaultDatabaseName,
-  destinations,
-  onRestore,
-}: Props) {
-  const queryClient = useQueryClient();
-  const configs = useQuery(queries.backupConfigs(databaseId));
+function extraMeta(row: ScheduleRow) {
+  if ("databaseName" in row) {
+    return [{ label: "Database", value: row.databaseName }];
+  }
+  return [
+    { label: "Volume", value: row.volumeName },
+    { label: "Mount path", value: row.mountPath ?? "—" },
+  ];
+}
 
-  const [editor, setEditor] = useState<BackupConfigRow | "new" | null>(null);
-  const [historyConfig, setHistoryConfig] = useState<BackupConfigRow | null>(
-    null
-  );
+function defaultVolumeNameFor(subject: BackupSubject, rows: ScheduleRow[]) {
+  if (subject.kind !== "volume") {
+    return;
+  }
+  const [first] = rows;
+  return first && "volumeName" in first ? first.volumeName : undefined;
+}
+
+export function BackupPanel(props: BackupPanelProps) {
+  const {
+    canCreate,
+    canRestore,
+    destinations,
+    onRestore,
+    resourceName,
+    subject,
+  } = props;
+  const copy = copyFor(subject.kind);
+  const queryClient = useQueryClient();
+  const configs = useQuery(queries.backupConfigsFor(subject));
+
+  const [editor, setEditor] = useState<ScheduleRow | "new" | null>(null);
+  const [historyConfig, setHistoryConfig] = useState<ScheduleRow | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   const invalidate = useCallback(() => {
-    cache
-      .backupConfigsFor(queryClient, databaseBackupSubject(databaseId))
-      .catch(() => undefined);
-  }, [databaseId, queryClient]);
+    cache.backupConfigsFor(queryClient, subject).catch(() => undefined);
+  }, [queryClient, subject.kind, backupSubjectScopeId(subject)]);
 
   if (destinations.length === 0) {
-    return (
-      <NoDestinationEmpty description="Noddle needs somewhere to push dumps before a schedule can run. Add one under" />
-    );
+    return <NoDestinationEmpty description={copy.noDestination} />;
   }
 
   const rows = configs.data ?? [];
@@ -76,18 +112,16 @@ export function BackupPanel({
       <Frame className="w-full" variant="ghost">
         <FrameHeader className="flex-row items-center justify-between gap-3">
           <div className="min-w-0">
-            <FrameTitle>Backups</FrameTitle>
-            <FrameDescription>
-              Dump this database to S3 on a schedule.
-            </FrameDescription>
+            <FrameTitle>{copy.title}</FrameTitle>
+            <FrameDescription>{copy.description}</FrameDescription>
           </div>
           {showHeaderActions ? (
             <ScheduleActions
               canRestore={canRestore}
-              createLabel="Add schedule"
+              createLabel={copy.createLabel}
               onCreate={() => setEditor("new")}
               onRestoreS3={() => setRestoreOpen(true)}
-              restoreLabel="Restore dump"
+              restoreLabel={copy.restoreLabel}
             />
           ) : null}
         </FrameHeader>
@@ -95,11 +129,20 @@ export function BackupPanel({
           rows.map((config) => (
             <BackupConfigCard
               canCreate={canCreate}
-              config={config}
+              config={{
+                destinationName: config.destinationName,
+                enabled: config.enabled,
+                extra: extraMeta(config),
+                id: config.id,
+                keepLatestCount: config.keepLatestCount,
+                prefix: config.prefix,
+                schedule: config.schedule,
+              }}
               key={config.id}
               onDeleted={invalidate}
               onEdit={() => setEditor(config)}
               onHistory={() => setHistoryConfig(config)}
+              subject={subject}
             />
           ))
         ) : (
@@ -108,13 +151,13 @@ export function BackupPanel({
               canCreate={canCreate}
               canRestore={canRestore}
               configsLoading={configs.isLoading}
-              createLabel="Add schedule"
-              emptyDescription={`Nothing dumps ${databaseName} on a cadence yet. Add a schedule, or restore from a dump already sitting in a destination.`}
-              emptyIcon={ArchiveIcon}
-              emptyTitle="No schedules yet"
+              createLabel={copy.createLabel}
+              emptyDescription={copy.emptyDescription(resourceName)}
+              emptyIcon={copy.emptyIcon}
+              emptyTitle={copy.emptyTitle}
               onCreate={() => setEditor("new")}
               onRestoreS3={() => setRestoreOpen(true)}
-              restoreLabel="Restore dump"
+              restoreLabel={copy.restoreLabel}
               rowCount={rows.length}
             />
           </FramePanel>
@@ -122,30 +165,49 @@ export function BackupPanel({
       </Frame>
 
       {editor ? (
-        <BackupConfigDialog
-          databaseId={databaseId}
-          defaultDatabaseName={defaultDatabaseName}
-          destinations={destinations}
-          editing={editor === "new" ? null : editor}
-          onOpenChange={(open) => {
-            if (!open) {
+        isDatabasePanel(props) ? (
+          <BackupConfigDialog
+            defaultDatabaseName={props.defaultDatabaseName}
+            destinations={destinations}
+            editing={editor === "new" ? null : (editor as BackupConfigRow)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditor(null);
+              }
+            }}
+            onSaved={() => {
               setEditor(null);
+              invalidate();
+            }}
+            open
+            subject={props.subject}
+          />
+        ) : (
+          <BackupConfigDialog
+            destinations={destinations}
+            editing={
+              editor === "new" ? null : (editor as VolumeBackupConfigRow)
             }
-          }}
-          onSaved={() => {
-            setEditor(null);
-            invalidate();
-          }}
-          open
-        />
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditor(null);
+              }
+            }}
+            onSaved={() => {
+              setEditor(null);
+              invalidate();
+            }}
+            open
+            subject={props.subject}
+          />
+        )
       ) : null}
 
       {historyConfig ? (
         <BackupHistoryDialog
           canCreate={canCreate}
           canRestore={canRestore}
-          config={historyConfig}
-          databaseId={databaseId}
+          configId={historyConfig.id}
           onOpenChange={(open) => {
             if (!open) {
               setHistoryConfig(null);
@@ -156,18 +218,21 @@ export function BackupPanel({
             onRestore({ backup, kind: "run" });
           }}
           open
+          subject={subject}
         />
       ) : null}
 
       {restoreOpen ? (
         <RestoreFromS3Dialog
+          defaultVolumeName={defaultVolumeNameFor(subject, rows)}
           destinations={destinations}
           onOpenChange={setRestoreOpen}
-          onPick={(destinationId, objectKey) => {
+          onPick={(target) => {
             setRestoreOpen(false);
-            onRestore({ destinationId, kind: "object", objectKey });
+            onRestore(target);
           }}
           open
+          subject={subject}
         />
       ) : null}
     </div>

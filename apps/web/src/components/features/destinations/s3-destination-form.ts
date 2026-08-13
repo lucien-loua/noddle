@@ -5,7 +5,7 @@ import {
 import { useCallback, useMemo } from "react";
 import { z } from "zod";
 import { findProvider, S3_PROVIDERS } from "@/lib/s3-providers";
-import type { DestinationRow } from "@/server/backups";
+import type { DestinationRow } from "@/server/backups/destinations";
 
 const providerFields = z.object({ providerId: z.string() });
 

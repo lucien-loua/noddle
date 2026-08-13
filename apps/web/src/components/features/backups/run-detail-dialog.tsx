@@ -16,7 +16,7 @@ import {
   byteSize,
   duration,
 } from "@/lib/format";
-import type { BackupRunRow } from "./types";
+import type { BackupRunRow } from "./run-types";
 
 export function BackupRunDetailDialog<T extends BackupRunRow>({
   backup,

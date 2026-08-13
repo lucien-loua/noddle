@@ -2,14 +2,17 @@ import { queryOptions } from "@tanstack/react-query";
 import type { BackupSubject } from "@/lib/backup-subject";
 import { getAccounts } from "@/server/accounts";
 import {
-  getBackups,
-  getDestinations,
-  getVolumeBackups,
+  type BackupConfigRow,
   listBackupConfigs,
-  listBackupObjects,
-  listServiceVolumes,
+} from "@/server/backups/configs";
+import { getDestinations } from "@/server/backups/destinations";
+import { getBackups, listBackupObjects } from "@/server/backups/runs";
+import {
   listVolumeBackupConfigs,
-} from "@/server/backups";
+  type VolumeBackupConfigRow,
+} from "@/server/backups/volume/configs";
+import { getVolumeBackups } from "@/server/backups/volume/runs";
+import { listServiceVolumes } from "@/server/backups/volume/volumes";
 import {
   getDeployments,
   getEnvironmentScope,
@@ -42,9 +45,18 @@ function volumeBackupConfigsQuery(serviceId: string) {
 }
 
 function backupConfigsForQuery(subject: BackupSubject) {
-  return subject.kind === "database"
-    ? databaseBackupConfigsQuery(subject.databaseId)
-    : volumeBackupConfigsQuery(subject.serviceId);
+  if (subject.kind === "database") {
+    return queryOptions({
+      queryFn: (): Promise<BackupConfigRow[] | VolumeBackupConfigRow[]> =>
+        listBackupConfigs({ data: { databaseId: subject.databaseId } }),
+      queryKey: ["backup-configs", subject.databaseId],
+    });
+  }
+  return queryOptions({
+    queryFn: (): Promise<BackupConfigRow[] | VolumeBackupConfigRow[]> =>
+      listVolumeBackupConfigs({ data: { serviceId: subject.serviceId } }),
+    queryKey: ["volume-backup-configs", subject.serviceId],
+  });
 }
 
 function databaseBackupRunsQuery(databaseId: string, configId: string) {

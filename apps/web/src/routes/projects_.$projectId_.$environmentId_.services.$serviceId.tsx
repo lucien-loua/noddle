@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { BuildLogsDialog } from "@/components/build-logs-dialog";
 import { DeploymentHistory } from "@/components/deployment-history";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { BackupTab } from "@/components/features/backup-shared/backup-tab";
+import { BackupTab } from "@/components/features/backups/backup-tab";
 import { ContainerLogs } from "@/components/features/database/database-logs";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ServiceBuild } from "@/components/features/services/service-build";

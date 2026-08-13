@@ -1,6 +1,7 @@
-import type { BackupRestoreTarget } from "@/components/features/backup-shared/restore-types";
+import type { BackupRestoreTarget } from "@/components/features/backups/restore-types";
 import type { BackupSubject } from "@/lib/backup-subject";
-import { triggerRestore, triggerVolumeRestore } from "@/server/backups";
+import { triggerRestore } from "@/server/backups/runs";
+import { triggerVolumeRestore } from "@/server/backups/volume/runs";
 
 export function queueBackupRestore(
   subject: BackupSubject,

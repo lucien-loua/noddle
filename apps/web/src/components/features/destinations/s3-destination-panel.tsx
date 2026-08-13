@@ -59,7 +59,7 @@ import {
   deleteDestination,
   saveDestination,
   testDestination,
-} from "@/server/backups";
+} from "@/server/backups/destinations";
 
 interface Props {
   destinations: DestinationRow[];

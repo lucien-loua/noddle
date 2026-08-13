@@ -14,39 +14,49 @@ import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { volumeBackupSubject } from "@/lib/backup-subject";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
 import { cn } from "@/lib/utils";
-import {
-  deleteVolumeBackupConfig,
-  type VolumeBackupConfigRow,
-} from "@/server/volume-backups";
+import { deleteBackupConfig } from "@/server/backups/configs";
+import { deleteVolumeBackupConfig } from "@/server/backups/volume/configs";
+import { copyFor } from "./copy";
 
-export function VolumeBackupConfigCard({
+export interface BackupScheduleCard {
+  destinationName: string;
+  enabled: boolean;
+  extra: { label: string; value: string }[];
+  id: string;
+  keepLatestCount: number | null;
+  prefix: string;
+  schedule: string;
+}
+
+export function BackupConfigCard({
   canCreate,
   config,
   onDeleted,
   onEdit,
   onHistory,
+  subject,
 }: {
   canCreate: boolean;
-  config: VolumeBackupConfigRow;
+  config: BackupScheduleCard;
   onDeleted: () => void;
   onEdit: () => void;
   onHistory: () => void;
+  subject: BackupSubject;
 }) {
+  const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
   const run = useMutation(
-    mutations.triggerBackupRun(
-      queryClient,
-      volumeBackupSubject(config.serviceId),
-      config.id
-    )
+    mutations.triggerBackupRun(queryClient, subject, config.id)
   );
   const remove = useMutation({
     mutationFn: () =>
-      deleteVolumeBackupConfig({ data: { configId: config.id } }),
+      subject.kind === "database"
+        ? deleteBackupConfig({ data: { configId: config.id } })
+        : deleteVolumeBackupConfig({ data: { configId: config.id } }),
     onError: (err) =>
       toast.add({
         description: errorMessage(err, "delete failed"),
@@ -64,6 +74,14 @@ export function VolumeBackupConfigCard({
       ? "Keep all"
       : String(config.keepLatestCount);
 
+  const meta = [
+    { label: "Destination", value: config.destinationName },
+    ...config.extra,
+    { label: "Schedule", value: config.schedule },
+    { label: "Prefix", value: config.prefix || "—" },
+    { label: "Retention", value: keepLatest },
+  ];
+
   return (
     <FramePanel>
       <div className="flex items-start justify-between gap-3">
@@ -80,18 +98,20 @@ export function VolumeBackupConfigCard({
               {config.enabled ? "Active" : "Inactive"}
             </h2>
           </div>
-          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
-            <Meta label="Destination" value={config.destinationName} />
-            <Meta label="Volume" value={config.volumeName} />
-            <Meta label="Schedule" value={config.schedule} />
-            <Meta label="Prefix" value={config.prefix || "—"} />
-            <Meta label="Retention" value={keepLatest} />
-            <Meta label="Mount path" value={config.mountPath ?? "—"} />
+          <dl
+            className={cn(
+              "mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3",
+              config.extra.length > 1 ? "lg:grid-cols-6" : "lg:grid-cols-5"
+            )}
+          >
+            {meta.map((item) => (
+              <Meta key={item.label} label={item.label} value={item.value} />
+            ))}
           </dl>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Button
-            aria-label="Backup history"
+            aria-label={copy.historyAria}
             onClick={onHistory}
             size="icon-sm"
             variant="ghost"
@@ -106,15 +126,12 @@ export function VolumeBackupConfigCard({
                 run
                   .mutateAsync()
                   .then(() => {
-                    toast.add({
-                      title: "Volume backup queued",
-                      type: "success",
-                    });
+                    toast.add({ title: copy.queuedToast, type: "success" });
                   })
                   .catch((err) => {
                     toast.add({
                       description: errorMessage(err, "backup failed"),
-                      title: "Could not queue volume backup",
+                      title: copy.queueErrorTitle,
                       type: "error",
                     });
                   });

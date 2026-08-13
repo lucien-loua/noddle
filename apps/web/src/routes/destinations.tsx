@@ -8,7 +8,10 @@ import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import { type DestinationRow, getDestinations } from "@/server/backups";
+import {
+  type DestinationRow,
+  getDestinations,
+} from "@/server/backups/destinations";
 
 export const Route = createFileRoute("/destinations")({
   beforeLoad: async () => {

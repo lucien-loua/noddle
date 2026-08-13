@@ -15,12 +15,11 @@ import {
   volumeBackupSubject,
 } from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
+import { deleteBackup, triggerBackup } from "@/server/backups/runs";
 import {
-  deleteBackup,
   deleteVolumeBackup,
-  triggerBackup,
   triggerVolumeBackup,
-} from "@/server/backups";
+} from "@/server/backups/volume/runs";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { saveEnvVars } from "@/server/env-vars";
 import { addServer } from "@/server/servers";

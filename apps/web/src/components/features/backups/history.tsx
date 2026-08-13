@@ -5,9 +5,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { BackupHistoryTable } from "@/components/features/backup-shared/history-table";
-import { BackupRunDetailDialog } from "@/components/features/backup-shared/run-detail-dialog";
-import { databaseRunLogs } from "@/components/features/backup-shared/run-logs";
+import { copyFor } from "@/components/features/backups/copy";
+import { BackupHistoryTable } from "@/components/features/backups/history-table";
+import { BackupRunDetailDialog } from "@/components/features/backups/run-detail-dialog";
+import {
+  databaseRunLogs,
+  volumeRunLogs,
+} from "@/components/features/backups/run-logs";
+import type { BackupRunRow } from "@/components/features/backups/run-types";
 import {
   FocusModal,
   FocusModalBody,
@@ -15,10 +20,9 @@ import {
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
-import { databaseBackupSubject } from "@/lib/backup-subject";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { mutations } from "@/lib/mutations";
 import { queries } from "@/lib/queries";
-import type { BackupConfigRow, BackupRow } from "@/server/backups";
 
 const POLL_MS = 3000;
 /** How many runs the history drawer lists. */
@@ -27,25 +31,25 @@ const HISTORY_LIMIT = 10;
 export function BackupHistoryDialog({
   canCreate,
   canRestore,
-  config,
-  databaseId,
+  configId,
   onOpenChange,
   onRestore,
   open,
+  subject,
 }: {
   canCreate: boolean;
   canRestore?: boolean;
-  config: BackupConfigRow;
-  databaseId: string;
+  configId: string;
   onOpenChange: (open: boolean) => void;
-  onRestore?: (backup: BackupRow) => void;
+  onRestore?: (backup: BackupRunRow) => void;
   open: boolean;
+  subject: BackupSubject;
 }) {
+  const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
-  const [viewing, setViewing] = useState<BackupRow | null>(null);
-  const subject = databaseBackupSubject(databaseId);
+  const [viewing, setViewing] = useState<BackupRunRow | null>(null);
   const backups = useQuery({
-    ...queries.backups(databaseId, config.id),
+    ...queries.backupRunsFor(subject, configId),
     refetchInterval: (query) =>
       query.state.data?.some(
         (b) => b.status === "queued" || b.status === "running"
@@ -55,7 +59,7 @@ export function BackupHistoryDialog({
   });
 
   const remove = useMutation(
-    mutations.deleteBackupRun(queryClient, subject, config.id)
+    mutations.deleteBackupRun(queryClient, subject, configId)
   );
 
   const rows = backups.isLoading
@@ -66,15 +70,15 @@ export function BackupHistoryDialog({
     <FocusModal onOpenChange={onOpenChange} open={open}>
       <FocusModalContent>
         <FocusModalHeader>
-          <FocusModalTitle>Dump history</FocusModalTitle>
+          <FocusModalTitle>{copy.historyTitle}</FocusModalTitle>
         </FocusModalHeader>
         <FocusModalBody className="flex min-h-0 flex-col">
           <BackupHistoryTable
             backups={rows}
             canCreate={canCreate}
             canRestore={canRestore}
-            emptyDescription="Run this schedule once, or wait for the next cron fire. Completed dumps show up here with size and timing."
-            emptyTitle="No dumps yet"
+            emptyDescription={copy.emptyHistoryDescription}
+            emptyTitle={copy.emptyHistoryTitle}
             onRestore={onRestore}
             onView={setViewing}
             remove={remove}
@@ -84,14 +88,14 @@ export function BackupHistoryDialog({
 
       <BackupRunDetailDialog
         backup={viewing}
-        logLines={databaseRunLogs}
+        logLines={subject.kind === "database" ? databaseRunLogs : volumeRunLogs}
         onOpenChange={(next) => {
           if (!next) {
             setViewing(null);
           }
         }}
         open={viewing !== null}
-        title="Dump run"
+        title={copy.runTitle}
       />
     </FocusModal>
   );

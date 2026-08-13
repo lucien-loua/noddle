@@ -8,6 +8,12 @@ import { readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import {
+  decryptSecret,
+  encryptSecret,
+  loadAppKey,
+  secretContext,
+} from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   account,
@@ -24,12 +30,6 @@ import {
   user,
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME } from "@noddle/deploy-contract";
-import {
-  decryptSecret,
-  encryptSecret,
-  loadAppKey,
-  secretContext,
-} from "@noddle/crypto";
 import { Queue } from "bullmq";
 import { eq, isNotNull } from "drizzle-orm";
 import IORedis from "ioredis";

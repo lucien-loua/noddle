@@ -4,7 +4,10 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { copyFor } from "@/components/features/backups/copy";
+import type { BackupRestoreTarget } from "@/components/features/backups/restore-types";
+import { ServiceVolumePicker } from "@/components/features/backups/service-volume-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +18,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   FocusModal,
   FocusModalBody,
@@ -24,6 +27,7 @@ import {
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -33,24 +37,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { BackupSubject } from "@/lib/backup-subject";
 import { byteSize, errorMessage, relativeTime } from "@/lib/format";
 import { queries } from "@/lib/queries";
-import type { BackupObjectRow, DestinationRow } from "@/server/backups";
+import type { DestinationRow } from "@/server/backups/destinations";
+import type { BackupObjectRow } from "@/server/backups/runs";
 
 function ObjectsListBody({
   destinationId,
+  emptyText,
   error,
   isError,
   isLoading,
   objects,
   onPick,
+  restoreDisabled,
 }: {
   destinationId: string;
+  emptyText: string;
   error: unknown;
   isError: boolean;
   isLoading: boolean;
   objects: BackupObjectRow[] | undefined;
   onPick: (destinationId: string, objectKey: string) => void;
+  restoreDisabled: boolean;
 }) {
   if (isLoading) {
     return (
@@ -72,11 +82,7 @@ function ObjectsListBody({
 
   const rows = objects ?? [];
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        No dump objects under this destination prefix.
-      </p>
-    );
+    return <p className="text-muted-foreground text-sm">{emptyText}</p>;
   }
 
   return (
@@ -104,6 +110,7 @@ function ObjectsListBody({
               </TableCell>
               <TableCell className="text-right">
                 <Button
+                  disabled={restoreDisabled}
                   onClick={() => onPick(destinationId, obj.key)}
                   size="sm"
                   variant="outline"
@@ -120,26 +127,43 @@ function ObjectsListBody({
 }
 
 export function RestoreFromS3Dialog({
+  defaultVolumeName,
   destinations,
   onOpenChange,
   onPick,
   open,
+  subject,
 }: {
+  defaultVolumeName?: string;
   destinations: DestinationRow[];
   onOpenChange: (open: boolean) => void;
-  onPick: (destinationId: string, objectKey: string) => void;
+  onPick: (target: Extract<BackupRestoreTarget, { kind: "object" }>) => void;
   open: boolean;
+  subject: BackupSubject;
 }) {
+  const copy = copyFor(subject.kind);
   const [firstDestination] = destinations;
   const [destinationId, setDestinationId] = useState(
     firstDestination ? firstDestination.id : ""
   );
+  const [volumeName, setVolumeName] = useState(defaultVolumeName ?? "");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (defaultVolumeName) {
+      setVolumeName(defaultVolumeName);
+    }
+  }, [open, defaultVolumeName]);
+
   const objects = useQuery({
     ...queries.backupObjects(destinationId),
     enabled: open && Boolean(destinationId),
   });
 
   const selected = destinations.find((d) => d.id === destinationId) ?? null;
+  const restoreDisabled = subject.kind === "volume" && volumeName.trim() === "";
 
   return (
     <FocusModal onOpenChange={onOpenChange} open={open}>
@@ -147,10 +171,7 @@ export function RestoreFromS3Dialog({
         <FocusModalHeader>
           <div className="min-w-0">
             <FocusModalTitle>Restore from destination</FocusModalTitle>
-            <FocusModalDescription>
-              Pick a dump already in the bucket. Noddle takes a safety dump
-              first so the restore stays reversible.
-            </FocusModalDescription>
+            <FocusModalDescription>{copy.s3Description}</FocusModalDescription>
           </div>
         </FocusModalHeader>
         <FocusModalBody className="flex min-h-0 flex-col gap-4 overflow-hidden p-4">
@@ -183,14 +204,52 @@ export function RestoreFromS3Dialog({
             </Combobox>
           </Field>
 
+          {subject.kind === "volume" ? (
+            <>
+              <ServiceVolumePicker
+                enabled={open}
+                onPick={(volume) => setVolumeName(volume.volumeName)}
+                serviceId={subject.serviceId}
+              />
+              <Field className="shrink-0">
+                <FieldLabel>Volume name</FieldLabel>
+                <Input
+                  onChange={(e) => setVolumeName(e.target.value)}
+                  placeholder="hello-data-abc123"
+                  value={volumeName}
+                />
+                <FieldDescription>
+                  The name of the Docker volume to restore into.
+                </FieldDescription>
+              </Field>
+            </>
+          ) : null}
+
           <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto">
             <ObjectsListBody
               destinationId={destinationId}
+              emptyText={copy.s3Empty}
               error={objects.error}
               isError={objects.isError}
               isLoading={objects.isLoading}
               objects={objects.data}
-              onPick={onPick}
+              onPick={(pickedDestinationId, objectKey) => {
+                if (subject.kind === "volume") {
+                  onPick({
+                    destinationId: pickedDestinationId,
+                    kind: "object",
+                    objectKey,
+                    volumeName: volumeName.trim(),
+                  });
+                  return;
+                }
+                onPick({
+                  destinationId: pickedDestinationId,
+                  kind: "object",
+                  objectKey,
+                });
+              }}
+              restoreDisabled={restoreDisabled}
             />
           </div>
         </FocusModalBody>

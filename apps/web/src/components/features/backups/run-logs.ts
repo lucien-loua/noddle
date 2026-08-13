@@ -3,7 +3,7 @@ import {
   type TerminalLogLine,
 } from "@/components/terminal-logs";
 import { byteSize } from "@/lib/format";
-import type { BackupRunRow } from "./types";
+import type { BackupRunRow } from "./run-types";
 
 function runLogLines(
   backup: BackupRunRow,

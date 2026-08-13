@@ -1,3 +1,4 @@
+import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import {
   databases,
   environments,
@@ -6,11 +7,6 @@ import {
   services,
   stacks,
 } from "@noddle/db/schema";
-import {
-  decryptSecret,
-  encryptSecret,
-  secretContext,
-} from "@noddle/crypto";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import {
   createEnvironmentSchema,

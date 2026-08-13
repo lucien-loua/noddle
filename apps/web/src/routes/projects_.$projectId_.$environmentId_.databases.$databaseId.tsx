@@ -1,7 +1,4 @@
-import {
-  DATABASE_ENGINE_LABEL,
-  DATABASE_PORT,
-} from "@noddle/database-spec";
+import { DATABASE_ENGINE_LABEL, DATABASE_PORT } from "@noddle/database-spec";
 import {
   ArrowClockwiseIcon,
   CaretDownIcon,
@@ -16,7 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { BackupTab } from "@/components/features/backup-shared/backup-tab";
+import { BackupTab } from "@/components/features/backups/backup-tab";
 import { DatabaseAdvanced } from "@/components/features/database/database-advanced";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";

@@ -7,17 +7,9 @@ const DELETE_BACKUP_RUN = /deleteBackupRun[\s\S]*?cache\.backupRunsFor/;
 const TRIGGER_BACKUP_RUN = /triggerBackupRun[\s\S]*?cache\.backupRunsFor/;
 const ROOT = join(import.meta.dirname, "components/features");
 
-const PANELS = ["backups/panel.tsx", "volume-backups/panel.tsx"] as const;
-
-const HISTORY = [
-  "backups/backup-history.tsx",
-  "volume-backups/history.tsx",
-] as const;
-
-const CONFIG_CARDS = [
-  "backups/backup-config-card.tsx",
-  "volume-backups/config-card.tsx",
-] as const;
+const PANEL = "backups/panel.tsx";
+const HISTORY = "backups/history.tsx";
+const CONFIG_CARD = "backups/config-card.tsx";
 
 const LEGACY_CACHE = [
   "cache.backupConfigs(",
@@ -62,54 +54,41 @@ await runVerify("backup cache seam (C8)", () => {
       cache.includes("cache.backupRunsFor(qc, databaseBackupSubject")
   );
 
-  for (const file of PANELS) {
-    const src = readFeature(file);
-    check(
-      `${file} invalidates via backupConfigsFor`,
-      src.includes("backupConfigsFor(")
-    );
-    check(
-      `${file} uses a backup subject helper`,
-      src.includes("databaseBackupSubject(") ||
-        src.includes("volumeBackupSubject(")
-    );
-    const legacy = lacksLegacy(src, LEGACY_CACHE);
-    check(
-      `${file} avoids legacy cache helpers`,
-      legacy.length === 0,
-      legacy.join(", ")
-    );
-  }
+  const panel = readFeature(PANEL);
+  check(
+    `${PANEL} invalidates via backupConfigsFor`,
+    panel.includes("backupConfigsFor(")
+  );
+  check(
+    `${PANEL} queries via backupConfigsFor(subject)`,
+    panel.includes("queries.backupConfigsFor(subject)")
+  );
+  const panelLegacy = lacksLegacy(panel, LEGACY_CACHE);
+  check(
+    `${PANEL} avoids legacy cache helpers`,
+    panelLegacy.length === 0,
+    panelLegacy.join(", ")
+  );
 
-  for (const file of HISTORY) {
-    const src = readFeature(file);
-    check(`${file} uses deleteBackupRun`, src.includes("deleteBackupRun("));
-    check(
-      `${file} uses a backup subject helper`,
-      src.includes("databaseBackupSubject(") ||
-        src.includes("volumeBackupSubject(")
-    );
-    const legacy = lacksLegacy(src, LEGACY_MUTATIONS);
-    check(
-      `${file} avoids legacy mutations`,
-      legacy.length === 0,
-      legacy.join(", ")
-    );
-  }
+  const history = readFeature(HISTORY);
+  check(`${HISTORY} uses deleteBackupRun`, history.includes("deleteBackupRun("));
+  check(
+    `${HISTORY} queries via backupRunsFor(subject)`,
+    history.includes("queries.backupRunsFor(subject")
+  );
+  const historyLegacy = lacksLegacy(history, LEGACY_MUTATIONS);
+  check(
+    `${HISTORY} avoids legacy mutations`,
+    historyLegacy.length === 0,
+    historyLegacy.join(", ")
+  );
 
-  for (const file of CONFIG_CARDS) {
-    const src = readFeature(file);
-    check(`${file} uses triggerBackupRun`, src.includes("triggerBackupRun("));
-    check(
-      `${file} uses a backup subject helper`,
-      src.includes("databaseBackupSubject(") ||
-        src.includes("volumeBackupSubject(")
-    );
-    const legacy = lacksLegacy(src, [...LEGACY_CACHE, ...LEGACY_MUTATIONS]);
-    check(
-      `${file} avoids legacy trigger/cache`,
-      legacy.length === 0,
-      legacy.join(", ")
-    );
-  }
+  const card = readFeature(CONFIG_CARD);
+  check(`${CONFIG_CARD} uses triggerBackupRun`, card.includes("triggerBackupRun("));
+  const cardLegacy = lacksLegacy(card, [...LEGACY_CACHE, ...LEGACY_MUTATIONS]);
+  check(
+    `${CONFIG_CARD} avoids legacy trigger/cache`,
+    cardLegacy.length === 0,
+    cardLegacy.join(", ")
+  );
 });

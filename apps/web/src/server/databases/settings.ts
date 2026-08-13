@@ -1,5 +1,5 @@
-import { databases } from "@noddle/db/schema";
 import { DEFAULT_DATABASE_VOLUME_PATH } from "@noddle/database-spec";
+import { databases } from "@noddle/db/schema";
 import {
   addDatabaseMountSchema,
   changeDatabasePasswordSchema,

@@ -16,7 +16,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
-import type { ServiceVolumeRow } from "@/server/volume-backups";
+import type { ServiceVolumeRow } from "@/server/backups/volume/volumes";
 
 type ServiceVolumePickerProps = {
   enabled: boolean;
