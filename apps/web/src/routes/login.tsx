@@ -3,31 +3,23 @@
 // One screen for both: on a fresh install there is no one to sign in, and on
 // an already-running install there is no one left to create. Two separate
 // pages would always be showing the wrong one.
-import { EyeIcon, EyeSlashIcon, GithubLogoIcon } from "@phosphor-icons/react";
+import {
+  adminSetupSchema,
+  MIN_PASSWORD_LENGTH,
+  signInFormSchema,
+} from "@noddle/shared/validation/account";
+import { GithubLogoIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { type SubmitEvent, useCallback, useState } from "react";
+import { useAppForm } from "@/components/fields/lib/form";
 import { NoddleMark } from "@/components/noddle-mark";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import { getAuthState } from "@/server/auth";
 
-const MIN_PASSWORD = 8;
-const MAX_PASSWORD = 128;
 const SOURCE_URL = "https://github.com/lucien-loua/noddle";
 
 export const Route = createFileRoute("/login")({
@@ -42,6 +34,12 @@ export const Route = createFileRoute("/login")({
   loader: ({ context }) => ({ needsSetup: context.needsSetup }),
 });
 
+// Named and hoisted: an inline selector in `form.Subscribe` gets recreated
+// on every render and forces a resubscribe.
+function selectSubmitting(state: { isSubmitting: boolean }) {
+  return state.isSubmitting;
+}
+
 function Brand({ className }: { className?: string }) {
   return (
     <div className={className}>
@@ -55,42 +53,43 @@ function LoginPage() {
   const { needsSetup } = Route.useLoaderData();
   const router = useRouter();
 
-  const [revealed, setRevealed] = useState(false);
+  // Rejections coming back from better-auth — wrong password, address already
+  // taken. The per-field messages are Zod's and live on the fields.
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const toggleReveal = useCallback(() => setRevealed((shown) => !shown), []);
-
-  const submit = useCallback(
-    async (event: SubmitEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      const email = String(form.get("email") ?? "");
-      const password = String(form.get("password") ?? "");
-
-      setBusy(true);
+  const form = useAppForm({
+    defaultValues: { confirmPassword: "", email: "", name: "", password: "" },
+    onSubmit: async ({ value }) => {
       setError(null);
 
       const { error: authError } = needsSetup
         ? await authClient.signUp.email({
-            email,
-            // better-auth requires a name on sign-up. Asking for it separately
-            // would add a field to a screen that doesn't need one.
-            name: email.split("@")[0] ?? "admin",
-            password,
+            email: value.email,
+            name: value.name,
+            password: value.password,
           })
-        : await authClient.signIn.email({ email, password });
+        : await authClient.signIn.email({
+            email: value.email,
+            password: value.password,
+          });
 
       if (authError) {
         setError(authError.message ?? "Authentication failed.");
-        setBusy(false);
         return;
       }
 
       await router.invalidate();
       await router.navigate({ to: "/" });
     },
-    [needsSetup, router]
+    validators: { onDynamic: needsSetup ? adminSetupSchema : signInFormSchema },
+  });
+
+  const submit = useCallback(
+    (event: SubmitEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      form.handleSubmit();
+    },
+    [form]
   );
 
   return (
@@ -130,49 +129,64 @@ function LoginPage() {
             ) : null}
           </div>
 
-          <form onSubmit={submit}>
+          {/* `noValidate` keeps `type="email"` for the mobile keyboard and for
+              password managers, without letting the browser judge the field
+              first: its bubble would preempt Zod and say something else. */}
+          <form noValidate onSubmit={submit}>
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email">Email address</FieldLabel>
-                <Input
-                  autoComplete="username"
-                  id="email"
-                  name="email"
-                  required
-                  type="email"
-                />
-              </Field>
+              {needsSetup ? (
+                <form.AppField name="name">
+                  {(f) => (
+                    <f.FieldText
+                      autoComplete="name"
+                      label="Full name"
+                      placeholder="Jane Doe"
+                      required
+                    />
+                  )}
+                </form.AppField>
+              ) : null}
 
-              <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <InputGroup>
-                  <InputGroupInput
+              <form.AppField name="email">
+                {(f) => (
+                  <f.FieldText
+                    autoComplete="username"
+                    label="Email address"
+                    placeholder="jane@example.com"
+                    required
+                    type="email"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="password">
+                {(f) => (
+                  <f.FieldPassword
                     autoComplete={
                       needsSetup ? "new-password" : "current-password"
                     }
-                    id="password"
-                    maxLength={MAX_PASSWORD}
-                    minLength={MIN_PASSWORD}
-                    name="password"
+                    description={
+                      needsSetup
+                        ? `At least ${MIN_PASSWORD_LENGTH} characters.`
+                        : undefined
+                    }
+                    label="Password"
                     required
-                    type={revealed ? "text" : "password"}
                   />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      aria-label={revealed ? "Hide password" : "Show password"}
-                      onClick={toggleReveal}
-                      size="icon-xs"
-                    >
-                      {revealed ? <EyeSlashIcon /> : <EyeIcon />}
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                </InputGroup>
-                {needsSetup ? (
-                  <FieldDescription>
-                    At least {MIN_PASSWORD} characters.
-                  </FieldDescription>
-                ) : null}
-              </Field>
+                )}
+              </form.AppField>
+
+              {needsSetup ? (
+                <form.AppField name="confirmPassword">
+                  {(f) => (
+                    <f.FieldPassword
+                      autoComplete="new-password"
+                      label="Confirm password"
+                      required
+                    />
+                  )}
+                </form.AppField>
+              ) : null}
 
               {error ? (
                 <Alert variant="destructive">
@@ -180,10 +194,18 @@ function LoginPage() {
                 </Alert>
               ) : null}
 
-              <Button className="w-full" disabled={busy} type="submit">
-                {busy ? <Spinner data-icon="inline-start" /> : null}
-                {needsSetup ? "Create account" : "Sign in"}
-              </Button>
+              <form.Subscribe selector={selectSubmitting}>
+                {(submitting) => (
+                  <Button
+                    className="w-full"
+                    disabled={submitting}
+                    type="submit"
+                  >
+                    {submitting ? <Spinner data-icon="inline-start" /> : null}
+                    {needsSetup ? "Create account" : "Sign in"}
+                  </Button>
+                )}
+              </form.Subscribe>
             </FieldGroup>
           </form>
         </div>

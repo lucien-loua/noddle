@@ -6,6 +6,7 @@ import {
   generateTestDomain,
   slugServerHost,
 } from "#generate-domain";
+import { adminSetupSchema, signInSchema } from "#validation/account";
 import {
   backupCronSchema,
   bucketNameSchema,
@@ -25,6 +26,59 @@ import { envVarKeySchema } from "#validation/env-var";
 import { gitBranchSchema, serviceNameSchema } from "#validation/service";
 
 const GENERATED_TEST_DOMAIN_PATTERN = /^api-[a-f0-9]{6}-10-0-0-1\.sslip\.io$/;
+
+function verifyAccountSchemas(): void {
+  const admin = {
+    confirmPassword: "correct horse",
+    email: "admin@example.com",
+    name: "Jane Doe",
+    password: "correct horse",
+  };
+
+  if (adminSetupSchema.safeParse(admin).success) {
+    ok("adminSetupSchema accepts a complete admin");
+  } else {
+    ko("adminSetupSchema rejects a valid admin");
+  }
+
+  // The mismatch must be reported ON the confirmation field. Attached
+  // anywhere else, the form refuses to submit while showing nothing — the
+  // owner is locked out of a screen that never says why.
+  const mismatch = adminSetupSchema.safeParse({
+    ...admin,
+    confirmPassword: "correct hoarse",
+  });
+  if (
+    !mismatch.success &&
+    mismatch.error.issues.some((issue) => issue.path[0] === "confirmPassword")
+  ) {
+    ok("adminSetupSchema reports a mismatch on confirmPassword");
+  } else {
+    ko("adminSetupSchema: mismatch not reported on confirmPassword");
+  }
+
+  if (
+    adminSetupSchema.safeParse({
+      ...admin,
+      confirmPassword: "short",
+      password: "short",
+    }).success
+  ) {
+    ko("adminSetupSchema accepts a password below the minimum");
+  } else {
+    ok("adminSetupSchema enforces the minimum length");
+  }
+
+  // Sign-in deliberately does NOT re-apply that policy.
+  if (
+    signInSchema.safeParse({ email: "admin@example.com", password: "short" })
+      .success
+  ) {
+    ok("signInSchema accepts any non-empty password");
+  } else {
+    ko("signInSchema applies a length rule it should not");
+  }
+}
 
 function verifyNameSchemas(): void {
   const cases: [string, boolean][] = [
@@ -285,6 +339,7 @@ function verifyGenerateDomain(): void {
 }
 
 await runVerify("shared validation", async () => {
+  await suite("account schemas", verifyAccountSchemas);
   await suite("name schemas", verifyNameSchemas);
   await suite("database schemas", verifyDatabaseSchemas);
   await suite("s3 bucket and cron", verifyS3BucketAndCron);

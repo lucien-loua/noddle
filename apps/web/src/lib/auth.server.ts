@@ -1,7 +1,10 @@
-// biome-ignore lint/performance/noNamespaceImport: drizzleAdapter wants the schema object
-
 import { deriveSubkey } from "@noddle/crypto";
+// biome-ignore lint/performance/noNamespaceImport: drizzleAdapter wants the schema object
 import * as schema from "@noddle/db/schema";
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+} from "@noddle/shared/validation/account";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -63,9 +66,6 @@ export const auth = betterAuth({
                 "Sign-up is reserved for the first account. Ask an admin to create one for you.",
             });
           }
-          // The first account is `owner`, and that's what makes an
-          // installation usable: without it, nobody could create the
-          // second one.
           return { data: { ...user, role: "owner" } };
         },
       },
@@ -74,6 +74,12 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    // Set from the same constants the sign-up form validates against. Left
+    // to their defaults, the two would drift the day the form's rule moves,
+    // and the mismatch only shows up as an API error on a password the
+    // screen already accepted.
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
+    minPasswordLength: MIN_PASSWORD_LENGTH,
     // No SMTP server to configure just to log into your own machine.
     requireEmailVerification: false,
   },
@@ -81,21 +87,11 @@ export const auth = betterAuth({
   plugins: [
     adminPlugin({
       ac,
-      // `owner` MUST be listed here: the plugin guards its own endpoints
-      // (create-user, set-role, remove-user) behind this list, which
-      // defaults to ["admin"], and our installation role is called `owner`.
       adminRoles: ["owner", "admin"],
-      // `viewer` by default: a freshly created account must not be able to
-      // break anything before it's been given its role. The reverse —
-      // administrator by default, later demoted — leaves a window during
-      // which forgetting is costly.
       defaultRole: "viewer",
       roles,
     }),
   ],
-
-  // Derived from APP_KEY rather than added alongside it: a single secret
-  // root to generate and save in the installer.
   secret: deriveSubkey(env.appKey, "noddle-better-auth").toString("base64"),
 });
 
