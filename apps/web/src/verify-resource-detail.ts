@@ -87,6 +87,20 @@ await runVerify("resource detail module (C6)", () => {
         "utf8"
       ).includes("export function DatabaseHeaderActions")
   );
+  check(
+    "database actions compose flat toolbar (no dropdown menu)",
+    (() => {
+      const src = readFileSync(
+        join(FEATURES, "database/database-header-actions.tsx"),
+        "utf8"
+      );
+      return (
+        src.includes("DatabaseActionsToolbar") &&
+        src.includes("ConfirmActionDialog") &&
+        !src.includes("DropdownMenu")
+      );
+    })()
+  );
 
   const deploySettings = readFileSync(
     join(FEATURES, "services/service-deploy-settings.tsx"),

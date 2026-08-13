@@ -1,47 +1,51 @@
 import {
   ArrowClockwiseIcon,
-  CaretDownIcon,
   PlayIcon,
   StopIcon,
   TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
+import { type ReactNode, useCallback, useState } from "react";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import {
   type LifecycleAction,
   useLifecycleActions,
 } from "@/components/use-lifecycle-actions";
-import { serviceLabel } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import type { DatabaseRow } from "@/server/databases";
 
-const PENDING_LABEL: Record<LifecycleAction, string> = {
-  restart: "Restarting",
-  start: "Starting",
-  stop: "Stopping",
+type ConfirmKind = "restart" | "start" | "stop";
+
+const CONFIRM_COPY: Record<
+  ConfirmKind,
+  { description: string; title: string }
+> = {
+  restart: {
+    description:
+      "Are you sure you want to restart this database? The container is stopped and started again without changing its data.",
+    title: "Restart",
+  },
+  start: {
+    description: "Are you sure you want to start this database?",
+    title: "Start",
+  },
+  stop: {
+    description:
+      "Are you sure you want to stop this database? Connected applications will lose access until it is started again.",
+    title: "Stop",
+  },
 };
 
+function DatabaseActionsToolbar({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
+}
+
 /**
- * A database's action bar — the SAME as a service's.
- *
- * It used to be a status `Badge` followed by three loose buttons (Stop,
- * Restart, Delete), while a service's page carries a `ButtonGroup`: the
- * status glued to a single trigger, and the actions in its menu. Two
- * screens doing the same thing shouldn't present it in two different ways.
- *
- * The branch with no lifecycle (a database never provisioned, or being torn
- * down) keeps the Delete button in plain sight rather than a one-entry menu.
+ * Database action bar — same shape as `ServiceDeploySettings`: flat buttons
+ * composed into a toolbar, not a status chip glued to a dropdown.
  */
 export function DatabaseHeaderActions({
   database,
@@ -60,6 +64,8 @@ export function DatabaseHeaderActions({
   onTerminal: (() => void) | null;
   pendingAction: LifecycleAction | null;
 }) {
+  const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
+
   const lifecycle = useLifecycleActions({
     onDone,
     onError,
@@ -75,101 +81,94 @@ export function DatabaseHeaderActions({
     role: known,
   });
 
-  const status = serviceLabel(database.status);
   const pending = pendingAction !== null || database.status === "deploying";
-  const headerLabel = pendingAction
-    ? PENDING_LABEL[pendingAction]
-    : status.label;
   const actionsBusy = lifecycle.busy || pending;
+  const showLifecycle = lifecycle.available;
 
-  if (!(lifecycle.available || del.canDelete || onTerminal)) {
-    return <Badge variant="outline">{headerLabel}</Badge>;
-  }
+  const closeConfirm = useCallback((open: boolean) => {
+    if (!open) {
+      setConfirm(null);
+    }
+  }, []);
 
-  if (!lifecycle.available) {
-    return (
-      <>
-        <ButtonGroup>
-          <ButtonGroupText>
-            {pending ? <Spinner /> : null}
-            {headerLabel}
-          </ButtonGroupText>
-          {onTerminal ? (
-            <Button onClick={onTerminal} variant="outline">
-              <TerminalIcon weight="bold" />
-              Terminal
-            </Button>
-          ) : null}
-          <Button onClick={del.handleOpen} variant="outline">
-            Delete
-          </Button>
-        </ButtonGroup>
-        {del.dialog}
-      </>
-    );
+  const requestRestart = useCallback(() => setConfirm("restart"), []);
+  const requestStartStop = useCallback(
+    () => setConfirm(lifecycle.stopped ? "start" : "stop"),
+    [lifecycle.stopped]
+  );
+
+  const handleConfirmed = useCallback(() => {
+    const kind = confirm;
+    setConfirm(null);
+    if (kind === "restart") {
+      lifecycle.handleRestart();
+      return;
+    }
+    lifecycle.handleStopStart();
+  }, [confirm, lifecycle]);
+
+  const copy = confirm ? CONFIRM_COPY[confirm] : null;
+
+  if (!(showLifecycle || del.canDelete || onTerminal)) {
+    return null;
   }
 
   return (
     <>
-      <ButtonGroup>
-        <ButtonGroupText>
-          {pending ? <Spinner /> : null}
-          {headerLabel}
-        </ButtonGroupText>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                aria-label={`Actions for ${database.name}`}
-                size="icon"
-                variant="outline"
-              >
-                <CaretDownIcon weight="bold" />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            {onTerminal ? (
-              <DropdownMenuItem onClick={onTerminal}>
-                <TerminalIcon weight="bold" />
-                Terminal
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuItem
-              disabled={actionsBusy}
-              onClick={lifecycle.handleStopStart}
-            >
-              {lifecycle.stopped ? (
-                <PlayIcon weight="fill" />
-              ) : (
-                <StopIcon weight="fill" />
-              )}
-              {lifecycle.stopped ? "Start" : "Stop"}
-            </DropdownMenuItem>
-            {lifecycle.showRestart ? (
-              <DropdownMenuItem
-                disabled={actionsBusy}
-                onClick={lifecycle.handleRestart}
-              >
-                <ArrowClockwiseIcon weight="fill" />
-                Restart
-              </DropdownMenuItem>
-            ) : null}
-            {del.canDelete ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={del.handleOpen}
-                  variant="destructive"
-                >
-                  <TrashIcon />
-                  Delete
-                </DropdownMenuItem>
-              </>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ButtonGroup>
+      <DatabaseActionsToolbar>
+        {showLifecycle && lifecycle.showRestart ? (
+          <Button
+            disabled={actionsBusy}
+            onClick={requestRestart}
+            variant="outline"
+          >
+            <ArrowClockwiseIcon data-icon="inline-start" weight="fill" />
+            Restart
+          </Button>
+        ) : null}
+
+        {showLifecycle ? (
+          <Button
+            disabled={actionsBusy}
+            onClick={requestStartStop}
+            variant={lifecycle.stopped ? "outline" : "destructive"}
+          >
+            {lifecycle.stopped ? (
+              <PlayIcon data-icon="inline-start" weight="fill" />
+            ) : (
+              <StopIcon data-icon="inline-start" weight="fill" />
+            )}
+            {lifecycle.stopped ? "Start" : "Stop"}
+          </Button>
+        ) : null}
+
+        {onTerminal ? (
+          <Button onClick={onTerminal} variant="outline">
+            <TerminalIcon data-icon="inline-start" weight="bold" />
+            Open Terminal
+          </Button>
+        ) : null}
+
+        {del.canDelete ? (
+          <Button onClick={del.handleOpen} variant="outline">
+            <TrashIcon data-icon="inline-start" />
+            Delete
+          </Button>
+        ) : null}
+
+        {pending ? <Spinner className="text-muted-foreground" /> : null}
+      </DatabaseActionsToolbar>
+
+      {copy ? (
+        <ConfirmActionDialog
+          description={copy.description}
+          onConfirm={handleConfirmed}
+          onOpenChange={closeConfirm}
+          open
+          pending={lifecycle.busy}
+          title={copy.title}
+        />
+      ) : null}
 
       {del.canDelete ? del.dialog : null}
     </>

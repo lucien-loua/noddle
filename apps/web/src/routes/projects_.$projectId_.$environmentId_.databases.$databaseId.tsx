@@ -1,4 +1,4 @@
-import { DATABASE_ENGINE_LABEL, DATABASE_PORT } from "@noddle/database-spec";
+import { DATABASE_PORT } from "@noddle/database-spec";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { lazy, useCallback, useEffect, useState } from "react";
@@ -7,7 +7,7 @@ import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
 import { DatabaseHeaderActions } from "@/components/features/database/database-header-actions";
-import { DatabaseMark } from "@/components/features/database/database-mark";
+import { DatabaseStatusLine } from "@/components/features/database/database-status-line";
 import { EnvVarPanel } from "@/components/features/env-vars/panel";
 import { ResourceDetailFrame } from "@/components/resource-detail/resource-detail-frame";
 import { TabRail } from "@/components/tab-rail";
@@ -208,11 +208,10 @@ function DatabaseDetail() {
       <ResourceDetailFrame
         deleteError={deleteError}
         subtitle={
-          <span className="flex items-center gap-2 truncate">
-            <DatabaseMark engine={database.engine} />
-            {DATABASE_ENGINE_LABEL[database.engine] ?? database.engine} ·{" "}
-            {database.serverName}
-          </span>
+          <DatabaseStatusLine
+            database={database}
+            pendingAction={awaiting?.action ?? null}
+          />
         }
         teardownError={database.lastError}
       >
