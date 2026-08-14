@@ -85,11 +85,6 @@ export function decryptSecret(
   key: Buffer,
   ctx: SecretContext
 ): string {
-  // IN ENGLISH, like the catch message further below and for the same
-  // reason: these four throws all end up in `last_error` (or its
-  // equivalent), displayed as-is on the dashboard. Three of them had been
-  // left in French — found by looking at /containers with a deliberately
-  // corrupted key, not by re-reading the code.
   const parts = payload.split(".");
   if (parts.length !== 4) {
     throw new CryptoError("malformed ciphertext");
@@ -120,16 +115,6 @@ export function decryptSecret(
       decipher.final(),
     ]).toString("utf8");
   } catch {
-    // Message deliberately identical regardless of the cause: wrong key,
-    // wrong context or corrupted ciphertext. Distinguishing the cases would
-    // tell an attacker what to fix — and attaching the original error via
-    // `cause` would surface it in logs, which we want to avoid.
-    //
-    // IN ENGLISH, like all visible text: this message resurfaces all the
-    // way to the browser via `services.last_error` (and its stack/database
-    // equivalents), displayed as-is on the dashboard. The rule already
-    // existed; this path ignored it because `last_error` didn't exist yet
-    // when the worker switched to English in Phase 4.
     // biome-ignore lint/style/useErrorCause: the cause is deliberately hidden
     throw new CryptoError("cannot decrypt: invalid key, context or data");
   }
