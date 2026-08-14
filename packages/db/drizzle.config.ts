@@ -4,7 +4,9 @@ import { defineConfig } from "drizzle-kit";
 // the migration journal. The URL is only used by `migrate` and `studio`.
 export default defineConfig({
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/noddle",
+    url:
+      process.env.DATABASE_URL ??
+      "postgres://postgres:noddle@localhost:55432/noddle",
   },
   dialect: "postgresql",
   out: "./src/migrations",

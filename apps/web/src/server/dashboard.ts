@@ -1,6 +1,7 @@
 import {
   deployments,
   environments,
+  projects,
   serviceDomains,
   services,
   stackDeployments,
@@ -837,22 +838,22 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
     });
 
     const since = new Date(Date.now() - SEVEN_DAYS_MS);
-    const deployRows = await db
-      .select({ value: count() })
-      .from(deployments)
-      .where(gte(deployments.createdAt, since));
+    const [deployRows, projectRows, environmentRows] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(deployments)
+        .where(gte(deployments.createdAt, since)),
+      db.select({ value: count() }).from(projects),
+      db.select({ value: count() }).from(environments),
+    ]);
     const deploys7d = deployRows[0]?.value ?? 0;
+    const projectCount = projectRows[0]?.value ?? 0;
+    const environmentCount = environmentRows[0]?.value ?? 0;
 
-    // Counted on the groups ALREADY loaded rather than with five more
-    // `count(*)`: the read is already done, re-iterating it costs nothing
-    // at this scale and keeps the numbers consistent with what the screen
-    // displays.
-    let environmentCount = 0;
     let serviceCount = 0;
     let stackCount = 0;
     let databaseCount = 0;
     for (const group of groups) {
-      environmentCount += group.scopes.length;
       for (const scope of group.scopes) {
         serviceCount += scope.services.length;
         stackCount += scope.stacks.length;
@@ -879,7 +880,7 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
         databases: databaseCount,
         deploys7d: deploys7d ?? 0,
         environments: environmentCount,
-        projects: groups.length,
+        projects: projectCount,
         services: serviceCount,
         stacks: stackCount,
       },

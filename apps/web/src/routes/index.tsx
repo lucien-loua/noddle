@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { badgeVariant, deploymentLabel, serviceLabel } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
 import { getOverview, type Overview } from "@/server/dashboard";
 
@@ -56,13 +57,15 @@ export const Route = createFileRoute("/")({
 function OverviewPage() {
   const { email, overview, role } = Route.useLoaderData();
   const { activity, attention, statusCounts } = overview;
+  // No services / stacks / databases yet. The dashboard still renders: a
+  // full-page empty would hide the layout the user is about to live in.
   const nothingAtAll = Object.keys(statusCounts).length === 0;
 
   return (
     <AppShell
       actions={
-        <Button nativeButton={false} render={<Link to="/deployments" />}>
-          View all
+        <Button nativeButton={false} render={<Link to="/projects" />}>
+          Go to projects
           <ArrowRightIcon data-icon="inline-end" />
         </Button>
       }
@@ -70,25 +73,18 @@ function OverviewPage() {
       role={role}
       title="Overview"
     >
-      {nothingAtAll ? (
-        <Empty className="h-full">
-          <EmptyTitle>Nothing deployed yet</EmptyTitle>
-          <EmptyDescription>
-            Connect a repository, a Compose stack or a database to get started.
-          </EmptyDescription>
-          <EmptyContent>
-            <Button nativeButton={false} render={<Link to="/deployments" />}>
-              Get started
-            </Button>
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <div className="flex min-w-0 flex-col gap-6">
-          <StatCards counts={overview.counts} statusCounts={statusCounts} />
-          <AttentionPanel rows={attention} />
-          <ActivityPanel rows={activity} />
-        </div>
-      )}
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-6",
+          // `h-full`: AppShell's scroller is not a flex column, so `flex-1`
+          // here would not stretch. Same as the environment grid empty.
+          activity.length === 0 && "h-full"
+        )}
+      >
+        <StatCards counts={overview.counts} statusCounts={statusCounts} />
+        <AttentionPanel idle={nothingAtAll} rows={attention} />
+        <ActivityPanel rows={activity} />
+      </div>
     </AppShell>
   );
 }
@@ -109,6 +105,8 @@ function StatCards({
   counts: Overview["counts"];
   statusCounts: Record<string, number>;
 }) {
+  const hasStatus = Object.values(statusCounts).some((n) => n > 0);
+
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
@@ -131,7 +129,11 @@ function StatCards({
           Status
         </p>
         <div className="mt-2">
-          <StatusSummary counts={statusCounts} />
+          {hasStatus ? (
+            <StatusSummary counts={statusCounts} />
+          ) : (
+            <p className="text-muted-foreground text-sm">no services yet</p>
+          )}
         </div>
       </div>
     </div>
@@ -163,9 +165,16 @@ function StatCard({
  *
  * When the list is empty, we SAY so instead of hiding the section: "nothing
  * to report" is information, and a section that disappears leaves doubt
- * about what it would have shown.
+ * about what it would have shown. An install with no services is not
+ * healthy — it is idle — so that case does not borrow the green check.
  */
-function AttentionPanel({ rows }: { rows: Overview["attention"] }) {
+function AttentionPanel({
+  idle,
+  rows,
+}: {
+  idle: boolean;
+  rows: Overview["attention"];
+}) {
   return (
     <section className="min-w-0">
       <h2 className="mb-2 px-1 font-semibold text-foreground text-sm">
@@ -174,8 +183,14 @@ function AttentionPanel({ rows }: { rows: Overview["attention"] }) {
 
       {rows.length === 0 ? (
         <div className="flex items-center gap-2 rounded-2xl border bg-card px-3 py-3 text-muted-foreground text-sm">
-          <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
-          Everything is running.
+          {idle ? (
+            "Nothing to report."
+          ) : (
+            <>
+              <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
+              Everything is running.
+            </>
+          )}
         </div>
       ) : (
         // `render`: `Item` then applies hover and focus to the anchor
@@ -219,14 +234,38 @@ function AttentionPanel({ rows }: { rows: Overview["attention"] }) {
 
 /** The last ten deployments, across all services. */
 function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
+  const empty = rows.length === 0;
+
   return (
-    <Frame className="min-w-0" variant="ghost">
-      <FrameHeader>
+    <Frame
+      className={empty ? "min-h-0 min-w-0 flex-1" : "min-w-0"}
+      variant="ghost"
+    >
+      <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Recent deployments</FrameTitle>
+        <Button
+          nativeButton={false}
+          render={<Link to="/deployments" />}
+          variant="ghost"
+        >
+          View all
+          <ArrowRightIcon data-icon="inline-end" />
+        </Button>
       </FrameHeader>
-      <FramePanel className={rows.length === 0 ? undefined : "p-0"}>
-        {rows.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No deployments yet.</p>
+      <FramePanel className={empty ? "flex min-h-0 flex-1 flex-col" : "p-0"}>
+        {empty ? (
+          <Empty className="min-h-48 flex-1 border-0">
+            <EmptyTitle>Nothing deployed yet</EmptyTitle>
+            <EmptyDescription>
+              Connect a repository, a Compose stack or a database to get
+              started.
+            </EmptyDescription>
+            <EmptyContent>
+              <Button nativeButton={false} render={<Link to="/projects" />}>
+                Get started
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
           <Table>
             <TableHeader>
