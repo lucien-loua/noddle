@@ -61,6 +61,16 @@ export const domainSchema = z
     "invalid domain name"
   );
 
+export const gitSourceTypeSchema = z.enum(["git", "github", "gitlab"]);
+
+export const serviceSourceTypeSchema = z.enum([
+  "git",
+  "github",
+  "gitlab",
+  "docker_image",
+  "compose",
+]);
+
 export const serviceInputSchema = z.object({
   buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).default("nixpacks"),
   domain: domainSchema.optional(),
@@ -68,13 +78,13 @@ export const serviceInputSchema = z.object({
   gitRepoUrl: gitRepoUrlSchema.optional(),
   name: serviceNameSchema,
   port: z.number().int().min(1).max(65_535).default(3000),
-  sourceType: z.enum(["git", "docker_image", "compose"]),
+  sourceType: serviceSourceTypeSchema,
 });
 
 /**
- * Create an application — name and server only. Git, build and domain
- * are configured on the service page, then Deploy. `sourceType` stays
- * `git`: the worker's only ship path today.
+ * Create an application — name and server only. Source, build and domain
+ * are configured on the service page, then Deploy. Default source is
+ * `git`; the Provider tabs switch it after creation.
  */
 export const connectRepoSchema = z.object({
   environmentName: environmentNameSchema,
@@ -86,10 +96,29 @@ export const connectRepoSchema = z.object({
 /** Empty string from a form field means "clear", not "invalid". */
 const optionalGitRepoUrl = z.union([z.literal(""), gitRepoUrlSchema]);
 
-export const serviceProviderSchema = z.object({
+/**
+ * Same rules as a database image ref: reject what would break the command
+ * line, not a catalogue of registries. Duplicated rather than imported
+ * from the database schema — that file already imports this one.
+ */
+export const dockerImageSchema = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[\w][\w.\-/:@]*$/, "not a valid image reference");
+
+const optionalDockerImage = z.union([z.literal(""), dockerImageSchema]);
+
+export const serviceGitProviderSchema = z.object({
   gitBranch: gitBranchSchema,
   gitRepoUrl: optionalGitRepoUrl,
 });
+
+export const serviceDockerProviderSchema = z.object({
+  dockerImage: optionalDockerImage,
+});
+
+export const serviceProviderSchema = serviceGitProviderSchema;
 
 export const serviceBuildSchema = z.object({
   buildMethod: z.enum(["nixpacks", "dockerfile"]),
@@ -169,14 +198,17 @@ export const generateServiceDomainHostSchema = z.object({
 
 /**
  * Source, build and public access — saved from General / Domains, never
- * at create time. A missing git URL blocks Deploy, it does not block Save.
+ * at create time. A missing git URL or docker image blocks Deploy, it
+ * does not block Save.
  */
 export const updateServiceSettingsSchema = z.object({
-  buildMethod: serviceBuildSchema.shape.buildMethod.optional(),
+  buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).optional(),
+  dockerImage: optionalDockerImage.optional(),
   gitBranch: gitBranchSchema.optional(),
   gitRepoUrl: optionalGitRepoUrl.optional(),
   publishDirectory: optionalPublishDirectory.optional(),
   serviceId: z.uuid(),
+  sourceType: z.enum(["git", "github", "gitlab", "docker_image"]).optional(),
 });
 
 export type ConnectRepoInput = z.infer<typeof connectRepoSchema>;
@@ -198,6 +230,24 @@ export type UpdateServiceDomainInput = z.infer<
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 
 export type ServiceProviderInput = z.infer<typeof serviceProviderSchema>;
+
+export type ServiceGitProviderInput = z.infer<typeof serviceGitProviderSchema>;
+
+export type ServiceDockerProviderInput = z.infer<
+  typeof serviceDockerProviderSchema
+>;
+
+export type GitSourceType = z.infer<typeof gitSourceTypeSchema>;
+
+export type ServiceSourceType = z.infer<typeof serviceSourceTypeSchema>;
+
+export function isGitSourceType(
+  sourceType: string
+): sourceType is GitSourceType {
+  return (
+    sourceType === "git" || sourceType === "github" || sourceType === "gitlab"
+  );
+}
 
 export type UpdateServiceSettingsInput = z.infer<
   typeof updateServiceSettingsSchema

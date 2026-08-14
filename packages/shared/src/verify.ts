@@ -23,7 +23,14 @@ import {
   setDatabaseSwarmSettingsSchema,
 } from "#validation/database";
 import { envVarKeySchema } from "#validation/env-var";
-import { gitBranchSchema, serviceNameSchema } from "#validation/service";
+import {
+  dockerImageSchema,
+  gitBranchSchema,
+  isGitSourceType,
+  serviceDockerProviderSchema,
+  serviceGitProviderSchema,
+  serviceNameSchema,
+} from "#validation/service";
 
 const GENERATED_TEST_DOMAIN_PATTERN = /^api-[a-f0-9]{6}-10-0-0-1\.sslip\.io$/;
 
@@ -103,6 +110,49 @@ function verifyNameSchemas(): void {
     ok("gitBranchSchema rejects what git would reject");
   } else {
     ko("inconsistent gitBranchSchema");
+  }
+
+  if (
+    serviceGitProviderSchema.safeParse({
+      gitBranch: "main",
+      gitRepoUrl: "https://github.com/org/repo.git",
+    }).success &&
+    serviceGitProviderSchema.safeParse({
+      gitBranch: "main",
+      gitRepoUrl: "",
+    }).success &&
+    !serviceGitProviderSchema.safeParse({
+      gitBranch: "main",
+      gitRepoUrl: "not-a-url",
+    }).success
+  ) {
+    ok("serviceGitProviderSchema accepts a URL or an empty field");
+  } else {
+    ko("inconsistent serviceGitProviderSchema");
+  }
+
+  if (
+    dockerImageSchema.safeParse("nginx:alpine").success &&
+    dockerImageSchema.safeParse("ghcr.io/org/app:1.2.3").success &&
+    !dockerImageSchema.safeParse("nginx alpine").success &&
+    serviceDockerProviderSchema.safeParse({ dockerImage: "" }).success &&
+    serviceDockerProviderSchema.safeParse({ dockerImage: "nginx:alpine" })
+      .success
+  ) {
+    ok("serviceDockerProviderSchema accepts a published image or empty");
+  } else {
+    ko("inconsistent serviceDockerProviderSchema");
+  }
+
+  if (
+    isGitSourceType("git") &&
+    isGitSourceType("github") &&
+    isGitSourceType("gitlab") &&
+    !isGitSourceType("docker_image")
+  ) {
+    ok("isGitSourceType distinguishes git remotes from a published image");
+  } else {
+    ko("inconsistent isGitSourceType");
   }
 
   if (

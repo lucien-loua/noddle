@@ -16,6 +16,8 @@ import { servers } from "#schema/servers";
 
 export const sourceType = pgEnum("source_type", [
   "git",
+  "github",
+  "gitlab",
   "docker_image",
   "compose",
 ]);
@@ -53,6 +55,11 @@ export const services = pgTable(
     // image from ITS OWN history, whereas Swarm only keeps one previous
     // spec.
     currentDeploymentId: uuid("current_deployment_id"),
+    /**
+     * Published image when `sourceType` is `docker_image`. Unused on git
+     * sources — kept if the user switches back, rather than destroyed.
+     */
+    dockerImage: text("docker_image"),
     environmentId: uuid("environment_id")
       .notNull()
       .references(() => environments.id, { onDelete: "cascade" }),

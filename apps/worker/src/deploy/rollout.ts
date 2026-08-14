@@ -25,6 +25,11 @@ export interface RolloutInput {
   managerDocker: DockerApi;
   networkName: string;
   port: number;
+  /**
+   * Image is pullable from a remote registry (Docker Hub, GHCR, a chosen
+   * registry). Skip pinning to the build node — Swarm can place it.
+   */
+  portable?: boolean;
   registry: RegistryConfig | undefined;
   serviceName: string;
   swarmNodeId: string | null | undefined;
@@ -48,12 +53,14 @@ export interface RolloutResult {
 export async function rolloutService(
   input: RolloutInput
 ): Promise<RolloutResult> {
-  const placementNodeId = await placementFor({
-    buildDocker: input.buildDocker,
-    image: input.image,
-    registry: input.registry,
-    swarmNodeId: input.swarmNodeId,
-  });
+  const placementNodeId = input.portable
+    ? undefined
+    : await placementFor({
+        buildDocker: input.buildDocker,
+        image: input.image,
+        registry: input.registry,
+        swarmNodeId: input.swarmNodeId,
+      });
 
   await ensureOverlayNetwork(input.managerDocker, input.networkName);
 

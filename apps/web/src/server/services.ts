@@ -15,10 +15,12 @@ import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
 interface ServiceSettingsPatch {
-  buildMethod?: "nixpacks" | "dockerfile";
+  buildMethod?: "nixpacks" | "dockerfile" | "image";
+  dockerImage?: string | null;
   gitBranch?: string;
   gitRepoUrl?: string | null;
   publishDirectory?: string | null;
+  sourceType?: "git" | "github" | "gitlab" | "docker_image";
 }
 
 function serviceSettingsPatch(
@@ -27,6 +29,9 @@ function serviceSettingsPatch(
   const patch: ServiceSettingsPatch = {};
   if (data.buildMethod !== undefined) {
     patch.buildMethod = data.buildMethod;
+  }
+  if (data.dockerImage !== undefined) {
+    patch.dockerImage = data.dockerImage === "" ? null : data.dockerImage;
   }
   if (data.gitBranch !== undefined) {
     patch.gitBranch = data.gitBranch;
@@ -37,6 +42,9 @@ function serviceSettingsPatch(
   if (data.publishDirectory !== undefined) {
     patch.publishDirectory =
       data.publishDirectory === "" ? null : data.publishDirectory;
+  }
+  if (data.sourceType !== undefined) {
+    patch.sourceType = data.sourceType;
   }
   return patch;
 }

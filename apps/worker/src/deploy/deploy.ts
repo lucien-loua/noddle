@@ -86,79 +86,97 @@ async function buildAndDeployService(
   const { service } = deployment;
   const { server } = service;
   const { buildClient, buildDocker, managerDocker } = clients;
+  const publishedImage = service.sourceType === "docker_image";
 
-  if (!service.gitRepoUrl) {
-    throw new Error(
-      "service has no git repository: this source_type is not supported here"
-    );
+  let imageTag: string;
+  let sha: string | null = null;
+
+  if (publishedImage) {
+    if (!service.dockerImage) {
+      throw new Error("service has no docker image");
+    }
+    imageTag = service.dockerImage;
+    sink.write(`▸ image ${imageTag}\n`);
+  } else {
+    if (!service.gitRepoUrl) {
+      throw new Error(
+        "service has no git repository: this source_type is not supported here"
+      );
+    }
+
+    // The cap is derived from the server's memory MINUS what the control
+    // plane already occupies: under the chosen topology, it shares the
+    // machine.
+    const cap = computeBuildCap({
+      totalMemoryMb: server.totalMemoryMb ?? 2048,
+    });
+    sink.write(`▸ build capped at ${cap.memory}\n`);
+    await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
+
+    const workDir = `${BUILD_ROOT}/${service.id}`;
+    sha = await fetchSource(buildClient, {
+      branch: service.gitBranch ?? "main",
+      commitSha: deployment.commitSha ?? undefined,
+      dir: workDir,
+      repoUrl: service.gitRepoUrl,
+      ...stream,
+    });
+
+    // The tag carries the registry's host when there is one — and this
+    // prefix isn't decorative: it's what Docker reads to know where to pull
+    // from, so it's what carries the fact "this image is portable". It's
+    // written as-is into history, and that's what will later allow deciding a
+    // rollback's placement without guessing anything.
+    // The Swarm name, not `services.name`: database uniqueness is per
+    // environment, Swarm's is global. See `swarmServiceName`.
+    // The registry repository follows the same name, for the same reason.
+    const builtName = swarmServiceName(service);
+    const version = `${sha.slice(0, 12)}-${Date.now()}`;
+    imageTag = registry
+      ? registryImageTag(registry, builtName, version)
+      : `${builtName}:${version}`;
   }
 
-  // The cap is derived from the server's memory MINUS what the control
-  // plane already occupies: under the chosen topology, it shares the
-  // machine.
-  const cap = computeBuildCap({ totalMemoryMb: server.totalMemoryMb ?? 2048 });
-  sink.write(`▸ build capped at ${cap.memory}\n`);
-  await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
-
-  const workDir = `${BUILD_ROOT}/${service.id}`;
-  const sha = await fetchSource(buildClient, {
-    branch: service.gitBranch ?? "main",
-    commitSha: deployment.commitSha ?? undefined,
-    dir: workDir,
-    repoUrl: service.gitRepoUrl,
-    ...stream,
-  });
-
-  // The tag carries the registry's host when there is one — and this
-  // prefix isn't decorative: it's what Docker reads to know where to pull
-  // from, so it's what carries the fact "this image is portable". It's
-  // written as-is into history, and that's what will later allow deciding a
-  // rollback's placement without guessing anything.
-  // The Swarm name, not `services.name`: database uniqueness is per
-  // environment, Swarm's is global. See `swarmServiceName`.
-  // The registry repository follows the same name, for the same reason.
   const swarmName = swarmServiceName(service);
-  const version = `${sha.slice(0, 12)}-${Date.now()}`;
-  const imageTag = registry
-    ? registryImageTag(registry, swarmName, version)
-    : `${swarmName}:${version}`;
   await db
     .update(deployments)
     .set({ commitSha: sha, imageTag, status: "deploying" })
     .where(eq(deployments.id, deployment.id));
 
-  if (service.buildMethod === "dockerfile") {
-    sink.write("▸ building from Dockerfile\n");
-    await buildImageFromDockerfile(buildClient, {
-      builderName: "noddle-builder",
-      contextDir: workDir,
-      dockerfilePath: "Dockerfile",
-      imageTag,
-      ...stream,
-    });
-  } else {
-    if (service.publishDirectory) {
-      sink.write(`▸ static output: ${service.publishDirectory}\n`);
+  if (!publishedImage) {
+    if (service.buildMethod === "dockerfile") {
+      sink.write("▸ building from Dockerfile\n");
+      await buildImageFromDockerfile(buildClient, {
+        builderName: "noddle-builder",
+        contextDir: `${BUILD_ROOT}/${service.id}`,
+        dockerfilePath: "Dockerfile",
+        imageTag,
+        ...stream,
+      });
+    } else {
+      if (service.publishDirectory) {
+        sink.write(`▸ static output: ${service.publishDirectory}\n`);
+      }
+      await buildImage(buildClient, {
+        builderName: "noddle-builder",
+        dir: `${BUILD_ROOT}/${service.id}`,
+        imageTag,
+        publishDirectory: service.publishDirectory,
+        ...stream,
+      });
     }
-    await buildImage(buildClient, {
-      builderName: "noddle-builder",
-      dir: workDir,
-      imageTag,
-      publishDirectory: service.publishDirectory,
-      ...stream,
-    });
-  }
 
-  if (registry) {
-    sink.write("▸ pushing image to the registry\n");
-    // `removeLocal`: the build node stops accumulating. The image now lives
-    // in the registry, and Swarm will pull it from there — including on
-    // this very node if it's the one running it.
-    await pushImage(buildClient, registry, {
-      imageTag,
-      removeLocal: true,
-      ...stream,
-    });
+    if (registry) {
+      sink.write("▸ pushing image to the registry\n");
+      // `removeLocal`: the build node stops accumulating. The image now lives
+      // in the registry, and Swarm will pull it from there — including on
+      // this very node if it's the one running it.
+      await pushImage(buildClient, registry, {
+        imageTag,
+        removeLocal: true,
+        ...stream,
+      });
+    }
   }
 
   const env: Record<string, string> = {};
@@ -180,6 +198,7 @@ async function buildAndDeployService(
     managerDocker,
     networkName: route.networkName,
     port: service.port,
+    portable: publishedImage,
     registry,
     serviceName: swarmName,
     swarmNodeId: server.swarmNodeId,
@@ -244,12 +263,17 @@ export async function runDeploy(
   }
 
   const { service } = deployment;
-  const registry = await resolveRegistry({
-    appKey: ctx.appKey,
-    db,
-    embedded: ctx.registry,
-    registryId: service.registryId,
-  });
+  // A published image with no chosen registry must not inherit the
+  // embedded one: Swarm would send those credentials to Docker Hub.
+  const registry =
+    service.sourceType === "docker_image" && !service.registryId
+      ? undefined
+      : await resolveRegistry({
+          appKey: ctx.appKey,
+          db,
+          embedded: ctx.registry,
+          registryId: service.registryId,
+        });
   const startedAt = new Date();
 
   await db

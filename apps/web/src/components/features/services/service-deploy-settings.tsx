@@ -87,8 +87,11 @@ export function ServiceDeploySettings({
     canDeploy &&
     service.status !== "deleting" &&
     service.status !== "deploying";
-  const hasGit = Boolean(service.gitRepoUrl);
-  const deployDisabled = pending || deployPending || !hasGit;
+  const hasSource =
+    service.sourceType === "docker_image"
+      ? Boolean(service.dockerImage)
+      : Boolean(service.gitRepoUrl);
+  const deployDisabled = pending || deployPending || !hasSource;
   const actionsBusy = lifecycle.busy || pending || deployPending;
   const showLifecycle = lifecycle.available;
 
@@ -137,9 +140,7 @@ export function ServiceDeploySettings({
             disabled={deployDisabled}
             onClick={requestDeploy}
             title={
-              hasGit
-                ? undefined
-                : "Set a git repository on General before deploying"
+              hasSource ? undefined : "Set a source on General before deploying"
             }
           >
             {deployPending ? <Spinner data-icon="inline-start" /> : null}
@@ -164,9 +165,9 @@ export function ServiceDeploySettings({
             disabled={deployDisabled}
             onClick={requestRebuild}
             title={
-              hasGit
+              hasSource
                 ? undefined
-                : "Set a git repository on General before rebuilding"
+                : "Set a source on General before rebuilding"
             }
             variant="outline"
           >

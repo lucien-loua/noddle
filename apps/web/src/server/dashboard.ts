@@ -56,6 +56,7 @@ export interface ServiceDomainRow {
 
 export interface ServiceRow {
   buildMethod: "nixpacks" | "dockerfile" | "image";
+  dockerImage: string | null;
   domains: ServiceDomainRow[];
   environment: string;
   environmentId: string;
@@ -86,6 +87,7 @@ export interface ServiceRow {
   registryId: string | null;
   serverHost: string;
   serverName: string;
+  sourceType: "git" | "github" | "gitlab" | "docker_image" | "compose";
   status: string;
   /** ISO timestamp — Restart stays `running`, so the project grid settles
    *  its pending "Restarting" badge off this bump instead. */
@@ -154,6 +156,7 @@ function toSummary(
 
 interface ServiceJoined {
   buildMethod: "nixpacks" | "dockerfile" | "image";
+  dockerImage: string | null;
   domains: {
     certificateType: "none" | "letsencrypt";
     host: string;
@@ -176,6 +179,7 @@ interface ServiceJoined {
   publishDirectory: string | null;
   registryId: string | null;
   server: { host: string; name: string };
+  sourceType: "git" | "github" | "gitlab" | "docker_image" | "compose";
   status: string;
   updatedAt: Date;
 }
@@ -188,6 +192,7 @@ function toServiceRow(
 ): ServiceRow {
   return {
     buildMethod: service.buildMethod,
+    dockerImage: service.dockerImage,
     domains: service.domains.map((d) => ({
       certificateType: d.certificateType,
       host: d.host,
@@ -214,6 +219,7 @@ function toServiceRow(
     registryId: service.registryId,
     serverHost: service.server.host,
     serverName: service.server.name,
+    sourceType: service.sourceType,
     status: service.status,
     updatedAt: service.updatedAt.toISOString(),
     watching,

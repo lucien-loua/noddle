@@ -118,7 +118,7 @@ export function ConnectRepoDialog({
         <DialogHeader>
           <DialogTitle>Create</DialogTitle>
           <DialogDescription>
-            Assign a name to your application. The git source and build are
+            Assign a name to your application. The source and build are
             configured on the next screen, then Deploy.
           </DialogDescription>
         </DialogHeader>

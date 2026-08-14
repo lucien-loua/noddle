@@ -156,6 +156,7 @@ async function createPreview(
     .insert(services)
     .values({
       buildMethod: parent.buildMethod,
+      dockerImage: parent.dockerImage,
       environmentId,
       gitBranch: opts.headBranch,
       gitRepoUrl: parent.gitRepoUrl,
