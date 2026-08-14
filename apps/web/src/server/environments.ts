@@ -18,12 +18,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { insertProjectEnvironment } from "@/lib/environment.server";
+import { assertNotDefaultEnvironment } from "@/lib/environment-guard";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface EnvironmentView {
   description: string | null;
   id: string;
+  isDefault: boolean;
   name: string;
 }
 
@@ -50,6 +53,7 @@ export const getProjectEnvironments = createServerFn({ method: "GET" })
     return rows.map((e) => ({
       description: e.description,
       id: e.id,
+      isDefault: e.isDefault,
       name: e.name,
     }));
   });
@@ -75,17 +79,11 @@ export const createEnvironment = createServerFn({ method: "POST" })
           throw new Error(`"${data.name}" already exists in this project`);
         }
 
-        const [created] = await db
-          .insert(environments)
-          .values({
-            description: data.description,
-            name: data.name,
-            projectId: data.projectId,
-          })
-          .returning();
-        if (!created) {
-          throw new Error("could not create environment");
-        }
+        const created = await insertProjectEnvironment({
+          description: data.description,
+          name: data.name,
+          projectId: data.projectId,
+        });
         return { environmentId: created.id, name: created.name };
       },
       target: ({ result }) => ({ id: result.environmentId, name: result.name }),
@@ -105,6 +103,7 @@ export const renameEnvironment = createServerFn({ method: "POST" })
         notFoundMessage: "environment not found",
         permission: { action: "create", resource: "service" },
         run: async ({ row: environment }) => {
+          assertNotDefaultEnvironment(environment, "rename");
           const existing = await db.query.environments.findFirst({
             where: and(
               eq(environments.projectId, environment.projectId),
@@ -127,15 +126,15 @@ export const renameEnvironment = createServerFn({ method: "POST" })
   );
 
 /**
- * Delete an environment — refused if it carries the slightest resource.
+ * Delete an environment — refused if it is the default, or if it carries
+ * the slightest resource.
  *
- * The same kind of guard as elsewhere (`haveServices`), adapted: Noddle has
- * no `isDefault` environment to protect, but an environment that contains a
- * service, a stack or a database has real infrastructure behind it.
- * Deleting it here would tear everything down without the user having asked
- * for it — that path goes through the dedicated delete buttons, with THEIR
- * own confirmation. An empty environment, on the other hand, is just a row:
- * no job, no name confirmation.
+ * The default is the environment a project is born with: deleting it would
+ * leave `/projects/<id>` with nothing to redirect to. Extra environments
+ * that still contain a service, a stack or a database have real
+ * infrastructure behind them — that path goes through the dedicated delete
+ * buttons, with THEIR own confirmation. An empty non-default environment,
+ * on the other hand, is just a row: no job, no name confirmation.
  */
 export const deleteEnvironment = createServerFn({ method: "POST" })
   .validator(environmentIdSchema)
@@ -149,6 +148,7 @@ export const deleteEnvironment = createServerFn({ method: "POST" })
         notFoundMessage: "environment not found",
         permission: { action: "delete", resource: "service" },
         run: async ({ row: environment }) => {
+          assertNotDefaultEnvironment(environment, "delete");
           const [service, stack, database] = await Promise.all([
             db.query.services.findFirst({
               where: eq(services.environmentId, environment.id),
@@ -234,17 +234,11 @@ async function copyEnvironment(
     throw new Error(`"${data.name}" already exists in this project`);
   }
 
-  const [target] = await db
-    .insert(environments)
-    .values({
-      description: source.description,
-      name: data.name,
-      projectId: source.projectId,
-    })
-    .returning();
-  if (!target) {
-    throw new Error("could not create environment");
-  }
+  const target = await insertProjectEnvironment({
+    description: source.description,
+    name: data.name,
+    projectId: source.projectId,
+  });
 
   for (const s of source.services) {
     // biome-ignore lint/performance/noAwaitInLoops: each copied service must exist before we can encrypt its variables under ITS id

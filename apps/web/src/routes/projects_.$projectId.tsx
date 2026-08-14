@@ -32,9 +32,9 @@ export const Route = createFileRoute("/projects_/$projectId")({
 
     const [first] = environments;
     if (!first) {
-      // Reachable: a project whose environments have all been deleted.
-      // `deleteEnvironment` refuses a non-empty environment, so this
-      // project is necessarily empty too — there's nothing to show.
+      // Unreachable from the UI: `deleteEnvironment` refuses the default
+      // environment a project is born with. Kept as a last resort for a
+      // row removed out of band.
       throw notFound();
     }
     throw redirect({

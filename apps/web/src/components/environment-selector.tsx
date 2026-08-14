@@ -273,26 +273,30 @@ function EnvironmentRow({
           >
             <CopyIcon />
           </Button>
-          <Button
-            aria-label={`Rename ${env.name}`}
-            className="size-6"
-            onClick={handleRename}
-            size="icon"
-            variant="ghost"
-          >
-            <PencilSimpleIcon />
-          </Button>
-          {canDelete ? (
-            <Button
-              aria-label={`Delete ${env.name}`}
-              className="size-6"
-              onClick={handleDelete}
-              size="icon"
-              variant="ghost"
-            >
-              <TrashIcon />
-            </Button>
-          ) : null}
+          {env.isDefault ? null : (
+            <>
+              <Button
+                aria-label={`Rename ${env.name}`}
+                className="size-6"
+                onClick={handleRename}
+                size="icon"
+                variant="ghost"
+              >
+                <PencilSimpleIcon />
+              </Button>
+              {canDelete ? (
+                <Button
+                  aria-label={`Delete ${env.name}`}
+                  className="size-6"
+                  onClick={handleDelete}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <TrashIcon />
+                </Button>
+              ) : null}
+            </>
+          )}
         </span>
       ) : null}
     </DropdownMenuItem>

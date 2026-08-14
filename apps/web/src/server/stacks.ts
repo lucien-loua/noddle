@@ -16,6 +16,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueStackDeploy } from "@/lib/deploy-queue.server";
+import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
@@ -52,14 +53,10 @@ export const connectStack = createServerFn({ method: "POST" })
           ),
         });
         if (!environment) {
-          const [created] = await db
-            .insert(environments)
-            .values({ name: data.environmentName, projectId: project.id })
-            .returning();
-          if (!created) {
-            throw new Error("could not create environment");
-          }
-          environment = created;
+          environment = await insertProjectEnvironment({
+            name: data.environmentName,
+            projectId: project.id,
+          });
         }
 
         const [stack] = await db

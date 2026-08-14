@@ -1,0 +1,2 @@
+-- Snapshot baseline: 0042–0047 were applied without a drizzle snapshot.
+-- This file is a no-op so `drizzle-kit generate` can diff from here.

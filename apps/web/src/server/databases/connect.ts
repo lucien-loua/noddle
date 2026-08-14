@@ -16,6 +16,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
+import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 
 const NON_IDENTIFIER = /[^a-z0-9_]/g;
@@ -56,14 +57,10 @@ async function createDatabaseRows(
     ),
   });
   if (!environment) {
-    const [created] = await db
-      .insert(environments)
-      .values({ name: data.environmentName, projectId: project.id })
-      .returning();
-    if (!created) {
-      throw new Error("could not create environment");
-    }
-    environment = created;
+    environment = await insertProjectEnvironment({
+      name: data.environmentName,
+      projectId: project.id,
+    });
   }
 
   const password = data.rootPassword ?? generateDatabasePassword();

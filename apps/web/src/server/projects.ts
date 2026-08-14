@@ -1,10 +1,4 @@
-import {
-  databases,
-  environments,
-  projects,
-  services,
-  stacks,
-} from "@noddle/db/schema";
+import { databases, projects, services, stacks } from "@noddle/db/schema";
 import {
   createProjectSchema,
   projectIdSchema,
@@ -13,6 +7,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -48,7 +43,8 @@ export const getProjects = createServerFn({ method: "GET" }).handler(
  *
  * `/projects/<id>` redirects to the project's first environment; with none,
  * it would render a 404 on a project just created — the screen would lie
- * about what exists. Common convention for this kind of product: we create
+ * about what exists. That first environment is the default: it cannot be
+ * deleted or renamed. Common convention for this kind of product: we create
  * "production" by default.
  */
 export const createProject = createServerFn({ method: "POST" })
@@ -78,13 +74,10 @@ export const createProject = createServerFn({ method: "POST" })
             throw new Error("could not create project");
           }
 
-          const [environment] = await db
-            .insert(environments)
-            .values({ name: data.environmentName, projectId: project.id })
-            .returning();
-          if (!environment) {
-            throw new Error("could not create the first environment");
-          }
+          const environment = await insertProjectEnvironment({
+            name: data.environmentName,
+            projectId: project.id,
+          });
 
           return {
             environmentId: environment.id,

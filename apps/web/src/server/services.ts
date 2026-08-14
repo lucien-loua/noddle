@@ -10,6 +10,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db.server";
+import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
@@ -80,14 +81,10 @@ export const connectRepo = createServerFn({ method: "POST" })
             ),
           });
           if (!environment) {
-            const [created] = await db
-              .insert(environments)
-              .values({ name: data.environmentName, projectId: project.id })
-              .returning();
-            if (!created) {
-              throw new Error("could not create environment");
-            }
-            environment = created;
+            environment = await insertProjectEnvironment({
+              name: data.environmentName,
+              projectId: project.id,
+            });
           }
 
           const [service] = await db

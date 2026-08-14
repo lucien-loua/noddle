@@ -1,4 +1,5 @@
-import { pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "#schema/columns";
 
 export const projects = pgTable(
@@ -25,11 +26,20 @@ export const environments = pgTable(
     /** Optional: an environment is already understood by its name. */
     description: text("description"),
     id: uuid("id").primaryKey().defaultRandom(),
+    // The environment a project is born with. It cannot be deleted or
+    // renamed — otherwise `/projects/<id>` would 404 with nothing to
+    // redirect to. Extra environments are never the default.
+    isDefault: boolean("is_default").notNull().default(false),
     name: text("name").notNull(),
     projectId: uuid("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     updatedAt,
   },
-  (t) => [uniqueIndex("environments_project_name_idx").on(t.projectId, t.name)]
+  (t) => [
+    uniqueIndex("environments_project_name_idx").on(t.projectId, t.name),
+    uniqueIndex("environments_one_default_idx")
+      .on(t.projectId)
+      .where(sql`${t.isDefault} = true`),
+  ]
 );

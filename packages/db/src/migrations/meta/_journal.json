@@ -337,6 +337,20 @@
       "when": 1786533000000,
       "tag": "0047_volume_backups_volume_name",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1786641565302,
+      "tag": "0048_catchup_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1786641600000,
+      "tag": "0049_environment_is_default",
+      "breakpoints": true
     }
   ]
 }
