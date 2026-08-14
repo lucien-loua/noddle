@@ -21,6 +21,16 @@ _Avoid_: Localhost special case, control plane host
 
 **Project**:
 A tenant-facing grouping of services the user deploys and operates together.
+A project is never without at least one environment.
+
+**Environment**:
+A named slice of a Project (production, staging, …) that holds Services,
+Stacks and Databases.
+_Avoid_: stage, namespace
+
+**Default environment**:
+The environment a Project is born with. It cannot be deleted or renamed.
+_Avoid_: production (the usual name, not the concept)
 
 **Environment scope**:
 The inventory of Services, Stacks, and Databases in one environment —
