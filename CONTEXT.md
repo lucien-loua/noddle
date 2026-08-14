@@ -86,8 +86,9 @@ as workers only.
 _Avoid_: Leader (Raft), control node
 
 **Post-deploy watch**:
-Noddle's continued observation after Swarm's `--update-monitor` window — late
-crashes trigger rollback from Noddle's deployment history.
+The period Noddle observes a Deployment after Swarm has accepted it — a ship,
+a Rollback, or a watch recovery — past Swarm's `--update-monitor` window. Late
+crashes in that window trigger Rollback from Noddle's deployment history.
 _Avoid_: Healthcheck (that's Swarm's), monitor window (Swarm's only)
 
 **Rollback**:

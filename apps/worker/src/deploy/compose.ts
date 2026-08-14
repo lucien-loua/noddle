@@ -13,13 +13,12 @@ import {
   parseCompose,
   SAFE_COMPOSE_KEY,
 } from "@noddle/compose-engine";
-import type { Database } from "@noddle/db";
 import {
   stackDeploymentLogs,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
-import { markCrashed, markRunning, settle } from "@noddle/shared/lifecycle";
+import { markCrashed, settle } from "@noddle/shared/lifecycle";
 import {
   execArgv,
   type SshClient,
@@ -31,10 +30,10 @@ import {
   isDeployAccepted,
   readUpdateState,
   waitForRunningTask,
-  watchUntilFor,
 } from "@noddle/swarm-ops";
-import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
+import { recordAcceptedStack } from "#deploy/accepted-deployment";
 import { type DeployClients, withDeployClients } from "#job-run";
 import { createLogSink, type LogSink } from "#log-sink";
 import {
@@ -46,31 +45,6 @@ import {
 
 /** Relative file path, with no escape from the cloned directory. */
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\.\.)[\w./-]+$/;
-
-/**
- * Any stack deployment still "under watch" stops being so as soon as
- * ANOTHER deployment becomes the current one — same reason as
- * `clearSupersededWatch` in `deploy.ts`: `inspectServiceHealth` checks a
- * Swarm service name, not which deployment produced which task, and an
- * otherwise healthy earlier stack would otherwise get blamed for a more
- * recent stack's crash.
- */
-async function clearSupersededStackWatch(
-  db: Database,
-  stackId: string,
-  currentDeploymentId: string
-): Promise<void> {
-  await db
-    .update(stackDeployments)
-    .set({ watchUntil: null })
-    .where(
-      and(
-        eq(stackDeployments.stackId, stackId),
-        ne(stackDeployments.id, currentDeploymentId),
-        isNotNull(stackDeployments.watchUntil)
-      )
-    );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SSH / Swarm orchestration (parse + inject live in @noddle/compose-engine)
@@ -359,21 +333,12 @@ async function buildAndDeployStack(
   }
 
   sink.write("✓ deployment accepted\n");
-  await db
-    .update(stackDeployments)
-    .set({
-      finishedAt,
-      status: settle("completed"),
-      swarmUpdateStates,
-      watchUntil: watchUntilFor(finishedAt),
-    })
-    .where(eq(stackDeployments.id, deployment.id));
-
-  await db
-    .update(stacks)
-    .set({ currentDeploymentId: deployment.id, ...markRunning(null) })
-    .where(eq(stacks.id, stack.id));
-  await clearSupersededStackWatch(db, stack.id, deployment.id);
+  await recordAcceptedStack(db, {
+    deploymentId: deployment.id,
+    finishedAt,
+    stackId: stack.id,
+    swarmUpdateStates,
+  });
 }
 
 export async function runStackDeploy(
@@ -540,23 +505,24 @@ export async function redeployStack(
         stackName: stack.swarmName,
       });
 
-      await ctx.db
-        .update(stackDeployments)
-        .set({
-          finishedAt: new Date(),
-          status: settle(accepted ? "completed" : "rollback_completed"),
-          swarmUpdateStates,
-        })
-        .where(eq(stackDeployments.id, created.id));
-
-      if (accepted) {
+      const finishedAt = new Date();
+      if (!accepted) {
         await ctx.db
-          .update(stacks)
-          .set({ currentDeploymentId: created.id, ...markRunning(null) })
-          .where(eq(stacks.id, stack.id));
-        await clearSupersededStackWatch(ctx.db, stack.id, created.id);
+          .update(stackDeployments)
+          .set({
+            finishedAt,
+            status: settle("rollback_completed"),
+            swarmUpdateStates,
+          })
+          .where(eq(stackDeployments.id, created.id));
+        return created.id;
       }
-
+      await recordAcceptedStack(ctx.db, {
+        deploymentId: created.id,
+        finishedAt,
+        stackId: stack.id,
+        swarmUpdateStates,
+      });
       return created.id;
     }
   );

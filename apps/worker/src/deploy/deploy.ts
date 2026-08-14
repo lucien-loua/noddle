@@ -6,7 +6,6 @@ import {
   fetchSource,
 } from "@noddle/build-engine";
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import type { Database } from "@noddle/db";
 import {
   deploymentLogs,
   deployments,
@@ -22,8 +21,8 @@ import {
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
-import { watchUntilFor } from "@noddle/swarm-ops";
-import { and, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { recordAcceptedService } from "#deploy/accepted-deployment";
 import { rolloutService } from "#deploy/rollout";
 import { type DeployClients, withDeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
@@ -35,33 +34,6 @@ import {
   type DeployContext,
   type RouteOptions,
 } from "#runtime-context";
-
-/**
- * Any deployment still "under watch" for this service stops being watched as
- * soon as ANOTHER deployment becomes the current one: its window no longer
- * covers the version actually serving. Leaving it active derails detection —
- * a crash of the NEW deployment then reads as a loop of the OLD one, since
- * `inspectServiceHealth` checks the Swarm service's name, not which
- * deployment produced which task. Measured: `verify-watch.ts` failed through
- * exactly this path, an earlier version that was actually healthy declared
- * to be crash-looping instead of the real culprit.
- */
-async function clearSupersededWatch(
-  db: Database,
-  serviceId: string,
-  currentDeploymentId: string
-): Promise<void> {
-  await db
-    .update(deployments)
-    .set({ watchUntil: null })
-    .where(
-      and(
-        eq(deployments.serviceId, serviceId),
-        ne(deployments.id, currentDeploymentId),
-        isNotNull(deployments.watchUntil)
-      )
-    );
-}
 
 type RunDeployment = NonNullable<
   Awaited<ReturnType<typeof loadDeploymentForRun>>
@@ -244,27 +216,13 @@ async function buildAndDeployService(
   }
 
   sink.write("✓ deployment accepted\n");
-  // Where the task ACTUALLY runs, not where we requested it. With a
-  // portable image, Swarm made the choice: the dashboard must display its
-  // choice, not our intent.
-  await db
-    .update(deployments)
-    .set({
-      finishedAt,
-      nodeId: outcome.nodeId,
-      status: "succeeded",
-      swarmUpdateState: outcome.updateState,
-      // Swarm's guarantee expires with its monitor window. From here on,
-      // Noddle's own watch covers late crashes.
-      watchUntil: watchUntilFor(finishedAt),
-    })
-    .where(eq(deployments.id, deployment.id));
-
-  await db
-    .update(services)
-    .set({ currentDeploymentId: deployment.id, status: "running" })
-    .where(eq(services.id, service.id));
-  await clearSupersededWatch(db, service.id, deployment.id);
+  await recordAcceptedService(db, {
+    deploymentId: deployment.id,
+    finishedAt,
+    nodeId: outcome.nodeId,
+    serviceId: service.id,
+    swarmUpdateState: outcome.updateState,
+  });
   await notify(ctx, {
     detail: deployment.commitSha ?? undefined,
     resource: service.name,
@@ -424,25 +382,30 @@ export async function redeployImage(
         swarmNodeId: service.server.swarmNodeId,
       });
 
-      await ctx.db
-        .update(deployments)
-        .set({
-          finishedAt: new Date(),
-          nodeId: outcome.nodeId,
-          status: outcome.accepted ? "succeeded" : "rolled_back",
-          swarmUpdateState: outcome.updateState,
-        })
-        .where(eq(deployments.id, created?.id ?? ""));
-
-      if (outcome.accepted && created) {
+      const finishedAt = new Date();
+      if (!outcome.accepted) {
         await ctx.db
-          .update(services)
-          .set({ currentDeploymentId: created.id, status: "running" })
-          .where(eq(services.id, service.id));
-        await clearSupersededWatch(ctx.db, service.id, created.id);
+          .update(deployments)
+          .set({
+            finishedAt,
+            nodeId: outcome.nodeId,
+            status: "rolled_back",
+            swarmUpdateState: outcome.updateState,
+          })
+          .where(eq(deployments.id, created?.id ?? ""));
+        return created?.id ?? "";
       }
-
-      return created?.id ?? "";
+      if (!created) {
+        return "";
+      }
+      await recordAcceptedService(ctx.db, {
+        deploymentId: created.id,
+        finishedAt,
+        nodeId: outcome.nodeId,
+        serviceId: service.id,
+        swarmUpdateState: outcome.updateState,
+      });
+      return created.id;
     }
   );
 }

@@ -56,6 +56,11 @@ export async function inspectServiceHealth(
 /** Duration for which a deployment remains under monitoring. */
 export const WATCH_WINDOW_MS = 5 * 60 * 1000;
 
+/**
+ * Instant at which Post-deploy watch expires. The worker's
+ * `recordAcceptedService` / `recordAcceptedStack` are the only callers —
+ * arming lives in one module so Rollback and watch recovery cannot skip it.
+ */
 export function watchUntilFor(startedAt: Date): Date {
   return new Date(startedAt.getTime() + WATCH_WINDOW_MS);
 }

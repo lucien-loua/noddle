@@ -7,6 +7,7 @@
     "#backup-run/*": "./src/backup-run/*.ts",
     "#deploy": "./src/deploy/deploy.ts",
     "#compose": "./src/deploy/compose.ts",
+    "#deploy/accepted-deployment": "./src/deploy/accepted-deployment.ts",
     "#deploy/placement": "./src/deploy/placement.ts",
     "#deploy/rollout": "./src/deploy/rollout.ts",
     "#registry": "./src/deploy/registry.ts",
