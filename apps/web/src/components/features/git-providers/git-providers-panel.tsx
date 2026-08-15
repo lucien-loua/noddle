@@ -48,6 +48,18 @@ import {
 
 const TRAILING_SLASHES = /\/+$/;
 
+/** The URL if it is http(s), `null` otherwise — including while typing. */
+function httpUrlOrNull(candidate: string): string | null {
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "https:" || parsed.protocol === "http:"
+      ? parsed.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function ProviderRow({
   onRemoved,
   provider,
@@ -285,7 +297,14 @@ function ConnectGitlabDialog({
 
   // Derived from the instance the user typed, so a self-hosted GitLab gets
   // its OWN link rather than one pointing at gitlab.com.
-  const applicationsUrl = `${url.replace(TRAILING_SLASHES, "")}/-/user_settings/applications`;
+  //
+  // Only http(s) becomes a link. Typed here it would only ever be the
+  // author's own session, but a scheme reaching an `href` unchecked is a
+  // shape not worth shipping — and half-typed input stops rendering a
+  // nonsensical link on the way.
+  const applicationsUrl = httpUrlOrNull(
+    `${url.replace(TRAILING_SLASHES, "")}/-/user_settings/applications`
+  );
 
   const start = useMutation({
     mutationFn: () =>
@@ -338,14 +357,20 @@ function ConnectGitlabDialog({
             <FieldLabel htmlFor="gitlab-redirect">Redirect URI</FieldLabel>
             <FieldDescription>
               Create the application at{" "}
-              <a
-                className="underline"
-                href={applicationsUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {applicationsUrl}
-              </a>{" "}
+              {applicationsUrl ? (
+                <a
+                  className="underline"
+                  href={applicationsUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {applicationsUrl}
+                </a>
+              ) : (
+                <span className="font-mono">
+                  {url}/-/user_settings/applications
+                </span>
+              )}{" "}
               with scopes <code className="font-mono">api</code> and{" "}
               <code className="font-mono">read_repository</code>, and register
               this exact URI. A mismatch is only refused once GitLab has already
