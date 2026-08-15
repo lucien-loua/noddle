@@ -461,15 +461,34 @@ export async function fetchSource(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * `NIXPACKS_NODE_VERSION=…` when the repository names no Node version, and
- * an empty string when it does.
+ * ` --env NIXPACKS_NODE_VERSION=…` when the repository names no Node
+ * version, and an empty string when it does.
  *
  * Nixpacks falls back to Node 18, which nixpkgs removed as end-of-life, so
  * a silent repository fails inside a nix evaluation — an error that names
- * neither the project nor the missing setting. The variable has the highest
- * precedence in nixpacks, so it is applied ONLY when nothing else speaks:
- * overriding an explicit `engines.node` would be worse than the bug.
+ * neither the project nor the missing setting.
+ *
+ * It has to be `--env` and NOT a variable in the process environment.
+ * Measured on 1.41.0 against a real repository:
+ *
+ *   NIXPACKS_NODE_VERSION=22 nixpacks …       → nodejs_18  (ignored)
+ *   nixpacks … --env NODE_VERSION=22          → nodejs_18  (wrong name)
+ *   nixpacks … --env NIXPACKS_NODE_VERSION=22 → nodejs_22
+ *
+ * `--env` is safe here, unlike `--apt` and `--pkgs` which wipe the nix
+ * overlay list: the overlay was checked present after this flag, because
+ * losing it is silent and breaks every Node build.
+ *
+ * Applied ONLY when the repository is silent — the variable outranks
+ * `engines.node`, `.nvmrc` and `.node-version`, so setting it always would
+ * override the very thing a user chose deliberately.
  */
+export function nixpacksNodeFlag(declared: boolean): string {
+  return declared
+    ? ""
+    : ` --env NIXPACKS_NODE_VERSION=${FALLBACK_NODE_VERSION}`;
+}
+
 async function nodeVersionFallback(
   client: SshClient,
   dir: string
@@ -480,9 +499,7 @@ async function nodeVersionFallback(
     client,
     `cd ${quoteArg(dir)} && { test -f .nvmrc || test -f .node-version || grep -q '"node"' package.json 2>/dev/null; }`
   );
-  return declared.code === 0
-    ? ""
-    : `NIXPACKS_NODE_VERSION=${FALLBACK_NODE_VERSION} `;
+  return nixpacksNodeFlag(declared.code === 0);
 }
 
 export interface BuildOptions extends ExecOptions {
@@ -527,7 +544,7 @@ export async function buildImage(
     "nixpacks",
     await exec(
       client,
-      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${nodeFallback}${spaOut}nixpacks build . --out .`,
+      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${spaOut}nixpacks build . --out .${nodeFallback}`,
       o
     )
   );

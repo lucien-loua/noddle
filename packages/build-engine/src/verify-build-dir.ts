@@ -3,7 +3,7 @@
 // Pure: no VM. `resolveBuildDir` turns a user-supplied string into a `cd`
 // target on the client's server, so what matters here is the REFUSALS.
 import { check, expectThrows, runVerify } from "@noddle/testing";
-import { BuildError, resolveBuildDir } from "#index";
+import { BuildError, nixpacksNodeFlag, resolveBuildDir } from "#index";
 
 const CLONE = "/var/lib/noddle/builds/abc";
 
@@ -40,5 +40,15 @@ await runVerify("build directory resolution", () => {
     "a leading dash is refused",
     () => resolveBuildDir(CLONE, "-rf"),
     (e) => e instanceof BuildError
+  );
+
+  // Measured on 1.41.0: the process environment is IGNORED, and
+  // `--env NODE_VERSION` is the wrong name. Only this shape moves the plan
+  // off the dead default, and `--env` leaves the nix overlay intact where
+  // `--apt` and `--pkgs` wipe it.
+  check(
+    "the Node fallback is passed as --env, the only form nixpacks reads",
+    nixpacksNodeFlag(false).startsWith(" --env NIXPACKS_NODE_VERSION=") &&
+      nixpacksNodeFlag(true) === ""
   );
 });
