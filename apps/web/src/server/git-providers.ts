@@ -1,4 +1,3 @@
-import { encryptSecret, secretContext } from "@noddle/crypto";
 import { githubProviders, gitProviders, services } from "@noddle/db/schema";
 import {
   appManifest,
@@ -11,7 +10,6 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
-import { env } from "@/lib/env.server";
 import { githubAppFor } from "@/lib/git-provider.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 
@@ -222,42 +220,3 @@ export const getProviderBranches = createServerFn({ method: "GET" })
         },
       })
   );
-
-/** Persist what the manifest exchange returned. Called by the callback. */
-export async function saveCreatedApp(
-  gitProviderId: string,
-  created: {
-    appId: string;
-    clientId: string;
-    clientSecret: string;
-    htmlUrl: string;
-    name: string;
-    pem: string;
-    webhookSecret: string;
-  }
-): Promise<void> {
-  await db
-    .update(githubProviders)
-    .set({
-      appId: created.appId,
-      appName: created.name,
-      clientId: created.clientId,
-      clientSecretEncrypted: encryptSecret(
-        created.clientSecret,
-        env.appKey,
-        secretContext.gitProvider(gitProviderId, "client_secret")
-      ),
-      htmlUrl: created.htmlUrl,
-      privateKeyEncrypted: encryptSecret(
-        created.pem,
-        env.appKey,
-        secretContext.gitProvider(gitProviderId, "private_key")
-      ),
-      webhookSecretEncrypted: encryptSecret(
-        created.webhookSecret,
-        env.appKey,
-        secretContext.gitProvider(gitProviderId, "webhook_secret")
-      ),
-    })
-    .where(eq(githubProviders.gitProviderId, gitProviderId));
-}

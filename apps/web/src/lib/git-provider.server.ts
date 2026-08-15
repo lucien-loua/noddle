@@ -1,5 +1,5 @@
-import { decryptSecret, secretContext } from "@noddle/crypto";
-import { gitProviders } from "@noddle/db/schema";
+import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
+import { githubProviders, gitProviders } from "@noddle/db/schema";
 import type { GithubApp } from "@noddle/git-provider/github";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -45,4 +45,43 @@ export async function githubAppFor(gitProviderId: string): Promise<GithubApp> {
     ),
     url: github.url,
   };
+}
+
+/** Persist what the manifest exchange returned. Called by the callback. */
+export async function saveCreatedApp(
+  gitProviderId: string,
+  created: {
+    appId: string;
+    clientId: string;
+    clientSecret: string;
+    htmlUrl: string;
+    name: string;
+    pem: string;
+    webhookSecret: string;
+  }
+): Promise<void> {
+  await db
+    .update(githubProviders)
+    .set({
+      appId: created.appId,
+      appName: created.name,
+      clientId: created.clientId,
+      clientSecretEncrypted: encryptSecret(
+        created.clientSecret,
+        env.appKey,
+        secretContext.gitProvider(gitProviderId, "client_secret")
+      ),
+      htmlUrl: created.htmlUrl,
+      privateKeyEncrypted: encryptSecret(
+        created.pem,
+        env.appKey,
+        secretContext.gitProvider(gitProviderId, "private_key")
+      ),
+      webhookSecretEncrypted: encryptSecret(
+        created.webhookSecret,
+        env.appKey,
+        secretContext.gitProvider(gitProviderId, "webhook_secret")
+      ),
+    })
+    .where(eq(githubProviders.gitProviderId, gitProviderId));
 }

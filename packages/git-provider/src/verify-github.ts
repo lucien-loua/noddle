@@ -14,6 +14,7 @@ import {
   GithubError,
   installationToken,
   installUrl,
+  isPubliclyReachable,
   listRepositories,
   redactCloneUrl,
 } from "#github";
@@ -189,10 +190,17 @@ await runVerify("github app", async () => {
     webhookUrl: "https://noddle.acme.io/api/webhooks/github",
   });
 
+  // GitHub refuses the WHOLE manifest when an event has no matching
+  // permission: "Default events are not supported by permissions:
+  // pull_request". Learned by being refused.
   check(
-    "it asks for the minimum — contents and metadata, read only",
+    "every default event is covered by a permission, all read-only",
     JSON.stringify(manifest.default_permissions) ===
-      JSON.stringify({ contents: "read", metadata: "read" })
+      JSON.stringify({
+        contents: "read",
+        metadata: "read",
+        pull_requests: "read",
+      })
   );
 
   check(
@@ -213,6 +221,29 @@ await runVerify("github app", async () => {
         active: true,
         url: "https://noddle.acme.io/api/webhooks/github",
       })
+  );
+
+  // GitHub refuses a hook it cannot reach — and refuses the whole manifest
+  // with it, rather than creating the App without one. On a local origin
+  // the hook is omitted so the App can still be created.
+  const local = appManifest({
+    name: "noddle-dev",
+    redirectUrl: "http://localhost:3000/api/git-providers/github/callback",
+    url: "http://localhost:3000",
+    webhookUrl: "http://localhost:3000/api/webhooks/github",
+  });
+  check(
+    "a local origin drops the hook instead of failing the manifest",
+    !("hook_attributes" in local) && local.name === "noddle-dev"
+  );
+
+  check(
+    "reachability covers loopback and private ranges, not real hosts",
+    isPubliclyReachable("https://noddle.acme.io") &&
+      !isPubliclyReachable("http://localhost:3000") &&
+      !isPubliclyReachable("http://127.0.0.1:3000") &&
+      !isPubliclyReachable("http://192.168.1.10:3000") &&
+      !isPubliclyReachable("http://noddle.local")
   );
 
   // ── the code exchange ────────────────────────────────────────────────

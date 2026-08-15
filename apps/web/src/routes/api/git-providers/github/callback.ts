@@ -3,8 +3,8 @@ import { exchangeManifestCode } from "@noddle/git-provider/github";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
+import { saveCreatedApp } from "@/lib/git-provider.server";
 import { runGuarded } from "@/lib/permission.server";
-import { saveCreatedApp } from "@/server/git-providers";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const NUMERIC = /^[0-9]{1,20}$/;

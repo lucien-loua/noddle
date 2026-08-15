@@ -223,29 +223,65 @@ export function redactCloneUrl(url: string): string {
 // App creation — the manifest flow
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Hosts GitHub cannot reach, so cannot deliver a webhook to. */
+const PRIVATE_HOST =
+  /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)|\.(local|localhost|internal|test)$/i;
+
+/**
+ * Can GitHub POST a webhook to this origin?
+ *
+ * Measured, not guessed: GitHub refuses the whole manifest with "Hook url is
+ * not supported because it isn't reachable over the public Internet" rather
+ * than creating the App without a hook.
+ */
+export function isPubliclyReachable(origin: string): boolean {
+  try {
+    return !PRIVATE_HOST.test(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * What GitHub renders as a "create this App" form.
  *
  * The manifest is POSTed by the BROWSER to GitHub, not by us: it is the
  * operator's account that must own the App (ADR-0019). GitHub then sends
  * the browser back to `redirect_url` with a single-use `code`.
+ *
+ * Two constraints GitHub enforces at creation, both learned by being
+ * refused:
+ *
+ *  - every default event must be covered by a permission. `pull_request`
+ *    needs `pull_requests: read`; asking for the event without it fails the
+ *    whole manifest.
+ *  - the hook URL must be reachable from the public Internet. On a local
+ *    origin the hook is OMITTED so the App can still be created; it is
+ *    added on GitHub once the dashboard has a public address.
  */
 export function appManifest(o: {
-  /** Where GitHub sends webhooks. Must be reachable from GitHub. */
-  webhookUrl: string;
+  name: string;
   /** Where GitHub returns the browser, carrying `?code=`. */
   redirectUrl: string;
-  name: string;
   /** The dashboard's own origin. */
   url: string;
+  /** Where GitHub sends webhooks. Omitted when unreachable. */
+  webhookUrl: string;
 }): Record<string, unknown> {
+  const reachable = isPubliclyReachable(o.webhookUrl);
   return {
-    // `checks: read` is not requested: Noddle deploys, it does not report
-    // build status back. Ask for the minimum — an App's permissions are
-    // what the operator is shown before approving.
     default_events: ["push", "pull_request"],
-    default_permissions: { contents: "read", metadata: "read" },
-    hook_attributes: { active: true, url: o.webhookUrl },
+    // `pull_requests` is read-only and only exists to receive the event:
+    // Noddle opens nothing and comments nowhere. `checks` is deliberately
+    // NOT requested — Noddle deploys, it does not report build status back.
+    default_permissions: {
+      contents: "read",
+      metadata: "read",
+      pull_requests: "read",
+    },
+    ...(reachable
+      ? { hook_attributes: { active: true, url: o.webhookUrl } }
+      : {}),
     name: o.name,
     public: false,
     redirect_url: o.redirectUrl,
