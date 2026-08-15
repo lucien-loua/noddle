@@ -3,9 +3,13 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   ConnectGithubDialog,
+  ConnectGitlabDialog,
   GitProvidersList,
 } from "@/components/features/git-providers/git-providers-panel";
-import { GithubIcon } from "@/components/features/services/provider-icons";
+import {
+  GithubIcon,
+  GitlabIcon,
+} from "@/components/features/services/provider-icons";
 import { Button } from "@/components/ui/button";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
@@ -41,17 +45,25 @@ function GitProvidersPage() {
     role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "gitProvider", "create");
   const [open, setOpen] = useState(false);
+  const [gitlabOpen, setGitlabOpen] = useState(false);
 
   const handleAdd = useCallback(() => setOpen(true), []);
+  const handleAddGitlab = useCallback(() => setGitlabOpen(true), []);
 
   return (
     <AppShell
       actions={
         canAdd ? (
-          <Button onClick={handleAdd}>
-            <GithubIcon />
-            Connect GitHub
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleAdd}>
+              <GithubIcon />
+              Connect GitHub
+            </Button>
+            <Button onClick={handleAddGitlab} variant="outline">
+              <GitlabIcon />
+              Connect GitLab
+            </Button>
+          </div>
         ) : null
       }
       email={email}
@@ -59,7 +71,10 @@ function GitProvidersPage() {
       title="Git providers"
     >
       {canAdd ? (
-        <ConnectGithubDialog onOpenChange={setOpen} open={open} />
+        <>
+          <ConnectGithubDialog onOpenChange={setOpen} open={open} />
+          <ConnectGitlabDialog onOpenChange={setGitlabOpen} open={gitlabOpen} />
+        </>
       ) : null}
       <GitProvidersList
         initial={providers}

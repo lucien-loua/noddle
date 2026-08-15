@@ -1,4 +1,10 @@
-import { githubProviders, gitProviders, services } from "@noddle/db/schema";
+import { encryptSecret, secretContext } from "@noddle/crypto";
+import {
+  githubProviders,
+  gitlabProviders,
+  gitProviders,
+  services,
+} from "@noddle/db/schema";
 import {
   appManifest,
   installUrl,
@@ -7,11 +13,13 @@ import {
   listInstallations,
   listRepositories,
 } from "@noddle/git-provider/github";
+import { authorizeUrl } from "@noddle/git-provider/gitlab";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
+import { env } from "@/lib/env.server";
 import { githubAppCredentials, githubAppFor } from "@/lib/git-provider.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 
@@ -154,6 +162,69 @@ export const startGithubApp = createServerFn({ method: "POST" })
       };
     }
   );
+
+const startGitlabSchema = z.object({
+  applicationId: z.string().min(1).max(255),
+  name: z.string().min(1).max(64),
+  secret: z.string().min(1).max(512),
+  /** `https://gitlab.com`, or a self-hosted instance. */
+  url: z.url().max(255).default("https://gitlab.com"),
+});
+
+/**
+ * Store the application and hand back where to send the browser.
+ *
+ * Unlike GitHub there is no manifest: the operator creates the application
+ * on GitLab first and pastes its id and secret here. So the redirect URI is
+ * shown to them BEFORE this — it has to match what they registered, and a
+ * mismatch is refused by GitLab after the browser has already left.
+ */
+export const startGitlabApp = createServerFn({ method: "POST" })
+  .validator(startGitlabSchema)
+  .handler(async ({ data }): Promise<{ authorizeUrl: string }> => {
+    const guarded = await runGuarded({
+      permission: { action: "create", resource: "gitProvider" },
+      run: async () => {
+        const origin = requestOrigin();
+        const redirectUri = `${origin}/api/git-providers/gitlab/callback`;
+        const id = crypto.randomUUID();
+
+        await db.insert(gitProviders).values({
+          id,
+          name: data.name,
+          providerType: "gitlab",
+        });
+        await db.insert(gitlabProviders).values({
+          applicationId: data.applicationId,
+          gitProviderId: id,
+          redirectUri,
+          secretEncrypted: encryptSecret(
+            data.secret,
+            env.appKey,
+            secretContext.gitProvider(id, "client_secret")
+          ),
+          url: data.url.replace(TRAILING_SLASHES, ""),
+        });
+
+        return {
+          authorizeUrl: authorizeUrl(
+            {
+              applicationId: data.applicationId,
+              redirectUri,
+              secret: data.secret,
+              url: data.url,
+            },
+            id
+          ),
+          id,
+          name: data.name,
+        };
+      },
+      target: ({ result }) => ({ id: result.id, name: result.name }),
+    });
+
+    return { authorizeUrl: guarded.authorizeUrl };
+  });
 
 const deleteGitProviderSchema = z.object({ gitProviderId: z.uuid() });
 

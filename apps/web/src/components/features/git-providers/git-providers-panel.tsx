@@ -39,6 +39,7 @@ import {
   deleteGitProvider,
   type GitProviderView,
   startGithubApp,
+  startGitlabApp,
   syncGithubInstallation,
 } from "@/server/git-providers";
 
@@ -102,7 +103,9 @@ function ProviderRow({
           </span>
         ) : null}
       </TableCell>
-      <TableCell className="text-muted-foreground text-sm">GitHub</TableCell>
+      <TableCell className="text-muted-foreground text-sm">
+        {provider.providerType === "gitlab" ? "GitLab" : "GitHub"}
+      </TableCell>
       <TableCell>
         {provider.connected ? (
           <Badge variant="secondary">Connected</Badge>
@@ -252,6 +255,138 @@ function ConnectGithubDialog({
   );
 }
 
+/**
+ * GitLab has no manifest: the operator creates the application on GitLab
+ * FIRST, then pastes its id and secret here. So the redirect URI is shown
+ * before anything else — it has to match what they registered, and GitLab
+ * refuses a mismatch only after the browser has already left.
+ */
+function ConnectGitlabDialog({
+  onOpenChange,
+  open,
+}: {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [applicationId, setApplicationId] = useState("");
+  const [secret, setSecret] = useState("");
+  const [url, setUrl] = useState("https://gitlab.com");
+
+  const redirectUri =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.origin}/api/git-providers/gitlab/callback`;
+
+  const start = useMutation({
+    mutationFn: () =>
+      startGitlabApp({ data: { applicationId, name, secret, url } }),
+    onError: (e: Error) =>
+      toast.add({
+        description: errorMessage(e, "could not start the connection"),
+        title: "Not connected",
+        type: "error",
+      }),
+    onSuccess: (result) => {
+      window.location.href = result.authorizeUrl;
+    },
+  });
+
+  const handleName = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+    []
+  );
+  const handleAppId = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setApplicationId(e.target.value),
+    []
+  );
+  const handleSecret = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setSecret(e.target.value),
+    []
+  );
+  const handleUrl = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value),
+    []
+  );
+  const handleStart = useCallback(() => start.mutate(), [start]);
+
+  const ready =
+    name.trim() !== "" && applicationId.trim() !== "" && secret.trim() !== "";
+
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Connect GitLab</DialogTitle>
+          <DialogDescription>
+            Create an application on GitLab with the redirect URI below and the
+            scopes api and read_repository, then paste its credentials here.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <Field>
+            <FieldLabel htmlFor="gitlab-redirect">Redirect URI</FieldLabel>
+            <FieldDescription>
+              Register this exact value on GitLab. A mismatch is only refused
+              after you have been sent there.
+            </FieldDescription>
+            <Input id="gitlab-redirect" readOnly value={redirectUri} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="gitlab-name">Name</FieldLabel>
+            <Input
+              autoComplete="off"
+              id="gitlab-name"
+              onChange={handleName}
+              placeholder="acme-gitlab"
+              value={name}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="gitlab-url">GitLab URL</FieldLabel>
+            <FieldDescription>
+              Change it for a self-hosted instance.
+            </FieldDescription>
+            <Input id="gitlab-url" onChange={handleUrl} value={url} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="gitlab-app-id">Application ID</FieldLabel>
+            <Input
+              autoComplete="off"
+              id="gitlab-app-id"
+              onChange={handleAppId}
+              value={applicationId}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="gitlab-secret">Secret</FieldLabel>
+            <Input
+              autoComplete="off"
+              id="gitlab-secret"
+              onChange={handleSecret}
+              type="password"
+              value={secret}
+            />
+          </Field>
+          {start.isError ? (
+            <p className="mt-3 text-destructive text-sm" role="alert">
+              {errorMessage(start.error, "could not start the connection")}
+            </p>
+          ) : null}
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline">Cancel</Button>} />
+          <Button disabled={!ready || start.isPending} onClick={handleStart}>
+            {start.isPending ? <Spinner data-icon="inline-start" /> : null}
+            Continue on GitLab
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function GitProvidersList({
   initial,
   onAdd,
@@ -323,4 +458,4 @@ export function GitProvidersList({
   );
 }
 
-export { ConnectGithubDialog };
+export { ConnectGithubDialog, ConnectGitlabDialog };

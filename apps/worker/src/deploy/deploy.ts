@@ -51,7 +51,7 @@ function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
           deployKey: true,
           domains: true,
           envVars: true,
-          gitProvider: { with: { github: true } },
+          gitProvider: { with: { github: true, gitlab: true } },
           server: true,
         },
       },

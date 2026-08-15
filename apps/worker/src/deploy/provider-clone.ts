@@ -1,9 +1,96 @@
-import { decryptSecret, secretContext } from "@noddle/crypto";
+import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
+import { gitlabProviders } from "@noddle/db/schema";
 import {
   cloneUrlWithToken,
   installationToken,
 } from "@noddle/git-provider/github";
+import {
+  cloneUrlWithToken as gitlabCloneUrlWithToken,
+  needsRefresh,
+  refreshTokens,
+} from "@noddle/git-provider/gitlab";
+import { eq } from "drizzle-orm";
 import type { DeployContext } from "#runtime-context";
+
+/**
+ * GitLab, where the token EXPIRES.
+ *
+ * Refreshed before the clone rather than on a failure: a token that dies
+ * mid-build surfaces as a clone that "randomly" 403s, minutes in. The
+ * renewed pair is persisted, because GitLab rotates the refresh token too.
+ */
+async function gitlabCloneUrl(
+  ctx: DeployContext,
+  provider: NonNullable<ProviderService["gitProvider"]>,
+  repoUrl: string
+): Promise<string> {
+  const { gitlab } = provider;
+  if (
+    !(gitlab?.applicationId && gitlab.secretEncrypted && gitlab.redirectUri)
+  ) {
+    throw new Error(
+      `provider ${provider.name} is not finished: authorise it on GitLab first`
+    );
+  }
+
+  const app = {
+    applicationId: gitlab.applicationId,
+    redirectUri: gitlab.redirectUri,
+    secret: decryptSecret(
+      gitlab.secretEncrypted,
+      ctx.appKey,
+      secretContext.gitProvider(provider.id, "client_secret")
+    ),
+    url: gitlab.url,
+  };
+
+  if (!needsRefresh(gitlab.expiresAt?.getTime() ?? null)) {
+    if (!gitlab.accessTokenEncrypted) {
+      throw new Error(`provider ${provider.name} has no access token`);
+    }
+    return gitlabCloneUrlWithToken(
+      repoUrl,
+      decryptSecret(
+        gitlab.accessTokenEncrypted,
+        ctx.appKey,
+        secretContext.gitProvider(provider.id, "access_token")
+      )
+    );
+  }
+
+  if (!gitlab.refreshTokenEncrypted) {
+    throw new Error(
+      `provider ${provider.name} was never authorised — connect it again`
+    );
+  }
+
+  const tokens = await refreshTokens(
+    app,
+    decryptSecret(
+      gitlab.refreshTokenEncrypted,
+      ctx.appKey,
+      secretContext.gitProvider(provider.id, "refresh_token")
+    )
+  );
+  await ctx.db
+    .update(gitlabProviders)
+    .set({
+      accessTokenEncrypted: encryptSecret(
+        tokens.accessToken,
+        ctx.appKey,
+        secretContext.gitProvider(provider.id, "access_token")
+      ),
+      expiresAt: new Date(tokens.expiresAt),
+      refreshTokenEncrypted: encryptSecret(
+        tokens.refreshToken,
+        ctx.appKey,
+        secretContext.gitProvider(provider.id, "refresh_token")
+      ),
+    })
+    .where(eq(gitlabProviders.gitProviderId, provider.id));
+
+  return gitlabCloneUrlWithToken(repoUrl, tokens.accessToken);
+}
 
 interface ProviderService {
   gitProvider?: {
@@ -11,6 +98,15 @@ interface ProviderService {
       appId: string | null;
       installationId: string | null;
       privateKeyEncrypted: string | null;
+      url: string;
+    } | null;
+    gitlab?: {
+      accessTokenEncrypted: string | null;
+      applicationId: string | null;
+      expiresAt: Date | null;
+      redirectUri: string | null;
+      refreshTokenEncrypted: string | null;
+      secretEncrypted: string | null;
       url: string;
     } | null;
     id: string;
@@ -41,11 +137,8 @@ export async function providerCloneUrl(
     return null;
   }
 
-  if (provider.providerType !== "github") {
-    // GitLab is sequenced after GitHub (ADR-0019). Failing loudly beats
-    // silently falling back to an anonymous clone, which would look like a
-    // permissions problem on a private repository.
-    throw new Error(`provider ${provider.providerType} is not wired yet`);
+  if (provider.providerType === "gitlab") {
+    return await gitlabCloneUrl(ctx, provider, service.gitRepoUrl);
   }
 
   const { github } = provider;
