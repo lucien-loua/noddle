@@ -6,27 +6,32 @@ import {
   serviceDockerProviderSchema,
   serviceGitProviderSchema,
 } from "@noddle/shared/validation/service";
-import {
-  CubeIcon,
-  GitBranchIcon,
-  GithubLogoIcon,
-  GitlabLogoIcon,
-} from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useAppForm } from "@/components/fields/lib/form";
+import {
+  DockerIcon,
+  GitIcon,
+  GithubIcon,
+  GitlabIcon,
+} from "@/components/features/services/provider-icons";
 import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
-  FrameFooter,
   FrameHeader,
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
@@ -51,6 +56,10 @@ function providerTab(sourceType: ServiceRow["sourceType"]): ProviderTab {
   return "git";
 }
 
+function isProviderTab(value: string): value is ProviderTab {
+  return value === "docker" || isGitSourceType(value);
+}
+
 function GitSourceForm({
   canEdit,
   service,
@@ -70,6 +79,7 @@ function GitSourceForm({
           buildMethod: service.buildMethod === "image" ? "nixpacks" : undefined,
           gitBranch: value.gitBranch,
           gitRepoUrl: value.gitRepoUrl,
+          gitSubmodules: value.gitSubmodules,
           serviceId: service.id,
           sourceType,
         },
@@ -83,6 +93,7 @@ function GitSourceForm({
   const defaultValues: ServiceGitProviderInput = {
     gitBranch: service.gitBranch ?? "main",
     gitRepoUrl: service.gitRepoUrl ?? "",
+    gitSubmodules: service.gitSubmodules,
   };
 
   const form = useAppForm({
@@ -94,7 +105,12 @@ function GitSourceForm({
   // biome-ignore lint/correctness/useExhaustiveDependencies: repo fields are the TRIGGER
   useEffect(() => {
     form.reset();
-  }, [form.reset, service.gitBranch, service.gitRepoUrl]);
+  }, [
+    form.reset,
+    service.gitBranch,
+    service.gitRepoUrl,
+    service.gitSubmodules,
+  ]);
 
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
 
@@ -120,6 +136,23 @@ function GitSourceForm({
             />
           )}
         </form.AppField>
+        <form.AppField name="gitSubmodules">
+          {(f) => (
+            <Field orientation="horizontal">
+              <div className="flex flex-1 flex-col gap-1">
+                <FieldLabel className="font-medium">Submodules</FieldLabel>
+                <FieldDescription>
+                  Clone submodules alongside the repository.
+                </FieldDescription>
+              </div>
+              <Switch
+                checked={f.state.value}
+                disabled={!canEdit}
+                onCheckedChange={f.handleChange}
+              />
+            </Field>
+          )}
+        </form.AppField>
       </FieldGroup>
 
       {save.isError ? (
@@ -129,7 +162,7 @@ function GitSourceForm({
       ) : null}
 
       {canEdit ? (
-        <FrameFooter className="flex-row justify-end">
+        <div className="mt-4 flex justify-end">
           <Button
             disabled={save.isPending}
             onClick={handleSubmit}
@@ -139,7 +172,7 @@ function GitSourceForm({
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>
-        </FrameFooter>
+        </div>
       ) : null}
     </>
   );
@@ -210,7 +243,7 @@ function DockerSourceForm({
       ) : null}
 
       {canEdit ? (
-        <FrameFooter className="flex-row justify-end">
+        <div className="mt-4 flex justify-end">
           <Button
             disabled={save.isPending}
             onClick={handleSubmit}
@@ -220,7 +253,7 @@ function DockerSourceForm({
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>
-        </FrameFooter>
+        </div>
       ) : null}
     </>
   );
@@ -241,6 +274,12 @@ export function ServiceProvider({
     setTab(providerTab(service.sourceType));
   }, [service.sourceType]);
 
+  const handleTabChange = useCallback((value: unknown) => {
+    if (typeof value === "string" && isProviderTab(value)) {
+      setTab(value);
+    }
+  }, []);
+
   return (
     <Frame variant="ghost">
       <FrameHeader>
@@ -248,35 +287,22 @@ export function ServiceProvider({
         <FrameDescription>Select the source of your code</FrameDescription>
       </FrameHeader>
       <FramePanel>
-        <Tabs
-          className="gap-4"
-          onValueChange={(value) => {
-            if (
-              value === "git" ||
-              value === "github" ||
-              value === "gitlab" ||
-              value === "docker"
-            ) {
-              setTab(value);
-            }
-          }}
-          value={tab}
-        >
+        <Tabs className="gap-4" onValueChange={handleTabChange} value={tab}>
           <TabsList>
             <TabsTrigger value="github">
-              <GithubLogoIcon />
+              <GithubIcon />
               GitHub
             </TabsTrigger>
             <TabsTrigger value="gitlab">
-              <GitlabLogoIcon />
+              <GitlabIcon />
               GitLab
             </TabsTrigger>
             <TabsTrigger value="git">
-              <GitBranchIcon />
+              <GitIcon />
               Git
             </TabsTrigger>
             <TabsTrigger value="docker">
-              <CubeIcon />
+              <DockerIcon />
               Docker
             </TabsTrigger>
           </TabsList>
