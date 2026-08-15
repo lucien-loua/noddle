@@ -161,6 +161,13 @@ Two constraints that follow, both already cost time:
 - **No TypeScript parameter properties** (`constructor(private readonly x: T)`) in code the worker loads. Node's strip-only type stripping refuses them — it removes types, it does not transform. Biome flags them too.
 - **An ssh2 `Channel` is a `Duplex`, not a `net.Socket`.** Node's HTTP agent calls `setKeepAlive`/`setNoDelay`/`ref` on whatever `createConnection` returns, and the failure surfaces as an unreadable `TypeError` from inside `node:_http_agent`. The executor stubs the missing methods and disables agent keep-alive.
 
+**The worker loads its code once, at startup.** It is a separate process from
+`web`, so a change to `build-engine`, `ssh-executor` or `deploy.ts` does nothing
+until it is restarted — the dashboard rebuild does not carry it. Three separate
+symptoms in one session traced back to this, each looking like the fix had failed
+rather than never having run. `bun run --cwd apps/worker dev` uses
+`node --watch`, which does reload.
+
 **Infrastructure code is not done when it typechecks.** Anything touching SSH,
 Swarm, Nixpacks or Traefik must be run against a real VPS before it is considered
 working. If you cannot test it, say so plainly instead of implying it works.
@@ -247,6 +254,35 @@ it regardless. Measured:
 Consequence for the product: **there is no way to inject a package through the
 nixpacks CLI.** Anything Noddle needs inside a user's image has to come from the
 base image, or from a build stage Noddle controls — never from a nixpacks flag.
+
+**`--env` is the exception, and it is the ONLY way to set a nixpacks config
+variable.** The process environment is ignored, and the un-prefixed name is not
+read. Measured on 1.41.0 against a real repository:
+
+| invocation | plan |
+|---|---|
+| `NIXPACKS_NODE_VERSION=22 nixpacks build …` | `nodejs_18` — ignored |
+| `nixpacks build … --env NODE_VERSION=22` | `nodejs_18` — wrong name |
+| `nixpacks build … --env NIXPACKS_NODE_VERSION=22` | `nodejs_22` |
+
+`--env` leaves the `overlays` list intact — checked, because that is exactly how
+`--apt` fails and losing it is silent.
+
+**Nixpacks defaults to Node 18, which nixpkgs has REMOVED as end-of-life.** So a
+repository that declares no version does not build at all, and dies inside a nix
+evaluation naming neither the project nor the setting. Upgrading nixpacks does
+not help: the default is still 18 on `main`. Noddle supplies
+`FALLBACK_NODE_VERSION` **only when the clone is silent** — the variable outranks
+`engines.node`, `.nvmrc` and `.node-version`, so setting it always would override
+the very thing a user chose deliberately.
+
+**The versions Noddle installs are PINNED** (`packages/shared/src/toolchain.ts`,
+mirrored in `installer/install.sh`, kept in step by `verify-toolchain`). Noddle
+installs nixpacks itself, so it owns both halves of the compatibility pair — the
+same reasoning as the Traefik pin below. Unpinned, two servers added a month
+apart build differently with nothing in the diff to explain it. Note `sudo -E`:
+without it the exported version is dropped and the install silently takes the
+latest, which looks like a correct command.
 
 **Swarm gotchas that will silently break things:**
 - `HEALTHCHECK` needs a binary **inside** the image, and it runs under a **non-login `sh -c`**. Measured in `nixpacks:ubuntu-1745885067`: `curl` is present at `/bin/curl` and on `PATH`; `wget` is absent; `node` is **not** on `PATH` because it lives in the nix profile that only a *login* shell sources. So the healthcheck uses `curl`, and a `node -e` healthcheck would fail just as silently as `wget`. Either way it presents as a Traefik routing bug.
