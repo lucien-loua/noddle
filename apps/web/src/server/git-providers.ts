@@ -87,11 +87,6 @@ const startGithubSchema = z.object({
       /^[a-zA-Z0-9][a-zA-Z0-9-]*$/,
       "letters, digits and dashes; cannot start with a dash"
     ),
-  /**
-   * Where GitHub should reach this dashboard. Defaults to the request's
-   * own origin — only needed when developing behind a tunnel.
-   */
-  publicUrl: z.union([z.literal(""), z.url().max(255)]).optional(),
   /** `https://github.com` or a GitHub Enterprise host. */
   url: z.url().max(255).default("https://github.com"),
 });
@@ -112,9 +107,7 @@ export const startGithubApp = createServerFn({ method: "POST" })
       const guarded = await runGuarded({
         permission: { action: "create", resource: "gitProvider" },
         run: async () => {
-          const origin = data.publicUrl?.trim()
-            ? data.publicUrl.trim().replace(TRAILING_SLASHES, "")
-            : requestOrigin();
+          const origin = requestOrigin();
 
           // Refused HERE, and BEFORE the insert. GitHub requires a hook it
           // can reach and rejects the whole manifest otherwise, so failing
@@ -122,7 +115,7 @@ export const startGithubApp = createServerFn({ method: "POST" })
           // pending row behind on every attempt.
           if (!isPubliclyReachable(origin)) {
             throw new Error(
-              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Serve Noddle on a public address, or expose it through a tunnel and enter that URL below.`
+              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Open Noddle on a public address — a tunnel URL works — and connect from there.`
             );
           }
 
