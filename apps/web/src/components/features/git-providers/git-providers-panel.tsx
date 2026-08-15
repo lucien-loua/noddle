@@ -46,6 +46,8 @@ import {
   syncGithubInstallation,
 } from "@/server/git-providers";
 
+const TRAILING_SLASHES = /\/+$/;
+
 function ProviderRow({
   onRemoved,
   provider,
@@ -281,6 +283,10 @@ function ConnectGitlabDialog({
       ? ""
       : `${window.location.origin}/api/git-providers/gitlab/callback`;
 
+  // Derived from the instance the user typed, so a self-hosted GitLab gets
+  // its OWN link rather than one pointing at gitlab.com.
+  const applicationsUrl = `${url.replace(TRAILING_SLASHES, "")}/-/user_settings/applications`;
+
   const start = useMutation({
     mutationFn: () =>
       startGitlabApp({ data: { applicationId, name, secret, url } }),
@@ -331,8 +337,19 @@ function ConnectGitlabDialog({
           <Field>
             <FieldLabel htmlFor="gitlab-redirect">Redirect URI</FieldLabel>
             <FieldDescription>
-              Register this exact value on GitLab. A mismatch is only refused
-              after you have been sent there.
+              Create the application at{" "}
+              <a
+                className="underline"
+                href={applicationsUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {applicationsUrl}
+              </a>{" "}
+              with scopes <code className="font-mono">api</code> and{" "}
+              <code className="font-mono">read_repository</code>, and register
+              this exact URI. A mismatch is only refused once GitLab has already
+              taken you there.
             </FieldDescription>
             <Input id="gitlab-redirect" readOnly value={redirectUri} />
           </Field>
