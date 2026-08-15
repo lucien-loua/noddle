@@ -21,6 +21,26 @@ export class BuildError extends Error {
   }
 }
 
+/**
+ * Did the build die for lack of memory rather than for a mistake in it?
+ *
+ * BuildKit reports this three different ways depending on who noticed —
+ * the kernel killing the process, buildkit's own accounting, or the tool
+ * reporting the signal. All three mean the same thing and none of them says
+ * "memory cap".
+ */
+const OOM_SIGNATURES = [
+  "cannot allocate memory",
+  "ResourceExhausted",
+  "signal SIGKILL",
+  "Killed",
+  "out of memory",
+];
+
+export function looksOutOfMemory(output: string): boolean {
+  return OOM_SIGNATURES.some((sign) => output.includes(sign));
+}
+
 function check(stage: string, res: ExecResult): ExecResult {
   if (res.code !== 0) {
     const tail = (res.stderr || res.stdout)
@@ -28,9 +48,17 @@ function check(stage: string, res: ExecResult): ExecResult {
       .split("\n")
       .slice(-8)
       .join("\n");
+    const output = `${res.stderr}\n${res.stdout}`;
+    // Said plainly, because the raw buildkit output names neither the cap
+    // nor memory as the cause — it ends on an exit code and a stack of
+    // layer noise, which reads as a broken build rather than a machine too
+    // small for it.
+    const reason = looksOutOfMemory(output)
+      ? `${stage} ran out of memory — the builder is capped so a heavy build cannot take the server down with it. Build on a larger server, or make the build itself lighter.\n`
+      : "";
     throw new BuildError(
       stage,
-      `${stage} failed (code ${res.code})\n${tail}`,
+      `${reason}${stage} failed (code ${res.code})\n${tail}`,
       res.code
     );
   }

@@ -3,7 +3,12 @@
 // Pure: no VM. `resolveBuildDir` turns a user-supplied string into a `cd`
 // target on the client's server, so what matters here is the REFUSALS.
 import { check, expectThrows, runVerify } from "@noddle/testing";
-import { BuildError, nixpacksNodeFlag, resolveBuildDir } from "#index";
+import {
+  BuildError,
+  looksOutOfMemory,
+  nixpacksNodeFlag,
+  resolveBuildDir,
+} from "#index";
 
 const CLONE = "/var/lib/noddle/builds/abc";
 
@@ -50,5 +55,25 @@ await runVerify("build directory resolution", () => {
     "the Node fallback is passed as --env, the only form nixpacks reads",
     nixpacksNodeFlag(false).startsWith(" --env NIXPACKS_NODE_VERSION=") &&
       nixpacksNodeFlag(true) === ""
+  );
+
+  // Measured on a 2 GB VM: Next.js compiled, then TypeScript was killed and
+  // buildkit reported only `code 102` under a wall of layer output. Each of
+  // these is how one of the three layers phrases the same cause.
+  check(
+    "every shape of an out-of-memory build is recognised",
+    [
+      "ERROR: failed to solve: ResourceExhausted: process ... cannot allocate memory",
+      'error: script "build" was terminated by signal SIGKILL (Forced quit)',
+      "Killed",
+      "fatal error: out of memory",
+    ].every(looksOutOfMemory)
+  );
+
+  check(
+    "an ordinary build failure is NOT reported as memory",
+    !looksOutOfMemory(
+      "error TS2304: Cannot find name 'foo'\nbuild failed with 1 error"
+    )
   );
 });
