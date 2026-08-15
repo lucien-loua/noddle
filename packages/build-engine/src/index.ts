@@ -53,14 +53,13 @@ function check(stage: string, res: ExecResult): ExecResult {
     // nor memory as the cause — it ends on an exit code and a stack of
     // layer noise, which reads as a broken build rather than a machine too
     // small for it.
-    const reason = looksOutOfMemory(output)
-      ? `${stage} ran out of memory — the builder is capped so a heavy build cannot take the server down with it. Build on a larger server, or make the build itself lighter.\n`
-      : "";
-    throw new BuildError(
-      stage,
-      `${reason}${stage} failed (code ${res.code})\n${tail}`,
-      res.code
-    );
+    // The FIRST line is the headline the dashboard shows on its own; the
+    // rest is tool output, collapsed behind it. So the first line has to
+    // say what happened without any of the noise below it.
+    const headline = looksOutOfMemory(output)
+      ? `${stage} ran out of memory — the builder is capped so one heavy build cannot take down what is already running. Build on a larger server, or make the build lighter.`
+      : `${stage} failed (code ${res.code})`;
+    throw new BuildError(stage, `${headline}\n${tail}`, res.code);
   }
   return res;
 }
