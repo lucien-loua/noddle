@@ -1,5 +1,6 @@
-import { PlugsIcon } from "@phosphor-icons/react";
+import { PlugsIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   GithubIcon,
@@ -23,16 +24,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
@@ -58,6 +58,15 @@ function httpUrlOrNull(candidate: string): string | null {
   } catch {
     return null;
   }
+}
+
+function Meta({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="truncate font-medium text-sm">{value}</dd>
+    </div>
+  );
 }
 
 function ProviderRow({
@@ -111,71 +120,79 @@ function ProviderRow({
   });
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {provider.name}
-        {error ? (
-          <span className="block text-destructive text-xs" role="status">
-            {error}
-          </span>
-        ) : null}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {provider.providerType === "gitlab" ? "GitLab" : "GitHub"}
-      </TableCell>
-      <TableCell>
-        {provider.connected ? (
-          <Badge variant="secondary">Connected</Badge>
-        ) : (
-          <Badge variant="outline">Not installed</Badge>
-        )}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {provider.serviceCount}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        <RelativeTime iso={provider.createdAt} />
-      </TableCell>
-      <TableCell className="text-end">
-        <div className="flex justify-end gap-1">
+    <FramePanel>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {provider.providerType === "gitlab" ? (
+              <GitlabIcon />
+            ) : (
+              <GithubIcon />
+            )}
+            <h2 className="truncate font-semibold text-sm">{provider.name}</h2>
+            {provider.connected ? (
+              <Badge variant="secondary">Connected</Badge>
+            ) : (
+              <Badge variant="outline">Not installed</Badge>
+            )}
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+            <Meta label="Services" value={provider.serviceCount} />
+            <Meta
+              label="Added"
+              value={<RelativeTime iso={provider.createdAt} />}
+            />
+          </dl>
+          {error ? (
+            <p className="mt-2 text-destructive text-xs" role="status">
+              {error}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
           {/* An App that exists but is installed nowhere can list no
               repository. Finishing it is the only useful action left. */}
           {provider.installUrl ? (
-            <Button
-              render={
-                <a href={provider.installUrl} rel="noreferrer" target="_blank">
-                  Install
-                </a>
-              }
-              size="sm"
-              variant="outline"
-            />
-          ) : null}
-          {provider.installUrl ? (
-            <Button
-              disabled={sync.isPending}
-              onClick={handleSync}
-              size="sm"
-              variant="ghost"
-            >
-              {sync.isPending ? <Spinner data-icon="inline-start" /> : null}I
-              have installed it
-            </Button>
+            <>
+              <Button
+                render={
+                  <a
+                    href={provider.installUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Install
+                  </a>
+                }
+                size="sm"
+                variant="outline"
+              />
+              <Button
+                disabled={sync.isPending}
+                onClick={handleSync}
+                size="sm"
+                variant="ghost"
+              >
+                {sync.isPending ? <Spinner data-icon="inline-start" /> : null}I
+                have installed it
+              </Button>
+            </>
           ) : null}
           {canDelete ? (
             <Button
+              aria-label={`Remove ${provider.name}`}
               disabled={isPending}
               onClick={handleRemove}
-              size="sm"
+              size="icon-sm"
               variant="ghost"
             >
-              {isPending ? <Spinner /> : null}
-              Remove
+              {isPending ? <Spinner /> : <TrashIcon />}
             </Button>
           ) : null}
         </div>
-      </TableCell>
-    </TableRow>
+      </div>
+    </FramePanel>
   );
 }
 
@@ -460,8 +477,9 @@ export function GitProvidersList({
         <SettingsList.EmptyHeader>
           <SettingsList.EmptyTitle>No connected forges</SettingsList.EmptyTitle>
           <SettingsList.EmptyDescription>
-            Connect GitHub to pick repositories from a list, deploy private ones
-            without managing a key, and get pushes delivered automatically.
+            Connect GitHub or GitLab to pick repositories from a list, deploy
+            private ones without managing a key, and get pushes delivered
+            automatically.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
         {onAddGithub && onAddGitlab ? (
@@ -482,33 +500,24 @@ export function GitProvidersList({
         ) : null}
       </SettingsList.Empty>
 
-      <SettingsList.Frame
-        description="Forges Noddle can read repositories from. The App belongs to your account — its private key never leaves this server, and revoking it on GitHub revokes it here."
-        title="Git providers"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Services</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <ProviderRow
-                key={row.id}
-                onRemoved={refresh}
-                provider={row}
-                role={role}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </SettingsList.Frame>
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader>
+          <FrameTitle>Git providers</FrameTitle>
+          <FrameDescription>
+            Forges Noddle can read repositories from. The credentials belong to
+            your account — they never leave this server, and revoking them on
+            the forge revokes them here.
+          </FrameDescription>
+        </FrameHeader>
+        {rows.map((row) => (
+          <ProviderRow
+            key={row.id}
+            onRemoved={refresh}
+            provider={row}
+            role={role}
+          />
+        ))}
+      </Frame>
     </SettingsList>
   );
 }
