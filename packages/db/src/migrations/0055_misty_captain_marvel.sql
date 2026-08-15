@@ -1,0 +1,1 @@
+ALTER TABLE "github_providers" ADD COLUMN "html_url" text;

@@ -8,9 +8,12 @@ import { check, expectThrowsAsync, runVerify } from "@noddle/testing";
 import {
   apiBase,
   appJwt,
+  appManifest,
   cloneUrlWithToken,
+  exchangeManifestCode,
   GithubError,
   installationToken,
+  installUrl,
   listRepositories,
   redactCloneUrl,
 } from "#github";
@@ -176,5 +179,84 @@ await runVerify("github app", async () => {
   check(
     "a remote that never stops paginating is bounded",
     calls === 20 && repos.length === 2000
+  );
+
+  // ── the manifest ─────────────────────────────────────────────────────
+  const manifest = appManifest({
+    name: "noddle-acme",
+    redirectUrl: "https://noddle.acme.io/api/git-providers/github/callback",
+    url: "https://noddle.acme.io",
+    webhookUrl: "https://noddle.acme.io/api/webhooks/github",
+  });
+
+  check(
+    "it asks for the minimum — contents and metadata, read only",
+    JSON.stringify(manifest.default_permissions) ===
+      JSON.stringify({ contents: "read", metadata: "read" })
+  );
+
+  check(
+    "push and pull_request, because previews need the second",
+    JSON.stringify(manifest.default_events) ===
+      JSON.stringify(["push", "pull_request"])
+  );
+
+  check(
+    "the App is private — it is the operator's, not a listing",
+    manifest.public === false
+  );
+
+  check(
+    "the webhook is active from creation, not a later manual step",
+    JSON.stringify(manifest.hook_attributes) ===
+      JSON.stringify({
+        active: true,
+        url: "https://noddle.acme.io/api/webhooks/github",
+      })
+  );
+
+  // ── the code exchange ────────────────────────────────────────────────
+  let exchangeUrl = "";
+  const created = await exchangeManifestCode(
+    "abc123",
+    "https://github.com",
+    (url, init) => {
+      exchangeUrl = `${init?.method} ${url}`;
+      return Promise.resolve(
+        jsonResponse({
+          client_id: "Iv1.deadbeef",
+          client_secret: "shhh",
+          html_url: "https://github.com/apps/noddle-acme",
+          id: 987_654,
+          name: "noddle-acme",
+          pem: "-----BEGIN RSA PRIVATE KEY-----\n",
+          webhook_secret: "whsec",
+        })
+      );
+    }
+  );
+
+  check(
+    "the code is exchanged by POST at the conversions endpoint",
+    exchangeUrl ===
+      "POST https://api.github.com/app-manifests/abc123/conversions"
+  );
+
+  check(
+    "the numeric app id becomes a string — it is a JWT claim and a path",
+    created.appId === "987654" && typeof created.appId === "string"
+  );
+
+  check(
+    "the private key and webhook secret are carried back",
+    created.pem.startsWith("-----BEGIN") && created.webhookSecret === "whsec"
+  );
+
+  check(
+    "the install URL is derived from the App page",
+    installUrl(created.htmlUrl) ===
+      "https://github.com/apps/noddle-acme/installations/new" &&
+      installUrl("https://github.com/apps/x/") ===
+        "https://github.com/apps/x/installations/new"
   );
 });

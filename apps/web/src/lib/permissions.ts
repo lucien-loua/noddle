@@ -68,6 +68,16 @@ export const statement = {
    * Reading goes through `requireSession`, the same trade-off as
    * `server: read` for disk usage breakdown.
    */
+  /**
+   * A connected forge (ADR-0019). Its own resource, same reasoning as
+   * `sshKey`: the row carries an App private key and a token that read
+   * every repository the installation was given. Someone who needs to
+   * deploy does not need to be able to connect a new one.
+   *
+   * No `update`: repointing a connection at another App would silently
+   * change what every service using it clones.
+   */
+  gitProvider: ["read", "create", "delete"],
   installation: ["update"],
   notification: ["read", "manage"],
 
@@ -148,6 +158,7 @@ export const admin = ac.newRole({
   // and runs migrations. It's administration of the installation, not
   // operations — and a `deployer` who deploys all day has no reason to be
   // able to change Noddle out from under their own feet.
+  gitProvider: ["read", "create", "delete"],
   installation: ["update"],
   notification: ["read", "manage"],
   registry: ["read", "create", "delete"],

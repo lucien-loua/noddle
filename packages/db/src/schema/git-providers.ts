@@ -41,6 +41,8 @@ export const githubProviders = pgTable("github_providers", {
   gitProviderId: uuid("git_provider_id")
     .primaryKey()
     .references(() => gitProviders.id, { onDelete: "cascade" }),
+  /** The App's page. `installUrl` derives the install link from it. */
+  htmlUrl: text("html_url"),
   /** Set once the App is installed on an account. */
   installationId: text("installation_id"),
   privateKeyEncrypted: text("private_key_encrypted"),

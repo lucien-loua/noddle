@@ -218,3 +218,90 @@ export function redactCloneUrl(url: string): string {
     return "<repository>";
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// App creation — the manifest flow
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * What GitHub renders as a "create this App" form.
+ *
+ * The manifest is POSTed by the BROWSER to GitHub, not by us: it is the
+ * operator's account that must own the App (ADR-0019). GitHub then sends
+ * the browser back to `redirect_url` with a single-use `code`.
+ */
+export function appManifest(o: {
+  /** Where GitHub sends webhooks. Must be reachable from GitHub. */
+  webhookUrl: string;
+  /** Where GitHub returns the browser, carrying `?code=`. */
+  redirectUrl: string;
+  name: string;
+  /** The dashboard's own origin. */
+  url: string;
+}): Record<string, unknown> {
+  return {
+    // `checks: read` is not requested: Noddle deploys, it does not report
+    // build status back. Ask for the minimum — an App's permissions are
+    // what the operator is shown before approving.
+    default_events: ["push", "pull_request"],
+    default_permissions: { contents: "read", metadata: "read" },
+    hook_attributes: { active: true, url: o.webhookUrl },
+    name: o.name,
+    public: false,
+    redirect_url: o.redirectUrl,
+    url: o.url,
+  };
+}
+
+export interface CreatedApp {
+  appId: string;
+  clientId: string;
+  clientSecret: string;
+  htmlUrl: string;
+  name: string;
+  pem: string;
+  webhookSecret: string;
+}
+
+/**
+ * Exchange the manifest `code` for the App's credentials.
+ *
+ * SINGLE USE and short-lived: GitHub invalidates the code within an hour
+ * and on first use. A failure here is unrecoverable by retrying the same
+ * code — the operator has to start the manifest over, which is why the
+ * error has to say so rather than read as a transient fault.
+ */
+export async function exchangeManifestCode(
+  code: string,
+  url: string,
+  fetchImpl: GithubFetch = fetch
+): Promise<CreatedApp> {
+  const body = await githubJson<{
+    client_id: string;
+    client_secret: string;
+    html_url: string;
+    id: number;
+    name: string;
+    pem: string;
+    webhook_secret: string;
+  }>(fetchImpl, `${apiBase(url)}/app-manifests/${code}/conversions`, {
+    method: "POST",
+  });
+
+  return {
+    // GitHub returns a number; every later use is a JWT `iss` claim and a
+    // path segment, both strings.
+    appId: String(body.id),
+    clientId: body.client_id,
+    clientSecret: body.client_secret,
+    htmlUrl: body.html_url,
+    name: body.name,
+    pem: body.pem,
+    webhookSecret: body.webhook_secret,
+  };
+}
+
+/** Where the operator installs the App they just created. */
+export function installUrl(htmlUrl: string): string {
+  return `${htmlUrl.replace(TRAILING_SLASHES, "")}/installations/new`;
+}

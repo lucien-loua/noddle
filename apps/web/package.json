@@ -19,6 +19,7 @@
     "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
     "@noddle/deploy-contract": "workspace:*",
+    "@noddle/git-provider": "workspace:*",
     "@noddle/notifier": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-credentials": "workspace:*",
