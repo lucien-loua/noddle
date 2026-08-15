@@ -13,6 +13,7 @@ import {
 } from "#toolchain";
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
+const MAJOR = /^\d+$/;
 const UNPINNED_INSTALL =
   /curl[^\n]*nixpacks\.com\/install\.sh[^\n]*\|\s*\$SUDO bash\s*$/m;
 
@@ -56,7 +57,7 @@ await runVerify("toolchain pinning", () => {
   // exists for that case and must not itself be dead.
   check(
     "the Node fallback is a real major, and not the dead default",
-    /^\d+$/.test(FALLBACK_NODE_VERSION) && Number(FALLBACK_NODE_VERSION) >= 20,
+    MAJOR.test(FALLBACK_NODE_VERSION) && Number(FALLBACK_NODE_VERSION) >= 20,
     `got "${FALLBACK_NODE_VERSION}"`
   );
 });
