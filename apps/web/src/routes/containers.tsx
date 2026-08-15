@@ -26,7 +26,6 @@ import {
   Frame,
   FrameDescription,
   FrameHeader,
-  FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -153,11 +152,10 @@ function ContainersPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        // `Frame` + `FramePanel`: the table sits INSIDE a panel rather than
-        // bare on the background. `p-0` because the panel pads its content
-        // by default, and a table must touch its own edges — it carries its
-        // own spacing, row by row.
-        <Frame variant="ghost">
+        // Cards are direct children of the Frame, like every other list:
+        // each one IS a panel, so wrapping them in another produced a panel
+        // inside a panel.
+        <Frame className="w-full" variant="ghost">
           <FrameHeader>
             <FrameTitle>All nodes</FrameTitle>
             <FrameDescription>
@@ -165,40 +163,34 @@ function ContainersPage() {
               Noddle's own control plane, and anything else running underneath.
             </FrameDescription>
           </FrameHeader>
-          <FramePanel className="p-0">
-            <div className="flex flex-col gap-3">
-              {view.containers.map((row) => (
-                <ResourceCard
-                  actions={
-                    <ContainerActions
-                      onError={handleError}
-                      role={known}
-                      row={row}
-                    />
-                  }
-                  key={`${row.serverId}-${row.id}`}
-                  title={
-                    <>
-                      <KindIcon kind={row.kind} />
-                      <h2 className="truncate font-semibold text-sm">
-                        {row.name}
-                      </h2>
-                      <KindBadge kind={row.kind} />
-                    </>
-                  }
-                >
-                  <ResourceCardMeta className="sm:grid-cols-3">
-                    <ResourceCardFact
-                      label="Status"
-                      value={<StateCell row={row} />}
-                    />
-                    <ResourceCardFact label="Image" value={row.image} />
-                    <ResourceCardFact label="Server" value={row.serverName} />
-                  </ResourceCardMeta>
-                </ResourceCard>
-              ))}
-            </div>
-          </FramePanel>
+          {view.containers.map((row) => (
+            <ResourceCard
+              actions={
+                <ContainerActions
+                  onError={handleError}
+                  role={known}
+                  row={row}
+                />
+              }
+              key={`${row.serverId}-${row.id}`}
+              title={
+                <>
+                  <KindIcon kind={row.kind} />
+                  <h2 className="truncate font-semibold text-sm">{row.name}</h2>
+                  <KindBadge kind={row.kind} />
+                </>
+              }
+            >
+              <ResourceCardMeta className="sm:grid-cols-3">
+                <ResourceCardFact
+                  label="Status"
+                  value={<StateCell row={row} />}
+                />
+                <ResourceCardFact label="Image" value={row.image} />
+                <ResourceCardFact label="Server" value={row.serverName} />
+              </ResourceCardMeta>
+            </ResourceCard>
+          ))}
         </Frame>
       )}
     </AppShell>
