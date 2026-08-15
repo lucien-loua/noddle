@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -91,12 +92,14 @@ export function ServiceRegistry({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={BUILT_IN}>Noddle</SelectItem>
-        {rows.map((r) => (
-          <SelectItem key={r.id} value={r.id}>
-            {r.name}
-          </SelectItem>
-        ))}
+        <SelectGroup>
+          <SelectItem value={BUILT_IN}>Noddle</SelectItem>
+          {rows.map((r) => (
+            <SelectItem key={r.id} value={r.id}>
+              {r.name}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );

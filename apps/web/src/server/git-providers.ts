@@ -213,7 +213,7 @@ export const syncGithubInstallation = createServerFn({ method: "POST" })
         run: async () => {
           const app = await githubAppCredentials(data.gitProviderId);
           const installations = await listInstallations(app);
-          const found = installations[0];
+          const [found] = installations;
           if (!found) {
             return { pending: true as const };
           }

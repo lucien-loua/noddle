@@ -19,6 +19,14 @@ import {
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import {
   Field,
   FieldDescription,
   FieldGroup,
@@ -47,6 +55,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -249,12 +258,14 @@ function DeployKeyField({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NO_DEPLOY_KEY}>None</SelectItem>
-          {rows.map((k) => (
-            <SelectItem key={k.id} value={k.id}>
-              {k.name}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+            <SelectItem value={NO_DEPLOY_KEY}>None</SelectItem>
+            {rows.map((k) => (
+              <SelectItem key={k.id} value={k.id}>
+                {k.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
         </SelectContent>
       </Select>
     </Field>
@@ -263,6 +274,78 @@ function DeployKeyField({
 
 /** What `null` means in the selector: a value, not an absence. */
 const CLONE_BY_URL = "url";
+
+interface ProviderRepo {
+  defaultBranch: string;
+  fullName: string;
+  url: string;
+}
+
+const repoLabel = (repo: ProviderRepo) => repo.fullName;
+
+/** Real branches of the picked repository, searchable. */
+function ProviderBranchField({
+  branch,
+  canEdit,
+  fullName,
+  onChange,
+  providerId,
+}: {
+  branch: string;
+  canEdit: boolean;
+  fullName: string;
+  onChange: (next: string) => void;
+  providerId: string;
+}) {
+  // Real branches, not a free-text guess: a branch that does not exist
+  // fails the clone, and it fails on the SERVER, minutes later.
+  const branches = useQuery({
+    ...queries.providerBranches(providerId, fullName),
+    enabled: canEdit,
+  });
+
+  const handleChange = useCallback(
+    (next: string | null) => {
+      if (next) {
+        onChange(next);
+      }
+    },
+    [onChange]
+  );
+
+  return (
+    <Field>
+      <FieldLabel htmlFor="git-branch-pick">Branch</FieldLabel>
+      {branches.isError ? (
+        <FieldDescription className="text-destructive">
+          {errorMessage(branches.error, "could not list branches")}
+        </FieldDescription>
+      ) : null}
+      <Combobox
+        items={branches.data ?? []}
+        onValueChange={handleChange}
+        value={branch}
+      >
+        <ComboboxInput
+          className="w-full"
+          disabled={!canEdit || branches.isPending}
+          id="git-branch-pick"
+          placeholder={branches.isPending ? "Loading…" : "Search a branch"}
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>No branch matches.</ComboboxEmpty>
+          <ComboboxList>
+            {(name: string) => (
+              <ComboboxItem key={name} value={name}>
+                {name}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </Field>
+  );
+}
 
 /**
  * Pick the repository from a connected forge instead of pasting a URL.
@@ -273,13 +356,17 @@ const CLONE_BY_URL = "url";
  * connected and clones anonymously.
  */
 function ProviderRepositoryField({
+  branch,
   canEdit,
+  onBranchChange,
   onPick,
   onProviderChange,
   providerId,
   repoUrl,
 }: {
+  branch: string;
   canEdit: boolean;
+  onBranchChange: (next: string) => void;
   onPick: (repoUrl: string, defaultBranch: string) => void;
   onProviderChange: (next: string | null) => void;
   providerId: string | null;
@@ -301,14 +388,15 @@ function ProviderRepositoryField({
   );
 
   const rows = repos.data ?? [];
+  const selectedRepo = rows.find((r) => r.url === repoUrl) ?? null;
+
   const handleRepo = useCallback(
-    (next: unknown) => {
-      const picked = rows.find((r) => r.url === next);
-      if (picked) {
-        onPick(picked.url, picked.defaultBranch);
+    (next: ProviderRepo | null) => {
+      if (next) {
+        onPick(next.url, next.defaultBranch);
       }
     },
-    [onPick, rows]
+    [onPick]
   );
 
   // Only connections that can actually list something. An App created but
@@ -338,12 +426,14 @@ function ProviderRepositoryField({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={CLONE_BY_URL}>Paste a URL</SelectItem>
-            {connected.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectItem value={CLONE_BY_URL}>Paste a URL</SelectItem>
+              {connected.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </Field>
@@ -356,28 +446,44 @@ function ProviderRepositoryField({
               {errorMessage(repos.error, "could not list repositories")}
             </FieldDescription>
           ) : null}
-          <Select
-            disabled={!canEdit || repos.isPending}
-            items={rows.map((r) => ({ label: r.fullName, value: r.url }))}
+          {/* A combobox and not a select: an installation can expose
+              hundreds of repositories, and a list you scroll is unusable
+              where a list you type into is not. */}
+          <Combobox
+            items={rows}
+            itemToStringLabel={repoLabel}
+            itemToStringValue={repoLabel}
             onValueChange={handleRepo}
-            value={repoUrl}
+            value={selectedRepo}
           >
-            <SelectTrigger aria-label="Repository" id="git-repository">
-              <SelectValue
-                placeholder={
-                  repos.isPending ? "Loading…" : "Select a repository"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {rows.map((r) => (
-                <SelectItem key={r.url} value={r.url}>
-                  {r.fullName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <ComboboxInput
+              className="w-full"
+              disabled={!canEdit || repos.isPending}
+              id="git-repository"
+              placeholder={repos.isPending ? "Loading…" : "Search a repository"}
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>No repository matches.</ComboboxEmpty>
+              <ComboboxList>
+                {(repo: ProviderRepo) => (
+                  <ComboboxItem key={repo.url} value={repo}>
+                    {repo.fullName}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </Field>
+      ) : null}
+
+      {providerId && selectedRepo ? (
+        <ProviderBranchField
+          branch={branch}
+          canEdit={canEdit}
+          fullName={selectedRepo.fullName}
+          onChange={onBranchChange}
+          providerId={providerId}
+        />
       ) : null}
     </>
   );
@@ -460,13 +566,20 @@ function GitSourceForm({
     [form]
   );
 
+  const handleBranchPick = useCallback(
+    (next: string) => form.setFieldValue("gitBranch", next),
+    [form]
+  );
+
   return (
     <>
       <FieldGroup>
         <form.AppField name="gitProviderId">
           {(f) => (
             <ProviderRepositoryField
+              branch={form.state.values.gitBranch}
               canEdit={canEdit}
+              onBranchChange={handleBranchPick}
               onPick={handlePick}
               onProviderChange={f.handleChange}
               providerId={f.state.value}
@@ -489,16 +602,22 @@ function GitSourceForm({
             )
           }
         </form.Subscribe>
-        <form.AppField name="gitBranch">
-          {(f) => (
-            <f.FieldText
-              disabled={!canEdit}
-              label="Branch"
-              placeholder="main"
-              required
-            />
-          )}
-        </form.AppField>
+        <form.Subscribe selector={selectProviderId}>
+          {(providerId) =>
+            providerId ? null : (
+              <form.AppField name="gitBranch">
+                {(f) => (
+                  <f.FieldText
+                    disabled={!canEdit}
+                    label="Branch"
+                    placeholder="main"
+                    required
+                  />
+                )}
+              </form.AppField>
+            )
+          }
+        </form.Subscribe>
         <form.AppField name="buildPath">
           {(f) => (
             <f.FieldText
