@@ -13,12 +13,10 @@ import { and, asc, count, desc, eq, gte, inArray } from "drizzle-orm";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 import z from "zod";
+import { loadDatabaseDashboardRows } from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
-import {
-  type DatabaseRow,
-  loadDatabaseDashboardRows,
-} from "@/server/databases/read";
+import type { DatabaseRow } from "@/server/databases/read";
 
 export interface DeploymentSummary {
   commitSha: string | null;
