@@ -1,4 +1,11 @@
-import { pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "#schema/columns";
 
 export const gitProviderType = pgEnum("git_provider_type", [
@@ -49,5 +56,35 @@ export const githubProviders = pgTable("github_providers", {
   updatedAt,
   /** `https://github.com`, or a GitHub Enterprise host. */
   url: text("url").notNull().default("https://github.com"),
+  webhookSecretEncrypted: text("webhook_secret_encrypted"),
+});
+
+/**
+ * A GitLab OAuth application, per ADR-0019.
+ *
+ * Unlike a GitHub App this holds a token that EXPIRES, so `expiresAt` is a
+ * column and not a detail: it is refreshed before use with a margin, never
+ * lazily on a 401 — a 401 surfaces as a failed deploy, minutes into a build.
+ *
+ * Do not "harmonise" this with `github_providers`. The asymmetry is the
+ * platform's, not a design we chose.
+ */
+export const gitlabProviders = pgTable("gitlab_providers", {
+  accessTokenEncrypted: text("access_token_encrypted"),
+  applicationId: text("application_id"),
+  createdAt,
+  /** When the access token dies. `null` until the first exchange. */
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  gitProviderId: uuid("git_provider_id")
+    .primaryKey()
+    .references(() => gitProviders.id, { onDelete: "cascade" }),
+  /** Scopes the repository listing when set. */
+  groupName: text("group_name"),
+  redirectUri: text("redirect_uri"),
+  refreshTokenEncrypted: text("refresh_token_encrypted"),
+  secretEncrypted: text("secret_encrypted"),
+  updatedAt,
+  /** `https://gitlab.com`, or a self-hosted instance. */
+  url: text("url").notNull().default("https://gitlab.com"),
   webhookSecretEncrypted: text("webhook_secret_encrypted"),
 });

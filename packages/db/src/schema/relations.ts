@@ -3,7 +3,11 @@ import { backupConfigs, backups } from "#schema/backups";
 import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
 import { envVars } from "#schema/env-vars";
-import { githubProviders, gitProviders } from "#schema/git-providers";
+import {
+  githubProviders,
+  gitlabProviders,
+  gitProviders,
+} from "#schema/git-providers";
 import { environments, projects } from "#schema/projects";
 import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
@@ -205,6 +209,10 @@ export const gitProvidersRelations = relations(
       fields: [gitProviders.id],
       references: [githubProviders.gitProviderId],
     }),
+    gitlab: one(gitlabProviders, {
+      fields: [gitProviders.id],
+      references: [gitlabProviders.gitProviderId],
+    }),
     services: many(services),
   })
 );
@@ -214,6 +222,16 @@ export const githubProvidersRelations = relations(
   ({ one }) => ({
     gitProvider: one(gitProviders, {
       fields: [githubProviders.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);
+
+export const gitlabProvidersRelations = relations(
+  gitlabProviders,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [gitlabProviders.gitProviderId],
       references: [gitProviders.id],
     }),
   })
