@@ -211,3 +211,32 @@ function parseGitlabMergeRequest(
     number: iid,
   };
 }
+
+const URL_SCHEME = /^[a-z]+:\/\/[^/]+\//i;
+const SSH_PREFIX = /^git@[^:]+:/i;
+const DOT_GIT = /\.git$/i;
+
+/**
+ * `owner/name` out of a clone URL, however it was written.
+ *
+ * The App's webhook identifies a repository by `full_name`, while a service
+ * stores whatever URL the user pasted: https or ssh, with or without
+ * `.git`, with or without a trailing slash. Two spellings of one repository
+ * must not read as two different ones — that would silently stop deploying
+ * a service whose URL is merely written differently.
+ */
+export function repoSlug(url: string | null | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+  const path = url
+    .trim()
+    .replace(URL_SCHEME, "")
+    .replace(SSH_PREFIX, "")
+    .replace(DOT_GIT, "");
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 2) {
+    return null;
+  }
+  return `${parts.at(-2)}/${parts.at(-1)}`.toLowerCase();
+}

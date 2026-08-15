@@ -9,6 +9,7 @@ import { check, runVerify } from "@noddle/testing";
 import {
   parseWebhookPullRequest,
   parseWebhookPush,
+  repoSlug,
 } from "@/lib/webhook.server";
 
 const gh = (action: string, sameRepo = true) =>
@@ -171,5 +172,39 @@ await runVerify("webhook payloads", () => {
     "a push with no commits array is still a push, with no files",
     bare !== null && bare.branch === "main" && bare.files.length === 0,
     `got ${JSON.stringify(bare)}`
+  );
+
+  // ── matching a payload's repository to a stored clone URL ────────────
+  // The App webhook says `owner/name`; a service stores whatever the user
+  // pasted. Two spellings of one repository must not read as two.
+  const spellings = [
+    "https://github.com/Org/App.git",
+    "https://github.com/Org/App",
+    "https://github.com/Org/App/",
+    "git@github.com:Org/App.git",
+    "ssh://git@github.com/Org/App.git",
+  ];
+  check(
+    "every spelling of one repository resolves to the same slug",
+    spellings.every((u) => repoSlug(u) === "org/app"),
+    `got ${JSON.stringify(spellings.map(repoSlug))}`
+  );
+
+  check(
+    "a self-hosted host does not change the slug",
+    repoSlug("https://git.acme.io/team/api.git") === "team/api"
+  );
+
+  check(
+    "a nested GitLab-style group keeps the LAST two segments",
+    repoSlug("https://gitlab.com/group/sub/app.git") === "sub/app"
+  );
+
+  check(
+    "an unusable URL is null, never a partial match",
+    repoSlug(null) === null &&
+      repoSlug("") === null &&
+      repoSlug("https://github.com/") === null &&
+      repoSlug("nonsense") === null
   );
 });
