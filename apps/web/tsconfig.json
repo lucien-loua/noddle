@@ -4,8 +4,7 @@
     "jsx": "react-jsx",
     "lib": ["esnext", "dom", "dom.iterable"],
     "paths": {
-      "@/*": ["./src/*"],
-      "#start-handler": ["./start-handler.d.ts"]
+      "@/*": ["./src/*"]
     },
     "types": ["bun", "vite/client"]
   },
@@ -15,6 +14,6 @@
     "vite.config.ts",
     "server.ts",
     "scripts/**/*.ts",
-    "start-handler.d.ts"
+    "types/**/*.d.ts"
   ]
 }
