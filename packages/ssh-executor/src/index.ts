@@ -3,14 +3,22 @@ import type { Duplex } from "node:stream";
 import Docker from "dockerode";
 import { Client, type ConnectConfig } from "ssh2";
 
-// Re-exported so packages that consume the executor (build-engine, worker)
-// don't have to depend on ssh2 themselves. The transport is an
-// implementation detail of this package: the day it changes, it shouldn't
-// change everywhere.
+/**
+ * The SSH client.
+ *
+ * Re-exported so packages that consume the executor (build-engine, worker)
+ * don't have to depend on ssh2 themselves. The transport is an
+ * implementation detail of this package: the day it changes, it shouldn't
+ * change everywhere.
+ */
 export type SshClient = Client;
 
-// Same for the Docker client: callers manipulate the Engine API without
-// having to declare dockerode among their own dependencies.
+/**
+ * The Docker client.
+ *
+ * Callers manipulate the Engine API without having to declare dockerode
+ * among their own dependencies.
+ */
 export type DockerApi = Docker;
 
 export interface ServerCredentials {
@@ -29,11 +37,13 @@ export interface ExecResult {
   stdout: string;
 }
 
-// No parameter properties (`constructor(readonly x: T)`) here. Node's
-// strip-only mode refuses them — it strips types without transforming
-// them, and this sugar generates code. This package is loaded by
-// `apps/worker`, which runs on Node. `erasableSyntaxOnly` in
-// @noddle/tsconfig enforces this mechanically.
+/**
+ * No parameter properties (`constructor(readonly x: T)`) here. Node's
+ * strip-only mode refuses them — it strips types without transforming
+ * them, and this sugar generates code. This package is loaded by
+ * `apps/worker`, which runs on Node. `erasableSyntaxOnly` in
+ * `@noddle/tsconfig` enforces this mechanically.
+ */
 export class SshError extends Error {
   readonly host: string;
   override readonly cause?: unknown;
