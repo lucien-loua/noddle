@@ -15,6 +15,7 @@ import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ContainersRouteImport } from './routes/containers'
 import { Route as DeploymentsRouteImport } from './routes/deployments'
 import { Route as DestinationsRouteImport } from './routes/destinations'
+import { Route as GitProvidersRouteImport } from './routes/git-providers'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ProjectsRouteImport } from './routes/projects'
@@ -27,7 +28,9 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDatabaseLogsDatabaseIdRouteImport } from './routes/api/database-logs/$databaseId'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
 import { Route as ApiServiceLogsServiceIdRouteImport } from './routes/api/service-logs/$serviceId'
+import { Route as ApiWebhooksGithubRouteImport } from './routes/api/webhooks/github'
 import { Route as ProjectsProjectIdEnvironmentIdRouteImport } from './routes/projects_.$projectId_.$environmentId'
+import { Route as ApiGitProvidersGithubCallbackRouteImport } from './routes/api/git-providers/github/callback'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
 import { Route as ApiWebhooksStackStackIdRouteImport } from './routes/api/webhooks/stack/$stackId'
 import { Route as ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRouteImport } from './routes/projects_.$projectId_.$environmentId_.databases.$databaseId'
@@ -62,6 +65,11 @@ const DeploymentsRoute = DeploymentsRouteImport.update({
 const DestinationsRoute = DestinationsRouteImport.update({
   id: '/destinations',
   path: '/destinations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GitProvidersRoute = GitProvidersRouteImport.update({
+  id: '/git-providers',
+  path: '/git-providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -125,10 +133,21 @@ const ApiServiceLogsServiceIdRoute = ApiServiceLogsServiceIdRouteImport.update({
   path: '/api/service-logs/$serviceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksGithubRoute = ApiWebhooksGithubRouteImport.update({
+  id: '/api/webhooks/github',
+  path: '/api/webhooks/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdEnvironmentIdRoute =
   ProjectsProjectIdEnvironmentIdRouteImport.update({
     id: '/projects_/$projectId_/$environmentId',
     path: '/projects/$projectId/$environmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiGitProvidersGithubCallbackRoute =
+  ApiGitProvidersGithubCallbackRouteImport.update({
+    id: '/api/git-providers/github/callback',
+    path: '/api/git-providers/github/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiWebhooksServiceServiceIdRoute =
@@ -168,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/containers': typeof ContainersRoute
   '/deployments': typeof DeploymentsRoute
   '/destinations': typeof DestinationsRoute
+  '/git-providers': typeof GitProvidersRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/projects': typeof ProjectsRoute
@@ -180,7 +200,9 @@ export interface FileRoutesByFullPath {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
+  '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
   '/projects/$projectId/$environmentId/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
@@ -194,6 +216,7 @@ export interface FileRoutesByTo {
   '/containers': typeof ContainersRoute
   '/deployments': typeof DeploymentsRoute
   '/destinations': typeof DestinationsRoute
+  '/git-providers': typeof GitProvidersRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/projects': typeof ProjectsRoute
@@ -206,7 +229,9 @@ export interface FileRoutesByTo {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
+  '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
   '/projects/$projectId/$environmentId/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
@@ -221,6 +246,7 @@ export interface FileRoutesById {
   '/containers': typeof ContainersRoute
   '/deployments': typeof DeploymentsRoute
   '/destinations': typeof DestinationsRoute
+  '/git-providers': typeof GitProvidersRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/projects': typeof ProjectsRoute
@@ -233,7 +259,9 @@ export interface FileRoutesById {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/projects_/$projectId_/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
+  '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
   '/projects_/$projectId_/$environmentId_/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
@@ -249,6 +277,7 @@ export interface FileRouteTypes {
     | '/containers'
     | '/deployments'
     | '/destinations'
+    | '/git-providers'
     | '/login'
     | '/notifications'
     | '/projects'
@@ -261,7 +290,9 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/webhooks/github'
     | '/projects/$projectId/$environmentId'
+    | '/api/git-providers/github/callback'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
     | '/projects/$projectId/$environmentId/databases/$databaseId'
@@ -275,6 +306,7 @@ export interface FileRouteTypes {
     | '/containers'
     | '/deployments'
     | '/destinations'
+    | '/git-providers'
     | '/login'
     | '/notifications'
     | '/projects'
@@ -287,7 +319,9 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/webhooks/github'
     | '/projects/$projectId/$environmentId'
+    | '/api/git-providers/github/callback'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
     | '/projects/$projectId/$environmentId/databases/$databaseId'
@@ -301,6 +335,7 @@ export interface FileRouteTypes {
     | '/containers'
     | '/deployments'
     | '/destinations'
+    | '/git-providers'
     | '/login'
     | '/notifications'
     | '/projects'
@@ -313,7 +348,9 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/webhooks/github'
     | '/projects_/$projectId_/$environmentId'
+    | '/api/git-providers/github/callback'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
     | '/projects_/$projectId_/$environmentId_/databases/$databaseId'
@@ -328,6 +365,7 @@ export interface RootRouteChildren {
   ContainersRoute: typeof ContainersRoute
   DeploymentsRoute: typeof DeploymentsRoute
   DestinationsRoute: typeof DestinationsRoute
+  GitProvidersRoute: typeof GitProvidersRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -340,7 +378,9 @@ export interface RootRouteChildren {
   ApiDatabaseLogsDatabaseIdRoute: typeof ApiDatabaseLogsDatabaseIdRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
   ApiServiceLogsServiceIdRoute: typeof ApiServiceLogsServiceIdRoute
+  ApiWebhooksGithubRoute: typeof ApiWebhooksGithubRoute
   ProjectsProjectIdEnvironmentIdRoute: typeof ProjectsProjectIdEnvironmentIdRoute
+  ApiGitProvidersGithubCallbackRoute: typeof ApiGitProvidersGithubCallbackRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
   ApiWebhooksStackStackIdRoute: typeof ApiWebhooksStackStackIdRoute
   ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute: typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
@@ -390,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/destinations'
       fullPath: '/destinations'
       preLoaderRoute: typeof DestinationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/git-providers': {
+      id: '/git-providers'
+      path: '/git-providers'
+      fullPath: '/git-providers'
+      preLoaderRoute: typeof GitProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -476,11 +523,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiServiceLogsServiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/github': {
+      id: '/api/webhooks/github'
+      path: '/api/webhooks/github'
+      fullPath: '/api/webhooks/github'
+      preLoaderRoute: typeof ApiWebhooksGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects_/$projectId_/$environmentId': {
       id: '/projects_/$projectId_/$environmentId'
       path: '/projects/$projectId/$environmentId'
       fullPath: '/projects/$projectId/$environmentId'
       preLoaderRoute: typeof ProjectsProjectIdEnvironmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/git-providers/github/callback': {
+      id: '/api/git-providers/github/callback'
+      path: '/api/git-providers/github/callback'
+      fullPath: '/api/git-providers/github/callback'
+      preLoaderRoute: typeof ApiGitProvidersGithubCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/webhooks/service/$serviceId': {
@@ -528,6 +589,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContainersRoute: ContainersRoute,
   DeploymentsRoute: DeploymentsRoute,
   DestinationsRoute: DestinationsRoute,
+  GitProvidersRoute: GitProvidersRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   ProjectsRoute: ProjectsRoute,
@@ -540,7 +602,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDatabaseLogsDatabaseIdRoute: ApiDatabaseLogsDatabaseIdRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
   ApiServiceLogsServiceIdRoute: ApiServiceLogsServiceIdRoute,
+  ApiWebhooksGithubRoute: ApiWebhooksGithubRoute,
   ProjectsProjectIdEnvironmentIdRoute: ProjectsProjectIdEnvironmentIdRoute,
+  ApiGitProvidersGithubCallbackRoute: ApiGitProvidersGithubCallbackRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
   ApiWebhooksStackStackIdRoute: ApiWebhooksStackStackIdRoute,
   ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute:
