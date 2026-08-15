@@ -6,16 +6,17 @@ import {
   serviceDockerProviderSchema,
   serviceGitProviderSchema,
 } from "@noddle/shared/validation/service";
+import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { useAppForm } from "@/components/fields/lib/form";
 import {
   DockerIcon,
-  GitIcon,
   GithubIcon,
+  GitIcon,
   GitlabIcon,
 } from "@/components/features/services/provider-icons";
+import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -30,6 +31,19 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,6 +74,117 @@ function isProviderTab(value: string): value is ProviderTab {
   return value === "docker" || isGitSourceType(value);
 }
 
+function WatchPathRow({
+  onRemove,
+  path,
+}: {
+  onRemove: (path: string) => void;
+  path: string;
+}) {
+  const handleRemove = useCallback(() => onRemove(path), [onRemove, path]);
+
+  return (
+    <Item role="listitem" size="xs" variant="outline">
+      <ItemContent>
+        <ItemTitle className="truncate font-mono">{path}</ItemTitle>
+      </ItemContent>
+      <ItemActions>
+        <Button
+          aria-label={`Remove ${path}`}
+          onClick={handleRemove}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <XIcon />
+        </Button>
+      </ItemActions>
+    </Item>
+  );
+}
+
+/**
+ * A push deploys when it touches one of these globs. Empty means every push
+ * deploys — stated in the description, because an empty list that silently
+ * blocked deploys would be the worst reading of the same screen.
+ */
+function WatchPathsField({
+  canEdit,
+  onChange,
+  value,
+}: {
+  canEdit: boolean;
+  onChange: (next: string[]) => void;
+  value: string[];
+}) {
+  const [draft, setDraft] = useState("");
+
+  const add = useCallback(() => {
+    const path = draft.trim();
+    setDraft("");
+    if (path !== "" && !value.includes(path)) {
+      onChange([...value, path]);
+    }
+  }, [draft, onChange, value]);
+
+  const remove = useCallback(
+    (path: string) => onChange(value.filter((p) => p !== path)),
+    [onChange, value]
+  );
+
+  const handleDraft = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value),
+    []
+  );
+
+  // Enter adds the path instead of submitting the form: the field sits in
+  // the middle of one, and losing a typed path to a save is worse.
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        add();
+      }
+    },
+    [add]
+  );
+
+  return (
+    <Field>
+      <FieldLabel htmlFor="watch-path-draft">Watch paths</FieldLabel>
+      <FieldDescription>
+        Deploy only when a push touches one of these globs, for example
+        apps/web/**. Empty deploys on every push.
+      </FieldDescription>
+      <InputGroup>
+        <InputGroupInput
+          disabled={!canEdit}
+          id="watch-path-draft"
+          onChange={handleDraft}
+          onKeyDown={handleKeyDown}
+          placeholder="apps/web/**"
+          value={draft}
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            disabled={!canEdit || draft.trim() === ""}
+            onClick={add}
+            variant="outline"
+          >
+            Add
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+      {value.length > 0 ? (
+        <ItemGroup>
+          {value.map((path) => (
+            <WatchPathRow key={path} onRemove={remove} path={path} />
+          ))}
+        </ItemGroup>
+      ) : null}
+    </Field>
+  );
+}
+
 function GitSourceForm({
   canEdit,
   service,
@@ -77,11 +202,13 @@ function GitSourceForm({
       updateServiceSettings({
         data: {
           buildMethod: service.buildMethod === "image" ? "nixpacks" : undefined,
+          buildPath: value.buildPath,
           gitBranch: value.gitBranch,
           gitRepoUrl: value.gitRepoUrl,
           gitSubmodules: value.gitSubmodules,
           serviceId: service.id,
           sourceType,
+          watchPaths: value.watchPaths,
         },
       }),
     onSuccess: async () => {
@@ -91,9 +218,11 @@ function GitSourceForm({
   });
 
   const defaultValues: ServiceGitProviderInput = {
+    buildPath: service.buildPath ?? "",
     gitBranch: service.gitBranch ?? "main",
     gitRepoUrl: service.gitRepoUrl ?? "",
     gitSubmodules: service.gitSubmodules,
+    watchPaths: service.watchPaths,
   };
 
   const form = useAppForm({
@@ -107,9 +236,11 @@ function GitSourceForm({
     form.reset();
   }, [
     form.reset,
+    service.buildPath,
     service.gitBranch,
     service.gitRepoUrl,
     service.gitSubmodules,
+    service.watchPaths,
   ]);
 
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
@@ -133,6 +264,25 @@ function GitSourceForm({
               label="Branch"
               placeholder="main"
               required
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="buildPath">
+          {(f) => (
+            <f.FieldText
+              description="Directory inside the repository to build, for a monorepo. Empty builds the root."
+              disabled={!canEdit}
+              label="Build path"
+              placeholder="apps/web"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="watchPaths">
+          {(f) => (
+            <WatchPathsField
+              canEdit={canEdit}
+              onChange={f.handleChange}
+              value={f.state.value}
             />
           )}
         </form.AppField>
