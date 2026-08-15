@@ -96,7 +96,14 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
           // message has to send the operator back to the start rather than
           // read as a transient failure.
           const detail = err instanceof Error ? err.message : String(err);
-          await db.delete(gitProviders).where(eq(gitProviders.id, state));
+          // Only if the App was never created. A permission denial lands
+          // here too, and it must not destroy a working connection.
+          const pending = await db.query.githubProviders.findFirst({
+            where: eq(githubProviders.gitProviderId, state),
+          });
+          if (pending && !pending.appId) {
+            await db.delete(gitProviders).where(eq(gitProviders.id, state));
+          }
           return new Response(
             `Could not finish creating the GitHub App, and the code cannot be reused. Start the connection again.\n\n${detail}`,
             { headers: { "content-type": "text/plain" }, status: 400 }

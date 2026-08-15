@@ -1,4 +1,4 @@
-import { gitProviders } from "@noddle/db/schema";
+import { gitlabProviders, gitProviders } from "@noddle/db/schema";
 import { exchangeCode } from "@noddle/git-provider/gitlab";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
@@ -24,44 +24,68 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
         const state = url.searchParams.get("state");
         const denied = url.searchParams.get("error");
 
-        // GitLab reports a refused authorisation here rather than by not
-        // coming back, so it needs saying — otherwise the connection sits
-        // half-created with no explanation.
-        if (denied) {
-          await db.delete(gitProviders).where(eq(gitProviders.id, state ?? ""));
-          return new Response(
-            `GitLab refused the authorisation (${denied}). The connection was removed — start it again.`,
-            { headers: { "content-type": "text/plain" }, status: 400 }
-          );
+        // Validated BEFORE it reaches a query, and before any branch can
+        // act on it.
+        if (!(state && UUID.test(state))) {
+          return new Response("missing state", { status: 400 });
         }
 
-        if (!(code && state && UUID.test(state))) {
-          return new Response("missing code or state", { status: 400 });
-        }
+        // The guard wraps EVERY path, the refusal included. Deleting the
+        // pending row is a write, and a callback URL is guessable — outside
+        // this, `?error=x&state=<id>` removes a connection with no session
+        // at all. Same reason the failure path below sits inside it: a
+        // permission denial must not land in a catch that deletes.
+        return await runGuarded({
+          permission: { action: "create", resource: "gitProvider" },
+          run: async () => {
+            // Only a connection that was never authorised can be removed
+            // here. Without this, replaying `?error=x&state=<id>` destroys
+            // a WORKING connection — and it is a GET, so a link is the
+            // whole attack.
+            const removePending = async () => {
+              const row = await db.query.gitlabProviders.findFirst({
+                where: eq(gitlabProviders.gitProviderId, state),
+              });
+              if (row && !row.accessTokenEncrypted) {
+                await db.delete(gitProviders).where(eq(gitProviders.id, state));
+              }
+            };
 
-        try {
-          await runGuarded({
-            permission: { action: "create", resource: "gitProvider" },
-            run: async () => {
+            if (denied) {
+              await removePending();
+              return new Response(
+                `GitLab refused the authorisation (${denied}). The connection was removed — start it again.`,
+                { headers: { "content-type": "text/plain" }, status: 400 }
+              );
+            }
+
+            if (!code) {
+              return new Response("missing code", { status: 400 });
+            }
+
+            try {
               const { app } = await gitlabAppFor(state);
               const tokens = await exchangeCode(app, code);
               await saveGitlabTokens(state, tokens);
-            },
-            target: () => ({ id: state, name: "gitlab" }),
-          });
-        } catch (err) {
-          // The code is single use. Retrying this URL cannot work, so the
-          // pending row goes rather than being left in a state that looks
-          // connected and is not.
-          const detail = err instanceof Error ? err.message : String(err);
-          await db.delete(gitProviders).where(eq(gitProviders.id, state));
-          return new Response(
-            `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,
-            { headers: { "content-type": "text/plain" }, status: 400 }
-          );
-        }
+            } catch (err) {
+              // The code is single use. Retrying this URL cannot work, so
+              // the pending row goes rather than being left looking
+              // connected when it is not.
+              const detail = err instanceof Error ? err.message : String(err);
+              await removePending();
+              return new Response(
+                `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,
+                { headers: { "content-type": "text/plain" }, status: 400 }
+              );
+            }
 
-        return Response.redirect(new URL("/git-providers", request.url), 303);
+            return Response.redirect(
+              new URL("/git-providers", request.url),
+              303
+            );
+          },
+          target: () => ({ id: state, name: "gitlab" }),
+        });
       },
     },
   },
