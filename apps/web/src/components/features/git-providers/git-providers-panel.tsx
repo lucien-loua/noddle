@@ -1,7 +1,10 @@
 import { PlugsIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GithubIcon } from "@/components/features/services/provider-icons";
+import {
+  GithubIcon,
+  GitlabIcon,
+} from "@/components/features/services/provider-icons";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { SettingsList } from "@/components/features/settings-list/settings-list";
@@ -389,11 +392,13 @@ function ConnectGitlabDialog({
 
 export function GitProvidersList({
   initial,
-  onAdd,
+  onAddGithub,
+  onAddGitlab,
   role,
 }: {
   initial: GitProviderView[];
-  onAdd?: () => void;
+  onAddGithub?: () => void;
+  onAddGitlab?: () => void;
   role: RoleName | null;
 }) {
   const {
@@ -417,12 +422,20 @@ export function GitProvidersList({
             without managing a key, and get pushes delivered automatically.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
-        {onAdd ? (
+        {onAddGithub && onAddGitlab ? (
           <SettingsList.EmptyContent>
-            <Button onClick={onAdd}>
-              <GithubIcon />
-              Connect GitHub
-            </Button>
+            {/* Both spelled out here: with nothing connected, the choice of
+                forge IS the content of this screen. */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={onAddGithub}>
+                <GithubIcon />
+                Connect GitHub
+              </Button>
+              <Button onClick={onAddGitlab} variant="outline">
+                <GitlabIcon />
+                Connect GitLab
+              </Button>
+            </div>
           </SettingsList.EmptyContent>
         ) : null}
       </SettingsList.Empty>

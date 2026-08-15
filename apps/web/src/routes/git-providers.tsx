@@ -1,3 +1,4 @@
+import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -11,6 +12,12 @@ import {
   GitlabIcon,
 } from "@/components/features/services/provider-icons";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type RoleName, roles } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
@@ -54,16 +61,30 @@ function GitProvidersPage() {
     <AppShell
       actions={
         canAdd ? (
-          <div className="flex items-center gap-2">
-            <Button onClick={handleAdd}>
-              <GithubIcon />
-              Connect GitHub
-            </Button>
-            <Button onClick={handleAddGitlab} variant="outline">
-              <GitlabIcon />
-              Connect GitLab
-            </Button>
-          </div>
+          // One control in the header, because two providers become four
+          // the day Bitbucket and Gitea land and a row of buttons does not
+          // survive that. The empty state keeps both visible — there, the
+          // choice IS the content.
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button>
+                  <PlusIcon data-icon="inline-start" />
+                  Connect
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleAdd}>
+                <GithubIcon />
+                GitHub
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAddGitlab}>
+                <GitlabIcon />
+                GitLab
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null
       }
       email={email}
@@ -78,7 +99,8 @@ function GitProvidersPage() {
       ) : null}
       <GitProvidersList
         initial={providers}
-        onAdd={canAdd ? handleAdd : undefined}
+        onAddGithub={canAdd ? handleAdd : undefined}
+        onAddGitlab={canAdd ? handleAddGitlab : undefined}
         role={known}
       />
     </AppShell>

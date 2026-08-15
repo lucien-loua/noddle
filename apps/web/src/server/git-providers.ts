@@ -13,7 +13,11 @@ import {
   listInstallations,
   listRepositories,
 } from "@noddle/git-provider/github";
-import { authorizeUrl } from "@noddle/git-provider/gitlab";
+import {
+  authorizeUrl,
+  listBranches as gitlabBranches,
+  listProjects,
+} from "@noddle/git-provider/gitlab";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
@@ -21,6 +25,7 @@ import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { githubAppCredentials, githubAppFor } from "@/lib/git-provider.server";
+import { gitlabAccessToken } from "@/lib/gitlab.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 
 export interface GitProviderView {
@@ -43,20 +48,31 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
       read: async () => {
         const rows = await db.query.gitProviders.findMany({
           orderBy: desc(gitProviders.createdAt),
-          with: { github: true },
+          with: { github: true, gitlab: true },
         });
         const connected = await db.query.services.findMany({
           columns: { gitProviderId: true },
         });
 
         return rows.map((row) => ({
-          connected: Boolean(row.github?.appId && row.github.installationId),
+          // Each type answers "connected" its own way: GitHub needs an App
+          // AND an installation, GitLab needs a token it was actually
+          // given. Reading only the GitHub half left every GitLab
+          // connection permanently "Not installed".
+          connected:
+            row.providerType === "gitlab"
+              ? Boolean(row.gitlab?.accessTokenEncrypted)
+              : Boolean(row.github?.appId && row.github.installationId),
           createdAt: row.createdAt.toISOString(),
           id: row.id,
           // Only offered once the App exists: before that there is nothing
           // to install, and the link would 404 on GitHub.
+          // GitHub only: a GitLab application is authorised in one step,
+          // so there is nothing left to install.
           installUrl:
-            row.github?.appId && !row.github.installationId
+            row.providerType === "github" &&
+            row.github?.appId &&
+            !row.github.installationId
               ? installUrl(row.github.htmlUrl ?? "")
               : null,
           name: row.name,
@@ -318,6 +334,18 @@ export const getProviderRepositories = createServerFn({ method: "GET" })
       runRead({
         permission: { action: "read", resource: "gitProvider" },
         read: async () => {
+          const provider = await db.query.gitProviders.findFirst({
+            where: eq(gitProviders.id, data.gitProviderId),
+          });
+          if (provider?.providerType === "gitlab") {
+            const { token, url } = await gitlabAccessToken(data.gitProviderId);
+            const projects = await listProjects(url, token);
+            return projects.map((r) => ({
+              defaultBranch: r.defaultBranch,
+              fullName: r.fullName,
+              url: r.url,
+            }));
+          }
           const app = await githubAppFor(data.gitProviderId);
           const repos = await listRepositories(app);
           return repos.map((r) => ({
@@ -341,6 +369,13 @@ export const getProviderBranches = createServerFn({ method: "GET" })
       runRead({
         permission: { action: "read", resource: "gitProvider" },
         read: async () => {
+          const provider = await db.query.gitProviders.findFirst({
+            where: eq(gitProviders.id, data.gitProviderId),
+          });
+          if (provider?.providerType === "gitlab") {
+            const { token, url } = await gitlabAccessToken(data.gitProviderId);
+            return await gitlabBranches(url, token, data.fullName);
+          }
           const app = await githubAppFor(data.gitProviderId);
           return await listBranches(app, data.fullName);
         },

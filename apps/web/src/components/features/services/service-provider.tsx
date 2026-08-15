@@ -430,7 +430,16 @@ function ProviderRepositoryField({
               <SelectItem value={CLONE_BY_URL}>Paste a URL</SelectItem>
               {connected.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+                  {/* The forge, not just the name a user typed: two
+                      connections can be called anything. */}
+                  <span className="flex items-center gap-2">
+                    {p.providerType === "gitlab" ? (
+                      <GitlabIcon />
+                    ) : (
+                      <GithubIcon />
+                    )}
+                    {p.name}
+                  </span>
                 </SelectItem>
               ))}
             </SelectGroup>
