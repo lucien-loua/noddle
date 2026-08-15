@@ -14,6 +14,7 @@ import { createdAt, updatedAt } from "#schema/columns";
 import { environments } from "#schema/projects";
 import { registries } from "#schema/registries";
 import { servers } from "#schema/servers";
+import { sshKeys } from "#schema/ssh-keys";
 
 export const sourceType = pgEnum("source_type", [
   "git",
@@ -66,6 +67,13 @@ export const services = pgTable(
     // image from ITS OWN history, whereas Swarm only keeps one previous
     // spec.
     currentDeploymentId: uuid("current_deployment_id"),
+
+    // Deploy key for a PRIVATE repository. `null` = clone anonymously.
+    // `restrict` like `registry_id`: deleting a key still in use would turn
+    // every later deploy into an authentication failure with no warning.
+    deployKeyId: uuid("deploy_key_id").references(() => sshKeys.id, {
+      onDelete: "restrict",
+    }),
     /**
      * Published image when `sourceType` is `docker_image`. Unused on git
      * sources — kept if the user switches back, rather than destroyed.

@@ -61,6 +61,8 @@ export interface ServiceRow {
   /** Build context inside the repo. `null` = repository root. */
   buildPath: string | null;
   cleanCache: boolean;
+  /** Deploy key for a private repository. `null` = anonymous clone. */
+  deployKeyId: string | null;
   dockerImage: string | null;
   domains: ServiceDomainRow[];
   environment: string;
@@ -167,6 +169,7 @@ interface ServiceJoined {
   buildMethod: "nixpacks" | "dockerfile" | "image";
   buildPath: string | null;
   cleanCache: boolean;
+  deployKeyId: string | null;
   dockerImage: string | null;
   domains: {
     certificateType: "none" | "letsencrypt";
@@ -208,6 +211,7 @@ function toServiceRow(
     buildMethod: service.buildMethod,
     buildPath: service.buildPath,
     cleanCache: service.cleanCache,
+    deployKeyId: service.deployKeyId,
     dockerImage: service.dockerImage,
     domains: service.domains.map((d) => ({
       certificateType: d.certificateType,

@@ -1,5 +1,5 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import { servers, sshKeys } from "@noddle/db/schema";
+import { servers, services, sshKeys } from "@noddle/db/schema";
 import {
   deleteSshKeySchema,
   sshKeyInputSchema,
@@ -130,6 +130,20 @@ export const deleteSshKey = createServerFn({ method: "POST" })
               `this key still opens ${used.length} server(s): ${used
                 .map((s) => s.name)
                 .join(", ")} — remove them first`
+            );
+          }
+
+          // Same reasoning one table over: the FK is `restrict`, so the
+          // delete would fail anyway — but with a constraint name instead
+          // of the list of services that would stop deploying.
+          const deploying = await db.query.services.findMany({
+            where: eq(services.deployKeyId, data.sshKeyId),
+          });
+          if (deploying.length > 0) {
+            throw new Error(
+              `this key still clones for ${deploying.length} service(s): ${deploying
+                .map((s) => s.name)
+                .join(", ")} — change their provider first`
             );
           }
 

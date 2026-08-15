@@ -5,6 +5,7 @@ import {
   execArgv,
   quoteArg,
   type SshClient,
+  writeRemoteFile,
 } from "@noddle/ssh-executor";
 
 export class BuildError extends Error {
@@ -236,10 +237,133 @@ export function resolveBuildDir(
 export interface CloneOptions extends ExecOptions {
   branch: string;
   commitSha?: string;
+  /**
+   * Decrypted deploy key for a private repository. Absent = clone
+   * anonymously. NEVER logged, and never placed on a command line: it goes
+   * to the build host over SFTP and is removed before this returns.
+   */
+  deployKey?: string | null;
   dir: string;
+  /** Identifies the key's directory on the build host. */
+  keyScope?: string;
   repoUrl: string;
   /** Clone submodules too, shallow like the parent. */
   submodules?: boolean;
+}
+
+/**
+ * Where a deploy key lives for the duration of one clone.
+ *
+ * Per scope and not a fixed `/tmp/id_rsa`: two services building at once
+ * would otherwise overwrite each other's key, and `/tmp` is readable by
+ * every user on the host.
+ */
+function keyDirFor(scope: string): string {
+  return `/var/lib/noddle/keys/${scope}`;
+}
+
+/**
+ * Installs the deploy key and returns the `GIT_SSH_COMMAND` git must run
+ * with. The caller MUST call `removeDeployKey` afterwards, in a `finally`.
+ *
+ * The key travels over SFTP: passed through a shell — even quoted — it
+ * would appear in the command string, which is exactly what gets streamed
+ * to the deployment log.
+ */
+async function installDeployKey(
+  client: SshClient,
+  scope: string,
+  deployKey: string
+): Promise<string> {
+  const dir = keyDirFor(scope);
+  const keyPath = `${dir}/id`;
+
+  // 0700 BEFORE the write: SFTP creates with the remote umask, so the
+  // directory is what actually keeps the key private, not the file mode.
+  check(
+    "deploy key directory",
+    await exec(client, `sudo install -d -m 700 -o "$USER" ${quoteArg(dir)}`)
+  );
+  await writeRemoteFile(client, keyPath, ensureTrailingNewline(deployKey));
+  // ssh refuses a key readable by anyone else, and says so obscurely.
+  check(
+    "deploy key mode",
+    await exec(client, `chmod 600 ${quoteArg(keyPath)}`)
+  );
+
+  // IdentitiesOnly: without it ssh offers every agent key first and the
+  // server closes the connection on MaxAuthTries before reaching ours.
+  // accept-new is trust-on-first-use: an unknown host is accepted, a host
+  // whose key CHANGED is still refused.
+  return [
+    "ssh",
+    "-i",
+    keyPath,
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    `UserKnownHostsFile=${dir}/known_hosts`,
+  ]
+    .map(quoteArg)
+    .join(" ");
+}
+
+function removeDeployKey(client: SshClient, scope: string): Promise<unknown> {
+  // Best effort: a clone that succeeded must not be reported as failed
+  // because the cleanup did. The directory is 0700 either way.
+  return exec(client, `rm -rf ${quoteArg(keyDirFor(scope))}`).catch(() => null);
+}
+
+/** An OpenSSH key without a final newline is rejected as malformed. */
+function ensureTrailingNewline(key: string): string {
+  return key.endsWith("\n") ? key : `${key}\n`;
+}
+
+type GitRunner = (
+  label: string,
+  argv: readonly string[]
+) => Promise<{ stdout: string }>;
+
+/** Move onto an explicit commit, submodules included. */
+async function checkoutCommit(
+  git: GitRunner,
+  o: CloneOptions & { commitSha?: string }
+): Promise<void> {
+  const sha = o.commitSha;
+  if (!sha) {
+    return;
+  }
+  await git("git checkout", [
+    "git",
+    "-C",
+    o.dir,
+    "fetch",
+    "--depth",
+    "1",
+    "origin",
+    sha,
+  ]);
+  // No `-- <sha>` here: in git, `checkout -- X` means "restore FILE X",
+  // not "switch to commit X". `--detach` lifts the ambiguity, and the SHA
+  // validation rules out a flag.
+  await git("git checkout", ["git", "-C", o.dir, "checkout", "--detach", sha]);
+  // The clone resolved submodules for the BRANCH tip; this commit may
+  // point elsewhere.
+  if (o.submodules) {
+    await git("git submodule update", [
+      "git",
+      "-C",
+      o.dir,
+      "submodule",
+      "update",
+      "--init",
+      "--recursive",
+      "--depth",
+      "1",
+    ]);
+  }
 }
 
 /** Returns the SHA actually built — never "the branch". */
@@ -271,81 +395,64 @@ export async function fetchSource(
     )
   );
 
-  // execArgv: URL and branch come from the user. Concatenated as-is into a
-  // shell string, they execute code on THEIR server.
-  check(
-    "git clone",
-    await execArgv(
-      client,
-      [
-        "git",
-        "clone",
-        "--depth",
-        "1",
-        "--branch",
-        o.branch,
-        ...(o.submodules
-          ? ["--recurse-submodules", "--shallow-submodules"]
-          : []),
-        // End of options: everything after is positional, even if it starts
-        // with a dash.
-        "--",
-        o.repoUrl,
-        o.dir,
-      ],
-      o
-    )
-  );
+  const scope = o.keyScope ?? "shared";
+  const sshCommand = o.deployKey
+    ? await installDeployKey(client, scope, o.deployKey)
+    : null;
 
-  if (o.commitSha) {
-    check(
-      "git checkout",
-      await execArgv(
+  // Every git call goes through here: a deploy key that authenticated the
+  // clone but not the submodule fetch would fail halfway, with the repo
+  // already on disk.
+  const git = async (label: string, argv: readonly string[]) => {
+    // quoteArg on each element for the same reason execArgv exists — the
+    // URL and branch come from the user. The env prefix is why this is not
+    // execArgv itself.
+    const command = argv.map(quoteArg).join(" ");
+    return check(
+      label,
+      await exec(
         client,
-        ["git", "-C", o.dir, "fetch", "--depth", "1", "origin", o.commitSha],
+        sshCommand
+          ? `GIT_SSH_COMMAND=${quoteArg(sshCommand)} ${command}`
+          : command,
         o
       )
     );
-    check(
-      "git checkout",
-      await execArgv(
-        client,
-        // No `-- <sha>` here: in git, `checkout -- X` means "restore FILE X",
-        // not "switch to commit X". `--detach` lifts the ambiguity, and the
-        // SHA validation above rules out a flag.
-        ["git", "-C", o.dir, "checkout", "--detach", o.commitSha],
-        o
-      )
-    );
-    // The clone resolved submodules for the BRANCH tip; this commit may
-    // point elsewhere.
-    if (o.submodules) {
-      check(
-        "git submodule update",
-        await execArgv(
-          client,
-          [
-            "git",
-            "-C",
-            o.dir,
-            "submodule",
-            "update",
-            "--init",
-            "--recursive",
-            "--depth",
-            "1",
-          ],
-          o
-        )
-      );
+  };
+
+  try {
+    await git("git clone", [
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--branch",
+      o.branch,
+      ...(o.submodules ? ["--recurse-submodules", "--shallow-submodules"] : []),
+      // End of options: everything after is positional, even if it starts
+      // with a dash.
+      "--",
+      o.repoUrl,
+      o.dir,
+    ]);
+
+    if (o.commitSha) {
+      await checkoutCommit(git, o);
+    }
+
+    const rev = await git("git rev-parse", [
+      "git",
+      "-C",
+      o.dir,
+      "rev-parse",
+      "HEAD",
+    ]);
+    return rev.stdout.trim();
+  } finally {
+    if (sshCommand) {
+      await removeDeployKey(client, scope);
     }
   }
-
-  const rev = check(
-    "git rev-parse",
-    await execArgv(client, ["git", "-C", o.dir, "rev-parse", "HEAD"])
-  );
-  return rev.stdout.trim();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

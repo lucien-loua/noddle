@@ -7,7 +7,7 @@ import {
   serviceGitProviderSchema,
 } from "@noddle/shared/validation/service";
 import { XIcon } from "@phosphor-icons/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -44,11 +44,19 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
+import { queries } from "@/lib/queries";
 import type { ServiceRow } from "@/server/dashboard";
 import { updateServiceSettings } from "@/server/services";
 
@@ -185,6 +193,68 @@ function WatchPathsField({
   );
 }
 
+/** What `null` means in the selector: a value, not an absence. */
+const NO_DEPLOY_KEY = "none";
+
+/**
+ * Which key clones a PRIVATE repository. Loaded from the client and only
+ * when editing is allowed: in the route loader it would fail the whole page
+ * for a role without the permission.
+ */
+function DeployKeyField({
+  canEdit,
+  onChange,
+  value,
+}: {
+  canEdit: boolean;
+  onChange: (next: string | null) => void;
+  value: string | null;
+}) {
+  const keys = useQuery({ ...queries.sshKeys(), enabled: canEdit });
+
+  const handleChange = useCallback(
+    (next: unknown) => {
+      if (typeof next === "string") {
+        onChange(next === NO_DEPLOY_KEY ? null : next);
+      }
+    },
+    [onChange]
+  );
+
+  const rows = keys.data ?? [];
+
+  return (
+    <Field>
+      <FieldLabel htmlFor="deploy-key">Deploy key</FieldLabel>
+      <FieldDescription>
+        SSH key used to clone a private repository. Add its public half as a
+        deploy key on the repository.
+      </FieldDescription>
+      <Select
+        disabled={!canEdit}
+        items={[
+          { label: "None", value: NO_DEPLOY_KEY },
+          ...rows.map((k) => ({ label: k.name, value: k.id })),
+        ]}
+        onValueChange={handleChange}
+        value={value ?? NO_DEPLOY_KEY}
+      >
+        <SelectTrigger aria-label="Deploy key" id="deploy-key">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_DEPLOY_KEY}>None</SelectItem>
+          {rows.map((k) => (
+            <SelectItem key={k.id} value={k.id}>
+              {k.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
 function GitSourceForm({
   canEdit,
   service,
@@ -203,6 +273,7 @@ function GitSourceForm({
         data: {
           buildMethod: service.buildMethod === "image" ? "nixpacks" : undefined,
           buildPath: value.buildPath,
+          deployKeyId: value.deployKeyId,
           gitBranch: value.gitBranch,
           gitRepoUrl: value.gitRepoUrl,
           gitSubmodules: value.gitSubmodules,
@@ -219,6 +290,7 @@ function GitSourceForm({
 
   const defaultValues: ServiceGitProviderInput = {
     buildPath: service.buildPath ?? "",
+    deployKeyId: service.deployKeyId,
     gitBranch: service.gitBranch ?? "main",
     gitRepoUrl: service.gitRepoUrl ?? "",
     gitSubmodules: service.gitSubmodules,
@@ -237,6 +309,7 @@ function GitSourceForm({
   }, [
     form.reset,
     service.buildPath,
+    service.deployKeyId,
     service.gitBranch,
     service.gitRepoUrl,
     service.gitSubmodules,
@@ -274,6 +347,15 @@ function GitSourceForm({
               disabled={!canEdit}
               label="Build path"
               placeholder="apps/web"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="deployKeyId">
+          {(f) => (
+            <DeployKeyField
+              canEdit={canEdit}
+              onChange={f.handleChange}
+              value={f.state.value}
             />
           )}
         </form.AppField>

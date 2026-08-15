@@ -1,0 +1,2 @@
+ALTER TABLE "services" ADD COLUMN "deploy_key_id" uuid;--> statement-breakpoint
+ALTER TABLE "services" ADD CONSTRAINT "services_deploy_key_id_ssh_keys_id_fk" FOREIGN KEY ("deploy_key_id") REFERENCES "public"."ssh_keys"("id") ON DELETE restrict ON UPDATE no action;

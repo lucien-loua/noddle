@@ -136,6 +136,8 @@ const optionalDockerImage = z.union([z.literal(""), dockerImageSchema]);
 
 export const serviceGitProviderSchema = z.object({
   buildPath: buildPathSchema,
+  /** `null` = clone anonymously. */
+  deployKeyId: z.union([z.uuid(), z.null()]),
   gitBranch: gitBranchSchema,
   gitRepoUrl: optionalGitRepoUrl,
   gitSubmodules: z.boolean(),
@@ -234,6 +236,7 @@ export const updateServiceSettingsSchema = z.object({
   buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).optional(),
   buildPath: buildPathSchema.optional(),
   cleanCache: z.boolean().optional(),
+  deployKeyId: z.union([z.uuid(), z.null()]).optional(),
   dockerImage: optionalDockerImage.optional(),
   gitBranch: gitBranchSchema.optional(),
   gitRepoUrl: optionalGitRepoUrl.optional(),

@@ -130,6 +130,7 @@ function verifyNameSchemas(): void {
   if (
     serviceGitProviderSchema.safeParse({
       buildPath: "",
+      deployKeyId: null,
       gitBranch: "main",
       gitRepoUrl: "https://github.com/org/repo.git",
       gitSubmodules: false,
@@ -137,6 +138,7 @@ function verifyNameSchemas(): void {
     }).success &&
     serviceGitProviderSchema.safeParse({
       buildPath: "apps/web",
+      deployKeyId: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
       gitBranch: "main",
       gitRepoUrl: "",
       gitSubmodules: true,
@@ -144,6 +146,7 @@ function verifyNameSchemas(): void {
     }).success &&
     !serviceGitProviderSchema.safeParse({
       buildPath: "",
+      deployKeyId: null,
       gitBranch: "main",
       gitRepoUrl: "not-a-url",
       gitSubmodules: false,

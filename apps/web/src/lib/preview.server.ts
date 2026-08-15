@@ -158,6 +158,7 @@ async function createPreview(
       buildMethod: parent.buildMethod,
       buildPath: parent.buildPath,
       cleanCache: parent.cleanCache,
+      deployKeyId: parent.deployKeyId,
       dockerImage: parent.dockerImage,
       environmentId,
       gitBranch: opts.headBranch,

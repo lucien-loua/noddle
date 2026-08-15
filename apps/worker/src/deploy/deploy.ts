@@ -44,7 +44,9 @@ function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
   return ctx.db.query.deployments.findFirst({
     where: eq(deployments.id, deploymentId),
     with: {
-      service: { with: { domains: true, envVars: true, server: true } },
+      service: {
+        with: { deployKey: true, domains: true, envVars: true, server: true },
+      },
     },
   });
 }
@@ -173,10 +175,25 @@ async function buildAndDeployService(
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
     const workDir = `${BUILD_ROOT}/${service.id}`;
+    // Decrypted here and nowhere else: it goes straight to `fetchSource`,
+    // which puts it on the build host over SFTP and removes it afterwards.
+    const deployKey = service.deployKey
+      ? decryptSecret(
+          service.deployKey.privateKeyEncrypted,
+          ctx.appKey,
+          secretContext.sshKey(service.deployKey.id)
+        )
+      : null;
+    if (deployKey) {
+      sink.write(`▸ authenticating as ${service.deployKey?.name}\n`);
+    }
+
     sha = await fetchSource(buildClient, {
       branch: service.gitBranch ?? "main",
       commitSha: deployment.commitSha ?? undefined,
+      deployKey,
       dir: workDir,
+      keyScope: service.id,
       repoUrl: service.gitRepoUrl,
       submodules: service.gitSubmodules,
       ...stream,

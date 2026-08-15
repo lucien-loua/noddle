@@ -19,6 +19,7 @@ interface ServiceSettingsPatch {
   buildMethod?: "nixpacks" | "dockerfile" | "image";
   buildPath?: string | null;
   cleanCache?: boolean;
+  deployKeyId?: string | null;
   dockerImage?: string | null;
   gitBranch?: string;
   gitRepoUrl?: string | null;
@@ -43,6 +44,9 @@ function serviceSettingsPatch(
   }
   if (data.cleanCache !== undefined) {
     patch.cleanCache = data.cleanCache;
+  }
+  if (data.deployKeyId !== undefined) {
+    patch.deployKeyId = data.deployKeyId;
   }
   if (data.dockerImage !== undefined) {
     patch.dockerImage = data.dockerImage === "" ? null : data.dockerImage;

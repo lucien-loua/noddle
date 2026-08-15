@@ -8,6 +8,7 @@ import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
 import { serviceDomains } from "#schema/service-domains";
 import { services } from "#schema/services";
+import { sshKeys } from "#schema/ssh-keys";
 import { stackDeploymentLogs, stackDeployments, stacks } from "#schema/stacks";
 import { volumeBackupConfigs, volumeBackups } from "#schema/volume-backups";
 
@@ -35,6 +36,10 @@ export const serversRelations = relations(servers, ({ many }) => ({
 }));
 
 export const servicesRelations = relations(services, ({ one, many }) => ({
+  deployKey: one(sshKeys, {
+    fields: [services.deployKeyId],
+    references: [sshKeys.id],
+  }),
   deployments: many(deployments),
   domains: many(serviceDomains),
   environment: one(environments, {
