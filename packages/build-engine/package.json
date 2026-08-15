@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+import { FALLBACK_NODE_VERSION } from "@noddle/shared/toolchain";
 import {
   type ExecOptions,
   type ExecResult,
@@ -459,6 +460,31 @@ export async function fetchSource(
 // Build
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * `NIXPACKS_NODE_VERSION=…` when the repository names no Node version, and
+ * an empty string when it does.
+ *
+ * Nixpacks falls back to Node 18, which nixpkgs removed as end-of-life, so
+ * a silent repository fails inside a nix evaluation — an error that names
+ * neither the project nor the missing setting. The variable has the highest
+ * precedence in nixpacks, so it is applied ONLY when nothing else speaks:
+ * overriding an explicit `engines.node` would be worse than the bug.
+ */
+async function nodeVersionFallback(
+  client: SshClient,
+  dir: string
+): Promise<string> {
+  // A JSON field, so grep rather than a parser — but anchored on the key,
+  // and only to decide whether the user said something at all.
+  const declared = await exec(
+    client,
+    `cd ${quoteArg(dir)} && { test -f .nvmrc || test -f .node-version || grep -q '"node"' package.json 2>/dev/null; }`
+  );
+  return declared.code === 0
+    ? ""
+    : `NIXPACKS_NODE_VERSION=${FALLBACK_NODE_VERSION} `;
+}
+
 export interface BuildOptions extends ExecOptions {
   builderName: string;
   dir: string;
@@ -495,11 +521,13 @@ export async function buildImage(
       ? `NIXPACKS_SPA_OUT_DIR=${quoteArg(publishDirectory)} `
       : "";
 
+  const nodeFallback = await nodeVersionFallback(client, o.dir);
+
   check(
     "nixpacks",
     await exec(
       client,
-      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${spaOut}nixpacks build . --out .`,
+      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${nodeFallback}${spaOut}nixpacks build . --out .`,
       o
     )
   );

@@ -6,7 +6,11 @@
 // nothing in the diff to explain it.
 import { readFileSync } from "node:fs";
 import { check, runVerify } from "@noddle/testing";
-import { NIXPACKS_VERSION, nixpacksInstallCommand } from "#toolchain";
+import {
+  FALLBACK_NODE_VERSION,
+  NIXPACKS_VERSION,
+  nixpacksInstallCommand,
+} from "#toolchain";
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
 const UNPINNED_INSTALL =
@@ -45,5 +49,14 @@ await runVerify("toolchain pinning", () => {
     command.includes(`NIXPACKS_VERSION=${NIXPACKS_VERSION}`) &&
       command.includes("-E"),
     `got "${command}"`
+  );
+
+  // Nixpacks defaults to Node 18 and nixpkgs removed it as end-of-life, so
+  // a repository that names no version does not build at all. The fallback
+  // exists for that case and must not itself be dead.
+  check(
+    "the Node fallback is a real major, and not the dead default",
+    /^\d+$/.test(FALLBACK_NODE_VERSION) && Number(FALLBACK_NODE_VERSION) >= 20,
+    `got "${FALLBACK_NODE_VERSION}"`
   );
 });
