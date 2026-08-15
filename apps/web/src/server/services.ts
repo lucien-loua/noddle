@@ -22,6 +22,7 @@ interface ServiceSettingsPatch {
   deployKeyId?: string | null;
   dockerImage?: string | null;
   gitBranch?: string;
+  gitProviderId?: string | null;
   gitRepoUrl?: string | null;
   gitSubmodules?: boolean;
   publishDirectory?: string | null;
@@ -29,48 +30,43 @@ interface ServiceSettingsPatch {
   watchPaths?: string[];
 }
 
+/** Fields where an empty string from a form means "clear", not "invalid". */
+const CLEARABLE = [
+  "buildPath",
+  "dockerImage",
+  "gitRepoUrl",
+  "publishDirectory",
+] as const;
+
+/** Fields copied across as-is when present. */
+const DIRECT = [
+  "autoDeploy",
+  "buildMethod",
+  "cleanCache",
+  "deployKeyId",
+  "gitBranch",
+  "gitProviderId",
+  "gitSubmodules",
+  "sourceType",
+  "watchPaths",
+] as const;
+
 function serviceSettingsPatch(
   data: z.infer<typeof updateServiceSettingsSchema>
 ): ServiceSettingsPatch {
-  const patch: ServiceSettingsPatch = {};
-  if (data.autoDeploy !== undefined) {
-    patch.autoDeploy = data.autoDeploy;
+  const patch: Record<string, unknown> = {};
+  for (const key of DIRECT) {
+    if (data[key] !== undefined) {
+      patch[key] = data[key];
+    }
   }
-  if (data.buildMethod !== undefined) {
-    patch.buildMethod = data.buildMethod;
+  for (const key of CLEARABLE) {
+    const value = data[key];
+    if (value !== undefined) {
+      patch[key] = value === "" ? null : value;
+    }
   }
-  if (data.buildPath !== undefined) {
-    patch.buildPath = data.buildPath === "" ? null : data.buildPath;
-  }
-  if (data.cleanCache !== undefined) {
-    patch.cleanCache = data.cleanCache;
-  }
-  if (data.deployKeyId !== undefined) {
-    patch.deployKeyId = data.deployKeyId;
-  }
-  if (data.dockerImage !== undefined) {
-    patch.dockerImage = data.dockerImage === "" ? null : data.dockerImage;
-  }
-  if (data.gitBranch !== undefined) {
-    patch.gitBranch = data.gitBranch;
-  }
-  if (data.gitRepoUrl !== undefined) {
-    patch.gitRepoUrl = data.gitRepoUrl === "" ? null : data.gitRepoUrl;
-  }
-  if (data.gitSubmodules !== undefined) {
-    patch.gitSubmodules = data.gitSubmodules;
-  }
-  if (data.publishDirectory !== undefined) {
-    patch.publishDirectory =
-      data.publishDirectory === "" ? null : data.publishDirectory;
-  }
-  if (data.sourceType !== undefined) {
-    patch.sourceType = data.sourceType;
-  }
-  if (data.watchPaths !== undefined) {
-    patch.watchPaths = data.watchPaths;
-  }
-  return patch;
+  return patch as ServiceSettingsPatch;
 }
 
 export const connectRepo = createServerFn({ method: "POST" })

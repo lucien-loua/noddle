@@ -138,6 +138,8 @@ export const serviceGitProviderSchema = z.object({
   buildPath: buildPathSchema,
   /** `null` = clone anonymously. */
   deployKeyId: z.union([z.uuid(), z.null()]),
+  /** `null` = clone by URL rather than through a connected forge. */
+  gitProviderId: z.union([z.uuid(), z.null()]),
   gitBranch: gitBranchSchema,
   gitRepoUrl: optionalGitRepoUrl,
   gitSubmodules: z.boolean(),
@@ -239,6 +241,7 @@ export const updateServiceSettingsSchema = z.object({
   deployKeyId: z.union([z.uuid(), z.null()]).optional(),
   dockerImage: optionalDockerImage.optional(),
   gitBranch: gitBranchSchema.optional(),
+  gitProviderId: z.union([z.uuid(), z.null()]).optional(),
   gitRepoUrl: optionalGitRepoUrl.optional(),
   gitSubmodules: z.boolean().optional(),
   publishDirectory: optionalPublishDirectory.optional(),

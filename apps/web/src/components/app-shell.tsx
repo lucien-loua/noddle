@@ -2,6 +2,7 @@ import {
   ArchiveIcon,
   BellIcon,
   FolderIcon,
+  GitBranchIcon,
   HardDrivesIcon,
   HouseIcon,
   KeyIcon,
@@ -96,6 +97,7 @@ export function AppShell({
   const knownRole = role && role in roles ? (role as RoleName) : null;
   const canReadAudit = useCan(knownRole, "audit", "read");
   const canReadSshKey = useCan(knownRole, "sshKey", "read");
+  const canReadGitProvider = useCan(knownRole, "gitProvider", "read");
   const canReadRegistry = useCan(knownRole, "registry", "read");
   const router = useRouter();
   const pathname = useRouterState({
@@ -184,6 +186,14 @@ export function AppShell({
                     icon={KeyIcon}
                     label="SSH keys"
                     to="/ssh-keys"
+                  />
+                ) : null}
+                {canReadGitProvider ? (
+                  <NavItem
+                    active={pathname.startsWith("/git-providers")}
+                    icon={GitBranchIcon}
+                    label="Git providers"
+                    to="/git-providers"
                   />
                 ) : null}
                 {canReadRegistry ? (

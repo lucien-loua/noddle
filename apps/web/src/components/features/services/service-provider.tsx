@@ -78,6 +78,12 @@ function providerTab(sourceType: ServiceRow["sourceType"]): ProviderTab {
   return "git";
 }
 
+function selectProviderId(state: {
+  values: { gitProviderId: string | null };
+}): string | null {
+  return state.values.gitProviderId;
+}
+
 function isProviderTab(value: string): value is ProviderTab {
   return value === "docker" || isGitSourceType(value);
 }
@@ -255,6 +261,128 @@ function DeployKeyField({
   );
 }
 
+/** What `null` means in the selector: a value, not an absence. */
+const CLONE_BY_URL = "url";
+
+/**
+ * Pick the repository from a connected forge instead of pasting a URL.
+ *
+ * Choosing one writes BOTH the connection and the repository URL: the clone
+ * still runs against a URL, the connection only says who authenticates it.
+ * Leaving them out of step is what would produce a service that looks
+ * connected and clones anonymously.
+ */
+function ProviderRepositoryField({
+  canEdit,
+  onPick,
+  onProviderChange,
+  providerId,
+  repoUrl,
+}: {
+  canEdit: boolean;
+  onPick: (repoUrl: string, defaultBranch: string) => void;
+  onProviderChange: (next: string | null) => void;
+  providerId: string | null;
+  repoUrl: string;
+}) {
+  const providers = useQuery({ ...queries.gitProviders(), enabled: canEdit });
+  const repos = useQuery({
+    ...queries.providerRepositories(providerId ?? ""),
+    enabled: canEdit && providerId !== null,
+  });
+
+  const handleProvider = useCallback(
+    (next: unknown) => {
+      if (typeof next === "string") {
+        onProviderChange(next === CLONE_BY_URL ? null : next);
+      }
+    },
+    [onProviderChange]
+  );
+
+  const rows = repos.data ?? [];
+  const handleRepo = useCallback(
+    (next: unknown) => {
+      const picked = rows.find((r) => r.url === next);
+      if (picked) {
+        onPick(picked.url, picked.defaultBranch);
+      }
+    },
+    [onPick, rows]
+  );
+
+  // Only connections that can actually list something. An App created but
+  // never installed would offer an empty list with no way to tell why.
+  const connected = (providers.data ?? []).filter((p) => p.connected);
+  if (connected.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <Field>
+        <FieldLabel htmlFor="git-provider">Connection</FieldLabel>
+        <FieldDescription>
+          Clone through a connected forge, or paste a URL below.
+        </FieldDescription>
+        <Select
+          disabled={!canEdit}
+          items={[
+            { label: "Paste a URL", value: CLONE_BY_URL },
+            ...connected.map((p) => ({ label: p.name, value: p.id })),
+          ]}
+          onValueChange={handleProvider}
+          value={providerId ?? CLONE_BY_URL}
+        >
+          <SelectTrigger aria-label="Connection" id="git-provider">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={CLONE_BY_URL}>Paste a URL</SelectItem>
+            {connected.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+
+      {providerId ? (
+        <Field>
+          <FieldLabel htmlFor="git-repository">Repository</FieldLabel>
+          {repos.isError ? (
+            <FieldDescription className="text-destructive">
+              {errorMessage(repos.error, "could not list repositories")}
+            </FieldDescription>
+          ) : null}
+          <Select
+            disabled={!canEdit || repos.isPending}
+            items={rows.map((r) => ({ label: r.fullName, value: r.url }))}
+            onValueChange={handleRepo}
+            value={repoUrl}
+          >
+            <SelectTrigger aria-label="Repository" id="git-repository">
+              <SelectValue
+                placeholder={
+                  repos.isPending ? "Loading…" : "Select a repository"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {rows.map((r) => (
+                <SelectItem key={r.url} value={r.url}>
+                  {r.fullName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+    </>
+  );
+}
+
 function GitSourceForm({
   canEdit,
   service,
@@ -275,6 +403,7 @@ function GitSourceForm({
           buildPath: value.buildPath,
           deployKeyId: value.deployKeyId,
           gitBranch: value.gitBranch,
+          gitProviderId: value.gitProviderId,
           gitRepoUrl: value.gitRepoUrl,
           gitSubmodules: value.gitSubmodules,
           serviceId: service.id,
@@ -292,6 +421,7 @@ function GitSourceForm({
     buildPath: service.buildPath ?? "",
     deployKeyId: service.deployKeyId,
     gitBranch: service.gitBranch ?? "main",
+    gitProviderId: service.gitProviderId,
     gitRepoUrl: service.gitRepoUrl ?? "",
     gitSubmodules: service.gitSubmodules,
     watchPaths: service.watchPaths,
@@ -311,6 +441,7 @@ function GitSourceForm({
     service.buildPath,
     service.deployKeyId,
     service.gitBranch,
+    service.gitProviderId,
     service.gitRepoUrl,
     service.gitSubmodules,
     service.watchPaths,
@@ -318,18 +449,46 @@ function GitSourceForm({
 
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
 
+  // Picking a repository sets the branch too: the default branch is right
+  // far more often than whatever the previous repository used, and a stale
+  // branch here fails the clone rather than the save.
+  const handlePick = useCallback(
+    (url: string, defaultBranch: string) => {
+      form.setFieldValue("gitRepoUrl", url);
+      form.setFieldValue("gitBranch", defaultBranch);
+    },
+    [form]
+  );
+
   return (
     <>
       <FieldGroup>
-        <form.AppField name="gitRepoUrl">
+        <form.AppField name="gitProviderId">
           {(f) => (
-            <f.FieldText
-              disabled={!canEdit}
-              label="Repository URL"
-              placeholder={GIT_URL_PLACEHOLDER[sourceType]}
+            <ProviderRepositoryField
+              canEdit={canEdit}
+              onPick={handlePick}
+              onProviderChange={f.handleChange}
+              providerId={f.state.value}
+              repoUrl={form.state.values.gitRepoUrl}
             />
           )}
         </form.AppField>
+        <form.Subscribe selector={selectProviderId}>
+          {(providerId) =>
+            providerId ? null : (
+              <form.AppField name="gitRepoUrl">
+                {(f) => (
+                  <f.FieldText
+                    disabled={!canEdit}
+                    label="Repository URL"
+                    placeholder={GIT_URL_PLACEHOLDER[sourceType]}
+                  />
+                )}
+              </form.AppField>
+            )
+          }
+        </form.Subscribe>
         <form.AppField name="gitBranch">
           {(f) => (
             <f.FieldText

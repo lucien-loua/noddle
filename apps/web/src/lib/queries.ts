@@ -22,6 +22,11 @@ import { getDatabase, getDatabaseCredentials } from "@/server/databases";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
 import { getProjectEnvironments } from "@/server/environments";
+import {
+  getGitProviders,
+  getProviderBranches,
+  getProviderRepositories,
+} from "@/server/git-providers";
 import { getDatabaseMetrics, getServiceMetrics } from "@/server/metrics";
 import { getChannels } from "@/server/notifications";
 import { getRegistries, getRegistryOptions } from "@/server/registries";
@@ -162,10 +167,28 @@ export const queries = {
       ],
     }),
 
+  gitProviders: () =>
+    queryOptions({
+      queryFn: () => getGitProviders(),
+      queryKey: ["git-providers"],
+    }),
+
   projectEnvironments: (projectId: string) =>
     queryOptions({
       queryFn: () => getProjectEnvironments({ data: { projectId } }),
       queryKey: ["project-environments", projectId],
+    }),
+
+  providerBranches: (gitProviderId: string, fullName: string) =>
+    queryOptions({
+      queryFn: () => getProviderBranches({ data: { fullName, gitProviderId } }),
+      queryKey: ["provider-branches", gitProviderId, fullName],
+    }),
+
+  providerRepositories: (gitProviderId: string) =>
+    queryOptions({
+      queryFn: () => getProviderRepositories({ data: { gitProviderId } }),
+      queryKey: ["provider-repositories", gitProviderId],
     }),
 
   registries: () =>
