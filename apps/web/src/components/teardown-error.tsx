@@ -1,20 +1,25 @@
 import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 
 /**
- * The headline of a failure, and the rest only if asked for.
+ * The headline of a failure, and its tool output only if asked for.
  *
- * A build failure carries the tail of whatever tool died — buildkit layer
- * numbers, nix store paths, a Dockerfile excerpt. Rendered whole it filled
- * the top of the page with red text nobody reads, and buried the one line
- * that says what happened. The full output already lives in the build logs;
- * this is a summary, not a second copy of them.
+ * Two things keep this from widening the page, and both are needed. The
+ * wrapper carries `min-w-0`, because a flex child defaults to
+ * `min-width: auto` and a long line pushes the CONTAINER wider instead of
+ * scrolling inside it. The `pre` then scrolls on its own axis.
  */
 export function TeardownError({ message }: { message: string | null }) {
   const [open, setOpen] = useState(false);
@@ -28,28 +33,42 @@ export function TeardownError({ message }: { message: string | null }) {
   const detail = rest.join("\n").trim();
 
   return (
-    <Alert className="mb-3" variant="destructive">
-      <AlertTitle className="wrap-anywhere">{headline}</AlertTitle>
-      {detail ? (
-        <AlertDescription>
-          <Collapsible onOpenChange={setOpen} open={open}>
+    <Frame className="mb-3 min-w-0" variant="ghost">
+      <Collapsible className="min-w-0" onOpenChange={setOpen} open={open}>
+        {/* Same shape as the other frames with an action: the trigger is
+            the header's action, not a control floating under it. */}
+        <FrameHeader className="flex-row justify-between gap-3">
+          <div className="min-w-0">
+            <FrameTitle className="wrap-anywhere text-destructive">
+              {headline}
+            </FrameTitle>
+            {detail ? (
+              <FrameDescription>
+                The full output is in this deployment&apos;s build logs.
+              </FrameDescription>
+            ) : null}
+          </div>
+          {detail ? (
             <CollapsibleTrigger
               render={
-                <Button size="sm" variant="ghost">
+                <Button size="sm" variant="outline">
                   {open ? "Hide details" : "Show details"}
                 </Button>
               }
             />
-            <CollapsibleContent>
-              {/* Monospace and scrollable: it is tool output, and it must
-                  not stretch the page to its longest line. */}
-              <pre className="mt-2 max-h-48 overflow-auto rounded-2xl bg-muted/50 p-3 font-mono text-xs">
+          ) : null}
+        </FrameHeader>
+
+        {detail ? (
+          <CollapsibleContent className="min-w-0">
+            <FramePanel className="min-w-0 p-0">
+              <pre className="no-scrollbar scroll-fade-x max-h-56 overflow-auto p-3 font-mono text-muted-foreground text-xs leading-relaxed">
                 {detail}
               </pre>
-            </CollapsibleContent>
-          </Collapsible>
-        </AlertDescription>
-      ) : null}
-    </Alert>
+            </FramePanel>
+          </CollapsibleContent>
+        ) : null}
+      </Collapsible>
+    </Frame>
   );
 }
