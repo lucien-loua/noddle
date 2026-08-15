@@ -1,5 +1,5 @@
 import { PlugsIcon } from "@phosphor-icons/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GithubIcon } from "@/components/features/services/provider-icons";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -38,6 +39,7 @@ import {
   deleteGitProvider,
   type GitProviderView,
   startGithubApp,
+  syncGithubInstallation,
 } from "@/server/git-providers";
 
 function ProviderRow({
@@ -50,6 +52,40 @@ function ProviderRow({
   role: RoleName | null;
 }) {
   const canDelete = useCan(role, "gitProvider", "delete");
+  const queryClient = useQueryClient();
+
+  // GitHub only redirects back after an install when the App carries a
+  // `setup_url`, and an App created before that did not. Asking the App
+  // what it is installed on recovers the fact either way.
+  const sync = useMutation({
+    mutationFn: () =>
+      syncGithubInstallation({ data: { gitProviderId: provider.id } }),
+    onError: (e: Error) =>
+      toast.add({
+        description: errorMessage(e, "could not check the installation"),
+        title: "Not connected",
+        type: "error",
+      }),
+    onSuccess: async (result) => {
+      if ("pending" in result) {
+        toast.add({
+          description: "Install it on an account first, then check again.",
+          title: "Not installed yet",
+          type: "error",
+        });
+        return;
+      }
+      toast.add({
+        description: `Installed on ${result.account}.`,
+        title: "Connected",
+        type: "success",
+      });
+      await queryClient.invalidateQueries();
+      onRemoved();
+    },
+  });
+  const handleSync = useCallback(() => sync.mutate(), [sync]);
+
   const { error, handleRemove, isPending } = useRowRemove({
     mutationFn: () =>
       deleteGitProvider({ data: { gitProviderId: provider.id } }),
@@ -87,13 +123,24 @@ function ProviderRow({
           {provider.installUrl ? (
             <Button
               render={
-                <a href={provider.installUrl} rel="noreferrer">
+                <a href={provider.installUrl} rel="noreferrer" target="_blank">
                   Install
                 </a>
               }
               size="sm"
               variant="outline"
             />
+          ) : null}
+          {provider.installUrl ? (
+            <Button
+              disabled={sync.isPending}
+              onClick={handleSync}
+              size="sm"
+              variant="ghost"
+            >
+              {sync.isPending ? <Spinner data-icon="inline-start" /> : null}I
+              have installed it
+            </Button>
           ) : null}
           {canDelete ? (
             <Button

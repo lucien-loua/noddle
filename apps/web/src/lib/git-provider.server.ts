@@ -13,6 +13,34 @@ import { env } from "@/lib/env.server";
  * and collapsing them into one message sends the operator to the wrong
  * screen.
  */
+/**
+ * The App's own credentials, WITHOUT requiring an installation.
+ *
+ * Split from `githubAppFor` because the installation is exactly what is
+ * missing when we go looking for it.
+ */
+export async function githubAppCredentials(
+  gitProviderId: string
+): Promise<{ appId: string; privateKeyPem: string; url: string }> {
+  const provider = await db.query.gitProviders.findFirst({
+    where: eq(gitProviders.id, gitProviderId),
+    with: { github: true },
+  });
+  const github = provider?.github;
+  if (!(github?.appId && github.privateKeyEncrypted)) {
+    throw new Error("the GitHub App was never created");
+  }
+  return {
+    appId: github.appId,
+    privateKeyPem: decryptSecret(
+      github.privateKeyEncrypted,
+      env.appKey,
+      secretContext.gitProvider(gitProviderId, "private_key")
+    ),
+    url: github.url,
+  };
+}
+
 export async function githubAppFor(gitProviderId: string): Promise<GithubApp> {
   const provider = await db.query.gitProviders.findFirst({
     where: eq(gitProviders.id, gitProviderId),

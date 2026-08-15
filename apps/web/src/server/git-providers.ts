@@ -4,6 +4,7 @@ import {
   installUrl,
   isPubliclyReachable,
   listBranches,
+  listInstallations,
   listRepositories,
 } from "@noddle/git-provider/github";
 import { createServerFn } from "@tanstack/react-start";
@@ -11,7 +12,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
-import { githubAppFor } from "@/lib/git-provider.server";
+import { githubAppCredentials, githubAppFor } from "@/lib/git-provider.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 
 export interface GitProviderView {
@@ -190,6 +191,48 @@ export const deleteGitProvider = createServerFn({ method: "POST" })
           return { ok: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
+
+const syncInstallationSchema = z.object({ gitProviderId: z.uuid() });
+
+/**
+ * Ask the App which installations it has, and record the one it finds.
+ *
+ * The post-install redirect is not guaranteed to arrive — an App created
+ * before `setup_url` existed never gets one, and a user who closes the tab
+ * never sends one either. The App knows its own installations, so this
+ * recovers the fact without recreating anything.
+ */
+export const syncGithubInstallation = createServerFn({ method: "POST" })
+  .validator(syncInstallationSchema)
+  .handler(
+    async ({ data }): Promise<{ account: string } | { pending: true }> =>
+      runGuarded({
+        permission: { action: "create", resource: "gitProvider" },
+        run: async () => {
+          const app = await githubAppCredentials(data.gitProviderId);
+          const installations = await listInstallations(app);
+          const found = installations[0];
+          if (!found) {
+            return { pending: true as const };
+          }
+          if (installations.length > 1) {
+            // One connection points at one installation. Picking silently
+            // would bind repositories the operator did not choose.
+            throw new Error(
+              `this App is installed on ${installations.length} accounts (${installations
+                .map((i) => i.account)
+                .join(", ")}) — connect one App per account`
+            );
+          }
+          await db
+            .update(githubProviders)
+            .set({ installationId: found.id })
+            .where(eq(githubProviders.gitProviderId, data.gitProviderId));
+          return { account: found.account };
+        },
+        target: () => ({ id: data.gitProviderId, name: "github" }),
       })
   );
 

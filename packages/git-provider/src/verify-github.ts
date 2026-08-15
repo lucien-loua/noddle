@@ -15,6 +15,7 @@ import {
   installationToken,
   installUrl,
   isPubliclyReachable,
+  listInstallations,
   listRepositories,
   redactCloneUrl,
 } from "#github";
@@ -269,6 +270,27 @@ await runVerify("github app", async () => {
   check(
     "the private key and webhook secret are carried back",
     created.pem.startsWith("-----BEGIN") && created.webhookSecret === "whsec"
+  );
+
+  // `redirect_url` fires after CREATION, `setup_url` after INSTALLATION.
+  // Without the second, an App is created and never recorded as installed —
+  // measured against a real App.
+  check(
+    "the manifest asks to be called back after installing, not only after creating",
+    manifest.setup_url === manifest.redirect_url &&
+      typeof manifest.setup_url === "string"
+  );
+
+  const installs = await listInstallations(APP, () =>
+    Promise.resolve(
+      jsonResponse([{ account: { login: "acme" }, id: 42_424_242 }])
+    )
+  );
+  check(
+    "installations are discoverable from the App itself",
+    installs.length === 1 &&
+      installs[0]?.id === "42424242" &&
+      installs[0]?.account === "acme"
   );
 
   check(

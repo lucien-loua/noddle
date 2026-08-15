@@ -131,6 +131,37 @@ export async function installationToken(
   };
 }
 
+export interface GithubInstallation {
+  /** The account the App was installed on. */
+  account: string;
+  id: string;
+}
+
+/**
+ * Installations of this App, authenticated by the App JWT alone.
+ *
+ * This is the recovery path when the post-install redirect never happens —
+ * the App knows its own installations, so the browser does not have to
+ * carry that fact back.
+ */
+export async function listInstallations(
+  app: { appId: string; privateKeyPem: string; url: string },
+  fetchImpl: GithubFetch = fetch
+): Promise<GithubInstallation[]> {
+  const jwt = appJwt(app.appId, app.privateKeyPem);
+  const body = await githubJson<{ account?: { login?: string }; id: number }[]>(
+    fetchImpl,
+    `${apiBase(app.url)}/app/installations?per_page=100`,
+    {
+      headers: { Authorization: `Bearer ${jwt}` },
+    }
+  );
+  return body.map((i) => ({
+    account: i.account?.login ?? "unknown",
+    id: String(i.id),
+  }));
+}
+
 export interface GithubRepo {
   defaultBranch: string;
   /** `owner/name`. */
@@ -255,6 +286,9 @@ export function isPubliclyReachable(origin: string): boolean {
  *  - every default event must be covered by a permission. `pull_request`
  *    needs `pull_requests: read`; asking for the event without it fails the
  *    whole manifest.
+ *  - `redirect_url` covers CREATION only. Installing is a separate step
+ *    with its own `setup_url`; leaving it out strands the App as created
+ *    but never recorded as installed.
  *  - the hook URL must be present AND reachable from the public Internet.
  *    Omitting it is not an escape hatch — GitHub answers "Hook url cannot
  *    be blank". So a local dashboard cannot create an App at all, and the
@@ -283,6 +317,11 @@ export function appManifest(o: {
     name: o.name,
     public: false,
     redirect_url: o.redirectUrl,
+    // Where GitHub sends the browser after INSTALLING, which is a different
+    // moment from creating and uses a different field. Without it the user
+    // installs, GitHub shows its own confirmation page, and nothing ever
+    // tells Noddle the installation exists.
+    setup_url: o.redirectUrl,
     url: o.url,
   };
 }
