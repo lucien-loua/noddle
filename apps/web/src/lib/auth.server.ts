@@ -111,21 +111,31 @@ export const auth = betterAuth({
   secret: deriveSubkey(env.appKey, "noddle-better-auth").toString("base64"),
 
   /**
-   * Trust the origin the request came in on — but ONLY when
-   * `BETTER_AUTH_URL` is unset.
+   * Trust the origin the request came in on — DEVELOPMENT ONLY, and only
+   * when `BETTER_AUTH_URL` is unset.
    *
    * Without it, reaching the dashboard through a tunnel fails every sign-in
    * with "Invalid origin": better-auth compares the browser's `Origin`
    * against a base URL it derived from the proxied request, and the two
    * disagree on scheme.
    *
-   * This adds no weakness where it matters: with `BETTER_AUTH_URL` set —
-   * which the installer does — the origin is verified against that value
-   * and this returns nothing. It only makes the inference already described
-   * above survive a proxy.
+   * `x-forwarded-host` is client-controlled, so this must never widen the
+   * trust surface in production — hence the NODE_ENV gate, which fails
+   * closed. It is not reachable as a CSRF bypass either way: a browser
+   * cannot attach that header to a cross-site request, and `Host` alone
+   * yields the real origin. And it adds nothing that better-auth does not
+   * already do here — with `BETTER_AUTH_URL` unset it infers `baseURL`
+   * from the very same headers, as the comment above says.
+   *
+   * The installer sets `BETTER_AUTH_URL`, so a real installation never
+   * reaches this branch.
    */
   trustedOrigins: (request) => {
-    if (process.env.BETTER_AUTH_URL || !request) {
+    if (
+      process.env.NODE_ENV === "production" ||
+      process.env.BETTER_AUTH_URL ||
+      !request
+    ) {
       return [];
     }
     const origin = forwardedOrigin(request);
