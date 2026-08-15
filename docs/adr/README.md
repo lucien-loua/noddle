@@ -23,3 +23,4 @@ an answer. New ADRs: next number, short title, why — see `/domain-modeling`.
 | [0016](./0016-local-multipass-topology.md) | Local Multipass topology |
 | [0017](./0017-terminal-websocket-on-web.md) | Terminal WebSocket on the dashboard |
 | [0018](./0018-default-environment.md) | Default environment is undeletable |
+| [0019](./0019-git-provider-integrations.md) | Git providers via a self-hosted GitHub App |

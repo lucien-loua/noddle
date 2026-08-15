@@ -181,6 +181,13 @@
         "@noddle/tsconfig": "workspace:*",
       },
     },
+    "packages/git-provider": {
+      "name": "@noddle/git-provider",
+      "devDependencies": {
+        "@noddle/testing": "workspace:*",
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
     "packages/notifier": {
       "name": "@noddle/notifier",
       "devDependencies": {
@@ -600,6 +607,8 @@
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
 
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
+
+    "@noddle/git-provider": ["@noddle/git-provider@workspace:packages/git-provider"],
 
     "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
 

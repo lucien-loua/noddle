@@ -3,6 +3,7 @@ import { backupConfigs, backups } from "#schema/backups";
 import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
 import { envVars } from "#schema/env-vars";
+import { githubProviders, gitProviders } from "#schema/git-providers";
 import { environments, projects } from "#schema/projects";
 import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
@@ -47,6 +48,10 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
     references: [environments.id],
   }),
   envVars: many(envVars),
+  gitProvider: one(gitProviders, {
+    fields: [services.gitProviderId],
+    references: [gitProviders.id],
+  }),
   server: one(servers, {
     fields: [services.serverId],
     references: [servers.id],
@@ -192,3 +197,24 @@ export const volumeBackupsRelations = relations(volumeBackups, ({ one }) => ({
     references: [services.id],
   }),
 }));
+
+export const gitProvidersRelations = relations(
+  gitProviders,
+  ({ one, many }) => ({
+    github: one(githubProviders, {
+      fields: [gitProviders.id],
+      references: [githubProviders.gitProviderId],
+    }),
+    services: many(services),
+  })
+);
+
+export const githubProvidersRelations = relations(
+  githubProviders,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [githubProviders.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);

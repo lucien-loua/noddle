@@ -14,6 +14,7 @@ export * from "#schema/backups";
 export * from "#schema/databases";
 export * from "#schema/deployments";
 export * from "#schema/env-vars";
+export * from "#schema/git-providers";
 export * from "#schema/metrics";
 export * from "#schema/notifications";
 export * from "#schema/projects";

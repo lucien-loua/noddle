@@ -9,7 +9,7 @@ function randomHex(byteCount: number): string {
   );
 }
 
-/** Turn a server address into the sslip.io label segment Dokploy uses. */
+/** Turn a server address into an sslip.io label segment. */
 export function slugServerHost(host: string): string {
   return host.replaceAll(".", "-").replaceAll(":", "-");
 }
@@ -22,7 +22,7 @@ function truncateAppLabel(appName: string): string {
 
 /**
  * Build a wildcard DNS hostname that resolves to `serverHost` without manual
- * DNS — same pattern as Dokploy (`*.sslip.io` since traefik.me outages).
+ * DNS. `*.sslip.io` rather than traefik.me, which has gone down.
  */
 export function formatTestDomain(opts: {
   appName: string;

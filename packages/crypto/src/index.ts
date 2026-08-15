@@ -185,14 +185,6 @@ export const secretContext = {
     aad: `database_password:${databaseId}`,
   }),
   envVar: (envVarId: string): SecretContext => ({ aad: `env_var:${envVarId}` }),
-  /** A channel's URL: whoever holds it can post to the channel. */
-  notificationChannel: (channelId: string): SecretContext => ({
-    aad: `notification_channel:${channelId}`,
-  }),
-  /** An external registry's password. */
-  registry: (registryId: string): SecretContext => ({
-    aad: `registry:${registryId}`,
-  }),
   /**
    * The private key of a library entry.
    *
@@ -209,6 +201,18 @@ export const secretContext = {
    * `backup_destination`, kept when the table was renamed to
    * `s3_destinations`.
    */
+  /** Every secret of one connected forge, distinguished by field. */
+  gitProvider: (gitProviderId: string, field: string): SecretContext => ({
+    aad: `git_provider:${gitProviderId}:${field}`,
+  }),
+  /** A channel's URL: whoever holds it can post to the channel. */
+  notificationChannel: (channelId: string): SecretContext => ({
+    aad: `notification_channel:${channelId}`,
+  }),
+  /** An external registry's password. */
+  registry: (registryId: string): SecretContext => ({
+    aad: `registry:${registryId}`,
+  }),
   sshKey: (sshKeyId: string): SecretContext => ({
     aad: `server_ssh_key:${sshKeyId}`,
   }),

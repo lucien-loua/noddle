@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "#schema/columns";
+import { gitProviders } from "#schema/git-providers";
 import { environments } from "#schema/projects";
 import { registries } from "#schema/registries";
 import { servers } from "#schema/servers";
@@ -83,6 +84,12 @@ export const services = pgTable(
       .notNull()
       .references(() => environments.id, { onDelete: "cascade" }),
     gitBranch: text("git_branch"),
+
+    // Connected forge this service clones through. `null` = clone by URL,
+    // with a deploy key or anonymously. ADR-0019.
+    gitProviderId: uuid("git_provider_id").references(() => gitProviders.id, {
+      onDelete: "set null",
+    }),
     gitRepoUrl: text("git_repo_url"),
 
     /** `--recurse-submodules` on clone. */
