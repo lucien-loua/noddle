@@ -255,9 +255,10 @@ export function isPubliclyReachable(origin: string): boolean {
  *  - every default event must be covered by a permission. `pull_request`
  *    needs `pull_requests: read`; asking for the event without it fails the
  *    whole manifest.
- *  - the hook URL must be reachable from the public Internet. On a local
- *    origin the hook is OMITTED so the App can still be created; it is
- *    added on GitHub once the dashboard has a public address.
+ *  - the hook URL must be present AND reachable from the public Internet.
+ *    Omitting it is not an escape hatch — GitHub answers "Hook url cannot
+ *    be blank". So a local dashboard cannot create an App at all, and the
+ *    caller has to say so before sending the browser away.
  */
 export function appManifest(o: {
   name: string;
@@ -268,7 +269,6 @@ export function appManifest(o: {
   /** Where GitHub sends webhooks. Omitted when unreachable. */
   webhookUrl: string;
 }): Record<string, unknown> {
-  const reachable = isPubliclyReachable(o.webhookUrl);
   return {
     default_events: ["push", "pull_request"],
     // `pull_requests` is read-only and only exists to receive the event:
@@ -279,9 +279,7 @@ export function appManifest(o: {
       metadata: "read",
       pull_requests: "read",
     },
-    ...(reachable
-      ? { hook_attributes: { active: true, url: o.webhookUrl } }
-      : {}),
+    hook_attributes: { active: true, url: o.webhookUrl },
     name: o.name,
     public: false,
     redirect_url: o.redirectUrl,

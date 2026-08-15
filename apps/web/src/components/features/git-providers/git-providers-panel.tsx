@@ -125,6 +125,7 @@ function ConnectGithubDialog({
   open: boolean;
 }) {
   const [name, setName] = useState("");
+  const [publicUrl, setPublicUrl] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const [posting, setPosting] = useState<{
     action: string;
@@ -132,7 +133,7 @@ function ConnectGithubDialog({
   } | null>(null);
 
   const start = useMutation({
-    mutationFn: () => startGithubApp({ data: { name } }),
+    mutationFn: () => startGithubApp({ data: { name, publicUrl } }),
     onSuccess: (result) =>
       setPosting({ action: result.action, manifest: result.manifest }),
   });
@@ -147,6 +148,10 @@ function ConnectGithubDialog({
 
   const handleName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+    []
+  );
+  const handlePublicUrl = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setPublicUrl(e.target.value),
     []
   );
   const handleStart = useCallback(() => start.mutate(), [start]);
@@ -176,6 +181,24 @@ function ConnectGithubDialog({
               value={name}
             />
           </Field>
+          <Field>
+            <FieldLabel htmlFor="github-public-url">
+              Public URL (optional)
+            </FieldLabel>
+            <FieldDescription>
+              Only needed while developing. GitHub has to reach this dashboard
+              to deliver webhooks, so a localhost address is refused — put a
+              tunnel URL here instead.
+            </FieldDescription>
+            <Input
+              autoComplete="off"
+              id="github-public-url"
+              onChange={handlePublicUrl}
+              placeholder="https://noddle.example.com"
+              value={publicUrl}
+            />
+          </Field>
+
           {start.isError ? (
             <p className="mt-3 text-destructive text-sm" role="alert">
               {errorMessage(start.error, "could not start the connection")}

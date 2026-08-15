@@ -138,9 +138,9 @@ export const serviceGitProviderSchema = z.object({
   buildPath: buildPathSchema,
   /** `null` = clone anonymously. */
   deployKeyId: z.union([z.uuid(), z.null()]),
+  gitBranch: gitBranchSchema,
   /** `null` = clone by URL rather than through a connected forge. */
   gitProviderId: z.union([z.uuid(), z.null()]),
-  gitBranch: gitBranchSchema,
   gitRepoUrl: optionalGitRepoUrl,
   gitSubmodules: z.boolean(),
   watchPaths: watchPathsSchema,

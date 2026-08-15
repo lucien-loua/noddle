@@ -2,6 +2,7 @@ import { githubProviders, gitProviders, services } from "@noddle/db/schema";
 import {
   appManifest,
   installUrl,
+  isPubliclyReachable,
   listBranches,
   listRepositories,
 } from "@noddle/git-provider/github";
@@ -86,6 +87,11 @@ const startGithubSchema = z.object({
       /^[a-zA-Z0-9][a-zA-Z0-9-]*$/,
       "letters, digits and dashes; cannot start with a dash"
     ),
+  /**
+   * Where GitHub should reach this dashboard. Defaults to the request's
+   * own origin — only needed when developing behind a tunnel.
+   */
+  publicUrl: z.union([z.literal(""), z.url().max(255)]).optional(),
   /** `https://github.com` or a GitHub Enterprise host. */
   url: z.url().max(255).default("https://github.com"),
 });
@@ -106,6 +112,20 @@ export const startGithubApp = createServerFn({ method: "POST" })
       const guarded = await runGuarded({
         permission: { action: "create", resource: "gitProvider" },
         run: async () => {
+          const origin = data.publicUrl?.trim()
+            ? data.publicUrl.trim().replace(TRAILING_SLASHES, "")
+            : requestOrigin();
+
+          // Refused HERE, and BEFORE the insert. GitHub requires a hook it
+          // can reach and rejects the whole manifest otherwise, so failing
+          // late would both send the browser away for nothing and leave a
+          // pending row behind on every attempt.
+          if (!isPubliclyReachable(origin)) {
+            throw new Error(
+              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Serve Noddle on a public address, or expose it through a tunnel and enter that URL below.`
+            );
+          }
+
           const id = crypto.randomUUID();
           await db.insert(gitProviders).values({
             id,
@@ -116,7 +136,6 @@ export const startGithubApp = createServerFn({ method: "POST" })
             .insert(githubProviders)
             .values({ gitProviderId: id, url: data.url });
 
-          const origin = requestOrigin();
           return {
             action: `${data.url.replace(TRAILING_SLASHES, "")}/settings/apps/new?state=${id}`,
             id,

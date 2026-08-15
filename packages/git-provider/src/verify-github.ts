@@ -223,21 +223,9 @@ await runVerify("github app", async () => {
       })
   );
 
-  // GitHub refuses a hook it cannot reach — and refuses the whole manifest
-  // with it, rather than creating the App without one. On a local origin
-  // the hook is omitted so the App can still be created.
-  const local = appManifest({
-    name: "noddle-dev",
-    redirectUrl: "http://localhost:3000/api/git-providers/github/callback",
-    url: "http://localhost:3000",
-    webhookUrl: "http://localhost:3000/api/webhooks/github",
-  });
   check(
-    "a local origin drops the hook instead of failing the manifest",
-    !("hook_attributes" in local) && local.name === "noddle-dev"
-  );
-
-  check(
+    // Omitting the hook is NOT an escape hatch — GitHub answers "Hook url
+    // cannot be blank". So the caller must refuse a local origin up front.
     "reachability covers loopback and private ranges, not real hosts",
     isPubliclyReachable("https://noddle.acme.io") &&
       !isPubliclyReachable("http://localhost:3000") &&
