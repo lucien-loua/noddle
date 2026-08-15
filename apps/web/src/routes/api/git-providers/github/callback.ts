@@ -3,10 +3,11 @@ import { exchangeManifestCode } from "@noddle/git-provider/github";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
-import { requireSession } from "@/lib/session.server";
+import { runGuarded } from "@/lib/permission.server";
 import { saveCreatedApp } from "@/server/git-providers";
 
 const UUID = /^[0-9a-f-]{36}$/i;
+const NUMERIC = /^[0-9]{1,20}$/;
 
 /**
  * Where GitHub returns the browser after the operator approved the App.
@@ -21,8 +22,6 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        await requireSession();
-
         const url = new URL(request.url);
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
@@ -36,10 +35,30 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
         // App is created, once with `installation_id` after it is installed.
         // Two steps on their side, one route on ours.
         if (installationId) {
-          await db
-            .update(githubProviders)
-            .set({ installationId })
-            .where(eq(githubProviders.gitProviderId, state));
+          if (!NUMERIC.test(installationId)) {
+            return new Response("invalid installation", { status: 400 });
+          }
+          await runGuarded({
+            load: () =>
+              db.query.githubProviders.findFirst({
+                where: eq(githubProviders.gitProviderId, state),
+              }),
+            notFoundMessage: "unknown connection",
+            permission: { action: "create", resource: "gitProvider" },
+            run: async ({ row }) => {
+              // One shot. Without this the route rebinds a working
+              // connection to any installation id a crafted link carries —
+              // and it is a GET, so a link is all it takes.
+              if (!row.appId || row.installationId) {
+                return;
+              }
+              await db
+                .update(githubProviders)
+                .set({ installationId })
+                .where(eq(githubProviders.gitProviderId, state));
+            },
+            target: ({ row }) => ({ id: row.gitProviderId, name: "github" }),
+          });
           return Response.redirect(new URL("/git-providers", request.url), 303);
         }
 
@@ -61,8 +80,17 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
         }
 
         try {
-          const created = await exchangeManifestCode(code, provider.github.url);
-          await saveCreatedApp(state, created);
+          await runGuarded({
+            permission: { action: "create", resource: "gitProvider" },
+            run: async () => {
+              const created = await exchangeManifestCode(
+                code,
+                provider.github?.url ?? "https://github.com"
+              );
+              await saveCreatedApp(state, created);
+            },
+            target: () => ({ id: state, name: provider.name }),
+          });
         } catch (err) {
           // The code is single-use: retrying this URL cannot work, so the
           // message has to send the operator back to the start rather than
