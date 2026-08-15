@@ -20,6 +20,11 @@ import { useTestAndSave } from "@/components/features/settings-list/hooks/use-te
 import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
+import {
+  ResourceCard,
+  ResourceCardFact,
+  ResourceCardMeta,
+} from "@/components/resource-card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,15 +46,13 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { type RoleName, roles } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -134,31 +137,24 @@ export function S3DestinationPanel({
           ) : null}
         </SettingsList.Empty>
 
-        <SettingsList.Frame
-          description="Where Noddle pushes database dumps. One is enough for most installations — a picker only shows up once there are two."
-          title="S3 destinations"
-        >
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {destinations.map((row) => (
-                <DestinationLine
-                  canEdit={canEdit}
-                  key={row.id}
-                  onEdit={handleEdit}
-                  onRemoved={refresh}
-                  row={row}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </SettingsList.Frame>
+        <Frame className="w-full" variant="ghost">
+          <FrameHeader>
+            <FrameTitle>S3 destinations</FrameTitle>
+            <FrameDescription>
+              Where Noddle pushes database dumps. One is enough for most
+              installations — a picker only shows up once there are two.
+            </FrameDescription>
+          </FrameHeader>
+          {destinations.map((row) => (
+            <DestinationLine
+              canEdit={canEdit}
+              key={row.id}
+              onEdit={handleEdit}
+              onRemoved={refresh}
+              row={row}
+            />
+          ))}
+        </Frame>
       </SettingsList>
     </>
   );
@@ -187,20 +183,10 @@ function DestinationLine({
   const handleEdit = useCallback(() => onEdit(row), [onEdit, row]);
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">{row.name}</TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {row.bucket} · {row.endpoint} · {row.region}
-        {row.prefix ? ` · ${row.prefix}` : ""}
-        {error ? (
-          <span className="block text-destructive text-xs" role="status">
-            {error}
-          </span>
-        ) : null}
-      </TableCell>
-      <TableCell className="text-end">
-        {canEdit ? (
-          <div className="flex justify-end gap-1">
+    <ResourceCard
+      actions={
+        canEdit ? (
+          <>
             <Button onClick={handleEdit} size="sm" variant="outline">
               Edit
             </Button>
@@ -210,13 +196,26 @@ function DestinationLine({
               size="sm"
               variant="ghost"
             >
-              {isPending ? <Spinner /> : null}
+              {isPending ? <Spinner data-icon="inline-start" /> : null}
               Remove
             </Button>
-          </div>
-        ) : null}
-      </TableCell>
-    </TableRow>
+          </>
+        ) : null
+      }
+      title={<h2 className="truncate font-semibold text-sm">{row.name}</h2>}
+    >
+      <ResourceCardMeta>
+        <ResourceCardFact label="Bucket" value={row.bucket} />
+        <ResourceCardFact label="Endpoint" value={row.endpoint} />
+        <ResourceCardFact label="Region" value={row.region} />
+        <ResourceCardFact label="Prefix" value={row.prefix || "—"} />
+      </ResourceCardMeta>
+      {error ? (
+        <p className="mt-2 text-destructive text-xs" role="status">
+          {error}
+        </p>
+      ) : null}
+    </ResourceCard>
   );
 }
 

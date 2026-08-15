@@ -8,6 +8,11 @@ import { useCallback, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ContainerActions } from "@/components/container-actions";
 import { IconStack } from "@/components/icon-stack";
+import {
+  ResourceCard,
+  ResourceCardFact,
+  ResourceCardMeta,
+} from "@/components/resource-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,14 +30,6 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { IconTile } from "@/components/ui/icon-tile";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { type RoleName, roles } from "@/lib/permissions";
 import { getAuthState } from "@/server/auth";
 import type { ContainerKind, ContainerRow } from "@/server/containers";
@@ -169,49 +166,38 @@ function ContainersPage() {
             </FrameDescription>
           </FrameHeader>
           <FramePanel className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Server</TableHead>
-                  <TableHead className="text-end">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {view.containers.map((row) => (
-                  <TableRow key={`${row.serverId}-${row.id}`}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <KindIcon kind={row.kind} />
-                        <span className="min-w-0 truncate">{row.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
+            <div className="flex flex-col gap-3">
+              {view.containers.map((row) => (
+                <ResourceCard
+                  actions={
+                    <ContainerActions
+                      onError={handleError}
+                      role={known}
+                      row={row}
+                    />
+                  }
+                  key={`${row.serverId}-${row.id}`}
+                  title={
+                    <>
+                      <KindIcon kind={row.kind} />
+                      <h2 className="truncate font-semibold text-sm">
+                        {row.name}
+                      </h2>
                       <KindBadge kind={row.kind} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {row.image}
-                    </TableCell>
-                    <TableCell>
-                      <StateCell row={row} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {row.serverName}
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <ContainerActions
-                        onError={handleError}
-                        role={known}
-                        row={row}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </>
+                  }
+                >
+                  <ResourceCardMeta className="sm:grid-cols-3">
+                    <ResourceCardFact
+                      label="Status"
+                      value={<StateCell row={row} />}
+                    />
+                    <ResourceCardFact label="Image" value={row.image} />
+                    <ResourceCardFact label="Server" value={row.serverName} />
+                  </ResourceCardMeta>
+                </ResourceCard>
+              ))}
+            </div>
           </FramePanel>
         </Frame>
       )}

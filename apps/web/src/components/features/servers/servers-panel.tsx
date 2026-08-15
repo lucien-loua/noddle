@@ -15,8 +15,14 @@ import { useResourceList } from "@/components/features/settings-list/hooks/use-r
 import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
-import { ResourceRow, RowGroup } from "@/components/resource-row";
+import { RelativeTime } from "@/components/relative-time";
+import {
+  ResourceCard,
+  ResourceCardFact,
+  ResourceCardMeta,
+} from "@/components/resource-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,12 +35,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import type { ServerView } from "@/server/servers";
 
 /** The badge and the dot share the same vocabulary as services:
@@ -73,20 +86,12 @@ function ServerRow({
 }) {
   const navigate = useNavigate();
   const tone = statusTone(server.status);
-  const facts = [
-    server.host,
-    server.role === "manager" ? "manager" : null,
-    server.dockerVersion ? `Docker ${server.dockerVersion}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
   const [removeError, setRemoveError] = useState<string | null>(null);
   const accessError = server.status === "unreachable" ? server.lastError : null;
   const secondaryError = removeError ?? accessError;
 
-  // The row leads to the detail view, exactly like the dashboard's rows.
-  // This is what allows removing the flat list of cards that used to live
-  // under it: a machine's resources are read on ITS OWN page.
+  // The card leads to the detail view: a machine's resources are read on
+  // ITS OWN page, which is what lets this stay a summary.
   const handleOpen = useCallback(
     () =>
       navigate({ params: { serverId: server.id }, to: "/servers/$serverId" }),
@@ -94,8 +99,8 @@ function ServerRow({
   );
 
   return (
-    <ResourceRow
-      action={
+    <ResourceCard
+      actions={
         <DeleteServerAction
           onError={setRemoveError}
           onRemoved={onRemoved}
@@ -104,20 +109,44 @@ function ServerRow({
           serverName={server.name}
         />
       }
-      name={server.name}
-      onToggle={handleOpen}
-      secondary={
-        secondaryError ? (
-          <span className="text-destructive" role="status">
-            {secondaryError}
-          </span>
-        ) : (
-          facts
-        )
+      onOpen={handleOpen}
+      title={
+        <>
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              tone === "ok" && "bg-success",
+              tone === "danger" && "bg-destructive",
+              tone === "busy" && "bg-muted-foreground"
+            )}
+          />
+          <h2 className="truncate font-semibold text-sm">{server.name}</h2>
+          <Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>
+          {server.role === "manager" ? (
+            <Badge variant="secondary">manager</Badge>
+          ) : null}
+        </>
       }
-      tone={tone}
-      toneLabel={STATUS_LABEL[server.status]}
-    />
+    >
+      <ResourceCardMeta>
+        <ResourceCardFact label="Host" value={server.host} />
+        <ResourceCardFact label="Docker" value={server.dockerVersion ?? "—"} />
+        <ResourceCardFact
+          label="Memory"
+          value={server.totalMemoryMb ? `${server.totalMemoryMb} MB` : "—"}
+        />
+        <ResourceCardFact
+          label="Added"
+          value={<RelativeTime iso={server.createdAt} />}
+        />
+      </ResourceCardMeta>
+      {secondaryError ? (
+        <p className="mt-2 text-destructive text-xs" role="status">
+          {secondaryError}
+        </p>
+      ) : null}
+    </ResourceCard>
   );
 }
 
@@ -165,18 +194,23 @@ export function ServersList({
         ) : null}
       </SettingsList.Empty>
 
-      <SettingsList.Body>
-        <RowGroup>
-          {servers.map((server) => (
-            <ServerRow
-              key={server.id}
-              onRemoved={handleRemoved}
-              role={role}
-              server={server}
-            />
-          ))}
-        </RowGroup>
-      </SettingsList.Body>
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader>
+          <FrameTitle>Servers</FrameTitle>
+          <FrameDescription>
+            Machines Noddle deploys onto. Open one to see its resources, disk
+            and toolchain.
+          </FrameDescription>
+        </FrameHeader>
+        {servers.map((server) => (
+          <ServerRow
+            key={server.id}
+            onRemoved={handleRemoved}
+            role={role}
+            server={server}
+          />
+        ))}
+      </Frame>
     </SettingsList>
   );
 }

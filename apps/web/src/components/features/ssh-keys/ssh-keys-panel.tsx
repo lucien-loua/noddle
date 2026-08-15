@@ -10,6 +10,11 @@ import { SettingsList } from "@/components/features/settings-list/settings-list"
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
+import {
+  ResourceCard,
+  ResourceCardFact,
+  ResourceCardMeta,
+} from "@/components/resource-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,15 +29,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
 import type { RoleName } from "@/lib/permissions";
@@ -117,30 +120,9 @@ function KeyRow({
   const algorithm = algorithmOf(sshKey.publicKey);
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {sshKey.name}
-        {error ? (
-          <span className="block text-destructive text-xs" role="status">
-            {error}
-          </span>
-        ) : null}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {algorithm ?? "—"}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        <RelativeTime iso={sshKey.createdAt} />
-      </TableCell>
-      <TableCell>
-        <Badge variant={used ? "secondary" : "outline"}>
-          {used
-            ? `opens ${sshKey.serverCount} server${sshKey.serverCount > 1 ? "s" : ""}`
-            : "not used yet"}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-end">
-        {canDelete ? (
+    <ResourceCard
+      actions={
+        canDelete ? (
           <Button
             disabled={isPending || used}
             onClick={handleRemove}
@@ -152,12 +134,35 @@ function KeyRow({
             }
             variant="ghost"
           >
-            {isPending ? <Spinner /> : null}
+            {isPending ? <Spinner data-icon="inline-start" /> : null}
             Remove
           </Button>
-        ) : null}
-      </TableCell>
-    </TableRow>
+        ) : null
+      }
+      title={
+        <>
+          <h2 className="truncate font-semibold text-sm">{sshKey.name}</h2>
+          <Badge variant={used ? "secondary" : "outline"}>
+            {used
+              ? `opens ${sshKey.serverCount} server${sshKey.serverCount > 1 ? "s" : ""}`
+              : "not used yet"}
+          </Badge>
+        </>
+      }
+    >
+      <ResourceCardMeta>
+        <ResourceCardFact label="Algorithm" value={algorithm ?? "—"} />
+        <ResourceCardFact
+          label="Added"
+          value={<RelativeTime iso={sshKey.createdAt} />}
+        />
+      </ResourceCardMeta>
+      {error ? (
+        <p className="mt-2 text-destructive text-xs" role="status">
+          {error}
+        </p>
+      ) : null}
+    </ResourceCard>
   );
 }
 
@@ -198,27 +203,18 @@ export function SshKeysList({
         ) : null}
       </SettingsList.Empty>
 
-      <SettingsList.Frame
-        description="A key is how Noddle reaches your machines, and can read a private repository. It never leaves this server, encrypted at rest."
-        title="SSH keys"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead>Algorithm</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((k) => (
-              <KeyRow key={k.id} onRemoved={refresh} role={role} sshKey={k} />
-            ))}
-          </TableBody>
-        </Table>
-      </SettingsList.Frame>
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader>
+          <FrameTitle>SSH keys</FrameTitle>
+          <FrameDescription>
+            A key is how Noddle reaches your machines, and can read a private
+            repository. It never leaves this server, encrypted at rest.
+          </FrameDescription>
+        </FrameHeader>
+        {rows.map((k) => (
+          <KeyRow key={k.id} onRemoved={refresh} role={role} sshKey={k} />
+        ))}
+      </Frame>
     </SettingsList>
   );
 }

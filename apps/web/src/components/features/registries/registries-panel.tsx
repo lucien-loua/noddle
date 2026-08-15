@@ -4,6 +4,7 @@ import {
   KeyIcon,
   PackageIcon,
   TagIcon,
+  TrashIcon,
   UserIcon,
 } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,11 @@ import { SettingsList } from "@/components/features/settings-list/settings-list"
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
+import {
+  ResourceCard,
+  ResourceCardFact,
+  ResourceCardMeta,
+} from "@/components/resource-card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,15 +36,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { Spinner } from "@/components/ui/spinner";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
@@ -70,27 +74,9 @@ function RegistryRow({
   const handleEdit = useCallback(() => onEdit(registry), [onEdit, registry]);
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {registry.name}
-        {error ? (
-          <span className="block text-destructive text-xs" role="status">
-            {error}
-          </span>
-        ) : null}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {registry.registryUrl}
-        {registry.imagePrefix ? `/${registry.imagePrefix}` : null}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {registry.username}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        <RelativeTime iso={registry.createdAt} />
-      </TableCell>
-      <TableCell className="text-end">
-        <div className="flex justify-end gap-1">
+    <ResourceCard
+      actions={
+        <>
           {canEdit ? (
             <Button onClick={handleEdit} size="sm" variant="ghost">
               Edit
@@ -98,18 +84,38 @@ function RegistryRow({
           ) : null}
           {canDelete ? (
             <Button
+              aria-label={`Remove ${registry.name}`}
               disabled={isPending}
               onClick={handleRemove}
-              size="sm"
+              size="icon-sm"
               variant="ghost"
             >
-              {isPending ? <Spinner /> : null}
-              Remove
+              {isPending ? <Spinner /> : <TrashIcon />}
             </Button>
           ) : null}
-        </div>
-      </TableCell>
-    </TableRow>
+        </>
+      }
+      title={
+        <h2 className="truncate font-semibold text-sm">{registry.name}</h2>
+      }
+    >
+      <ResourceCardMeta>
+        <ResourceCardFact
+          label="Registry"
+          value={`${registry.registryUrl}${registry.imagePrefix ? `/${registry.imagePrefix}` : ""}`}
+        />
+        <ResourceCardFact label="Username" value={registry.username} />
+        <ResourceCardFact
+          label="Added"
+          value={<RelativeTime iso={registry.createdAt} />}
+        />
+      </ResourceCardMeta>
+      {error ? (
+        <p className="mt-2 text-destructive text-xs" role="status">
+          {error}
+        </p>
+      ) : null}
+    </ResourceCard>
   );
 }
 
@@ -155,34 +161,26 @@ export function RegistriesList({
         ) : null}
       </SettingsList.Empty>
 
-      <SettingsList.Frame
-        description="Where Noddle can push the images it builds. Its own registry stays the default — these are alternatives, and the password never leaves this server."
-        title="External registries"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead>Registry</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <RegistryRow
-                canEdit={canEdit}
-                key={row.id}
-                onEdit={onEdit}
-                onRemoved={refresh}
-                registry={row}
-                role={role}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </SettingsList.Frame>
+      <Frame className="w-full" variant="ghost">
+        <FrameHeader>
+          <FrameTitle>External registries</FrameTitle>
+          <FrameDescription>
+            Where Noddle can push the images it builds. Its own registry stays
+            the default — these are alternatives, and the password never leaves
+            this server.
+          </FrameDescription>
+        </FrameHeader>
+        {rows.map((row) => (
+          <RegistryRow
+            canEdit={canEdit}
+            key={row.id}
+            onEdit={onEdit}
+            onRemoved={refresh}
+            registry={row}
+            role={role}
+          />
+        ))}
+      </Frame>
     </SettingsList>
   );
 }
