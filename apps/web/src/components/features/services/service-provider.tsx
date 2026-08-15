@@ -8,7 +8,7 @@ import {
 } from "@noddle/shared/validation/service";
 import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   DockerIcon,
@@ -358,6 +358,7 @@ function ProviderBranchField({
 function ProviderRepositoryField({
   branch,
   canEdit,
+  forge,
   onBranchChange,
   onPick,
   onProviderChange,
@@ -366,6 +367,8 @@ function ProviderRepositoryField({
 }: {
   branch: string;
   canEdit: boolean;
+  /** The tab this field belongs to. Only its own forge is offered. */
+  forge: "github" | "gitlab";
   onBranchChange: (next: string) => void;
   onPick: (repoUrl: string, defaultBranch: string) => void;
   onProviderChange: (next: string | null) => void;
@@ -399,11 +402,29 @@ function ProviderRepositoryField({
     [onPick]
   );
 
-  // Only connections that can actually list something. An App created but
-  // never installed would offer an empty list with no way to tell why.
-  const connected = (providers.data ?? []).filter((p) => p.connected);
+  // Scoped to THIS tab's forge. Offering every connection made the tabs
+  // interchangeable — the GitHub tab listed GitLab connections, which is
+  // the thing that made them all look the same.
+  //
+  // And only connections that can actually list something: an App created
+  // but never installed would offer an empty list with no way to tell why.
+  const connected = (providers.data ?? []).filter(
+    (p) => p.connected && p.providerType === forge
+  );
+
+  // Said rather than hidden. A silent tab reads as "this forge does not
+  // work here", when the answer is one screen away.
   if (connected.length === 0) {
-    return null;
+    return (
+      <FieldDescription>
+        No {forge === "gitlab" ? "GitLab" : "GitHub"} connection yet — add one
+        under{" "}
+        <Link className="underline" to="/git-providers">
+          Git providers
+        </Link>{" "}
+        to pick a repository from a list. You can still paste a URL below.
+      </FieldDescription>
+    );
   }
 
   return (
@@ -518,7 +539,10 @@ function GitSourceForm({
           buildPath: value.buildPath,
           deployKeyId: value.deployKeyId,
           gitBranch: value.gitBranch,
-          gitProviderId: value.gitProviderId,
+          // The custom tab is BY URL by definition: switching to it drops
+          // the connection, otherwise a service keeps cloning through a
+          // forge the screen no longer shows.
+          gitProviderId: sourceType === "git" ? null : value.gitProviderId,
           gitRepoUrl: value.gitRepoUrl,
           gitSubmodules: value.gitSubmodules,
           serviceId: service.id,
@@ -583,22 +607,25 @@ function GitSourceForm({
   return (
     <>
       <FieldGroup>
-        <form.AppField name="gitProviderId">
-          {(f) => (
-            <ProviderRepositoryField
-              branch={form.state.values.gitBranch}
-              canEdit={canEdit}
-              onBranchChange={handleBranchPick}
-              onPick={handlePick}
-              onProviderChange={f.handleChange}
-              providerId={f.state.value}
-              repoUrl={form.state.values.gitRepoUrl}
-            />
-          )}
-        </form.AppField>
+        {sourceType === "git" ? null : (
+          <form.AppField name="gitProviderId">
+            {(f) => (
+              <ProviderRepositoryField
+                branch={form.state.values.gitBranch}
+                canEdit={canEdit}
+                forge={sourceType === "gitlab" ? "gitlab" : "github"}
+                onBranchChange={handleBranchPick}
+                onPick={handlePick}
+                onProviderChange={f.handleChange}
+                providerId={f.state.value}
+                repoUrl={form.state.values.gitRepoUrl}
+              />
+            )}
+          </form.AppField>
+        )}
         <form.Subscribe selector={selectProviderId}>
           {(providerId) =>
-            providerId ? null : (
+            providerId && sourceType !== "git" ? null : (
               <form.AppField name="gitRepoUrl">
                 {(f) => (
                   <f.FieldText
@@ -613,7 +640,7 @@ function GitSourceForm({
         </form.Subscribe>
         <form.Subscribe selector={selectProviderId}>
           {(providerId) =>
-            providerId ? null : (
+            providerId && sourceType !== "git" ? null : (
               <form.AppField name="gitBranch">
                 {(f) => (
                   <f.FieldText
@@ -637,15 +664,20 @@ function GitSourceForm({
             />
           )}
         </form.AppField>
-        <form.AppField name="deployKeyId">
-          {(f) => (
-            <DeployKeyField
-              canEdit={canEdit}
-              onChange={f.handleChange}
-              value={f.state.value}
-            />
-          )}
-        </form.AppField>
+        {/* A deploy key is the answer for a repository behind NO provider
+            (ADR-0019). A connected forge authenticates on its own, so the
+            field only belongs on the custom tab. */}
+        {sourceType === "git" ? (
+          <form.AppField name="deployKeyId">
+            {(f) => (
+              <DeployKeyField
+                canEdit={canEdit}
+                onChange={f.handleChange}
+                value={f.state.value}
+              />
+            )}
+          </form.AppField>
+        ) : null}
         <form.AppField name="watchPaths">
           {(f) => (
             <WatchPathsField
