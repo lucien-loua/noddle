@@ -201,6 +201,34 @@ function assertWipableDir(dir: string): void {
   }
 }
 
+const SURROUNDING_SLASHES = /^\/+|\/+$/g;
+
+/**
+ * Join a user-supplied build path onto the clone directory.
+ *
+ * The result becomes a `cd` target on the user's server, so an escape is
+ * refused here even though @noddle/shared already validated it — same
+ * philosophy as `assertNotFlag`: the engine does not trust its callers.
+ */
+export function resolveBuildDir(
+  cloneDir: string,
+  buildPath: string | null | undefined
+): string {
+  const rel = buildPath?.trim().replace(SURROUNDING_SLASHES, "") ?? "";
+  if (rel === "") {
+    return cloneDir;
+  }
+  assertNotFlag(rel, "build path");
+  if (rel.split("/").some((s) => s === "" || s === "." || s === "..")) {
+    throw new BuildError(
+      "validation",
+      `build path refused: "${buildPath}" — it would leave the repository`,
+      null
+    );
+  }
+  return `${cloneDir}/${rel}`;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Source fetch
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,6 +238,8 @@ export interface CloneOptions extends ExecOptions {
   commitSha?: string;
   dir: string;
   repoUrl: string;
+  /** Clone submodules too, shallow like the parent. */
+  submodules?: boolean;
 }
 
 /** Returns the SHA actually built — never "the branch". */
@@ -254,6 +284,9 @@ export async function fetchSource(
         "1",
         "--branch",
         o.branch,
+        ...(o.submodules
+          ? ["--recurse-submodules", "--shallow-submodules"]
+          : []),
         // End of options: everything after is positional, even if it starts
         // with a dash.
         "--",
@@ -284,6 +317,28 @@ export async function fetchSource(
         o
       )
     );
+    // The clone resolved submodules for the BRANCH tip; this commit may
+    // point elsewhere.
+    if (o.submodules) {
+      check(
+        "git submodule update",
+        await execArgv(
+          client,
+          [
+            "git",
+            "-C",
+            o.dir,
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+            "--depth",
+            "1",
+          ],
+          o
+        )
+      );
+    }
   }
 
   const rev = check(
@@ -301,6 +356,8 @@ export interface BuildOptions extends ExecOptions {
   builderName: string;
   dir: string;
   imageTag: string;
+  /** Rebuild every layer — `--no-cache` on buildx. */
+  noCache?: boolean;
   /** Relative path passed to Nixpacks as `NIXPACKS_SPA_OUT_DIR`. */
   publishDirectory?: string | null;
 }
@@ -354,6 +411,7 @@ export async function buildImage(
       `cd ${quoteArg(o.dir)} && sudo docker buildx build` +
         ` --builder ${quoteArg(o.builderName)}` +
         " --progress=plain --load" +
+        (o.noCache ? " --no-cache" : "") +
         " -f .nixpacks/Dockerfile" +
         ` -t ${quoteArg(o.imageTag)} .`,
       o
@@ -372,6 +430,8 @@ export interface DockerfileBuildOptions extends ExecOptions {
    */
   dockerfilePath: string;
   imageTag: string;
+  /** Rebuild every layer — `--no-cache` on buildx. */
+  noCache?: boolean;
 }
 
 /**
@@ -398,6 +458,7 @@ export async function buildImageFromDockerfile(
       `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
         ` --builder ${quoteArg(o.builderName)}` +
         " --progress=plain --load" +
+        (o.noCache ? " --no-cache" : "") +
         ` -f ${quoteArg(o.dockerfilePath)}` +
         ` -t ${quoteArg(o.imageTag)} .`,
       o

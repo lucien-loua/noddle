@@ -23,6 +23,30 @@ export function verifyWebhookSignature(
 export interface WebhookPush {
   branch: string;
   commitSha: string | null;
+  /** Every file the push touched, across all its commits. */
+  files: string[];
+}
+
+function pushedFiles(payload: Record<string, unknown>): string[] {
+  const { commits } = payload;
+  if (!Array.isArray(commits)) {
+    return [];
+  }
+  const files: string[] = [];
+  for (const commit of commits) {
+    if (typeof commit !== "object" || commit === null) {
+      continue;
+    }
+    const { added, modified, removed } = commit as Record<string, unknown>;
+    // A removal is a change: deleting the last file under a watched path
+    // must still deploy.
+    for (const list of [added, modified, removed]) {
+      if (Array.isArray(list)) {
+        files.push(...list.filter((f) => typeof f === "string"));
+      }
+    }
+  }
+  return files;
 }
 
 /** `null` = unreadable payload or not a branch push (tag, deletion). */
@@ -45,6 +69,7 @@ export function parseWebhookPush(rawBody: string): WebhookPush | null {
   return {
     branch: ref.slice("refs/heads/".length),
     commitSha: typeof after === "string" ? after : null,
+    files: pushedFiles(payload as Record<string, unknown>),
   };
 }
 

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -47,7 +48,17 @@ export const serviceStatus = pgEnum("service_status", [
 export const services = pgTable(
   "services",
   {
+    // Off keeps the webhook secret intact — the hook stays configured on the
+    // provider's side, it just stops deploying.
+    autoDeploy: boolean("auto_deploy").notNull().default(true),
+
     buildMethod: buildMethod("build_method").notNull().default("nixpacks"),
+
+    /** Build context inside the repo. `null` = repository root. */
+    buildPath: text("build_path"),
+
+    /** `--no-cache` on every build while on. */
+    cleanCache: boolean("clean_cache").notNull().default(false),
 
     createdAt,
 
@@ -65,6 +76,10 @@ export const services = pgTable(
       .references(() => environments.id, { onDelete: "cascade" }),
     gitBranch: text("git_branch"),
     gitRepoUrl: text("git_repo_url"),
+
+    /** `--recurse-submodules` on clone. */
+    gitSubmodules: boolean("git_submodules").notNull().default(false),
+
     id: uuid("id").primaryKey().defaultRandom(),
 
     // Why a teardown failed, visible without digging through the worker's
@@ -119,6 +134,9 @@ export const services = pgTable(
     sourceType: sourceType("source_type").notNull(),
     status: serviceStatus("status").notNull().default("created"),
     updatedAt,
+
+    /** Globs a webhook push must touch to deploy. Empty = every push does. */
+    watchPaths: text("watch_paths").array().notNull().default(sql`'{}'`),
 
     // Absent = no webhook configured. Shown once in plaintext, at the
     // moment it's generated — never read back afterward, even encrypted:

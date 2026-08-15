@@ -6,7 +6,10 @@
 // getting that boolean wrong hands production secrets to anyone who opens
 // a PR.
 import { check, runVerify } from "@noddle/testing";
-import { parseWebhookPullRequest } from "@/lib/webhook.server";
+import {
+  parseWebhookPullRequest,
+  parseWebhookPush,
+} from "@/lib/webhook.server";
 
 const gh = (action: string, sameRepo = true) =>
   JSON.stringify({
@@ -135,4 +138,38 @@ await runVerify("webhook payloads", () => {
       "produced a PR"
     );
   }
+
+  // ── the file list a watch-path filter is applied to ──────────────────
+  const push = parseWebhookPush(
+    JSON.stringify({
+      after: "abc123",
+      commits: [
+        { added: ["src/a.ts"], modified: ["README.md"], removed: [] },
+        { added: [], modified: ["src/b.ts"], removed: ["old/c.ts"] },
+      ],
+      ref: "refs/heads/main",
+    })
+  );
+  check(
+    "a push lists every file it touched, across commits",
+    push !== null &&
+      push.files.length === 4 &&
+      push.files.includes("src/a.ts") &&
+      push.files.includes("src/b.ts") &&
+      // A removal is a change: dropping the last file under a watched path
+      // must still deploy.
+      push.files.includes("old/c.ts"),
+    `got ${JSON.stringify(push?.files)}`
+  );
+
+  // A push with no readable commits stays a valid push — the deploy
+  // decision belongs to shouldDeployPaths, not to the parser.
+  const bare = parseWebhookPush(
+    JSON.stringify({ after: "abc123", ref: "refs/heads/main" })
+  );
+  check(
+    "a push with no commits array is still a push, with no files",
+    bare !== null && bare.branch === "main" && bare.files.length === 0,
+    `got ${JSON.stringify(bare)}`
+  );
 });

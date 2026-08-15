@@ -156,10 +156,15 @@ async function createPreview(
     .insert(services)
     .values({
       buildMethod: parent.buildMethod,
+      buildPath: parent.buildPath,
+      cleanCache: parent.cleanCache,
       dockerImage: parent.dockerImage,
       environmentId,
       gitBranch: opts.headBranch,
       gitRepoUrl: parent.gitRepoUrl,
+      // A preview builds the same repository: without this, a parent with
+      // submodules builds and its PR does not.
+      gitSubmodules: parent.gitSubmodules,
       name: previewServiceName(parent.name, opts.prNumber),
       port: parent.port,
       previewOfServiceId: parent.id,

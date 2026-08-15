@@ -12,6 +12,7 @@
     "./logs": "./src/logs.ts",
     "./password": "./src/password.ts",
     "./swarm-names": "./src/swarm-names.ts",
+    "./watch-paths": "./src/watch-paths.ts",
     "./workload": "./src/workload.ts",
     "./validation/*": "./src/validation/*.ts"
   },

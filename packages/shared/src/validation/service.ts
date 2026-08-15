@@ -52,6 +52,31 @@ const optionalPublishDirectory = z.union([
   publishDirectorySchema,
 ]);
 
+/**
+ * Build context inside the repo, for a monorepo. Unlike the publish
+ * directory this becomes a `cd` target on the user's SERVER, so `..` is
+ * rejected explicitly — the path regex alone would accept it as a segment.
+ */
+export const buildPathSchema = z
+  .string()
+  .max(512)
+  .regex(
+    /^(?:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)?$/,
+    "expected a relative path such as apps/web"
+  )
+  .refine(
+    (v) => !v.split("/").includes(".."),
+    "`..` is not allowed in a build path"
+  );
+
+/**
+ * One glob per entry, matched against the files a push touched. An empty
+ * list means every push deploys — the same default as no filter at all.
+ */
+export const watchPathsSchema = z
+  .array(z.string().min(1).max(512))
+  .max(50, "at most 50 watch paths");
+
 export const domainSchema = z
   .string()
   .min(1)
@@ -110,8 +135,11 @@ export const dockerImageSchema = z
 const optionalDockerImage = z.union([z.literal(""), dockerImageSchema]);
 
 export const serviceGitProviderSchema = z.object({
+  buildPath: buildPathSchema,
   gitBranch: gitBranchSchema,
   gitRepoUrl: optionalGitRepoUrl,
+  gitSubmodules: z.boolean(),
+  watchPaths: watchPathsSchema,
 });
 
 export const serviceDockerProviderSchema = z.object({
@@ -202,13 +230,18 @@ export const generateServiceDomainHostSchema = z.object({
  * does not block Save.
  */
 export const updateServiceSettingsSchema = z.object({
+  autoDeploy: z.boolean().optional(),
   buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).optional(),
+  buildPath: buildPathSchema.optional(),
+  cleanCache: z.boolean().optional(),
   dockerImage: optionalDockerImage.optional(),
   gitBranch: gitBranchSchema.optional(),
   gitRepoUrl: optionalGitRepoUrl.optional(),
+  gitSubmodules: z.boolean().optional(),
   publishDirectory: optionalPublishDirectory.optional(),
   serviceId: z.uuid(),
   sourceType: z.enum(["git", "github", "gitlab", "docker_image"]).optional(),
+  watchPaths: watchPathsSchema.optional(),
 });
 
 export type ConnectRepoInput = z.infer<typeof connectRepoSchema>;

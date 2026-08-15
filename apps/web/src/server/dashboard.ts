@@ -55,13 +55,19 @@ export interface ServiceDomainRow {
 }
 
 export interface ServiceRow {
+  /** Whether a webhook push deploys. The secret survives it being off. */
+  autoDeploy: boolean;
   buildMethod: "nixpacks" | "dockerfile" | "image";
+  /** Build context inside the repo. `null` = repository root. */
+  buildPath: string | null;
+  cleanCache: boolean;
   dockerImage: string | null;
   domains: ServiceDomainRow[];
   environment: string;
   environmentId: string;
   gitBranch: string | null;
   gitRepoUrl: string | null;
+  gitSubmodules: boolean;
   id: string;
   lastDeployment: DeploymentSummary | null;
   /** Why a teardown failed. `null` if nothing failed, or once the service is
@@ -94,6 +100,8 @@ export interface ServiceRow {
   updatedAt: string;
   /** True as long as post-deploy monitoring is still watching this service. */
   watching: boolean;
+  /** Globs a webhook push must touch. Empty = every push deploys. */
+  watchPaths: string[];
 }
 
 export interface StackRow {
@@ -155,7 +163,10 @@ function toSummary(
 }
 
 interface ServiceJoined {
+  autoDeploy: boolean;
   buildMethod: "nixpacks" | "dockerfile" | "image";
+  buildPath: string | null;
+  cleanCache: boolean;
   dockerImage: string | null;
   domains: {
     certificateType: "none" | "letsencrypt";
@@ -171,6 +182,7 @@ interface ServiceJoined {
   environmentId: string;
   gitBranch: string | null;
   gitRepoUrl: string | null;
+  gitSubmodules: boolean;
   id: string;
   lastError: string | null;
   name: string;
@@ -182,6 +194,7 @@ interface ServiceJoined {
   sourceType: "git" | "github" | "gitlab" | "docker_image" | "compose";
   status: string;
   updatedAt: Date;
+  watchPaths: string[];
 }
 
 function toServiceRow(
@@ -191,7 +204,10 @@ function toServiceRow(
   watching: boolean
 ): ServiceRow {
   return {
+    autoDeploy: service.autoDeploy,
     buildMethod: service.buildMethod,
+    buildPath: service.buildPath,
+    cleanCache: service.cleanCache,
     dockerImage: service.dockerImage,
     domains: service.domains.map((d) => ({
       certificateType: d.certificateType,
@@ -207,6 +223,7 @@ function toServiceRow(
     environmentId: service.environmentId,
     gitBranch: service.gitBranch,
     gitRepoUrl: service.gitRepoUrl,
+    gitSubmodules: service.gitSubmodules,
     id: service.id,
     lastDeployment: last ? toSummary(last, nodes) : null,
     lastError: service.lastError,
@@ -223,6 +240,7 @@ function toServiceRow(
     status: service.status,
     updatedAt: service.updatedAt.toISOString(),
     watching,
+    watchPaths: service.watchPaths,
   };
 }
 

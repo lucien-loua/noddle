@@ -1,5 +1,6 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import { services } from "@noddle/db/schema";
+import { shouldDeployPaths } from "@noddle/shared/watch-paths";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -78,6 +79,16 @@ export const Route = createFileRoute("/api/webhooks/service/$serviceId")({
 
         if (!service.gitBranch || push.branch !== service.gitBranch) {
           return Response.json({ ignored: `branch ${push.branch}` });
+        }
+
+        // Checked here and not at the signature: an invalid secret stays a
+        // 401, autodeploy being off is a legitimate 200.
+        if (!service.autoDeploy) {
+          return Response.json({ ignored: "autodeploy disabled" });
+        }
+
+        if (!shouldDeployPaths(service.watchPaths, push.files)) {
+          return Response.json({ ignored: "no watched path changed" });
         }
 
         const { deploymentId } = await queueServiceDeploy(serviceId, {

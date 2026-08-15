@@ -24,6 +24,7 @@ import {
 } from "#validation/database";
 import { envVarKeySchema } from "#validation/env-var";
 import {
+  buildPathSchema,
   dockerImageSchema,
   gitBranchSchema,
   isGitSourceType,
@@ -112,18 +113,47 @@ function verifyNameSchemas(): void {
     ko("inconsistent gitBranchSchema");
   }
 
+  // The build path becomes a `cd` target on the user's server. The path
+  // regex alone accepts `..` as a segment, so the refusal is explicit.
+  if (
+    buildPathSchema.safeParse("").success &&
+    buildPathSchema.safeParse("apps/web").success &&
+    !buildPathSchema.safeParse("../../etc").success &&
+    !buildPathSchema.safeParse("apps/../../etc").success &&
+    !buildPathSchema.safeParse("/absolute").success
+  ) {
+    ok("buildPathSchema refuses anything leaving the repository");
+  } else {
+    ko("inconsistent buildPathSchema");
+  }
+
   if (
     serviceGitProviderSchema.safeParse({
+      buildPath: "",
       gitBranch: "main",
       gitRepoUrl: "https://github.com/org/repo.git",
+      gitSubmodules: false,
+      watchPaths: [],
     }).success &&
     serviceGitProviderSchema.safeParse({
+      buildPath: "apps/web",
       gitBranch: "main",
       gitRepoUrl: "",
+      gitSubmodules: true,
+      watchPaths: ["apps/web/**"],
     }).success &&
     !serviceGitProviderSchema.safeParse({
+      buildPath: "",
       gitBranch: "main",
       gitRepoUrl: "not-a-url",
+      gitSubmodules: false,
+      watchPaths: [],
+    }).success &&
+    // The clone flag is carried by the form, never inferred: a missing field
+    // would silently deploy without submodules.
+    !serviceGitProviderSchema.safeParse({
+      gitBranch: "main",
+      gitRepoUrl: "https://github.com/org/repo.git",
     }).success
   ) {
     ok("serviceGitProviderSchema accepts a URL or an empty field");

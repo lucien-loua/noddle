@@ -4,6 +4,7 @@ import {
   computeBuildCap,
   ensureCappedBuilder,
   fetchSource,
+  resolveBuildDir,
 } from "@noddle/build-engine";
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
@@ -68,6 +69,64 @@ function routeHosts(
   }));
 }
 
+/** Build the image and, when a registry is configured, push it there. */
+async function buildAndPushImage(
+  service: RunDeployment["service"],
+  imageTag: string,
+  registry: RegistryConfig | undefined,
+  buildClient: DeployClients["buildClient"],
+  sink: Awaited<ReturnType<typeof createLogSink>>,
+  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void }
+): Promise<void> {
+  if (service.cleanCache) {
+    sink.write("▸ cache disabled for this build\n");
+  }
+
+  const buildDir = resolveBuildDir(
+    `${BUILD_ROOT}/${service.id}`,
+    service.buildPath
+  );
+  if (service.buildPath) {
+    sink.write(`▸ build context: ${service.buildPath}\n`);
+  }
+
+  if (service.buildMethod === "dockerfile") {
+    sink.write("▸ building from Dockerfile\n");
+    await buildImageFromDockerfile(buildClient, {
+      builderName: "noddle-builder",
+      contextDir: buildDir,
+      dockerfilePath: "Dockerfile",
+      imageTag,
+      noCache: service.cleanCache,
+      ...stream,
+    });
+  } else {
+    if (service.publishDirectory) {
+      sink.write(`▸ static output: ${service.publishDirectory}\n`);
+    }
+    await buildImage(buildClient, {
+      builderName: "noddle-builder",
+      dir: buildDir,
+      imageTag,
+      noCache: service.cleanCache,
+      publishDirectory: service.publishDirectory,
+      ...stream,
+    });
+  }
+
+  if (registry) {
+    sink.write("▸ pushing image to the registry\n");
+    // `removeLocal`: the build node stops accumulating. The image now lives
+    // in the registry, and Swarm will pull it from there — including on
+    // this very node if it's the one running it.
+    await pushImage(buildClient, registry, {
+      imageTag,
+      removeLocal: true,
+      ...stream,
+    });
+  }
+}
+
 /**
  * Clone, build, push, and roll out — everything that needs the SSH
  * connection. Hoisted out of `runDeploy` so the guard's closure does not
@@ -119,6 +178,7 @@ async function buildAndDeployService(
       commitSha: deployment.commitSha ?? undefined,
       dir: workDir,
       repoUrl: service.gitRepoUrl,
+      submodules: service.gitSubmodules,
       ...stream,
     });
 
@@ -144,39 +204,14 @@ async function buildAndDeployService(
     .where(eq(deployments.id, deployment.id));
 
   if (!publishedImage) {
-    if (service.buildMethod === "dockerfile") {
-      sink.write("▸ building from Dockerfile\n");
-      await buildImageFromDockerfile(buildClient, {
-        builderName: "noddle-builder",
-        contextDir: `${BUILD_ROOT}/${service.id}`,
-        dockerfilePath: "Dockerfile",
-        imageTag,
-        ...stream,
-      });
-    } else {
-      if (service.publishDirectory) {
-        sink.write(`▸ static output: ${service.publishDirectory}\n`);
-      }
-      await buildImage(buildClient, {
-        builderName: "noddle-builder",
-        dir: `${BUILD_ROOT}/${service.id}`,
-        imageTag,
-        publishDirectory: service.publishDirectory,
-        ...stream,
-      });
-    }
-
-    if (registry) {
-      sink.write("▸ pushing image to the registry\n");
-      // `removeLocal`: the build node stops accumulating. The image now lives
-      // in the registry, and Swarm will pull it from there — including on
-      // this very node if it's the one running it.
-      await pushImage(buildClient, registry, {
-        imageTag,
-        removeLocal: true,
-        ...stream,
-      });
-    }
+    await buildAndPushImage(
+      service,
+      imageTag,
+      registry,
+      buildClient,
+      sink,
+      stream
+    );
   }
 
   const env: Record<string, string> = {};

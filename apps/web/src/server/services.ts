@@ -15,20 +15,34 @@ import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 
 interface ServiceSettingsPatch {
+  autoDeploy?: boolean;
   buildMethod?: "nixpacks" | "dockerfile" | "image";
+  buildPath?: string | null;
+  cleanCache?: boolean;
   dockerImage?: string | null;
   gitBranch?: string;
   gitRepoUrl?: string | null;
+  gitSubmodules?: boolean;
   publishDirectory?: string | null;
   sourceType?: "git" | "github" | "gitlab" | "docker_image";
+  watchPaths?: string[];
 }
 
 function serviceSettingsPatch(
   data: z.infer<typeof updateServiceSettingsSchema>
 ): ServiceSettingsPatch {
   const patch: ServiceSettingsPatch = {};
+  if (data.autoDeploy !== undefined) {
+    patch.autoDeploy = data.autoDeploy;
+  }
   if (data.buildMethod !== undefined) {
     patch.buildMethod = data.buildMethod;
+  }
+  if (data.buildPath !== undefined) {
+    patch.buildPath = data.buildPath === "" ? null : data.buildPath;
+  }
+  if (data.cleanCache !== undefined) {
+    patch.cleanCache = data.cleanCache;
   }
   if (data.dockerImage !== undefined) {
     patch.dockerImage = data.dockerImage === "" ? null : data.dockerImage;
@@ -39,12 +53,18 @@ function serviceSettingsPatch(
   if (data.gitRepoUrl !== undefined) {
     patch.gitRepoUrl = data.gitRepoUrl === "" ? null : data.gitRepoUrl;
   }
+  if (data.gitSubmodules !== undefined) {
+    patch.gitSubmodules = data.gitSubmodules;
+  }
   if (data.publishDirectory !== undefined) {
     patch.publishDirectory =
       data.publishDirectory === "" ? null : data.publishDirectory;
   }
   if (data.sourceType !== undefined) {
     patch.sourceType = data.sourceType;
+  }
+  if (data.watchPaths !== undefined) {
+    patch.watchPaths = data.watchPaths;
   }
   return patch;
 }
