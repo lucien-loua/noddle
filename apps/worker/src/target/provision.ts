@@ -1,5 +1,6 @@
 import { servers } from "@noddle/db/schema";
 import { ensureRegistryTrust } from "@noddle/registry";
+import { nixpacksInstallCommand } from "@noddle/shared/toolchain";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
@@ -103,10 +104,7 @@ export async function provisionServer(
 
     const nixpacksCheck = await exec(client, "command -v nixpacks");
     if (nixpacksCheck.code !== 0) {
-      await exec(
-        client,
-        "curl -sSL https://nixpacks.com/install.sh | sudo bash"
-      );
+      await exec(client, nixpacksInstallCommand());
     }
 
     if (ctx.registry) {

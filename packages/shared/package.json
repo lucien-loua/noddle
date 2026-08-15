@@ -13,9 +13,10 @@
     "./password": "./src/password.ts",
     "./redact": "./src/redact.ts",
     "./swarm-names": "./src/swarm-names.ts",
+    "./toolchain": "./src/toolchain.ts",
+    "./validation/*": "./src/validation/*.ts",
     "./watch-paths": "./src/watch-paths.ts",
-    "./workload": "./src/workload.ts",
-    "./validation/*": "./src/validation/*.ts"
+    "./workload": "./src/workload.ts"
   },
   "dependencies": {
     "@noddle/database-spec": "workspace:*",

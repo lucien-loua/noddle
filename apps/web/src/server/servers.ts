@@ -5,10 +5,12 @@ import {
   sshKeys,
   stacks,
 } from "@noddle/db/schema";
+import { NIXPACKS_VERSION } from "@noddle/shared/toolchain";
 import {
   deleteServerSchema,
   serverInputSchema,
 } from "@noddle/shared/validation/server";
+import { exec } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -16,6 +18,7 @@ import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
+import { withServerSessionById } from "@/lib/ssh.server";
 
 export interface ServerView {
   createdAt: string;
@@ -203,3 +206,80 @@ async function heldBy(serverId: string): Promise<string | null> {
   ].filter(Boolean);
   return held.length > 0 ? held.join(", ") : null;
 }
+
+const serverIdSchema = z.object({ serverId: z.uuid() });
+
+export interface ServerToolReport {
+  /** `null` when the tool is absent. */
+  docker: string | null;
+  nixpacks: string | null;
+  /** The version Noddle provisions. A mismatch is worth seeing. */
+  nixpacksExpected: string;
+  swarm: string;
+}
+
+/**
+ * What a server actually has, reported and NOT installed.
+ *
+ * A server added by adoption never went through provisioning, so it can
+ * clone and fail to build — which surfaces as `nixpacks: command not found`
+ * in the middle of a deploy, minutes in, pointing at the build rather than
+ * at the machine. This makes that legible before a deploy instead of during
+ * one.
+ */
+export const checkServerTools = createServerFn({ method: "POST" })
+  .validator(serverIdSchema)
+  .handler(
+    async ({ data }): Promise<ServerToolReport> =>
+      runGuarded({
+        load: () =>
+          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+        notFoundMessage: "server not found",
+        permission: { action: "read", resource: "server" },
+        run: ({ row }) =>
+          withServerSessionById(row.id, async (client) => {
+            const version = async (command: string) => {
+              const r = await exec(client, command);
+              const out = r.stdout.trim();
+              return r.code === 0 && out !== "" ? out : null;
+            };
+            return {
+              docker: await version("docker --version"),
+              nixpacks: await version("nixpacks --version"),
+              nixpacksExpected: NIXPACKS_VERSION,
+              // Queried directly, never `docker info | grep`: these scripts
+              // run under pipefail and grep -q makes it a race.
+              swarm:
+                (await version(
+                  "sudo docker info --format '{{.Swarm.LocalNodeState}}'"
+                )) ?? "unknown",
+            };
+          }),
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );
+
+/**
+ * Re-run provisioning on an existing server.
+ *
+ * It is the SAME job as the one an added server gets, and it is idempotent
+ * throughout — it checks before installing Docker, joining the Swarm and
+ * installing nixpacks. So this repairs a server rather than requiring it be
+ * removed and added again.
+ */
+export const setupServer = createServerFn({ method: "POST" })
+  .validator(serverIdSchema)
+  .handler(
+    async ({ data }): Promise<{ ok: true }> =>
+      runGuarded({
+        load: () =>
+          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+        notFoundMessage: "server not found",
+        permission: { action: "create", resource: "server" },
+        run: async ({ row }) => {
+          await enqueueDeploy({ kind: "provision-server", serverId: row.id });
+          return { ok: true as const };
+        },
+        target: ({ row }) => ({ id: row.id, name: row.name }),
+      })
+  );

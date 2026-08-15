@@ -165,9 +165,16 @@ else
 fi
 
 # The worker builds on the target, so this machine needs nixpacks locally.
+#
+# PINNED, and it has to stay in step with NIXPACKS_VERSION in
+# packages/shared/src/toolchain.ts: the project's build rules were measured
+# on this version, and a server provisioned later must not get a different
+# one.
+NIXPACKS_VERSION=1.41.0
 if ! command -v nixpacks >/dev/null 2>&1; then
-  say "nixpacks"
-  curl -sSL https://nixpacks.com/install.sh | $SUDO bash
+  say "nixpacks $NIXPACKS_VERSION"
+  export NIXPACKS_VERSION
+  curl -sSL https://nixpacks.com/install.sh | $SUDO -E bash
 fi
 
 # ── 5. Image registry ────────────────────────────────────────────────────────

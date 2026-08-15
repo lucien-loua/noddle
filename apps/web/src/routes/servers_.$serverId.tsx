@@ -7,6 +7,7 @@ import { UpdatePanel } from "@/components/features/updates/panel";
 import { ResourceGraphs } from "@/components/resource-graphs";
 import { ServerDiskUsage } from "@/components/server-disk";
 import { ServerPruneToggle } from "@/components/server-prune-toggle";
+import { ServerToolchain } from "@/components/server-toolchain";
 import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,13 @@ function ServerDetail() {
             ) : null}
           </FramePanel>
         </Frame>
+      </section>
+
+      {/* Before Resources on purpose: a machine that cannot build is not a
+          performance question, and it is what makes a deploy fail. */}
+      <section className="mt-8 space-y-3">
+        <h2 className="font-medium text-sm">Toolchain</h2>
+        <ServerToolchain role={known} serverId={server.id} />
       </section>
 
       <section className="mt-8 space-y-3">
