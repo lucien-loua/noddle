@@ -20,10 +20,12 @@ import {
   registryImageTag,
 } from "@noddle/registry";
 import { markFailed } from "@noddle/shared/lifecycle";
+import { redactUrlCredentials } from "@noddle/shared/redact";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
 import { and, desc, eq } from "drizzle-orm";
 import { recordAcceptedService } from "#deploy/accepted-deployment";
+import { providerCloneUrl } from "#deploy/provider-clone";
 import { rolloutService } from "#deploy/rollout";
 import { type DeployClients, withDeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
@@ -45,7 +47,13 @@ function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
     where: eq(deployments.id, deploymentId),
     with: {
       service: {
-        with: { deployKey: true, domains: true, envVars: true, server: true },
+        with: {
+          deployKey: true,
+          domains: true,
+          envVars: true,
+          gitProvider: { with: { github: true } },
+          server: true,
+        },
       },
     },
   });
@@ -69,6 +77,40 @@ function routeHosts(
     path: d.path,
     stripPath: d.stripPath,
   }));
+}
+
+/**
+ * How this service authenticates its clone.
+ *
+ * A connected provider REPLACES the deploy key: the installation token
+ * already authenticates, so carrying both is never right (ADR-0019).
+ */
+async function sourceCredentials(
+  ctx: DeployContext,
+  service: RunDeployment["service"],
+  sink: Awaited<ReturnType<typeof createLogSink>>
+): Promise<{ deployKey: string | null; repoUrl: string | null }> {
+  const repoUrl = await providerCloneUrl(ctx, service);
+  if (repoUrl) {
+    sink.write(`▸ cloning through ${service.gitProvider?.name}\n`);
+    return { deployKey: null, repoUrl };
+  }
+
+  if (!service.deployKey) {
+    return { deployKey: null, repoUrl: null };
+  }
+
+  // Decrypted here and nowhere else: it goes straight to `fetchSource`,
+  // which puts it on the build host over SFTP and removes it afterwards.
+  sink.write(`▸ authenticating as ${service.deployKey.name}\n`);
+  return {
+    deployKey: decryptSecret(
+      service.deployKey.privateKeyEncrypted,
+      ctx.appKey,
+      secretContext.sshKey(service.deployKey.id)
+    ),
+    repoUrl: null,
+  };
 }
 
 /** Build the image and, when a registry is configured, push it there. */
@@ -175,26 +217,15 @@ async function buildAndDeployService(
     await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
 
     const workDir = `${BUILD_ROOT}/${service.id}`;
-    // Decrypted here and nowhere else: it goes straight to `fetchSource`,
-    // which puts it on the build host over SFTP and removes it afterwards.
-    const deployKey = service.deployKey
-      ? decryptSecret(
-          service.deployKey.privateKeyEncrypted,
-          ctx.appKey,
-          secretContext.sshKey(service.deployKey.id)
-        )
-      : null;
-    if (deployKey) {
-      sink.write(`▸ authenticating as ${service.deployKey?.name}\n`);
-    }
+    const auth = await sourceCredentials(ctx, service, sink);
 
     sha = await fetchSource(buildClient, {
       branch: service.gitBranch ?? "main",
       commitSha: deployment.commitSha ?? undefined,
-      deployKey,
+      deployKey: auth.deployKey,
       dir: workDir,
       keyScope: service.id,
-      repoUrl: service.gitRepoUrl,
+      repoUrl: auth.repoUrl ?? service.gitRepoUrl,
       submodules: service.gitSubmodules,
       ...stream,
     });
@@ -356,7 +387,12 @@ export async function runDeploy(
       )
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    // `check` folds the failing command's stderr into the message, and git
+    // echoes the clone URL in several of its errors. This one is persisted
+    // and notified, so it does not pass through the sink's redaction.
+    const message = redactUrlCredentials(
+      err instanceof Error ? err.message : String(err)
+    );
     sink?.write(`✗ ${message}\n`);
     await db
       .update(deployments)

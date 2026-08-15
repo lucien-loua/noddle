@@ -58,7 +58,8 @@
     "croner": "^10.0.1",
     "ioredis": "catalog:",
     "drizzle-orm": "catalog:",
-    "yaml": "catalog:"
+    "yaml": "catalog:",
+    "@noddle/git-provider": "workspace:*"
   },
   "devDependencies": {
     "@noddle/testing": "workspace:*",

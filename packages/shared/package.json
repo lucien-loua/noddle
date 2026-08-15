@@ -11,6 +11,7 @@
     "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
     "./password": "./src/password.ts",
+    "./redact": "./src/redact.ts",
     "./swarm-names": "./src/swarm-names.ts",
     "./watch-paths": "./src/watch-paths.ts",
     "./workload": "./src/workload.ts",
