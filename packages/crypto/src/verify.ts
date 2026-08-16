@@ -25,7 +25,7 @@ function verifyCrypto(): void {
   const ctx = secretContext.sshKey("srv-1");
   const SECRET = "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END-----";
 
-  mustThrow("missing APP_KEY is rejected", () => loadAppKey());
+  mustThrow("missing APP_KEY is rejected", () => loadAppKey(undefined));
   mustThrow("too-short APP_KEY is rejected", () =>
     loadAppKey(Buffer.from("court").toString("base64"))
   );
@@ -108,7 +108,7 @@ function verifyCrypto(): void {
 async function verifySecretRetention(): Promise<void> {
   if (
     isRetainedSecret(null) &&
-    isRetainedSecret() &&
+    isRetainedSecret(undefined) &&
     isRetainedSecret("") &&
     !isRetainedSecret("s3cret")
   ) {

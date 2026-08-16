@@ -96,12 +96,15 @@ export async function ensureRepositoryHook(
     });
     return { error: null, repositoryFullName };
   } catch (error) {
-    const error = messageOf(error);
+    // The catch binding keeps the name the linter requires; the derived
+    // message takes its own, or the two collide and the whole failure path
+    // throws a ReferenceError instead of recording the failure.
+    const message = messageOf(error);
     await record(db, gitProviderId, repositoryFullName, hookUrl, {
       hookId: null,
-      lastError: error,
+      lastError: message,
     }).catch(() => null);
-    return { error, repositoryFullName };
+    return { error: message, repositoryFullName };
   }
 }
 

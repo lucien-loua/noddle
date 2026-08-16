@@ -28,7 +28,8 @@ const TIER_HEADER = /^\/\/ tier: (local|pure|vm|fixture)\n/;
  * `vm` runs on Node: `dockerode` over the SSH tunnel does not work on Bun
  * (ADR-0015). Re-checking that on both runtimes stays a deliberate manual act.
  */
-const RUNTIME: Record<string, string> = {
+type Runnable = (typeof RUNNABLE)[number];
+const RUNTIME: Record<Runnable, string> = {
   local: "bun",
   pure: "bun",
   vm: "node",
@@ -65,7 +66,7 @@ if (!(requested && (RUNNABLE as readonly string[]).includes(requested))) {
   process.stderr.write(`usage: noddle-verify <${RUNNABLE.join("|")}>\n`);
   process.exit(2);
 }
-const tier = requested as Tier;
+const tier = requested as Runnable;
 
 const cwd = process.cwd();
 const all = walk(cwd).toSorted();
