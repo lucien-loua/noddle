@@ -99,6 +99,32 @@ function githubPr(
   });
 }
 
+/**
+ * A GitLab merge request, trimmed to what the reader looks at. GitLab names
+ * everything differently from GitHub — `iid` not `number`, `source_branch`
+ * not `head.ref` — and reports a fork by comparing project ids rather than
+ * repository names.
+ */
+function gitlabMr(
+  action: string,
+  number: number,
+  sha: string,
+  branch: string,
+  sameProject = true
+): string {
+  return JSON.stringify({
+    object_attributes: {
+      action,
+      iid: number,
+      last_commit: { id: sha },
+      source_branch: branch,
+      source_project_id: sameProject ? 7 : 9,
+      target_project_id: 7,
+    },
+    object_kind: "merge_request",
+  });
+}
+
 function sign(body: string, secret: string): string {
   return `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
 }
@@ -385,21 +411,25 @@ try {
 
   const path = `/api/webhooks/service/${serviceId}`;
 
-  // ── forged signature: refused, NOTHING happens ────────────────────────────
-  {
+  // ── forged credentials: refused, NOTHING happens ─────────────────────────
+  //
+  // Both schemes, because the intake is now ONE module behind two of them.
+  // Exercising only the GitHub half is what let the GitLab path ship broken.
+  for (const [label, headers] of [
+    ["GitHub signature", { "x-hub-signature-256": "sha256=0000" }],
+    ["GitLab token", { "x-gitlab-token": "not-the-secret" }],
+  ] as const) {
     const body = githubPush("main", "0000000000000000000000000000000000000a");
+    // biome-ignore lint/performance/noAwaitInLoops: scenarios are ordered — each reads the state the previous one left
     const res = await fetch(`${BASE}${path}`, {
       body,
-      headers: {
-        "content-type": "application/json",
-        "x-hub-signature-256": "sha256=0000",
-      },
+      headers: { "content-type": "application/json", ...headers },
       method: "POST",
     });
     if (res.status === 401) {
-      ok("invalid signature refused (401)");
+      ok(`forged ${label} refused (401)`);
     } else {
-      ko(`invalid signature: status ${res.status} instead of 401`);
+      ko(`forged ${label}: status ${res.status} instead of 401`);
     }
   }
 
@@ -408,27 +438,32 @@ try {
     const before = await db.query.deployments.findMany({
       where: eq(deployments.serviceId, serviceId),
     });
-    const body = githubPush(
-      "some-other-branch",
-      "0000000000000000000000000000000000000b"
-    );
-    const res = await fetch(`${BASE}${path}`, {
-      body,
-      headers: {
-        "content-type": "application/json",
-        "x-hub-signature-256": sign(body, WEBHOOK_SECRET),
-      },
-      method: "POST",
-    });
-    const after = await db.query.deployments.findMany({
-      where: eq(deployments.serviceId, serviceId),
-    });
-    if (res.ok && after.length === before.length) {
-      ok("different branch: signature accepted, deployment ignored");
-    } else {
-      ko(
-        `different branch: status ${res.status}, ${after.length} deployment(s) instead of ${before.length}`
+    // Same push, authenticated each way. The push payload schema is shared
+    // by both forges, so only the credential differs.
+    for (const forge of ["github", "gitlab"] as const) {
+      const body = githubPush(
+        "some-other-branch",
+        "0000000000000000000000000000000000000b"
       );
+      // biome-ignore lint/performance/noAwaitInLoops: ordered, and the count below depends on this one having landed
+      const res = await postWebhook(`${BASE}${path}`, forge, body);
+      const after = await db.query.deployments.findMany({
+        where: eq(deployments.serviceId, serviceId),
+      });
+      const skipped = Array.isArray(res.body.skipped)
+        ? (res.body.skipped as string[])
+        : [];
+      if (
+        res.status === 200 &&
+        after.length === before.length &&
+        skipped.length === 1
+      ) {
+        ok(`${forge}: different branch accepted, deployment ignored`);
+      } else {
+        ko(
+          `${forge} different branch: status ${res.status}, ${after.length} deployment(s) instead of ${before.length}, skipped ${JSON.stringify(skipped)}`
+        );
+      }
     }
   }
 
@@ -481,9 +516,19 @@ try {
     });
 
   // A FORK: no preview at all, and above all no secrets leaking out.
-  {
+  //
+  // Run for BOTH forges, because they detect a fork by different means —
+  // GitHub compares `full_name`, GitLab compares project ids — and this is
+  // the one boolean that decides whether outside code runs with the parent's
+  // secrets. A GitLab fork slipping through leaks exactly as much as a
+  // GitHub one.
+  for (const [forge, payload] of [
+    ["github", githubPr("opened", 99, headSha, "feature/x", false)],
+    ["gitlab", gitlabMr("open", 98, headSha, "feature/x", false)],
+  ] as const) {
+    // biome-ignore lint/performance/noAwaitInLoops: ordered — the preview count is measured around each post
     const before = (await previews()).length;
-    const r = await postPr(githubPr("opened", 99, headSha, "feature/x", false));
+    const r = await postWebhook(`${BASE}${path}`, forge, payload);
     const after = (await previews()).length;
     // The REASON, not just "ignored": the push reader also answers
     // `{ignored: …}` on a payload it doesn't recognize. This test's first
@@ -491,10 +536,10 @@ try {
     // detection — a green that proved nothing.
     const reason = String(r.body.ignored ?? "");
     if (r.status === 200 && after === before && reason.includes("fork")) {
-      ok(`fork PR ignored (${reason}) — nothing created`);
+      ok(`${forge}: fork ignored (${reason}) — nothing created`);
     } else {
       ko(
-        `fork: status ${r.status}, reason "${reason}", ${after} preview(s) instead of ${before}`
+        `${forge} fork: status ${r.status}, reason "${reason}", ${after} preview(s) instead of ${before}`
       );
     }
   }
