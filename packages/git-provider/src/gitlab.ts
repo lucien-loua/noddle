@@ -286,6 +286,36 @@ export async function createProjectHook(
   return { id: String(body.id), url: body.url };
 }
 
+/** Repoint an existing hook. Used when the dashboard's public origin moves. */
+export async function updateProjectHook(
+  url: string,
+  accessToken: string,
+  fullName: string,
+  hookId: string,
+  hook: { hookUrl: string; token: string },
+  fetchImpl: GitlabFetch = fetch
+): Promise<GitlabHook> {
+  const body = await gitlabJson<{ id: number; url: string }>(
+    fetchImpl,
+    `${projectHooksUrl(url, fullName)}/${hookId}`,
+    {
+      body: new URLSearchParams({
+        enable_ssl_verification: "true",
+        merge_requests_events: "true",
+        push_events: "true",
+        token: hook.token,
+        url: hook.hookUrl,
+      }),
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      method: "PUT",
+    }
+  );
+  return { id: String(body.id), url: body.url };
+}
+
 /** A 404 is success: the end state asked for is that the hook is gone. */
 export async function deleteProjectHook(
   url: string,

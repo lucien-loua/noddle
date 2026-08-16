@@ -9,6 +9,7 @@ import {
   deleteProjectHook,
   GitlabError,
   listProjectHooks,
+  updateProjectHook,
 } from "@noddle/git-provider/gitlab";
 import { check, expectThrowsAsync, runVerify } from "@noddle/testing";
 
@@ -81,6 +82,38 @@ await runVerify("git-provider-credentials/hooks", async () => {
     body.get("token") === "s3cret"
   );
   check("the hook URL is sent", body.get("url") === "https://noddle.test/hook");
+
+  // ── repointing, when the dashboard's public origin moves ─────────────
+  // Proven against real GitLab too: a hook created at one ngrok domain was
+  // repointed to another, same hook id, one hook not two.
+  const moved = stub(200, { id: 9, url: "https://new.example/hook" });
+  const repointed = await updateProjectHook(
+    URL_BASE,
+    TOKEN,
+    NESTED,
+    "9",
+    { hookUrl: "https://new.example/hook", token: "s3cret" },
+    moved.fetchImpl
+  );
+  const movedBody = new URLSearchParams(moved.calls[0]?.body ?? "");
+  check(
+    "repointing is a PUT on the existing hook",
+    moved.calls[0]?.method === "PUT"
+  );
+  check(
+    "it addresses the hook by id rather than creating another",
+    moved.calls[0]?.url.endsWith("/hooks/9") === true,
+    moved.calls[0]?.url
+  );
+  check(
+    "the new URL is sent",
+    movedBody.get("url") === "https://new.example/hook"
+  );
+  check(
+    "the secret is re-sent, since GitLab does not return it",
+    movedBody.get("token") === "s3cret"
+  );
+  check("the same hook comes back", repointed.id === "9");
 
   // ── removal ──────────────────────────────────────────────────────────
   const gone = stub(404, undefined);

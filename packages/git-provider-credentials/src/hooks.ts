@@ -4,6 +4,7 @@ import {
   createProjectHook,
   deleteProjectHook,
   listProjectHooks,
+  updateProjectHook,
 } from "@noddle/git-provider/gitlab";
 import { and, eq } from "drizzle-orm";
 import { gitlabAccessToken, gitlabWebhookSecret } from "./index.ts";
@@ -62,13 +63,23 @@ export async function ensureRepositoryHook(
       gitlabWebhookSecret(db, appKey, gitProviderId),
     ]);
 
-    // GitLab happily creates a second hook with the same URL, so the list is
-    // what makes this idempotent.
+    // Ours is the one whose path names this connection — NOT the one whose
+    // URL matches exactly. The dashboard's public origin moves (an ngrok
+    // domain every restart, a real domain once), and matching on the whole
+    // URL would create a second hook and orphan the first on GitLab, with
+    // its id no longer recorded anywhere.
     const existing = await listProjectHooks(url, token, repositoryFullName);
-    const already = existing.find((h) => h.url === hookUrl);
-    if (already) {
+    const mine = existing.find((h) => h.url.endsWith(`/${gitProviderId}`));
+    if (mine) {
+      const hook =
+        mine.url === hookUrl
+          ? mine
+          : await updateProjectHook(url, token, repositoryFullName, mine.id, {
+              hookUrl,
+              token: secret,
+            });
       await record(db, gitProviderId, repositoryFullName, hookUrl, {
-        hookId: already.id,
+        hookId: hook.id,
         lastError: null,
       });
       return { error: null, repositoryFullName };
