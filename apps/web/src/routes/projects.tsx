@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { type RoleName, roles } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, type ProjectGroup } from "@/server/dashboard";
 import { getProjects, type ProjectView } from "@/server/projects";
@@ -122,13 +123,9 @@ function ProjectCard({
             {project.description}
           </CardDescription>
         ) : null}
-        {/* `z-10`: stay above the title's stretched `::after`. `row-span-1`
-            when there is no description — CardAction's default `row-span-2`
-            would otherwise invent an empty second row. */}
+        {/* `z-10`: stay above the title's stretched `::after`. */}
         <CardAction
-          className={
-            project.description ? "relative z-10" : "relative z-10 row-span-1"
-          }
+          className={cn("relative z-10", !project.description && "row-span-1")}
         >
           <ProjectRowActions
             description={project.description}
