@@ -19,6 +19,7 @@
     "postgres": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*",
     "drizzle-kit": "catalog:"
   }
