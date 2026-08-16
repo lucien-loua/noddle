@@ -15,6 +15,7 @@ import {
   services,
 } from "@noddle/db/schema";
 import { connect, disconnect, exec } from "@noddle/ssh-executor";
+import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
 import {
   collectMetrics,
@@ -24,9 +25,7 @@ import {
 } from "#metrics";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 const HOST = process.env.STACK_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");

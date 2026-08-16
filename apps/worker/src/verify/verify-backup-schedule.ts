@@ -26,6 +26,7 @@ import {
   execArgv,
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
+import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
 import { runBackup } from "#backup";
 import { pruneBackups, sweepBackups } from "#backup-sweep";
@@ -33,17 +34,15 @@ import { provisionDatabase } from "#database";
 import { legacyDatabaseServiceName } from "#database-runtime";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 const HOST = process.env.STACK_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
-const S3_ENDPOINT = process.env.S3_ENDPOINT ?? "http://localhost:9000";
-const S3_KEY = process.env.S3_ACCESS_KEY ?? "rustfsadmin";
-const S3_SECRET = process.env.S3_SECRET_KEY ?? "rustfsadmin";
-const S3_BUCKET = process.env.S3_BUCKET ?? "noddle-verify";
+const S3_ENDPOINT = devStack().s3.endpoint;
+const S3_KEY = devStack().s3.accessKeyId;
+const S3_SECRET = devStack().s3.secretAccessKey;
+const S3_BUCKET = devStack().s3.bucket;
 
 const NAME = "probe-planif";
 const PREFIX = "planif";

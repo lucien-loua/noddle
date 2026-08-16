@@ -86,6 +86,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
     volumes:
       - rustfs-data:/data
 

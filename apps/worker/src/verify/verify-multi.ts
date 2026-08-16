@@ -23,6 +23,7 @@ import {
   quoteArg,
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
+import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
 import { runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
@@ -30,9 +31,7 @@ import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 const MANAGER_HOST = process.env.MANAGER_HOST ?? "192.168.252.3";
 const WORKER_HOST = process.env.WORKER_HOST ?? "192.168.252.5";
 const USER = process.env.TARGET_USER ?? "ubuntu";

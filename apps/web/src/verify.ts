@@ -26,14 +26,13 @@ import {
   logBufferKey,
   logChannel,
 } from "@noddle/shared/logs";
+import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:56379";
+const DB_URL = devStack().databaseUrl;
+const REDIS_URL = devStack().redisUrl;
 const PORT = Number(process.env.PORT ?? 3311);
 const BASE = `http://localhost:${PORT}`;
 

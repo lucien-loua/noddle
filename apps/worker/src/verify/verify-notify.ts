@@ -4,13 +4,12 @@ import { createServer } from "node:http";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { notificationChannels } from "@noddle/db/schema";
+import { devStack } from "@noddle/testing/dev-stack";
 import { eq } from "drizzle-orm";
 import { notify } from "#notify";
 import { verifyCtx } from "#verify-seed";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 
 let pass = 0;
 let fail = 0;

@@ -27,15 +27,14 @@ import {
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
+import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
 import { redeployStack, runStackDeploy } from "#compose";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const execFileAsync = promisify(execFile);
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 const STACK_HOST = process.env.STACK_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");

@@ -17,15 +17,14 @@ import {
   services,
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME, deployJobSchema } from "@noddle/deploy-contract";
+import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
 import { seedSshKey } from "#verify-seed";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:56379";
+const DB_URL = devStack().databaseUrl;
+const REDIS_URL = devStack().redisUrl;
 const APP_KEY_B64 = process.env.APP_KEY ?? "";
 
 let pass = 0;

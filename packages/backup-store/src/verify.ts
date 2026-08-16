@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import { devStack } from "@noddle/testing/dev-stack";
 import {
   type BackupDestination,
   backupObjectKey,
@@ -13,10 +14,10 @@ import {
   uploadStream,
 } from "#index";
 
-const ENDPOINT = process.env.S3_ENDPOINT ?? "http://localhost:9000";
-const ACCESS_KEY = process.env.S3_ACCESS_KEY ?? "rustfsadmin";
-const SECRET_KEY = process.env.S3_SECRET_KEY ?? "rustfsadmin";
-const BUCKET = process.env.S3_BUCKET ?? "noddle-verify";
+const ENDPOINT = devStack().s3.endpoint;
+const ACCESS_KEY = devStack().s3.accessKeyId;
+const SECRET_KEY = devStack().s3.secretAccessKey;
+const BUCKET = devStack().s3.bucket;
 
 const runtime =
   typeof globalThis.Bun === "undefined"

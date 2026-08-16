@@ -1,6 +1,6 @@
 // Prerequisites: the Multipass VM, Postgres, Redis, migrations applied.
 //
-//   DATABASE_URL=postgres://postgres:noddle@localhost:55432/noddle_verify \
+//   DATABASE_URL=postgres://noddle:noddle@localhost:55432/noddle_verify \
 //   REDIS_URL=redis://localhost:56379/1 \
 //   TARGET_HOST=<vm ip> bun run apps/web/src/verify-webhook.ts
 //
@@ -42,14 +42,13 @@ import {
   user,
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME } from "@noddle/deploy-contract";
+import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq, isNotNull } from "drizzle-orm";
 import IORedis from "ioredis";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:56379";
+const DB_URL = devStack().databaseUrl;
+const REDIS_URL = devStack().redisUrl;
 const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");

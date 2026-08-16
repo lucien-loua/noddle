@@ -14,7 +14,7 @@
  * (ADR-0016), and nothing here substitutes for one.
  */
 
-export type DevStack = {
+export interface DevStack {
   databaseUrl: string;
   redisUrl: string;
   s3: {
@@ -23,7 +23,7 @@ export type DevStack = {
     endpoint: string;
     secretAccessKey: string;
   };
-};
+}
 
 /**
  * The role is `noddle`, matching production. The postgres image only creates

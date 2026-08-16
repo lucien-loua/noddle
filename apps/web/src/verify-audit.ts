@@ -8,11 +8,10 @@ import {
   session as sessionTable,
   user,
 } from "@noddle/db/schema";
+import { devStack } from "@noddle/testing/dev-stack";
 import { and, eq } from "drizzle-orm";
 
-const DB_URL =
-  process.env.DATABASE_URL ??
-  "postgres://postgres:noddle@localhost:55432/noddle";
+const DB_URL = devStack().databaseUrl;
 const PORT = Number(process.env.PORT ?? 3101);
 const BASE = `http://localhost:${PORT}`;
 const OWNER = "owner@noddle.test";
