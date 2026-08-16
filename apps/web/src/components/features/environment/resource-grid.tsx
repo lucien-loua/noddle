@@ -21,7 +21,6 @@ import { MoveServiceDialog } from "@/components/features/services/move-dialog";
 import { IconStack } from "@/components/icon-stack";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -46,8 +45,19 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  Frame,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { IconTile } from "@/components/ui/icon-tile";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -59,12 +69,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { cache } from "@/lib/cache";
-import {
-  badgeVariant,
-  dotClass,
-  errorMessage,
-  serviceLabel,
-} from "@/lib/format";
+import { badgeVariant, errorMessage, serviceLabel } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
@@ -642,16 +647,17 @@ export function ResourceGrid({
     // screen. Same fix as /containers.
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1">
-          <MagnifyingGlassIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+        <InputGroup className="min-w-48 flex-1">
+          <InputGroupAddon>
+            <MagnifyingGlassIcon />
+          </InputGroupAddon>
+          <InputGroupInput
             aria-label="Search"
-            className="pl-9"
             onChange={handleSearchChange}
             placeholder="Search…"
             value={search}
           />
-        </div>
+        </InputGroup>
         <Select
           items={{
             all: "All types",
@@ -904,15 +910,19 @@ function ResourceGridCard({
 
   return (
     <>
-      {/* `relative` on the card, `after:absolute after:inset-0` on the
-          title: the link covers the whole card WITHOUT nesting a button
-          inside a clickable block — same pattern as `ItemContent` in
-          `resource-row.tsx`. The checkbox and the menu trigger remain
-          NORMAL buttons, just given `relative z-10` to stay above the
-          stretched link in stacking order. */}
-      <Card className="group relative transition-shadow hover:shadow-lg">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
+      {/* Three tiers, and they answer three different questions: the header
+          says WHAT this is, the panel says HOW IT IS DOING, the footer says
+          WHERE IT LIVES. The status dot that used to sit beside the checkbox
+          is gone — it repeated the badge, which carries the word as well as
+          the tone.
+
+          `after:absolute after:inset-0` on the title stretches the link over
+          the whole card WITHOUT nesting a button inside a clickable block —
+          same pattern as `ItemContent` in `resource-row.tsx`. `Frame` is
+          already `relative`, so it is the box the `::after` covers. */}
+      <Frame className="group transition-shadow hover:shadow-lg">
+        <FrameHeader>
+          <div className="flex items-center gap-2">
             {item.engine ? (
               <DatabaseMark engine={item.engine} size="sm" />
             ) : (
@@ -920,21 +930,25 @@ function ResourceGridCard({
                 <Icon />
               </IconTile>
             )}
+            <FrameTitle className="min-w-0 flex-1 truncate">
+              <button
+                className="w-full truncate text-start after:absolute after:inset-0"
+                onClick={handleOpen}
+                type="button"
+              >
+                {item.name}
+              </button>
+            </FrameTitle>
             {/* `z-10`: the title's stretched button places its `::after`
                 over the WHOLE card, and comes AFTER this group in DOM
                 order — without an explicit z-index, it would win the
                 stacking order and these buttons would become unclickable.
                 As measured: without `z-10`, `.click()` here reaches the
                 title's button instead. */}
-            <div className="relative z-10 flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className={`size-2 rounded-full ${dotClass(status.tone)}`}
-              />
+            <div className="relative z-10 flex items-center gap-1">
               <Checkbox
                 aria-label={`Select ${item.name}`}
                 checked={selected}
-                className="opacity-0 transition-opacity group-hover:opacity-100 has-data-checked:opacity-100"
                 onCheckedChange={handleToggleSelect}
               />
               <ResourceCardMenu
@@ -953,21 +967,8 @@ function ResourceGridCard({
               />
             </div>
           </div>
-          <CardTitle className="truncate">
-            <button
-              className="w-full truncate text-start after:absolute after:inset-0"
-              onClick={handleOpen}
-              type="button"
-            >
-              {item.name}
-            </button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          <p className="truncate text-muted-foreground text-sm">
-            {item.serverName}
-            {item.domain ? ` · ${item.domain}` : ""}
-          </p>
+        </FrameHeader>
+        <FramePanel className="flex flex-col gap-2">
           <Badge
             aria-live="polite"
             className="w-fit"
@@ -981,8 +982,19 @@ function ResourceGridCard({
               {item.lastError}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
+        </FramePanel>
+        <FrameFooter>
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+            <span className="truncate">{item.serverName}</span>
+            {item.domain ? (
+              <>
+                <span aria-hidden>·</span>
+                <span className="truncate">{item.domain}</span>
+              </>
+            ) : null}
+          </div>
+        </FrameFooter>
+      </Frame>
 
       <ResourceDeleteDialog
         item={item}
