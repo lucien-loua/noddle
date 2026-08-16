@@ -36,12 +36,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FrameTitle,
-} from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
@@ -54,7 +48,7 @@ import type { ServerView } from "@/server/servers";
 /** The badge and the dot share the same vocabulary as services:
  *  "connected" reads like "running", with no new color code to learn for
  *  this screen. */
-function statusTone(status: ServerView["status"]) {
+const statusTone = (status: ServerView["status"]) => {
   if (status === "connected") {
     return "ok";
   }
@@ -62,7 +56,7 @@ function statusTone(status: ServerView["status"]) {
     return "danger";
   }
   return "busy";
-}
+};
 
 const STATUS_LABEL: Record<ServerView["status"], string> = {
   connected: "Connected",
@@ -76,7 +70,7 @@ const STATUS_LABEL: Record<ServerView["status"], string> = {
  *  for no reason. */
 const POLL_MS = 3000;
 
-function ServerRow({
+const ServerRow = ({
   onRemoved,
   role,
   server,
@@ -84,7 +78,7 @@ function ServerRow({
   onRemoved: () => void;
   role: RoleName | null;
   server: ServerView;
-}) {
+}) => {
   const navigate = useNavigate();
   const tone = statusTone(server.status);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -149,9 +143,9 @@ function ServerRow({
       ) : null}
     </ResourceCard>
   );
-}
+};
 
-export function ServersList({
+export const ServersList = ({
   initial,
   onAdd,
   role,
@@ -161,7 +155,7 @@ export function ServersList({
    *  explains it, without offering a button that would be refused. */
   onAdd?: () => void;
   role: RoleName | null;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const { data: servers, isEmpty } = useResourceList(queries.servers, initial, {
     refetchInterval: (query) =>
@@ -195,14 +189,10 @@ export function ServersList({
         ) : null}
       </SettingsList.Empty>
 
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader>
-          <FrameTitle>Servers</FrameTitle>
-          <FrameDescription>
-            Machines Noddle deploys onto. Open one to see its resources, disk
-            and toolchain.
-          </FrameDescription>
-        </FrameHeader>
+      <SettingsList.Frame
+        description="Machines Noddle deploys onto. Open one to see its resources, disk and toolchain."
+        title="Servers"
+      >
         {servers.map((server) => (
           <ServerRow
             key={server.id}
@@ -211,10 +201,10 @@ export function ServersList({
             server={server}
           />
         ))}
-      </Frame>
+      </SettingsList.Frame>
     </SettingsList>
   );
-}
+};
 
 const serverFormSchema = serverInputSchema.extend({
   sshPort: z
