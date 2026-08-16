@@ -13,6 +13,7 @@
     "./logs": "./src/logs.ts",
     "./password": "./src/password.ts",
     "./redact": "./src/redact.ts",
+    "./source-type": "./src/source-type.ts",
     "./swarm-names": "./src/swarm-names.ts",
     "./toolchain": "./src/toolchain.ts",
     "./validation/*": "./src/validation/*.ts",

@@ -1,3 +1,4 @@
+import { dockerSourcePatch, gitSourcePatch } from "@noddle/shared/source-type";
 import {
   BUILT_IN_REGISTRY,
   type GitSourceType,
@@ -566,23 +567,8 @@ function GitSourceForm({
     mutationFn: (value: ServiceGitProviderInput) =>
       updateServiceSettings({
         data: {
-          buildMethod: service.buildMethod === "image" ? "railpack" : undefined,
-          buildPath: value.buildPath,
-          deployKeyId: value.deployKeyId,
-          gitBranch: value.gitBranch,
-          // The custom tab is BY URL by definition: switching to it drops
-          // the connection, otherwise a service keeps cloning through a
-          // forge the screen no longer shows.
-          gitProviderId: sourceType === "git" ? null : value.gitProviderId,
-          // Dropped along with the connection on the custom tab: a typed URL
-          // carries no forge name, and a stale one would match the wrong
-          // repository's pushes.
-          gitRepoFullName: sourceType === "git" ? null : value.gitRepoFullName,
-          gitRepoUrl: value.gitRepoUrl,
-          gitSubmodules: value.gitSubmodules,
+          ...gitSourcePatch(sourceType, value, service),
           serviceId: service.id,
-          sourceType,
-          watchPaths: value.watchPaths,
         },
       }),
     onSuccess: async () => {
@@ -813,10 +799,8 @@ function DockerSourceForm({
 
       await updateServiceSettings({
         data: {
-          buildMethod: "image",
-          dockerImage: value.dockerImage,
+          ...dockerSourcePatch(value.dockerImage),
           serviceId: service.id,
-          sourceType: "docker_image",
         },
       });
       await setServiceRegistry({
