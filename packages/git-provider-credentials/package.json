@@ -1,0 +1,24 @@
+{
+  "name": "@noddle/git-provider-credentials",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "verify": "bun run src/verify.ts"
+  },
+  "dependencies": {
+    "@noddle/crypto": "workspace:*",
+    "@noddle/db": "workspace:*",
+    "@noddle/git-provider": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

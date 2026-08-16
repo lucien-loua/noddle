@@ -21,6 +21,7 @@ COPY packages/database-spec/package.json packages/database-spec/
 COPY packages/db/package.json packages/db/
 COPY packages/deploy-contract/package.json packages/deploy-contract/
 COPY packages/git-provider/package.json packages/git-provider/
+COPY packages/git-provider-credentials/package.json packages/git-provider-credentials/
 COPY packages/notifier/package.json packages/notifier/
 COPY packages/proxy-config/package.json packages/proxy-config/
 COPY packages/registry/package.json packages/registry/

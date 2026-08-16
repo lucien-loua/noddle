@@ -1,78 +1,32 @@
-import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import { githubProviders, gitProviders } from "@noddle/db/schema";
+import { encryptSecret, secretContext } from "@noddle/crypto";
+import { githubProviders } from "@noddle/db/schema";
 import type { GithubApp } from "@noddle/git-provider/github";
+import {
+  githubAppCredentials as appCredentials,
+  githubAppFor as appFor,
+} from "@noddle/git-provider-credentials";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 
 /**
- * Load a connection and decrypt its App key.
- *
- * The refusals are deliberately distinct: "not a GitHub connection" and
- * "the App was never finished" are different problems with different fixes,
- * and collapsing them into one message sends the operator to the wrong
- * screen.
+ * Web-side binding of the shared credential module: this process's `db` and
+ * `appKey`, nothing else. Decrypt, AAD and the refusal wording live in
+ * `@noddle/git-provider-credentials` so the worker cannot drift from them.
  */
+
 /**
- * The App's own credentials, WITHOUT requiring an installation.
- *
- * Split from `githubAppFor` because the installation is exactly what is
- * missing when we go looking for it.
+ * The App's own credentials, WITHOUT requiring an installation — the
+ * installation is exactly what is missing when we go looking for it.
  */
-export async function githubAppCredentials(
+export function githubAppCredentials(
   gitProviderId: string
 ): Promise<{ appId: string; privateKeyPem: string; url: string }> {
-  const provider = await db.query.gitProviders.findFirst({
-    where: eq(gitProviders.id, gitProviderId),
-    with: { github: true },
-  });
-  const github = provider?.github;
-  if (!(github?.appId && github.privateKeyEncrypted)) {
-    throw new Error("the GitHub App was never created");
-  }
-  return {
-    appId: github.appId,
-    privateKeyPem: decryptSecret(
-      github.privateKeyEncrypted,
-      env.appKey,
-      secretContext.gitProvider(gitProviderId, "private_key")
-    ),
-    url: github.url,
-  };
+  return appCredentials(db, env.appKey, gitProviderId);
 }
 
-export async function githubAppFor(gitProviderId: string): Promise<GithubApp> {
-  const provider = await db.query.gitProviders.findFirst({
-    where: eq(gitProviders.id, gitProviderId),
-    with: { github: true },
-  });
-  if (!provider) {
-    throw new Error("git provider not found");
-  }
-  if (provider.providerType !== "github") {
-    throw new Error(`${provider.name} is not a GitHub connection`);
-  }
-
-  const { github } = provider;
-  if (!(github?.appId && github.privateKeyEncrypted)) {
-    throw new Error(`${provider.name}: the GitHub App was never created`);
-  }
-  if (!github.installationId) {
-    throw new Error(
-      `${provider.name}: the App exists but is not installed on any account yet`
-    );
-  }
-
-  return {
-    appId: github.appId,
-    installationId: github.installationId,
-    privateKeyPem: decryptSecret(
-      github.privateKeyEncrypted,
-      env.appKey,
-      secretContext.gitProvider(gitProviderId, "private_key")
-    ),
-    url: github.url,
-  };
+export function githubAppFor(gitProviderId: string): Promise<GithubApp> {
+  return appFor(db, env.appKey, gitProviderId);
 }
 
 /** Persist what the manifest exchange returned. Called by the callback. */

@@ -59,7 +59,8 @@
     "ioredis": "catalog:",
     "drizzle-orm": "catalog:",
     "yaml": "catalog:",
-    "@noddle/git-provider": "workspace:*"
+    "@noddle/git-provider": "workspace:*",
+    "@noddle/git-provider-credentials": "workspace:*"
   },
   "devDependencies": {
     "@noddle/testing": "workspace:*",

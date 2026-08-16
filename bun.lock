@@ -25,6 +25,7 @@
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/git-provider": "workspace:*",
+        "@noddle/git-provider-credentials": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
@@ -80,6 +81,7 @@
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/git-provider": "workspace:*",
+        "@noddle/git-provider-credentials": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/proxy-config": "workspace:*",
         "@noddle/registry": "workspace:*",
@@ -186,6 +188,19 @@
     },
     "packages/git-provider": {
       "name": "@noddle/git-provider",
+      "devDependencies": {
+        "@noddle/testing": "workspace:*",
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
+    "packages/git-provider-credentials": {
+      "name": "@noddle/git-provider-credentials",
+      "dependencies": {
+        "@noddle/crypto": "workspace:*",
+        "@noddle/db": "workspace:*",
+        "@noddle/git-provider": "workspace:*",
+        "drizzle-orm": "catalog:",
+      },
       "devDependencies": {
         "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
@@ -612,6 +627,8 @@
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
 
     "@noddle/git-provider": ["@noddle/git-provider@workspace:packages/git-provider"],
+
+    "@noddle/git-provider-credentials": ["@noddle/git-provider-credentials@workspace:packages/git-provider-credentials"],
 
     "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
 

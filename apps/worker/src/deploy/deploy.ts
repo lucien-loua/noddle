@@ -51,7 +51,10 @@ function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
           deployKey: true,
           domains: true,
           envVars: true,
-          gitProvider: { with: { github: true, gitlab: true } },
+          // Id and name only: the credential module loads and decrypts what
+          // it needs itself, so the encrypted columns no longer travel
+          // through the deployment record.
+          gitProvider: true,
           server: true,
         },
       },
