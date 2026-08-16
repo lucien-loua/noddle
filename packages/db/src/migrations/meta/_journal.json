@@ -414,6 +414,20 @@
       "when": 1786877201198,
       "tag": "0058_short_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1786888446424,
+      "tag": "0059_violet_nightmare",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1786888507266,
+      "tag": "0060_worthless_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

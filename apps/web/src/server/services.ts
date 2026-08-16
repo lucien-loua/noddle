@@ -1,4 +1,5 @@
 import { environments, projects, services } from "@noddle/db/schema";
+import { ensureRepositoryHook } from "@noddle/git-provider-credentials/hooks";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import {
   connectRepoSchema,
@@ -10,9 +11,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db.server";
+import { env } from "@/lib/env.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
+import { gitlabHookUrl } from "@/lib/request-origin.server";
 
 interface ServiceSettingsPatch {
   autoDeploy?: boolean;
@@ -151,6 +154,33 @@ export const connectRepo = createServerFn({ method: "POST" })
     }
   );
 
+/**
+ * Register the GitLab Repository hook for this service's repository.
+ *
+ * Deliberately does not throw: the token's user may not be Maintainer on the
+ * project, and refusing the save would make a legitimate setup impossible.
+ * The failure is recorded on the hook row and shown on the service.
+ */
+async function armRepositoryHook(serviceId: string): Promise<void> {
+  const service = await db.query.services.findFirst({
+    where: eq(services.id, serviceId),
+    with: { gitProvider: true },
+  });
+  const provider = service?.gitProvider;
+  if (
+    provider?.providerType !== "gitlab" ||
+    !service?.gitRepoFullName ||
+    service.previewOfServiceId !== null
+  ) {
+    return;
+  }
+  await ensureRepositoryHook(db, env.appKey, {
+    gitProviderId: provider.id,
+    hookUrl: gitlabHookUrl(provider.id),
+    repositoryFullName: service.gitRepoFullName,
+  });
+}
+
 export const updateServiceSettings = createServerFn({ method: "POST" })
   .validator(updateServiceSettingsSchema)
   .handler(
@@ -167,6 +197,7 @@ export const updateServiceSettings = createServerFn({ method: "POST" })
           if (Object.keys(patch).length > 0) {
             await db.update(services).set(patch).where(eq(services.id, row.id));
           }
+          await armRepositoryHook(row.id);
           return { ok: true as const };
         },
         target: ({ row }) => ({ id: row.id, name: row.name }),

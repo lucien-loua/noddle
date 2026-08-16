@@ -6,6 +6,7 @@ import { envVars } from "#schema/env-vars";
 import {
   githubProviders,
   gitlabProviders,
+  gitlabRepositoryHooks,
   gitProviders,
 } from "#schema/git-providers";
 import { environments, projects } from "#schema/projects";
@@ -213,6 +214,7 @@ export const gitProvidersRelations = relations(
       fields: [gitProviders.id],
       references: [gitlabProviders.gitProviderId],
     }),
+    repositoryHooks: many(gitlabRepositoryHooks),
     services: many(services),
   })
 );
@@ -232,6 +234,16 @@ export const gitlabProvidersRelations = relations(
   ({ one }) => ({
     gitProvider: one(gitProviders, {
       fields: [gitlabProviders.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);
+
+export const gitlabRepositoryHooksRelations = relations(
+  gitlabRepositoryHooks,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [gitlabRepositoryHooks.gitProviderId],
       references: [gitProviders.id],
     }),
   })

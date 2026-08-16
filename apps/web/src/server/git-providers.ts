@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   githubProviders,
@@ -19,7 +20,6 @@ import {
   listProjects,
 } from "@noddle/git-provider/gitlab";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
@@ -27,6 +27,7 @@ import { env } from "@/lib/env.server";
 import { githubAppCredentials, githubAppFor } from "@/lib/git-provider.server";
 import { gitlabAccessToken } from "@/lib/gitlab.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
+import { requestOrigin } from "@/lib/request-origin.server";
 
 export interface GitProviderView {
   /** False until the App is created AND installed. */
@@ -85,21 +86,6 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
 );
 
 const TRAILING_SLASHES = /\/+$/;
-
-/**
- * The dashboard's own origin, taken from the request rather than from a new
- * setting: GitHub has to reach both the callback and the webhook, and the
- * host the operator is currently using is the only one we know works.
- */
-function requestOrigin(): string {
-  const headers = getRequestHeaders();
-  const host = headers.get("x-forwarded-host") ?? headers.get("host");
-  if (!host) {
-    throw new Error("cannot determine this dashboard's public URL");
-  }
-  const proto = headers.get("x-forwarded-proto") ?? "https";
-  return `${proto}://${host}`;
-}
 
 const startGithubSchema = z.object({
   name: z
@@ -210,6 +196,11 @@ export const startGitlabApp = createServerFn({ method: "POST" })
           name: data.name,
           providerType: "gitlab",
         });
+        // Minted here so "the secret exists" is an invariant of a connection
+        // rather than a state it may or may not have reached. GitLab returns
+        // it in `x-gitlab-token` on every delivery.
+        const webhookSecret = randomBytes(32).toString("hex");
+
         await db.insert(gitlabProviders).values({
           applicationId: data.applicationId,
           gitProviderId: id,
@@ -220,6 +211,11 @@ export const startGitlabApp = createServerFn({ method: "POST" })
             secretContext.gitProvider(id, "client_secret")
           ),
           url: data.url.replace(TRAILING_SLASHES, ""),
+          webhookSecretEncrypted: encryptSecret(
+            webhookSecret,
+            env.appKey,
+            secretContext.gitProvider(id, "webhook_secret")
+          ),
         });
 
         return {

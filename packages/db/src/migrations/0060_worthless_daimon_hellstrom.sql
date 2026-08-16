@@ -1,0 +1,1 @@
+ALTER TABLE "gitlab_repository_hooks" ADD COLUMN "hook_url" text NOT NULL;

@@ -525,6 +525,17 @@ function ProviderRepositoryField({
   );
 }
 
+/** Autodeploy is not armed: registration was refused and stays refused. */
+function HookWarning({ error }: { error: string }) {
+  return (
+    <Field>
+      <FieldDescription className="text-destructive">
+        Autodeploy is not armed for this repository: {error}
+      </FieldDescription>
+    </Field>
+  );
+}
+
 function GitSourceForm({
   canEdit,
   service,
@@ -640,6 +651,7 @@ function GitSourceForm({
             )}
           </form.AppField>
         )}
+        {service.hookError ? <HookWarning error={service.hookError} /> : null}
         {sourceType === "git" ? (
           <>
             <form.AppField name="gitRepoUrl">

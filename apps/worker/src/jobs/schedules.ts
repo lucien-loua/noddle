@@ -10,6 +10,7 @@ import {
   defineSchedule,
   type ScheduleSpec,
 } from "@noddle/deploy-contract/schedule";
+import { reconcileRepositoryHooks } from "@noddle/git-provider-credentials/hooks";
 import { sweepBackups } from "#backup-sweep";
 import { collectMetrics } from "#metrics";
 import { sweepRegistryTrust } from "#registry";
@@ -117,6 +118,20 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     id: "docker-prune",
     queue: "noddle-docker-prune",
     run: ({ enqueue }) => enqueue({ kind: "prune-docker" }),
+  }),
+
+  // GitLab hooks are per-project, so a deleted Project — which cascades to
+  // its Services in Postgres, with no application code running — leaves one
+  // behind. Inline cleanup structurally cannot see that, so it reconciles
+  // here instead, in both directions.
+  //
+  // Ten minutes: it only calls GitLab when something actually diverged, and
+  // the failure it heals is a permission grant, which arrives on human time.
+  defineSchedule<SweepDeps>({
+    every: 10 * MINUTE,
+    id: "repository-hooks",
+    queue: "noddle-repository-hooks",
+    run: ({ ctx }) => reconcileRepositoryHooks(ctx.db, ctx.appKey),
   }),
 
   // One minute: fine-grained enough to see a memory leak climbing, coarse

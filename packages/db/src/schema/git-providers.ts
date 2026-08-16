@@ -88,3 +88,39 @@ export const gitlabProviders = pgTable("gitlab_providers", {
   url: text("url").notNull().default("https://gitlab.com"),
   webhookSecretEncrypted: text("webhook_secret_encrypted"),
 });
+
+/**
+ * A Repository hook. GitLab only: a GitHub App carries one hook for the whole
+ * App, so there is nothing per-repository to record there.
+ *
+ * Keyed on connection + repository, not Service — several Services can deploy
+ * one repository and share the hook.
+ */
+export const gitlabRepositoryHooks = pgTable(
+  "gitlab_repository_hooks",
+  {
+    createdAt,
+    gitProviderId: uuid("git_provider_id")
+      .notNull()
+      .references(() => gitProviders.id, { onDelete: "cascade" }),
+    /** Null with `lastError` set = registration failed, Maintainer+ needed. */
+    hookId: text("hook_id"),
+    /**
+     * Where the hook points. Stored because the worker's reconcile sweep has
+     * no notion of the dashboard's public origin — web writes it, the sweep
+     * reuses it.
+     */
+    hookUrl: text("hook_url").notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    lastError: text("last_error"),
+    /** Matches `path_with_namespace`. */
+    repositoryFullName: text("repository_full_name").notNull(),
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("gitlab_repository_hooks_idx").on(
+      t.gitProviderId,
+      t.repositoryFullName
+    ),
+  ]
+);

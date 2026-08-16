@@ -6,7 +6,8 @@
     "#*": "./src/*.ts"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./hooks": "./src/hooks.ts"
   },
   "scripts": {
     "verify": "bun run src/verify.ts"

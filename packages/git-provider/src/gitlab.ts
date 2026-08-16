@@ -220,3 +220,92 @@ export function cloneUrlWithToken(repoUrl: string, token: string): string {
   parsed.password = token;
   return parsed.toString();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Project hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GitLab has no application-level webhook: hooks belong to a project, so one
+// is registered per repository. The token's user must be Maintainer or better,
+// or GitLab answers 403.
+
+export interface GitlabHook {
+  id: string;
+  url: string;
+}
+
+function projectHooksUrl(url: string, fullName: string): string {
+  return `${apiBase(url)}/projects/${encodeURIComponent(fullName)}/hooks`;
+}
+
+/** Hooks already on the project — how a duplicate is avoided. */
+export async function listProjectHooks(
+  url: string,
+  accessToken: string,
+  fullName: string,
+  fetchImpl: GitlabFetch = fetch
+): Promise<GitlabHook[]> {
+  const body = await gitlabJson<{ id: number; url: string }[]>(
+    fetchImpl,
+    `${projectHooksUrl(url, fullName)}?per_page=100`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return body.map((h) => ({ id: String(h.id), url: h.url }));
+}
+
+/**
+ * Push and merge-request events on one hook, matching the GitHub App's
+ * `default_events`. GitLab returns `token` in `x-gitlab-token` rather than
+ * signing the body.
+ */
+export async function createProjectHook(
+  url: string,
+  accessToken: string,
+  fullName: string,
+  hook: { hookUrl: string; token: string },
+  fetchImpl: GitlabFetch = fetch
+): Promise<GitlabHook> {
+  const body = await gitlabJson<{ id: number; url: string }>(
+    fetchImpl,
+    projectHooksUrl(url, fullName),
+    {
+      body: new URLSearchParams({
+        enable_ssl_verification: "true",
+        merge_requests_events: "true",
+        push_events: "true",
+        token: hook.token,
+        url: hook.hookUrl,
+      }),
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      method: "POST",
+    }
+  );
+  return { id: String(body.id), url: body.url };
+}
+
+/** A 404 is success: the end state asked for is that the hook is gone. */
+export async function deleteProjectHook(
+  url: string,
+  accessToken: string,
+  fullName: string,
+  hookId: string,
+  fetchImpl: GitlabFetch = fetch
+): Promise<void> {
+  const response = await fetchImpl(
+    `${projectHooksUrl(url, fullName)}/${hookId}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      method: "DELETE",
+    }
+  );
+  if (!(response.ok || response.status === 404)) {
+    const detail = await response.text().catch(() => "");
+    throw new GitlabError(
+      `GitLab responded ${response.status}: ${detail.slice(0, 300)}`,
+      response.status
+    );
+  }
+}

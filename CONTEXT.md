@@ -67,6 +67,12 @@ Producing a Docker image on the **target server** (Railpack or Dockerfile), unde
 a resource-capped BuildKit daemon Noddle owns.
 _Avoid_: CI build (Noddle builds on the target, not in GitHub Actions)
 
+**Repository hook**:
+The webhook Noddle registers on a GitLab project, for one connection. GitLab
+only — a GitHub App carries one hook for the whole App. Several Services can
+deploy one repository and share the hook.
+_Avoid_: project hook (GitLab's own word; Project here means something else)
+
 **Registry**:
 Image store used so a built image can leave the build node (embedded registry in
 Phase 4+). Without a push, a local image pins the service to that node.

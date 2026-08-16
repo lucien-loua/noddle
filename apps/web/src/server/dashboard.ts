@@ -71,6 +71,8 @@ export interface ServiceRow {
   gitRepoFullName: string | null;
   gitRepoUrl: string | null;
   gitSubmodules: boolean;
+  /** Why this repository's GitLab hook is not armed. Null when it is. */
+  hookError: string | null;
   id: string;
   lastDeployment: DeploymentSummary | null;
   /** Why a teardown failed. `null` if nothing failed, or once the service is
@@ -207,7 +209,8 @@ function toServiceRow(
   service: ServiceJoined,
   last: typeof deployments.$inferSelect | undefined,
   nodes: Map<string, string>,
-  watching: boolean
+  watching: boolean,
+  hookError: string | null = null
 ): ServiceRow {
   return {
     autoDeploy: service.autoDeploy,
@@ -233,6 +236,7 @@ function toServiceRow(
     gitRepoFullName: service.gitRepoFullName,
     gitRepoUrl: service.gitRepoUrl,
     gitSubmodules: service.gitSubmodules,
+    hookError,
     id: service.id,
     lastDeployment: last ? toSummary(last, nodes) : null,
     lastError: service.lastError,
@@ -280,6 +284,31 @@ function toStackSummary(
   };
 }
 
+/**
+ * Failed Repository hook registrations, by connection and repository — one
+ * query rather than one per service.
+ */
+async function hookErrors(): Promise<Map<string, string>> {
+  const rows = await db.query.gitlabRepositoryHooks.findMany();
+  const byKey = new Map<string, string>();
+  for (const h of rows) {
+    if (h.lastError) {
+      byKey.set(`${h.gitProviderId}:${h.repositoryFullName}`, h.lastError);
+    }
+  }
+  return byKey;
+}
+
+function hookErrorOf(
+  errors: Map<string, string>,
+  service: { gitProviderId: string | null; gitRepoFullName: string | null }
+): string | null {
+  return service.gitProviderId && service.gitRepoFullName
+    ? (errors.get(`${service.gitProviderId}:${service.gitRepoFullName}`) ??
+        null)
+    : null;
+}
+
 async function loadServiceDashboard(
   environmentId?: string
 ): Promise<ServiceRow[]> {
@@ -322,12 +351,14 @@ async function loadServiceDashboard(
     }
   }
 
+  const errors = await hookErrors();
   return rows.map((service) =>
     toServiceRow(
       service,
       latest.get(service.id),
       nodes,
-      watched.has(service.id)
+      watched.has(service.id),
+      hookErrorOf(errors, service)
     )
   );
 }
@@ -363,7 +394,13 @@ export const getService = createServerFn({ method: "GET" })
     const watching = Boolean(
       last?.watchUntil && last.watchUntil.getTime() > Date.now()
     );
-    return toServiceRow(row, last ?? undefined, nodes, watching);
+    return toServiceRow(
+      row,
+      last ?? undefined,
+      nodes,
+      watching,
+      hookErrorOf(await hookErrors(), row)
+    );
   });
 
 async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {

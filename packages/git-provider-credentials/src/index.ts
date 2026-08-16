@@ -252,6 +252,31 @@ export async function gitlabAccessToken(
 }
 
 /**
+ * The shared secret GitLab sends back in `x-gitlab-token`.
+ *
+ * Minted when the connection is created, so its absence means a connection
+ * from before Repository hooks existed — reconnecting is the fix.
+ */
+export async function gitlabWebhookSecret(
+  db: Database,
+  appKey: Buffer,
+  gitProviderId: string
+): Promise<string> {
+  const provider = await loadProvider(db, gitProviderId);
+  const encrypted = provider.gitlab?.webhookSecretEncrypted;
+  if (!encrypted) {
+    throw new Error(
+      `${provider.name} has no webhook secret — reconnect it to arm autodeploy`
+    );
+  }
+  return decryptSecret(
+    encrypted,
+    appKey,
+    secretContext.gitProvider(gitProviderId, "webhook_secret")
+  );
+}
+
+/**
  * The URL git clones with, carrying a freshly minted token.
  *
  * The returned string is a SECRET that looks like a URL (ADR-0019): it goes
