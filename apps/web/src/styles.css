@@ -186,3 +186,37 @@
     transition-duration: 150ms !important;
   }
 }
+
+/*
+ * Collapsed sidebar, two preset defaults corrected. Here and not in
+ * `ui/sidebar.tsx`, which `shadcn add` rewrites wholesale; unlayered, so these
+ * outrank Tailwind's `@layer utilities` without `!important`.
+ */
+
+/* `overflow-hidden` targets the horizontal overflow of truncated labels, but
+   it is the shorthand and takes vertical scrolling down with it — a long menu
+   becomes unreachable. Both axes restated: a shorthand cannot be overridden
+   one axis at a time. */
+[data-slot="sidebar"][data-collapsible="icon"] [data-sidebar="content"] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* The `+2px` in the collapsed width belongs to `floating`, whose ring draws
+   outside the panel. `inset` has no ring, so the surplus lands entirely to the
+   right of the 32px buttons — 8px left, 10px right. */
+[data-slot="sidebar"][data-variant="inset"][data-collapsible="icon"]
+[data-slot="sidebar-container"] {
+  width: calc(var(--sidebar-width-icon) + var(--spacing) * 4);
+}
+
+/* The panel shares the page background, so the eye reads the rail as centred
+   between the window edge and the raised card. `ms-2` on collapse made that
+   16px / 24px; it was there to clear the 2px above, gone with it. Expanded
+   already reads 16px / 16px — same rhythm in both states. */
+@media (width >= 48rem) {
+  [data-slot="sidebar"][data-variant="inset"][data-collapsible="icon"]
+    ~ [data-slot="sidebar-inset"] {
+    margin-inline-start: 0;
+  }
+}

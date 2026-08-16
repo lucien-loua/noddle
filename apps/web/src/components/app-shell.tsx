@@ -268,8 +268,12 @@ export function AppShell({
       </Sidebar>
 
       {/* `min-h-0`: without it, a `flex-1` child refuses to shrink below
-          its content height and overflows instead of scrolling. */}
-      <SidebarInset className="min-h-0 overflow-hidden">
+          its content height and overflows instead of scrolling.
+          `ring` and not `border`: drawn outside the box, so the 8px rhythm
+          around the card stays whole. Gated like the preset's own `m-2` —
+          on mobile the card is full-bleed and an outline would trace the
+          viewport. */}
+      <SidebarInset className="min-h-0 overflow-hidden md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-border">
         {/* Sticky: on a screen you scroll through, the create action and
             the sidebar's collapse toggle must stay reachable without
             scrolling back up. */}
