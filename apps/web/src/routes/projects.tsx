@@ -6,7 +6,14 @@ import {
   ProjectRowActions,
 } from "@/components/project-actions";
 import { StatusSummary } from "@/components/status-summary";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { type RoleName, roles } from "@/lib/permissions";
 import { getAuthState } from "@/server/auth";
@@ -98,38 +105,40 @@ function ProjectCard({
   return (
     <Card className="group relative transition-shadow hover:shadow-lg">
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="min-w-0 truncate">
-            {/* Stretched link: the whole card navigates, without nesting the
-                menu inside a clickable block — same pattern as
-                `features/environment/resource-grid.tsx`. */}
-            <Link
-              className="truncate after:absolute after:inset-0"
-              params={{ projectId: project.id }}
-              to="/projects/$projectId"
-            >
-              {project.name}
-            </Link>
-          </CardTitle>
-          {/* `z-10`: the stretched link comes BEFORE in the DOM but covers
-              the whole card — without a z-index the menu would become
-              unreachable. */}
-          <div className="relative z-10">
-            <ProjectRowActions
-              description={project.description}
-              name={project.name}
-              projectId={project.id}
-              role={role}
-            />
-          </div>
-        </div>
+        <CardTitle className="min-w-0 truncate">
+          {/* Stretched link: the whole card navigates, without nesting the
+              menu inside a clickable block — same pattern as
+              `features/environment/resource-grid.tsx`. */}
+          <Link
+            className="truncate after:absolute after:inset-0"
+            params={{ projectId: project.id }}
+            to="/projects/$projectId"
+          >
+            {project.name}
+          </Link>
+        </CardTitle>
+        {project.description ? (
+          <CardDescription className="line-clamp-2">
+            {project.description}
+          </CardDescription>
+        ) : null}
+        {/* `z-10`: stay above the title's stretched `::after`. `row-span-1`
+            when there is no description — CardAction's default `row-span-2`
+            would otherwise invent an empty second row. */}
+        <CardAction
+          className={
+            project.description ? "relative z-10" : "relative z-10 row-span-1"
+          }
+        >
+          <ProjectRowActions
+            description={project.description}
+            name={project.name}
+            projectId={project.id}
+            role={role}
+          />
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {project.description ? (
-          <p className="line-clamp-2 text-muted-foreground text-sm">
-            {project.description}
-          </p>
-        ) : null}
         <p className="text-muted-foreground text-sm">
           {environments} environment{environments === 1 ? "" : "s"} · {services}{" "}
           app{services === 1 ? "" : "s"} · {stacks} compose · {databases} db
