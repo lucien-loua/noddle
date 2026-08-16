@@ -1539,7 +1539,7 @@ function FilterSubmenuContent<T = unknown>({
             aria-expanded={true}
             aria-haspopup="listbox"
             className={cn(
-              "h-8 rounded-none border-0 bg-transparent! px-2 text-sm shadow-none",
+              "h-8 rounded-none border-0 bg-transparent! px-1.75 text-sm shadow-none",
               "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
               isActive && "placeholder:text-foreground"
             )}
@@ -1913,7 +1913,7 @@ export function Filters<T = unknown>({
                       }
                       aria-controls={`${rootId}-listbox`}
                       className={cn(
-                        "h-8 rounded-none border-0 bg-transparent! px-2 text-sm shadow-none",
+                        "h-8 rounded-none border-0 bg-transparent! px-1.75 text-sm shadow-none",
                         "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
                         activeMenu === "root" && "placeholder:text-foreground"
                       )}
@@ -1992,7 +1992,7 @@ export function Filters<T = unknown>({
                       value={menuSearchInput}
                     />
                     {enableShortcut && shortcutLabel && (
-                      <Kbd className="absolute inset-e-2 top-1/2 -translate-y-1/2 border bg-background">
+                      <Kbd className="absolute inset-e-1.75 top-1/2 -translate-y-1/2 border bg-background">
                         {shortcutLabel}
                       </Kbd>
                     )}

@@ -105,12 +105,16 @@ function SelectLabel({
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
-      className={cn("px-3 py-2.5 text-xs text-muted-foreground", className)}
+      className={cn("px-1.75 py-2.5 text-xs text-muted-foreground", className)}
       {...props}
     />
   )
 }
 
+// `alignItemWithTrigger` positions the popup by putting the selected item's text
+// on the trigger's value text, so the two text columns must be identical or the
+// popup lands off the trigger: the group's 6px gutter plus 7px here matches the
+// trigger's px-3 and its 1px border.
 function SelectItem({
   className,
   children,
@@ -120,7 +124,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2.5 rounded-2xl py-2 pe-8 ps-3 text-sm font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-default items-center gap-2.5 rounded-2xl py-2 pe-8 ps-1.75 text-sm font-medium outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}
@@ -130,7 +134,7 @@ function SelectItem({
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator
         render={
-          <span className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />
+          <span className="pointer-events-none absolute inset-e-1.75 flex size-4 items-center justify-center" />
         }
       >
         <CheckIcon className="pointer-events-none" weight="regular" />
