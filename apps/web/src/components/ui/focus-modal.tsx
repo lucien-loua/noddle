@@ -4,6 +4,19 @@ import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// Concentric radius: inner = outer − padding.
+const FOCUS_MODAL_TOKENS = [
+  "[--focus-modal-radius:var(--radius-4xl)]",
+  "[--focus-modal-p:--spacing(0.75)]",
+  "[--focus-modal-gap:--spacing(0.75)]",
+  "[--focus-modal-panel-radius:max(0px,calc(var(--focus-modal-radius)_-_var(--focus-modal-p)))]",
+  "[--focus-modal-panel-px:--spacing(4)] [--focus-modal-panel-py:--spacing(4)]",
+  "[--focus-modal-chrome-px:--spacing(4)] [--focus-modal-chrome-py:--spacing(2)]",
+].join(" ");
+
+const FOCUS_MODAL_PANEL =
+  "relative overflow-hidden rounded-(--focus-modal-panel-radius) border border-border bg-card bg-clip-padding shadow-xs before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--focus-modal-panel-radius)-1px)] before:shadow-black/5 dark:bg-clip-border dark:before:shadow-white/5";
+
 function FocusModal({
   disablePointerDismissal = true,
   ...props
@@ -59,15 +72,10 @@ function FocusModalContent({
       <FocusModalOverlay {...overlayProps} />
       <DialogPrimitive.Popup
         className={cn(
-          // Open/close: same recipe as `DialogContent` — keyframes only,
-          // no live `transition`/`scale` at rest (those fight zoom-out and
-          // flicker). Nested stack effects are gated on
-          // `data-nested-dialog-open` so a lone FocusModal closes cleanly.
-          "fixed inset-2 z-50 flex flex-col overflow-hidden rounded-4xl bg-popover text-popover-foreground shadow-xl outline-none ring-1 ring-foreground/5 duration-100 dark:ring-foreground/10",
-          "data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:animate-out data-open:animate-in",
-          // Nested stack (Base UI `--nested-dialogs`): only while a child
-          // dialog is open — parent peeks up and dims.
-          "origin-top data-nested-dialog-open:scale-[calc(1-0.025*var(--nested-dialogs,0))] data-nested-dialog-open:translate-y-[calc(var(--nested-dialogs,0)*-0.25rem)] data-nested-dialog-open:transition-[scale,translate] data-nested-dialog-open:duration-200 data-nested-dialog-open:ease-out",
+          FOCUS_MODAL_TOKENS,
+          "fixed inset-2 z-50 flex flex-col gap-(--focus-modal-gap) overflow-hidden rounded-(--focus-modal-radius) bg-muted p-(--focus-modal-p) text-foreground shadow-xl outline-none ring-1 ring-foreground/5 dark:ring-foreground/10",
+          "duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+          "origin-top data-nested-dialog-open:translate-y-[calc(var(--nested-dialogs,0)*-0.25rem)] data-nested-dialog-open:scale-[calc(1-0.025*var(--nested-dialogs,0))] data-nested-dialog-open:transition-[scale,translate] data-nested-dialog-open:duration-200 data-nested-dialog-open:ease-out",
           "after:pointer-events-none after:absolute after:inset-0 after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100",
           className
         )}
@@ -84,9 +92,9 @@ function FocusModalHeader({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <div
+    <header
       className={cn(
-        "flex shrink-0 items-center gap-x-3 border-b bg-secondary/25 p-3",
+        "flex shrink-0 items-center gap-x-3 px-(--focus-modal-chrome-px) py-(--focus-modal-chrome-py)",
         className
       )}
       data-slot="focus-modal-header"
@@ -99,7 +107,7 @@ function FocusModalHeader({
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
       <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    </header>
   );
 }
 
@@ -109,29 +117,23 @@ function FocusModalFooter({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <div
+    <footer
       className={cn(
-        "flex shrink-0 items-center justify-end gap-x-2 border-t bg-secondary/25 p-3",
+        "flex shrink-0 items-center justify-end gap-x-2 px-(--focus-modal-chrome-px) py-(--focus-modal-chrome-py)",
         className
       )}
       data-slot="focus-modal-footer"
       {...props}
     >
       {children}
-    </div>
+    </footer>
   );
 }
 
-function FocusModalTitle({
-  className,
-  ...props
-}: DialogPrimitive.Title.Props) {
+function FocusModalTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
-      className={cn(
-        "block truncate font-heading font-medium text-base leading-none",
-        className
-      )}
+      className={cn("block truncate font-semibold text-sm", className)}
       data-slot="focus-modal-title"
       {...props}
     />
@@ -144,22 +146,13 @@ function FocusModalDescription({
 }: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
-      className={cn(
-        "mt-1 block truncate text-muted-foreground text-sm",
-        className
-      )}
+      className={cn("block truncate text-muted-foreground text-sm", className)}
       data-slot="focus-modal-description"
       {...props}
     />
   );
 }
 
-/**
- * Scrollable body of a focus modal.
- *
- * Same pattern as `DialogBody`: `min-h-0` lets the flex child shrink,
- * `scroll-fade-y` hints at more content, and `no-scrollbar` hides the bar.
- */
 function FocusModalBody({
   className,
   ...props
@@ -167,7 +160,8 @@ function FocusModalBody({
   return (
     <div
       className={cn(
-        "scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto",
+        FOCUS_MODAL_PANEL,
+        "no-scrollbar min-h-0 flex-1 overflow-y-auto px-(--focus-modal-panel-px) py-(--focus-modal-panel-py)",
         className
       )}
       data-slot="focus-modal-body"
