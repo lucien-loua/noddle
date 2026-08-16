@@ -9,6 +9,7 @@ import { check, runVerify } from "@noddle/testing";
 import {
   parseWebhookPullRequest,
   parseWebhookPush,
+  payloadRepository,
   repoSlug,
   repositoryMatches,
 } from "@/lib/webhook.server";
@@ -259,5 +260,40 @@ await runVerify("webhook payloads", () => {
   check(
     "a service with neither name nor URL matches nothing",
     !repositoryMatches({ gitRepoFullName: null, gitRepoUrl: null }, "org/app")
+  );
+
+  // ── naming the repository, per forge ─────────────────────────────────
+  // The two forges put it in different places under different names. Reading
+  // the GitHub field from a GitLab payload yields null, and a null repository
+  // means every push is ignored with a 200.
+  const ghBody = JSON.stringify({ repository: { full_name: "Org/App" } });
+  const glBody = JSON.stringify({
+    project: { path_with_namespace: "Group/Sub/App" },
+  });
+
+  check(
+    "GitHub reads repository.full_name, lowercased",
+    payloadRepository("github", ghBody) === "org/app"
+  );
+  check(
+    "GitLab reads project.path_with_namespace, subgroups intact",
+    payloadRepository("gitlab", glBody) === "group/sub/app"
+  );
+  check(
+    "each forge reads its OWN field and not the other's",
+    payloadRepository("github", glBody) === null &&
+      payloadRepository("gitlab", ghBody) === null
+  );
+  check(
+    "an unreadable body names nothing rather than throwing",
+    payloadRepository("github", "{{") === null &&
+      payloadRepository("gitlab", "[]") === null
+  );
+
+  // The end-to-end shape of the defect that started this: a GitLab subgroup
+  // payload against the service that deploys it.
+  check(
+    "a GitLab subgroup payload matches its service",
+    repositoryMatches(picked, payloadRepository("gitlab", glBody) ?? "")
   );
 });

@@ -148,7 +148,9 @@ export const startGithubApp = createServerFn({ method: "POST" })
                 name: data.name,
                 redirectUrl: `${origin}/api/git-providers/github/callback`,
                 url: origin,
-                webhookUrl: `${origin}/api/webhooks/github`,
+                // Per connection, so a delivery names its own App instead of
+                // being matched by trying every stored secret.
+                webhookUrl: `${origin}/api/webhooks/github/${id}`,
               })
             ),
             name: data.name,

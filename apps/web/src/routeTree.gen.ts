@@ -33,6 +33,7 @@ import { Route as ApiWebhooksGitlabRouteImport } from './routes/api/webhooks/git
 import { Route as ProjectsProjectIdEnvironmentIdRouteImport } from './routes/projects_.$projectId_.$environmentId'
 import { Route as ApiGitProvidersGithubCallbackRouteImport } from './routes/api/git-providers/github/callback'
 import { Route as ApiGitProvidersGitlabCallbackRouteImport } from './routes/api/git-providers/gitlab/callback'
+import { Route as ApiWebhooksGithubGitProviderIdRouteImport } from './routes/api/webhooks/github_.$gitProviderId'
 import { Route as ApiWebhooksGitlabGitProviderIdRouteImport } from './routes/api/webhooks/gitlab_.$gitProviderId'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
 import { Route as ApiWebhooksStackStackIdRouteImport } from './routes/api/webhooks/stack/$stackId'
@@ -164,6 +165,12 @@ const ApiGitProvidersGitlabCallbackRoute =
     path: '/api/git-providers/gitlab/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiWebhooksGithubGitProviderIdRoute =
+  ApiWebhooksGithubGitProviderIdRouteImport.update({
+    id: '/api/webhooks/github_/$gitProviderId',
+    path: '/api/webhooks/github/$gitProviderId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiWebhooksGitlabGitProviderIdRoute =
   ApiWebhooksGitlabGitProviderIdRouteImport.update({
     id: '/api/webhooks/gitlab_/$gitProviderId',
@@ -225,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/webhooks/github/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -257,6 +265,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/webhooks/github/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -290,6 +299,7 @@ export interface FileRoutesById {
   '/projects_/$projectId_/$environmentId': typeof ProjectsProjectIdEnvironmentIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/webhooks/github_/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab_/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/$environmentId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/webhooks/github/$gitProviderId'
     | '/api/webhooks/gitlab/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/$environmentId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/webhooks/github/$gitProviderId'
     | '/api/webhooks/gitlab/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -388,6 +400,7 @@ export interface FileRouteTypes {
     | '/projects_/$projectId_/$environmentId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/webhooks/github_/$gitProviderId'
     | '/api/webhooks/gitlab_/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
@@ -421,6 +434,7 @@ export interface RootRouteChildren {
   ProjectsProjectIdEnvironmentIdRoute: typeof ProjectsProjectIdEnvironmentIdRoute
   ApiGitProvidersGithubCallbackRoute: typeof ApiGitProvidersGithubCallbackRoute
   ApiGitProvidersGitlabCallbackRoute: typeof ApiGitProvidersGitlabCallbackRoute
+  ApiWebhooksGithubGitProviderIdRoute: typeof ApiWebhooksGithubGitProviderIdRoute
   ApiWebhooksGitlabGitProviderIdRoute: typeof ApiWebhooksGitlabGitProviderIdRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
   ApiWebhooksStackStackIdRoute: typeof ApiWebhooksStackStackIdRoute
@@ -599,6 +613,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGitProvidersGitlabCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/github_/$gitProviderId': {
+      id: '/api/webhooks/github_/$gitProviderId'
+      path: '/api/webhooks/github/$gitProviderId'
+      fullPath: '/api/webhooks/github/$gitProviderId'
+      preLoaderRoute: typeof ApiWebhooksGithubGitProviderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/gitlab_/$gitProviderId': {
       id: '/api/webhooks/gitlab_/$gitProviderId'
       path: '/api/webhooks/gitlab/$gitProviderId'
@@ -669,6 +690,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsProjectIdEnvironmentIdRoute: ProjectsProjectIdEnvironmentIdRoute,
   ApiGitProvidersGithubCallbackRoute: ApiGitProvidersGithubCallbackRoute,
   ApiGitProvidersGitlabCallbackRoute: ApiGitProvidersGitlabCallbackRoute,
+  ApiWebhooksGithubGitProviderIdRoute: ApiWebhooksGithubGitProviderIdRoute,
   ApiWebhooksGitlabGitProviderIdRoute: ApiWebhooksGitlabGitProviderIdRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
   ApiWebhooksStackStackIdRoute: ApiWebhooksStackStackIdRoute,

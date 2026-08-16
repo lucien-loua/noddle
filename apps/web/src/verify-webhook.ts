@@ -103,6 +103,38 @@ function sign(body: string, secret: string): string {
   return `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
 }
 
+type Forge = "github" | "gitlab";
+
+/**
+ * The one thing that differs between the forges: GitHub signs the body,
+ * GitLab echoes the shared secret. The endpoint accepts both, so every
+ * scenario below can be run either way.
+ */
+function authHeaders(forge: Forge, body: string): Record<string, string> {
+  return forge === "gitlab"
+    ? { "x-gitlab-token": WEBHOOK_SECRET }
+    : { "x-hub-signature-256": sign(body, WEBHOOK_SECRET) };
+}
+
+async function postWebhook(
+  url: string,
+  forge: Forge,
+  body: string
+): Promise<{ body: Record<string, unknown>; status: number }> {
+  const r = await fetch(url, {
+    body,
+    headers: {
+      "content-type": "application/json",
+      ...authHeaders(forge, body),
+    },
+    method: "POST",
+  });
+  return {
+    body: (await r.json().catch(() => ({}))) as Record<string, unknown>,
+    status: r.status,
+  };
+}
+
 async function waitForWeb(): Promise<boolean> {
   for (let i = 0; i < 120; i += 1) {
     try {
@@ -402,23 +434,18 @@ try {
 
   // ── THE test: a signed push on the right branch really deploys ──────────
   const body = githubPush("main", headSha);
-  const res = await fetch(`${BASE}${path}`, {
-    body,
-    headers: {
-      "content-type": "application/json",
-      "x-hub-signature-256": sign(body, WEBHOOK_SECRET),
-    },
-    method: "POST",
-  });
-  const payload = (await res.json()) as { deploymentId?: string };
-  if (res.ok && payload.deploymentId) {
-    ok(`webhook accepted, deployment ${payload.deploymentId} queued`);
+  const res = await postWebhook(`${BASE}${path}`, "github", body);
+  const queued = Array.isArray(res.body.queued)
+    ? (res.body.queued as string[])
+    : [];
+  const [deploymentId] = queued;
+  if (res.status === 200 && deploymentId) {
+    ok(`webhook accepted, deployment ${deploymentId} queued`);
   } else {
-    ko(`webhook: status ${res.status}, body ${JSON.stringify(payload)}`);
+    ko(`webhook: status ${res.status}, body ${JSON.stringify(res.body)}`);
     throw new Error("aborting");
   }
 
-  const { deploymentId } = payload;
   const deadline = Date.now() + DEPLOY_TIMEOUT_MS;
   let final: typeof deployments.$inferSelect | undefined;
   while (Date.now() < deadline) {
@@ -445,20 +472,8 @@ try {
   // The SAME webhook, the other event. What matters here isn't that a PR
   // deploys — it's that a fork gets NOTHING, and that a `synchronize`
   // lands on the same row instead of creating a second one.
-  const postPr = async (prPayload: string) => {
-    const r = await fetch(`${BASE}${path}`, {
-      body: prPayload,
-      headers: {
-        "content-type": "application/json",
-        "x-hub-signature-256": sign(prPayload, WEBHOOK_SECRET),
-      },
-      method: "POST",
-    });
-    return {
-      body: (await r.json()) as Record<string, unknown>,
-      status: r.status,
-    };
-  };
+  const postPr = (prPayload: string) =>
+    postWebhook(`${BASE}${path}`, "github", prPayload);
   const previews = async () =>
     await db.query.services.findMany({
       where: isNotNull(services.previewOfServiceId),

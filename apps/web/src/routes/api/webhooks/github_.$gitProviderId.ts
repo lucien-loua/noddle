@@ -4,8 +4,8 @@ import { handleWebhook } from "@/lib/webhook-intake.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
-/** Where hooks Noddle registers point. */
-export const Route = createFileRoute("/api/webhooks/gitlab_/$gitProviderId")({
+/** What new App manifests declare as their hook URL. */
+export const Route = createFileRoute("/api/webhooks/github_/$gitProviderId")({
   server: {
     handlers: {
       POST: ({ params, request }) => {
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/webhooks/gitlab_/$gitProviderId")({
         if (!UUID.test(gitProviderId)) {
           return new Response("invalid id", { status: 400 });
         }
-        return handleWebhook(request, forgeTargets("gitlab", gitProviderId));
+        return handleWebhook(request, forgeTargets("github", gitProviderId));
       },
     },
   },

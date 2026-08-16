@@ -242,6 +242,29 @@ export function repoSlug(url: string | null | undefined): string | null {
 }
 
 /**
+ * The repository a payload names. GitHub says `repository.full_name`,
+ * GitLab `project.path_with_namespace`.
+ */
+export function payloadRepository(
+  forge: "github" | "gitlab",
+  rawBody: string
+): string | null {
+  try {
+    const body = JSON.parse(rawBody) as {
+      project?: { path_with_namespace?: unknown };
+      repository?: { full_name?: unknown };
+    };
+    const named =
+      forge === "gitlab"
+        ? body.project?.path_with_namespace
+        : body.repository?.full_name;
+    return typeof named === "string" ? named.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Does this service deploy the repository the payload names?
  *
  * Two ways, and which one applies is decided by what the service knows:
@@ -259,12 +282,12 @@ export function repoSlug(url: string | null | undefined): string | null {
  */
 export function repositoryMatches(
   service: { gitRepoFullName: string | null; gitRepoUrl: string | null },
-  payloadRepository: string
+  repository: string
 ): boolean {
   const full = service.gitRepoFullName?.trim().toLowerCase();
   if (full) {
-    return full === payloadRepository.trim().toLowerCase();
+    return full === repository.trim().toLowerCase();
   }
   const slug = repoSlug(service.gitRepoUrl);
-  return slug !== null && slug === repoSlug(payloadRepository);
+  return slug !== null && slug === repoSlug(repository);
 }

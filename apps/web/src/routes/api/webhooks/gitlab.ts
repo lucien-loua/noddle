@@ -1,14 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { handleGitlabWebhook } from "@/lib/gitlab-webhook.server";
+import { forgeTargets } from "@/lib/forge-webhook.server";
+import { handleWebhook } from "@/lib/webhook-intake.server";
 
-/**
- * Hooks added by hand, from before Noddle registered them itself. The
- * connection is not in the URL, so it is found by trying each secret.
- */
+/** Hooks added by hand, without the connection in the URL. */
 export const Route = createFileRoute("/api/webhooks/gitlab")({
   server: {
     handlers: {
-      POST: ({ request }) => handleGitlabWebhook(request),
+      POST: ({ request }) => handleWebhook(request, forgeTargets("gitlab")),
     },
   },
 });
