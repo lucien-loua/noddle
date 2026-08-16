@@ -130,6 +130,8 @@ function TerminalSession({
   const handleReady = useCallback((term: WTerm) => {
     sizeRef.current = { cols: term.cols, rows: term.rows };
     setReady(true);
+    // The dialog's `initialFocus` already ran — this mounts after it.
+    handleRef.current?.focus();
   }, []);
 
   const handleError = useCallback(() => {
@@ -213,7 +215,19 @@ export function TerminalDialog({
   const [status, setStatus] = useState<"connecting" | "open" | "closed">(
     "connecting"
   );
+  // wterm measures once at mount, and the popup opens with a `zoom-in-95`
+  // transform: mounted inside that window it sizes to a 95% box, and its
+  // ResizeObserver never corrects it since the layout size never changed.
+  const [settled, setSettled] = useState(false);
   const termHostRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenChangeComplete = useCallback(
+    (next: boolean) => {
+      setSettled(next);
+      onOpenChangeComplete?.(next);
+    },
+    [onOpenChangeComplete]
+  );
 
   useEffect(() => {
     if (open) {
@@ -238,7 +252,7 @@ export function TerminalDialog({
   return (
     <FocusModal
       onOpenChange={onOpenChange}
-      onOpenChangeComplete={onOpenChangeComplete}
+      onOpenChangeComplete={handleOpenChangeComplete}
       open={open}
     >
       <FocusModalContent initialFocus={initialFocus}>
@@ -251,7 +265,7 @@ export function TerminalDialog({
           </div>
         </FocusModalHeader>
         <FocusModalBody className="mask-none flex min-h-0 flex-col overflow-hidden p-0">
-          {target ? (
+          {target && settled ? (
             <TerminalSession
               onStatus={handleStatus}
               target={target}
