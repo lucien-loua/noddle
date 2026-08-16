@@ -6,6 +6,7 @@
     "#*": "./src/*.ts"
   },
   "exports": {
+    "./build-spec": "./src/build-spec.ts",
     "./deploy-policy": "./src/deploy-policy.ts",
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",

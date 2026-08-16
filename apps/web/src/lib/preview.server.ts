@@ -5,6 +5,7 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
+import { buildSpecOf } from "@noddle/shared/build-spec";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -155,25 +156,15 @@ async function createPreview(
   const [preview] = await db
     .insert(services)
     .values({
-      buildMethod: parent.buildMethod,
-      buildPath: parent.buildPath,
-      cleanCache: parent.cleanCache,
-      deployKeyId: parent.deployKeyId,
-      dockerImage: parent.dockerImage,
+      ...buildSpecOf(parent),
       environmentId,
+      // The pull request's branch, not the parent's — the one field a
+      // preview genuinely builds differently.
       gitBranch: opts.headBranch,
-      gitProviderId: parent.gitProviderId,
-      gitRepoFullName: parent.gitRepoFullName,
-      gitRepoUrl: parent.gitRepoUrl,
-      // A preview builds the same repository: without this, a parent with
-      // submodules builds and its PR does not.
-      gitSubmodules: parent.gitSubmodules,
       name: previewServiceName(parent.name, opts.prNumber),
-      port: parent.port,
       previewOfServiceId: parent.id,
       prNumber: opts.prNumber,
       serverId: parent.serverId,
-      sourceType: parent.sourceType,
     })
     .returning();
   if (!preview) {

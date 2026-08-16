@@ -1,5 +1,6 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { environments, envVars, services, stacks } from "@noddle/db/schema";
+import { buildSpecOf } from "@noddle/shared/build-spec";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
@@ -58,21 +59,10 @@ export async function copyEnvironment(
     const [clone] = await db
       .insert(services)
       .values({
-        buildMethod: s.buildMethod,
-        dockerImage: s.dockerImage,
+        ...buildSpecOf(s),
         environmentId: target.id,
-        gitBranch: s.gitBranch,
-        // The connection travels with the repository. Without it the clone
-        // silently falls back to anonymous, which fails only for a private
-        // repository and only at the first deploy of the copy.
-        gitProviderId: s.gitProviderId,
-        gitRepoFullName: s.gitRepoFullName,
-        gitRepoUrl: s.gitRepoUrl,
         name: s.name,
-        port: s.port,
-        registryId: s.registryId,
         serverId: s.serverId,
-        sourceType: s.sourceType,
       })
       .returning();
     if (!clone) {
