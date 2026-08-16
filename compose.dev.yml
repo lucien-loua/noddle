@@ -1,0 +1,95 @@
+# The control plane's own state, for local development.
+#
+# This is NOT a development copy of `installer/docker-compose.yml`. That file
+# describes an installed Noddle: it builds web and worker as images, joins the
+# external `noddle-public` overlay, publishes no port for Postgres or Redis,
+# and mounts certificates that only `install.sh` can generate. Overriding it
+# would mean negating five of its decisions — an override that contradicts
+# most of its base is a second file wearing a disguise.
+#
+# What this file does NOT cover: deploy targets. Those are Multipass VMs over
+# real SSH, at 2 GB, and nothing here substitutes for them (ADR-0016).
+# `scripts/spike-local.sh` still owns that half.
+#
+# Ports are shifted into a 5xxxx range on purpose: the prefix means "this
+# belongs to Noddle's local development", so a Postgres you already run on
+# 5432 keeps working.
+#
+#   bun run dev:stack         start, and wait until healthy
+#   bun run dev:stack:down    stop, keep the data
+#   bun run dev:stack:reset   destroy the volumes, recreate, migrate
+name: noddle-dev
+
+services:
+  postgres:
+    # Same tag as `installer/docker-compose.yml`, and `verify-compose` fails
+    # if the two ever drift. Development finding a bug production cannot
+    # reproduce — or the reverse — is the whole cost being avoided here.
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      # The SAME role as production. The postgres image only creates the role
+      # named here, so a `postgres` superuser simply would not exist on an
+      # installed Noddle: copying a DSN across would fail with
+      # `role "postgres" does not exist`, which does not say why.
+      POSTGRES_USER: noddle
+      # Local only, and never reachable from outside this machine. Production
+      # draws its own from `openssl rand -hex 24` in `install.sh`.
+      POSTGRES_PASSWORD: noddle
+      POSTGRES_DB: noddle
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noddle -d noddle"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:56379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3, for the backup and restore suites. Production ships no S3 at all — the
+  # destination is the user's — so this service has no counterpart to drift
+  # against, and `verify-compose` does not check it.
+  #
+  # Bound to loopback like the rest: it is the WORKER that talks to S3, never
+  # the target server, so a Multipass VM never needs to reach this port.
+  rustfs:
+    # `latest` on purpose, and it is the ONE moving tag in this repo — the
+    # pinning rule covers what Noddle installs on a target server, and this
+    # is neither installed nor shipped: production carries no S3 at all, the
+    # destination is the user's.
+    #
+    # What that costs, so it is not rediscovered later: every "measured
+    # against RustFS" claim in the codebase (backup-store/index.ts,
+    # schema/backups.ts, ssh-executor/index.ts) was taken against whatever
+    # `latest` resolved to that day. When it moves, the backup suites change
+    # substrate with nothing in the diff to say so — and `verify-compose`
+    # cannot catch it, having no production counterpart to compare against.
+    #
+    # The credentials the backup verifies expect (rustfsadmin/rustfsadmin)
+    # are this image's documented defaults.
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:59000:9000"
+    volumes:
+      - rustfs-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:
+  rustfs-data:
