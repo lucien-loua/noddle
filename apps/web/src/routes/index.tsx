@@ -1,4 +1,11 @@
-import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
+import {
+  ArrowRightIcon,
+  CheckCircleIcon,
+  CubeIcon,
+  FolderIcon,
+  PulseIcon,
+  RocketLaunchIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -110,25 +117,25 @@ function StatCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard label="Projects">
+      <StatCard icon={FolderIcon} label="Projects">
         <StatNumber
           detail={`${counts.environments} environment${counts.environments === 1 ? "" : "s"}`}
           value={counts.projects}
         />
       </StatCard>
-      <StatCard label="Services">
+      <StatCard icon={CubeIcon} label="Services">
         <StatNumber
           detail={`${counts.services} app${counts.services === 1 ? "" : "s"} · ${counts.stacks} compose · ${counts.databases} db`}
           value={counts.services + counts.stacks + counts.databases}
         />
       </StatCard>
-      <StatCard label="Deploys">
+      <StatCard icon={RocketLaunchIcon} label="Deploys">
         <StatNumber
           detail={counts.deploys7d === 0 ? "no activity yet" : "last 7 days"}
           value={counts.deploys7d}
         />
       </StatCard>
-      <StatCard label="Status">
+      <StatCard icon={PulseIcon} label="Status">
         {hasStatus ? (
           <StatusSummary counts={statusCounts} />
         ) : (
@@ -146,11 +153,23 @@ function StatCards({
  * breakdown instead of a number — it now takes the same shell and only
  * differs by what it puts inside it.
  */
-function StatCard({ children, label }: { children: ReactNode; label: string }) {
+function StatCard({
+  children,
+  icon: Icon,
+  label,
+}: {
+  children: ReactNode;
+  icon: typeof FolderIcon;
+  label: string;
+}) {
   return (
     <Frame spacing="sm" variant="ghost">
-      <FrameHeader>
-        <FrameTitle className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+      {/* `text-muted-foreground` sits on the header, not on the title: the
+          glyph takes its colour from the row it belongs to, so there is one
+          place to change and no second copy to keep in step. */}
+      <FrameHeader className="flex-row items-center gap-1.5 text-muted-foreground">
+        <Icon aria-hidden="true" className="size-3.5 shrink-0" weight="fill" />
+        <FrameTitle className="font-medium text-xs uppercase tracking-wide">
           {label}
         </FrameTitle>
       </FrameHeader>
