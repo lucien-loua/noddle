@@ -1,10 +1,22 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Frame,
   FrameDescription,
@@ -12,7 +24,11 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -105,26 +121,48 @@ function DeploymentsPage() {
     []
   );
 
+  const filtering = search.trim() !== "" || status !== "all" || type !== "all";
+  const clearFilters = useCallback(() => {
+    setSearch("");
+    setStatus("all");
+    setType("all");
+  }, []);
+
   return (
     <AppShell email={email} role={role} title="Deployments">
-      <Frame variant="ghost">
+      {/* `stacked`: the filter bar and the table are one object — a
+          toolbar over its content — not two cards that happen to sit above
+          each other. Every panel below is therefore a DIRECT child, which
+          is what the join is keyed on. */}
+      <Frame stacked variant="ghost">
         <FrameHeader>
-          <FrameTitle>Deployments</FrameTitle>
+          <FrameTitle className="flex items-center gap-2">
+            Deployments
+            <Badge variant="outline">
+              {filtering ? `${visible.length} of ${log.length}` : log.length}
+            </Badge>
+          </FrameTitle>
           <FrameDescription>
             Every application and compose deployment, most recent first.
             Creating a service happens in its environment, not here.
           </FrameDescription>
         </FrameHeader>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              aria-label="Search deployments"
-              className="min-w-56 flex-1"
-              onChange={handleSearchChange}
-              placeholder="Search by name, project, environment, server…"
-              value={search}
-            />
+        {/* No filter bar over an empty log: three controls that can only
+            ever narrow nothing down to nothing. */}
+        {log.length > 0 ? (
+          <FramePanel className="flex flex-wrap items-center gap-2">
+            <InputGroup className="min-w-56 flex-1">
+              <InputGroupAddon>
+                <MagnifyingGlassIcon />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label="Search deployments"
+                onChange={handleSearchChange}
+                placeholder="Search by name, project, environment, server…"
+                value={search}
+              />
+            </InputGroup>
             <Select
               items={Object.fromEntries([
                 ["all", "All statuses"],
@@ -167,55 +205,114 @@ function DeploymentsPage() {
                 </SelectGroup>
               </SelectContent>
             </Select>
-          </div>
+            {filtering ? (
+              <Button onClick={clearFilters} size="sm" variant="ghost">
+                Clear
+              </Button>
+            ) : null}
+          </FramePanel>
+        ) : null}
 
-          {visible.length === 0 ? (
-            <Empty className="h-full">
-              <EmptyTitle>No deployments found</EmptyTitle>
+        {/* The two empty states are NOT the same event, so they do not get
+            the same way out: filtered to nothing is undone by clearing the
+            filters, while nothing ever deployed is undone somewhere else
+            entirely — this page cannot start a deployment, and saying so
+            with a link beats a sentence that leaves you here. */}
+        {visible.length === 0 ? (
+          <FramePanel>
+            <Empty>
+              <EmptyTitle>
+                {filtering ? "No deployments match" : "No deployments yet"}
+              </EmptyTitle>
               <EmptyDescription>
-                {log.length === 0
-                  ? "Deployments from applications and compose will appear here."
-                  : "Try a different search or filter."}
+                {filtering
+                  ? "No deployment matches this search and these filters."
+                  : "Deployments from applications and compose appear here. They start from a service, in its environment."}
               </EmptyDescription>
+              <EmptyContent>
+                {filtering ? (
+                  <Button onClick={clearFilters} variant="outline">
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button nativeButton={false} render={<Link to="/projects" />}>
+                    Go to projects
+                  </Button>
+                )}
+              </EmptyContent>
             </Empty>
-          ) : (
-            // `p-0`: the table already carries its own cell margins, and
-            // the panel should only frame it — same composition as
-            // `audit-table.tsx`.
-            <FramePanel className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Service</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Environment</TableHead>
-                    <TableHead>Server</TableHead>
-                    <TableHead className="w-24">Commit</TableHead>
-                    <TableHead className="w-32">Status</TableHead>
-                    <TableHead className="w-32">Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visible.map((d) => (
-                    <DeploymentLogLine key={`${d.kind}:${d.id}`} row={d} />
-                  ))}
-                </TableBody>
-              </Table>
-            </FramePanel>
-          )}
-        </div>
+          </FramePanel>
+        ) : (
+          // `p-0`: the table already carries its own cell margins, and
+          // the panel should only frame it — same composition as
+          // `audit-table.tsx`.
+          <FramePanel className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Service</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Environment</TableHead>
+                  <TableHead>Server</TableHead>
+                  <TableHead className="w-24">Commit</TableHead>
+                  <TableHead className="w-32">Status</TableHead>
+                  <TableHead className="w-32">Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((d) => (
+                  <DeploymentLogLine key={`${d.kind}:${d.id}`} row={d} />
+                ))}
+              </TableBody>
+            </Table>
+          </FramePanel>
+        )}
       </Frame>
     </AppShell>
   );
 }
 
+/**
+ * A row goes to THIS deployment, not to the service that owns it.
+ *
+ * The resource's page already reads `?deployment=<id>` and opens that
+ * build's logs, so the row can land on the exact thing it names — one step
+ * instead of "open the service, find the tab, find the line again". The
+ * name stays a real link so middle-click and "open in new tab" work; the
+ * row's own handler is what makes the other six cells clickable, which
+ * they were not.
+ */
 function DeploymentLogLine({ row }: { row: DeploymentLogRow }) {
   const label = deploymentLabel(row.status);
+  const navigate = useNavigate();
+
+  const handleRowClick = useCallback(() => {
+    if (row.kind === "service") {
+      navigate({
+        params: {
+          environmentId: row.environmentId,
+          projectId: row.projectId,
+          serviceId: row.resourceId,
+        },
+        search: { deployment: row.id, tab: "deployments" },
+        to: "/projects/$projectId/$environmentId/services/$serviceId",
+      });
+      return;
+    }
+    navigate({
+      params: {
+        environmentId: row.environmentId,
+        projectId: row.projectId,
+        stackId: row.resourceId,
+      },
+      search: { deployment: row.id, tab: "history" },
+      to: "/projects/$projectId/$environmentId/stacks/$stackId",
+    });
+  }, [navigate, row]);
+
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={handleRowClick}>
       <TableCell className="font-medium">
-        {/* The link targets the RESOURCE, not the deployment: it's its page
-            that carries the history and the logs. */}
         {row.kind === "service" ? (
           <Link
             className="hover:underline"
@@ -224,6 +321,7 @@ function DeploymentLogLine({ row }: { row: DeploymentLogRow }) {
               projectId: row.projectId,
               serviceId: row.resourceId,
             }}
+            search={{ deployment: row.id, tab: "deployments" }}
             to="/projects/$projectId/$environmentId/services/$serviceId"
           >
             {row.name}
@@ -236,6 +334,7 @@ function DeploymentLogLine({ row }: { row: DeploymentLogRow }) {
               projectId: row.projectId,
               stackId: row.resourceId,
             }}
+            search={{ deployment: row.id, tab: "history" }}
             to="/projects/$projectId/$environmentId/stacks/$stackId"
           >
             {row.name}

@@ -23,7 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
@@ -247,24 +253,26 @@ function ConnectGithubDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <Field>
-            <FieldLabel htmlFor="github-app-name">App name</FieldLabel>
-            <FieldDescription>
-              Must be unique across all of GitHub. Letters, digits and dashes.
-            </FieldDescription>
-            <Input
-              autoComplete="off"
-              id="github-app-name"
-              onChange={handleName}
-              placeholder="noddle-acme"
-              value={name}
-            />
-          </Field>
-          {start.isError ? (
-            <p className="mt-3 text-destructive text-sm" role="alert">
-              {errorMessage(start.error, "could not start the connection")}
-            </p>
-          ) : null}
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="github-app-name">App name</FieldLabel>
+              <FieldDescription>
+                Must be unique across all of GitHub. Letters, digits and dashes.
+              </FieldDescription>
+              <Input
+                autoComplete="off"
+                id="github-app-name"
+                onChange={handleName}
+                placeholder="noddle-acme"
+                value={name}
+              />
+            </Field>
+            {start.isError ? (
+              <FieldError>
+                {errorMessage(start.error, "could not start the connection")}
+              </FieldError>
+            ) : null}
+          </FieldGroup>
 
           {posting ? (
             <form action={posting.action} method="post" ref={formRef}>
@@ -370,72 +378,79 @@ function ConnectGitlabDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <Field>
-            <FieldLabel htmlFor="gitlab-redirect">Redirect URI</FieldLabel>
-            <FieldDescription>
-              Create the application at{" "}
-              {applicationsUrl ? (
-                <a
-                  className="underline"
-                  href={applicationsUrl}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {applicationsUrl}
-                </a>
-              ) : (
-                <span className="font-mono">
-                  {url}/-/user_settings/applications
-                </span>
-              )}{" "}
-              with scopes <code className="font-mono">api</code> and{" "}
-              <code className="font-mono">read_repository</code>, and register
-              this exact URI. A mismatch is only refused once GitLab has already
-              taken you there.
-            </FieldDescription>
-            <Input id="gitlab-redirect" readOnly value={redirectUri} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="gitlab-name">Name</FieldLabel>
-            <Input
-              autoComplete="off"
-              id="gitlab-name"
-              onChange={handleName}
-              placeholder="acme-gitlab"
-              value={name}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="gitlab-url">GitLab URL</FieldLabel>
-            <FieldDescription>
-              Change it for a self-hosted instance.
-            </FieldDescription>
-            <Input id="gitlab-url" onChange={handleUrl} value={url} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="gitlab-app-id">Application ID</FieldLabel>
-            <Input
-              autoComplete="off"
-              id="gitlab-app-id"
-              onChange={handleAppId}
-              value={applicationId}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="gitlab-secret">Secret</FieldLabel>
-            <Input
-              autoComplete="off"
-              id="gitlab-secret"
-              onChange={handleSecret}
-              type="password"
-              value={secret}
-            />
-          </Field>
-          {start.isError ? (
-            <p className="mt-3 text-destructive text-sm" role="alert">
-              {errorMessage(start.error, "could not start the connection")}
-            </p>
-          ) : null}
+          {/* `FieldGroup` and not five loose `Field`: `DialogBody` is a
+              scroll container with no vertical rhythm of its own, so the
+              fields were touching. The gap between fields belongs to the
+              group, exactly as the gap between a label and its input
+              belongs to `Field`. */}
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="gitlab-redirect">Redirect URI</FieldLabel>
+              <FieldDescription>
+                Create the application at{" "}
+                {applicationsUrl ? (
+                  <a
+                    className="underline"
+                    href={applicationsUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {applicationsUrl}
+                  </a>
+                ) : (
+                  <span className="font-mono">
+                    {url}/-/user_settings/applications
+                  </span>
+                )}{" "}
+                with scopes <code className="font-mono">api</code> and{" "}
+                <code className="font-mono">read_repository</code>, and register
+                this exact URI. A mismatch is only refused once GitLab has
+                already taken you there.
+              </FieldDescription>
+              <Input id="gitlab-redirect" readOnly value={redirectUri} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="gitlab-name">Name</FieldLabel>
+              <Input
+                autoComplete="off"
+                id="gitlab-name"
+                onChange={handleName}
+                placeholder="acme-gitlab"
+                value={name}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="gitlab-url">GitLab URL</FieldLabel>
+              <FieldDescription>
+                Change it for a self-hosted instance.
+              </FieldDescription>
+              <Input id="gitlab-url" onChange={handleUrl} value={url} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="gitlab-app-id">Application ID</FieldLabel>
+              <Input
+                autoComplete="off"
+                id="gitlab-app-id"
+                onChange={handleAppId}
+                value={applicationId}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="gitlab-secret">Secret</FieldLabel>
+              <Input
+                autoComplete="off"
+                id="gitlab-secret"
+                onChange={handleSecret}
+                type="password"
+                value={secret}
+              />
+            </Field>
+            {start.isError ? (
+              <FieldError>
+                {errorMessage(start.error, "could not start the connection")}
+              </FieldError>
+            ) : null}
+          </FieldGroup>
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button variant="outline">Cancel</Button>} />
