@@ -27,6 +27,14 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   Field,
   FieldDescription,
   FieldGroup,
@@ -412,21 +420,8 @@ function ProviderRepositoryField({
     (p) => p.connected && p.providerType === forge
   );
 
-  // Said rather than hidden. A silent tab reads as "this forge does not
-  // work here", when the answer is one screen away.
-  if (connected.length === 0) {
-    return (
-      <FieldDescription>
-        No {forge === "gitlab" ? "GitLab" : "GitHub"} connection yet — add one
-        under{" "}
-        <Link className="underline" to="/git-providers">
-          Git providers
-        </Link>{" "}
-        to pick a repository from a list. You can still paste a URL below.
-      </FieldDescription>
-    );
-  }
-
+  // The unconnected case never reaches here — `ForgeTab` replaces the whole
+  // tab with an empty state before this renders.
   return (
     <>
       <Field>
@@ -810,6 +805,79 @@ function DockerSourceForm({
   );
 }
 
+const FORGE_LABEL = Object.freeze({ github: "GitHub", gitlab: "GitLab" });
+
+/**
+ * A forge tab, gated on that forge actually being connected.
+ *
+ * Without the gate every tab rendered the same form, so GitHub, GitLab and Git
+ * were three names for one screen — the tabs looked like a choice that changed
+ * nothing. A forge tab only means something once a connection exists, and until
+ * then the honest answer is where to go, not a form that cannot use the forge.
+ *
+ * Cloning a URL by hand is NOT lost: that is what the Git tab is, and the empty
+ * state points at it. That is also what makes the two tabs distinct rather than
+ * interchangeable.
+ */
+function ForgeTab({
+  canEdit,
+  forge,
+  service,
+}: {
+  canEdit: boolean;
+  forge: "github" | "gitlab";
+  service: ServiceRow;
+}) {
+  const providers = useQuery(queries.gitProviders());
+
+  const connected = (providers.data ?? []).filter(
+    (p) => p.connected && p.providerType === forge
+  );
+
+  // Loading is NOT emptiness. Rendering the empty state first would flash
+  // "not connected" at someone who is connected, every single time.
+  if (providers.isPending) {
+    return (
+      <div className="flex justify-center p-12">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (connected.length === 0) {
+    return (
+      <Empty>
+        <EmptyMedia variant="icon">
+          {forge === "gitlab" ? <GitlabIcon /> : <GithubIcon />}
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>{FORGE_LABEL[forge]} is not connected</EmptyTitle>
+          <EmptyDescription>
+            Connect a {FORGE_LABEL[forge]} account to pick a repository from a
+            list and deploy on every push. To clone a public repository by URL
+            instead, use the Git tab.
+          </EmptyDescription>
+        </EmptyHeader>
+        {canEdit ? (
+          <EmptyContent>
+            <Button
+              nativeButton={false}
+              render={<Link to="/git-providers" />}
+              variant="outline"
+            >
+              Connect {FORGE_LABEL[forge]}
+            </Button>
+          </EmptyContent>
+        ) : null}
+      </Empty>
+    );
+  }
+
+  return (
+    <GitSourceForm canEdit={canEdit} service={service} sourceType={forge} />
+  );
+}
+
 export function ServiceProvider({
   canEdit,
   service,
@@ -859,18 +927,10 @@ export function ServiceProvider({
           </TabsList>
 
           <TabsContent value="github">
-            <GitSourceForm
-              canEdit={canEdit}
-              service={service}
-              sourceType="github"
-            />
+            <ForgeTab canEdit={canEdit} forge="github" service={service} />
           </TabsContent>
           <TabsContent value="gitlab">
-            <GitSourceForm
-              canEdit={canEdit}
-              service={service}
-              sourceType="gitlab"
-            />
+            <ForgeTab canEdit={canEdit} forge="gitlab" service={service} />
           </TabsContent>
           <TabsContent value="git">
             <GitSourceForm

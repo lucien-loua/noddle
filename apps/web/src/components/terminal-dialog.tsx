@@ -241,9 +241,7 @@ export function TerminalDialog({
       onOpenChangeComplete={onOpenChangeComplete}
       open={open}
     >
-      <FocusModalContent
-        initialFocus={initialFocus}
-      >
+      <FocusModalContent initialFocus={initialFocus}>
         <FocusModalHeader>
           <div className="flex min-w-0 items-center gap-2">
             <TerminalIcon className="size-4 shrink-0" />
