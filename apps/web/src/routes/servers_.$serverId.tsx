@@ -12,6 +12,11 @@ import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Frame,
   FrameHeader,
   FramePanel,
@@ -93,6 +98,7 @@ function ServerDetail() {
   const canShell = useCan(known, "server", "shell");
   const { openTerminal, terminal } = useTerminalDialog();
   const [pruneError, setPruneError] = useState<string | null>(null);
+  const [resourcesOpen, setResourcesOpen] = useState(true);
   const handlePruneError = useCallback((m: string) => setPruneError(m), []);
   const handleOpenTerminal = useCallback(() => {
     openTerminal({
@@ -169,12 +175,36 @@ function ServerDetail() {
           performance question, and it is what makes a deploy fail. */}
       <section className="mt-8 space-y-3">
         <h2 className="font-medium text-sm">Toolchain</h2>
-        <ServerToolchain role={known} serverId={server.id} />
+        <ServerToolchain
+          reachable={server.status !== "unreachable"}
+          role={known}
+          serverId={server.id}
+        />
       </section>
 
+      {/* The one section worth folding on this page: four stacked
+          sparklines are the tallest thing here, and they sit between the
+          toolchain and the disk. Folded at the SECTION level rather than
+          inside the frame — `ResourceGraphs` is a `stacked` frame, whose
+          joined panels are styled by direct-child adjacency, and a
+          wrapper inside it would break that. Open by default: a section
+          that hides itself makes you wonder what you are missing. */}
       <section className="mt-8 space-y-3">
-        <h2 className="font-medium text-sm">Resources</h2>
-        <ResourceGraphs series={series} />
+        <Collapsible onOpenChange={setResourcesOpen} open={resourcesOpen}>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-medium text-sm">Resources</h2>
+            <CollapsibleTrigger
+              render={
+                <Button size="sm" variant="ghost">
+                  {resourcesOpen ? "Hide" : "Show"}
+                </Button>
+              }
+            />
+          </div>
+          <CollapsibleContent className="mt-3">
+            <ResourceGraphs series={series} />
+          </CollapsibleContent>
+        </Collapsible>
       </section>
 
       {/* Disk is PER NODE and doesn't aggregate across machines: that's why

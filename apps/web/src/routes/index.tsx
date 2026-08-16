@@ -1,5 +1,6 @@
 import { ArrowRightIcon, CheckCircleIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
@@ -109,54 +110,61 @@ function StatCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard
-        detail={`${counts.environments} environment${counts.environments === 1 ? "" : "s"}`}
-        label="Projects"
-        value={counts.projects}
-      />
-      <StatCard
-        detail={`${counts.services} app${counts.services === 1 ? "" : "s"} · ${counts.stacks} compose · ${counts.databases} db`}
-        label="Services"
-        value={counts.services + counts.stacks + counts.databases}
-      />
-      <StatCard
-        detail={counts.deploys7d === 0 ? "no activity yet" : "last 7 days"}
-        label="Deploys"
-        value={counts.deploys7d}
-      />
-      <div className="rounded-2xl border bg-card p-3">
-        <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          Status
-        </p>
-        <div className="mt-2">
-          {hasStatus ? (
-            <StatusSummary counts={statusCounts} />
-          ) : (
-            <p className="text-muted-foreground text-sm">no services yet</p>
-          )}
-        </div>
-      </div>
+      <StatCard label="Projects">
+        <StatNumber
+          detail={`${counts.environments} environment${counts.environments === 1 ? "" : "s"}`}
+          value={counts.projects}
+        />
+      </StatCard>
+      <StatCard label="Services">
+        <StatNumber
+          detail={`${counts.services} app${counts.services === 1 ? "" : "s"} · ${counts.stacks} compose · ${counts.databases} db`}
+          value={counts.services + counts.stacks + counts.databases}
+        />
+      </StatCard>
+      <StatCard label="Deploys">
+        <StatNumber
+          detail={counts.deploys7d === 0 ? "no activity yet" : "last 7 days"}
+          value={counts.deploys7d}
+        />
+      </StatCard>
+      <StatCard label="Status">
+        {hasStatus ? (
+          <StatusSummary counts={statusCounts} />
+        ) : (
+          <p className="text-muted-foreground text-sm">no services yet</p>
+        )}
+      </StatCard>
     </div>
   );
 }
 
-function StatCard({
-  detail,
-  label,
-  value,
-}: {
-  detail: string;
-  label: string;
-  value: number;
-}) {
+/**
+ * The shell: the measure's name is chrome, its value is the panel.
+ *
+ * The status tile used to repeat this markup by hand because it holds a
+ * breakdown instead of a number — it now takes the same shell and only
+ * differs by what it puts inside it.
+ */
+function StatCard({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <div className="rounded-2xl border bg-card p-3">
-      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {label}
-      </p>
-      <p className="mt-1 font-semibold text-3xl tabular-nums">{value}</p>
+    <Frame spacing="sm" variant="ghost">
+      <FrameHeader>
+        <FrameTitle className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          {label}
+        </FrameTitle>
+      </FrameHeader>
+      <FramePanel>{children}</FramePanel>
+    </Frame>
+  );
+}
+
+function StatNumber({ detail, value }: { detail: string; value: number }) {
+  return (
+    <>
+      <p className="font-semibold text-3xl tabular-nums">{value}</p>
       <p className="mt-1 truncate text-muted-foreground text-xs">{detail}</p>
-    </div>
+    </>
   );
 }
 
@@ -182,16 +190,18 @@ function AttentionPanel({
       </h2>
 
       {rows.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-2xl border bg-card px-3 py-3 text-muted-foreground text-sm">
-          {idle ? (
-            "Nothing to report."
-          ) : (
-            <>
-              <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
-              Everything is running.
-            </>
-          )}
-        </div>
+        <Frame variant="ghost">
+          <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
+            {idle ? (
+              "Nothing to report."
+            ) : (
+              <>
+                <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
+                Everything is running.
+              </>
+            )}
+          </FramePanel>
+        </Frame>
       ) : (
         // `render`: `Item` then applies hover and focus to the anchor
         // itself, rather than to a wrapping container.

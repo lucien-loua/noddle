@@ -227,37 +227,42 @@ export interface ServerToolReport {
  * at the machine. This makes that legible before a deploy instead of during
  * one.
  */
-export const checkServerTools = createServerFn({ method: "POST" })
+export const checkServerTools = createServerFn({ method: "GET" })
   .validator(serverIdSchema)
-  .handler(
-    async ({ data }): Promise<ServerToolReport> =>
-      runGuarded({
-        load: () =>
-          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
-        notFoundMessage: "server not found",
-        permission: { action: "read", resource: "server" },
-        run: ({ row }) =>
-          withServerSessionById(row.id, async (client) => {
-            const version = async (command: string) => {
-              const r = await exec(client, command);
-              const out = r.stdout.trim();
-              return r.code === 0 && out !== "" ? out : null;
-            };
-            return {
-              docker: await version("docker --version"),
-              railpack: await version("railpack --version"),
-              railpackExpected: RAILPACK_VERSION,
-              // Queried directly, never `docker info | grep`: these scripts
-              // run under pipefail and grep -q makes it a race.
-              swarm:
-                (await version(
-                  "sudo docker info --format '{{.Swarm.LocalNodeState}}'"
-                )) ?? "unknown",
-            };
-          }),
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
-  );
+  .handler(async ({ data }): Promise<ServerToolReport> => {
+    // `requireSession` alone: `server:read` is universal, and
+    // `verify-permissions` rejects a permission guard on a universal GET
+    // for the reason that applies here — one audit line per visit, in a
+    // log that keeps 200. Asking a machine for its versions changes
+    // nothing, and this now loads with the page rather than on a click.
+    await requireSession();
+
+    const row = await db.query.servers.findFirst({
+      where: eq(servers.id, data.serverId),
+    });
+    if (!row) {
+      throw new Error("server not found");
+    }
+
+    return await withServerSessionById(row.id, async (client) => {
+      const version = async (command: string) => {
+        const r = await exec(client, command);
+        const out = r.stdout.trim();
+        return r.code === 0 && out !== "" ? out : null;
+      };
+      return {
+        docker: await version("docker --version"),
+        railpack: await version("railpack --version"),
+        railpackExpected: RAILPACK_VERSION,
+        // Queried directly, never `docker info | grep`: these scripts
+        // run under pipefail and grep -q makes it a race.
+        swarm:
+          (await version(
+            "sudo docker info --format '{{.Swarm.LocalNodeState}}'"
+          )) ?? "unknown",
+      };
+    });
+  });
 
 /**
  * Re-run provisioning on an existing server.

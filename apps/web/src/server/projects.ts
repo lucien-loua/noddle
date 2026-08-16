@@ -12,6 +12,8 @@ import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface ProjectView {
+  /** ISO timestamp — the card reads it as "Created 2 days ago". */
+  createdAt: string;
   description: string | null;
   id: string;
   name: string;
@@ -31,6 +33,7 @@ export const getProjects = createServerFn({ method: "GET" }).handler(
     await requireSession();
     const rows = await db.query.projects.findMany({ orderBy: projects.name });
     return rows.map((p) => ({
+      createdAt: p.createdAt.toISOString(),
       description: p.description,
       id: p.id,
       name: p.name,

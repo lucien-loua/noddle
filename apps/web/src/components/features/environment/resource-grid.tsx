@@ -1,9 +1,15 @@
-import type { DatabaseEngine } from "@noddle/database-spec";
+import {
+  DATABASE_ENGINE_LABEL,
+  type DatabaseEngine,
+} from "@noddle/database-spec";
 import {
   ArrowClockwiseIcon,
+  ArrowSquareOutIcon,
   CodeIcon,
   DatabaseIcon,
   DotsThreeIcon,
+  GlobeIcon,
+  HardDrivesIcon,
   MagnifyingGlassIcon,
   PlayIcon,
   RocketLaunchIcon,
@@ -18,8 +24,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { MoveServiceDialog } from "@/components/features/services/move-dialog";
+import {
+  DockerIcon,
+  GithubIcon,
+  GitIcon,
+  GitlabIcon,
+} from "@/components/features/services/provider-icons";
 import { IconStack } from "@/components/icon-stack";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -52,7 +63,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { IconTile } from "@/components/ui/icon-tile";
 import {
   InputGroup,
   InputGroupAddon,
@@ -69,7 +79,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { cache } from "@/lib/cache";
-import { badgeVariant, errorMessage, serviceLabel } from "@/lib/format";
+import { dotClass, errorMessage, serviceLabel } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
@@ -80,6 +90,29 @@ import { deleteService } from "@/server/services";
 import { deleteStack, triggerStackDeploy } from "@/server/stacks";
 
 type Kind = "database" | "service" | "stack";
+
+/** Where the thing comes from — the question a card could not answer. */
+type Source = "compose" | "docker_image" | "git" | "github" | "gitlab";
+
+/**
+ * The real marks, the ones `provider-icons.tsx` already carries.
+ *
+ * Same reasoning as `DatabaseMark`: four sources side by side are
+ * CATEGORIES, which is the case the colour rule allows, and a brand
+ * stripped of its colour stops being recognisable. `size-3.5` is passed
+ * because those SVGs each hardcode a different height (14, 18, 20, 24) and
+ * would otherwise sit at four sizes on the same line.
+ */
+const SOURCE: Record<
+  Source,
+  { icon: (props: { className?: string }) => React.JSX.Element; label: string }
+> = {
+  compose: { icon: DockerIcon, label: "Compose" },
+  docker_image: { icon: DockerIcon, label: "Image" },
+  git: { icon: GitIcon, label: "Git" },
+  github: { icon: GithubIcon, label: "GitHub" },
+  gitlab: { icon: GitlabIcon, label: "GitLab" },
+};
 type SortKey = "name" | "status";
 type TypeFilter = "all" | Kind;
 type LifecycleAction = "restart" | "start" | "stop";
@@ -95,6 +128,10 @@ const PENDING_LABEL: Record<LifecycleAction, string> = {
 
 interface GridItem {
   domain: string | null;
+  /** The full URL, when the scheme is KNOWN. A service domain carries an
+   *  `https` flag; a stack's `domain` is a bare string, so it stays text
+   *  rather than a link that 404s half the time. */
+  domainUrl: string | null;
   /** The engine, for databases only: it's what selects the mark. */
   engine?: DatabaseEngine;
   id: string;
@@ -102,6 +139,9 @@ interface GridItem {
   lastError: string | null;
   name: string;
   serverName: string;
+  /** `null` for a database: it runs a pinned image, and the engine shown in
+   *  the panel already says which. */
+  source: Source | null;
   status: string;
   /** ISO timestamp. Restart doesn't move `status`; the pending badge
    *  settles when this bumps. Empty on stacks — they have no lifecycle. */
@@ -124,6 +164,39 @@ interface AwaitingEntry {
 interface ResourceSnapshot {
   status: string;
   updatedAt: string;
+}
+
+/**
+ * Where the resource answers.
+ *
+ * A link when the scheme is known — a domain shown but not clickable is
+ * the kind of dead end that makes a dashboard feel unfinished. `z-20`
+ * keeps it above the card's stretched link, which would otherwise swallow
+ * the click and open the detail page instead of the site.
+ */
+function ResourceAddress({ item }: { item: GridItem }) {
+  if (item.engine) {
+    return (
+      <span className="truncate">{DATABASE_ENGINE_LABEL[item.engine]}</span>
+    );
+  }
+  if (!item.domain) {
+    return <span className="text-muted-foreground">No domain</span>;
+  }
+  if (!item.domainUrl) {
+    return <span className="truncate">{item.domain}</span>;
+  }
+  return (
+    <a
+      className="relative z-20 inline-flex min-w-0 items-center gap-1 hover:underline"
+      href={item.domainUrl}
+      rel="noreferrer noopener"
+      target="_blank"
+    >
+      <span className="truncate">{item.domain}</span>
+      <ArrowSquareOutIcon className="size-3.5 shrink-0" />
+    </a>
+  );
 }
 
 /** The selection key: composite, because three tables can theoretically
@@ -366,26 +439,35 @@ export function ResourceGrid({
 
   const items: GridItem[] = useMemo(
     () => [
-      ...scope.services.map(
-        (s): GridItem => ({
-          domain: s.domains[0]?.host ?? null,
+      ...scope.services.map((s): GridItem => {
+        const [first] = s.domains;
+        return {
+          domain: first?.host ?? null,
+          domainUrl: first
+            ? `${first.https ? "https" : "http"}://${first.host}`
+            : null,
           id: s.id,
           kind: "service",
           lastError: s.lastError,
           name: s.name,
           serverName: s.serverName,
+          source: s.sourceType,
           status: s.status,
           updatedAt: s.updatedAt,
-        })
-      ),
+        };
+      }),
       ...scope.stacks.map(
         (s): GridItem => ({
           domain: s.domain,
+          domainUrl: null,
           id: s.id,
           kind: "stack",
           lastError: s.lastError,
           name: s.name,
           serverName: s.serverName,
+          // A stack always clones a repository; "Compose" here would
+          // repeat what the kind icon already says.
+          source: "git",
           status: s.status,
           updatedAt: "",
         })
@@ -393,12 +475,14 @@ export function ResourceGrid({
       ...scope.databases.map(
         (d): GridItem => ({
           domain: null,
+          domainUrl: null,
           engine: d.engine,
           id: d.id,
           kind: "database",
           lastError: d.lastError,
           name: d.name,
           serverName: d.serverName,
+          source: null,
           status: d.status,
           updatedAt: d.updatedAt,
         })
@@ -887,6 +971,7 @@ function ResourceGridCard({
   // keep the generic icon for their type. It's the only one of the three
   // whose nature varies, and that's what the mark conveys at a glance.
   const Icon = KIND_ICON[item.kind];
+  const source = item.source ? SOURCE[item.source] : null;
   const stopped = item.status === "stopped";
   // `created` = never deployed, `deploying` = provision in flight,
   // `deleting` = teardown: no stable Swarm service to operate.
@@ -926,26 +1011,24 @@ function ResourceGridCard({
             {item.engine ? (
               <DatabaseMark engine={item.engine} size="sm" />
             ) : (
-              <IconTile size="sm" variant="frame">
-                <Icon />
-              </IconTile>
+              // `size-5` against the mark's `size-6`: a solid glyph reads
+              // heavier than a brand logo inside the same box.
+              <Icon className="size-5 shrink-0 text-muted-foreground" />
             )}
             <FrameTitle className="min-w-0 flex-1 truncate">
               <button
-                className="w-full truncate text-start after:absolute after:inset-0"
+                className="w-full cursor-pointer truncate text-start after:absolute after:inset-0 after:z-10"
                 onClick={handleOpen}
                 type="button"
               >
                 {item.name}
               </button>
             </FrameTitle>
-            {/* `z-10`: the title's stretched button places its `::after`
-                over the WHOLE card, and comes AFTER this group in DOM
-                order — without an explicit z-index, it would win the
-                stacking order and these buttons would become unclickable.
-                As measured: without `z-10`, `.click()` here reaches the
-                title's button instead. */}
-            <div className="relative z-10 flex items-center gap-1">
+            {/* The title's stretched `::after` covers the WHOLE card at
+                `z-10`, so everything that stays clickable sits at `z-20`:
+                this cluster, and the domain link in the panel. Without it,
+                `.click()` here reaches the title's button instead. */}
+            <div className="relative z-20 flex items-center gap-1">
               <Checkbox
                 aria-label={`Select ${item.name}`}
                 checked={selected}
@@ -968,15 +1051,32 @@ function ResourceGridCard({
             </div>
           </div>
         </FrameHeader>
-        <FramePanel className="flex flex-col gap-2">
-          <Badge
-            aria-live="polite"
-            className="w-fit"
-            variant={badgeVariant(status.tone)}
-          >
-            {inFlight ? <Spinner data-icon="inline-start" /> : null}
-            {status.label}
-          </Badge>
+        <FramePanel className="flex flex-col gap-3">
+          {/* A dot, not a badge: a grid is scanned column by column, and a
+              disc in a fixed position reads without being read. The word
+              stays beside it — colour is never the only channel. */}
+          <div aria-live="polite" className="flex items-center gap-2 text-sm">
+            {inFlight ? (
+              <Spinner className="size-2.5 shrink-0" />
+            ) : (
+              <span
+                aria-hidden
+                className={`size-2.5 shrink-0 rounded-full ${dotClass(status.tone)}`}
+              />
+            )}
+            <span className="truncate">{status.label}</span>
+          </div>
+          {/* The address line: what you actually came to read after the
+              status. A database has no domain, so it states its engine —
+              the one fact that changes how you connect to it. */}
+          <div className="flex items-center gap-1.5 text-sm">
+            {item.engine ? (
+              <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <GlobeIcon className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <ResourceAddress item={item} />
+          </div>
           {item.lastError ? (
             <p className="line-clamp-2 text-destructive text-xs" role="status">
               {item.lastError}
@@ -984,13 +1084,16 @@ function ResourceGridCard({
           ) : null}
         </FramePanel>
         <FrameFooter>
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-            <span className="truncate">{item.serverName}</span>
-            {item.domain ? (
-              <>
-                <span aria-hidden>·</span>
-                <span className="truncate">{item.domain}</span>
-              </>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
+            <span className="flex min-w-0 items-center gap-1.5">
+              <HardDrivesIcon aria-hidden className="size-3.5 shrink-0" />
+              <span className="truncate">{item.serverName}</span>
+            </span>
+            {source ? (
+              <span className="flex items-center gap-1.5">
+                <source.icon className="size-3.5 shrink-0" />
+                {source.label}
+              </span>
             ) : null}
           </div>
         </FrameFooter>
@@ -1086,8 +1189,7 @@ function ResourceCardMenu({
         render={
           <Button
             aria-label={`Actions for ${item.name}`}
-            className="size-6"
-            size="icon"
+            size="icon-xs"
             variant="ghost"
           >
             <DotsThreeIcon />

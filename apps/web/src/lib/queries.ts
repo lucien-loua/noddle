@@ -30,7 +30,7 @@ import {
 import { getDatabaseMetrics, getServiceMetrics } from "@/server/metrics";
 import { getChannels } from "@/server/notifications";
 import { getRegistries, getRegistryOptions } from "@/server/registries";
-import { getServers } from "@/server/servers";
+import { checkServerTools, getServers } from "@/server/servers";
 import { getSshKeys } from "@/server/ssh-keys";
 import { getStackDeployments } from "@/server/stacks";
 import { getUpdateStatus } from "@/server/updates";
@@ -202,6 +202,16 @@ export const queries = {
 
   servers: () =>
     queryOptions({ queryFn: () => getServers(), queryKey: ["servers"] }),
+
+  serverTools: (serverId: string) =>
+    queryOptions({
+      queryFn: () => checkServerTools({ data: { serverId } }),
+      queryKey: ["server-tools", serverId],
+      // Every fetch is an SSH round-trip to the machine. Toolchain
+      // versions change when someone installs something, which is not a
+      // thing that happens while you look at the page.
+      staleTime: 5 * 60 * 1000,
+    }),
 
   service: (serviceId: string) =>
     queryOptions({

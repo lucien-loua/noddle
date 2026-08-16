@@ -1,3 +1,9 @@
+import {
+  CodeIcon,
+  DatabaseIcon,
+  StackIcon,
+  TreeStructureIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -5,18 +11,18 @@ import {
   CreateProjectButton,
   ProjectRowActions,
 } from "@/components/project-actions";
+import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Frame,
+  FrameDescription,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { type RoleName, roles } from "@/lib/permissions";
-import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, type ProjectGroup } from "@/server/dashboard";
 import { getProjects, type ProjectView } from "@/server/projects";
@@ -85,14 +91,35 @@ function ProjectsPage() {
   );
 }
 
+function ProjectCount({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof CodeIcon;
+  label: string;
+  value: number;
+}) {
+  if (value === 0) {
+    return null;
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-sm">
+      <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <span className="font-medium tabular-nums">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
+  );
+}
+
 function ProjectCard({
   group,
   project,
   role,
 }: {
-  /** Absent = an EMPTY project: it exists, it simply has nothing in it yet.
-   *  This isn't missing data, and the card says so with zeros rather than
-   *  a dash. */
+  /** Absent = an EMPTY project: it exists, it simply has nothing in it
+   *  yet. This isn't missing data, and the card says so in words rather
+   *  than with a dash. */
   group: ProjectGroup | undefined;
   project: ProjectView;
   role: RoleName | null;
@@ -102,46 +129,93 @@ function ProjectCard({
   const stacks = scopes.reduce((n, s) => n + s.stacks.length, 0);
   const databases = scopes.reduce((n, s) => n + s.databases.length, 0);
   const environments = scopes.length;
+  const deployed = group
+    ? Object.values(group.statusCounts).reduce((n, c) => n + c, 0)
+    : 0;
 
+  // Same three tiers as a resource card: the header says WHICH project,
+  // the panel says WHAT IS IN IT and how it is doing, the footer says HOW
+  // OLD and HOW MANY ENVIRONMENTS. Nothing is stated twice — a total would
+  // repeat what the two panel rows already add up to.
   return (
-    <Card className="group relative transition-shadow hover:shadow-lg">
-      <CardHeader>
-        <CardTitle className="min-w-0 truncate">
-          {/* Stretched link: the whole card navigates, without nesting the
-              menu inside a clickable block — same pattern as
-              `features/environment/resource-grid.tsx`. */}
-          <Link
-            className="truncate after:absolute after:inset-0"
-            params={{ projectId: project.id }}
-            to="/projects/$projectId"
-          >
-            {project.name}
-          </Link>
-        </CardTitle>
-        {project.description ? (
-          <CardDescription className="line-clamp-2">
-            {project.description}
-          </CardDescription>
+    <Frame className="group transition-shadow hover:shadow-lg">
+      <FrameHeader>
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <FrameTitle className="min-w-0 truncate">
+              {/* Stretched link: the whole card navigates, without nesting
+                  the menu inside a clickable block — same pattern as
+                  `features/environment/resource-grid.tsx`. `z-10` so it
+                  also covers the panel and the footer, which are
+                  positioned and come later in the DOM. */}
+              <Link
+                className="truncate after:absolute after:inset-0 after:z-10"
+                params={{ projectId: project.id }}
+                to="/projects/$projectId"
+              >
+                {project.name}
+              </Link>
+            </FrameTitle>
+            {project.description ? (
+              <FrameDescription className="line-clamp-2">
+                {project.description}
+              </FrameDescription>
+            ) : null}
+          </div>
+          {/* `z-20`: stay above the title's stretched `::after`. */}
+          <div className="relative z-20 shrink-0">
+            <ProjectRowActions
+              description={project.description}
+              name={project.name}
+              projectId={project.id}
+              role={role}
+            />
+          </div>
+        </div>
+      </FrameHeader>
+      <FramePanel className="flex flex-col gap-3">
+        {deployed > 0 && group ? (
+          <StatusSummary counts={group.statusCounts} />
+        ) : (
+          <p className="text-muted-foreground text-sm">No resources yet</p>
+        )}
+        {/* Same shape as `StatusSummary` — icon, number, word — so the
+            two rows read as one system, and same rule: only what is
+            actually there. The statuses say HOW the resources are, this
+            says WHAT they are; the total appears in neither, because the
+            two rows already add up to it. The glyphs are the ones the
+            resource grid uses for the same three things. */}
+        {services + stacks + databases > 0 ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <ProjectCount
+              icon={CodeIcon}
+              label={services === 1 ? "app" : "apps"}
+              value={services}
+            />
+            <ProjectCount icon={StackIcon} label="compose" value={stacks} />
+            <ProjectCount icon={DatabaseIcon} label="db" value={databases} />
+          </div>
         ) : null}
-        {/* `z-10`: stay above the title's stretched `::after`. */}
-        <CardAction
-          className={cn("relative z-10", !project.description && "row-span-1")}
-        >
-          <ProjectRowActions
-            description={project.description}
-            name={project.name}
-            projectId={project.id}
-            role={role}
-          />
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-muted-foreground text-sm">
-          {environments} environment{environments === 1 ? "" : "s"} · {services}{" "}
-          app{services === 1 ? "" : "s"} · {stacks} compose · {databases} db
+      </FramePanel>
+      <FrameFooter>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground text-xs">
+          {/* `z-20`: the card's stretched link sits at `z-10` and would
+              otherwise take the hover, so the tooltip would never open. */}
+          <span>
+            Created{" "}
+            <RelativeTime
+              className="relative z-20"
+              iso={project.createdAt}
+              long
+            />
+          </span>
+          <span aria-hidden>·</span>
+          <span className="flex items-center gap-1.5">
+            <TreeStructureIcon aria-hidden className="size-3.5 shrink-0" />
+            {environments} environment{environments === 1 ? "" : "s"}
+          </span>
         </p>
-        {group ? <StatusSummary counts={group.statusCounts} /> : null}
-      </CardContent>
-    </Card>
+      </FrameFooter>
+    </Frame>
   );
 }

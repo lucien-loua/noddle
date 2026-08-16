@@ -154,6 +154,28 @@ export function relativeTime(iso: string): string {
   return `${Math.floor(seconds / DAY)}d ago`;
 }
 
+/** Spelled out — "2 days ago", not "2d ago". For a sentence, where the
+ *  compact form above belongs in a table cell. `numeric: "auto"` is what
+ *  turns -1 day into "yesterday"; the locale is explicit because the two
+ *  runtimes that render this page do not share a default. */
+const RELATIVE_LONG = new Intl.RelativeTimeFormat("en-US", {
+  numeric: "auto",
+});
+
+export function relativeTimeLong(iso: string): string {
+  const seconds = Math.round((Date.now() - Date.parse(iso)) / 1000);
+  if (seconds < MINUTE) {
+    return "just now";
+  }
+  if (seconds < HOUR) {
+    return RELATIVE_LONG.format(-Math.floor(seconds / MINUTE), "minute");
+  }
+  if (seconds < DAY) {
+    return RELATIVE_LONG.format(-Math.floor(seconds / HOUR), "hour");
+  }
+  return RELATIVE_LONG.format(-Math.floor(seconds / DAY), "day");
+}
+
 export function shortSha(sha: string | null): string {
   return sha ? sha.slice(0, 7) : "—";
 }

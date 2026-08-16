@@ -92,8 +92,7 @@ export function ProjectRowActions({
           render={
             <Button
               aria-label={`Actions for ${name}`}
-              className="size-7"
-              size="icon"
+              size="icon-xs"
               variant="ghost"
             >
               <DotsThreeIcon />
