@@ -1,4 +1,5 @@
 import { redirect } from "@tanstack/react-router";
+
 import { getAuthState } from "@/server/auth";
 
 /** Signed-in gate shared by service, database, and stack detail routes. */

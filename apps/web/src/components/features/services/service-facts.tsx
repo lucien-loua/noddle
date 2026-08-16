@@ -1,5 +1,6 @@
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+
 import { RelativeTime } from "@/components/relative-time";
 import {
   Frame,

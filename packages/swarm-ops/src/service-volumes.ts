@@ -69,9 +69,9 @@ async function mountsFromRunningTask(
 ): Promise<ServiceVolumeMount[]> {
   const tasks = (await docker.listTasks({
     filters: JSON.stringify({ service: [serviceName] }),
-  })) as Array<{
+  })) as {
     Status?: { ContainerStatus?: { ContainerID?: string }; State?: string };
-  }>;
+  }[];
   const running = tasks.find((t) => t.Status?.State === "running");
   const containerId = running?.Status?.ContainerStatus?.ContainerID;
   if (!containerId) {

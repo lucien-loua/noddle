@@ -1,18 +1,11 @@
 import { dockerSourcePatch, gitSourcePatch } from "@noddle/shared/source-type";
-import {
-  BUILT_IN_REGISTRY,
-  type GitSourceType,
-  isGitSourceType,
-  NEW_REGISTRY,
-  type ServiceDockerProviderInput,
-  type ServiceGitProviderInput,
-  serviceDockerProviderSchema,
-  serviceGitProviderSchema,
-} from "@noddle/shared/validation/service";
+import { BUILT_IN_REGISTRY, isGitSourceType, NEW_REGISTRY, serviceDockerProviderSchema, serviceGitProviderSchema } from '@noddle/shared/validation/service';
+import type { GitSourceType, ServiceDockerProviderInput, ServiceGitProviderInput } from '@noddle/shared/validation/service';
 import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+
 import {
   DockerIcon,
   GithubIcon,

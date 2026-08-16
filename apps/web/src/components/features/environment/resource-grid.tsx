@@ -1,7 +1,5 @@
-import {
-  DATABASE_ENGINE_LABEL,
-  type DatabaseEngine,
-} from "@noddle/database-spec";
+import { DATABASE_ENGINE_LABEL } from '@noddle/database-spec';
+import type { DatabaseEngine } from '@noddle/database-spec';
 import {
   ArrowClockwiseIcon,
   ArrowSquareOutIcon,
@@ -21,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { MoveServiceDialog } from "@/components/features/services/move-dialog";
@@ -456,37 +455,33 @@ export function ResourceGrid({
           updatedAt: s.updatedAt,
         };
       }),
-      ...scope.stacks.map(
-        (s): GridItem => ({
-          domain: s.domain,
-          domainUrl: null,
-          id: s.id,
-          kind: "stack",
-          lastError: s.lastError,
-          name: s.name,
-          serverName: s.serverName,
-          // A stack always clones a repository; "Compose" here would
-          // repeat what the kind icon already says.
-          source: "git",
-          status: s.status,
-          updatedAt: "",
-        })
-      ),
-      ...scope.databases.map(
-        (d): GridItem => ({
-          domain: null,
-          domainUrl: null,
-          engine: d.engine,
-          id: d.id,
-          kind: "database",
-          lastError: d.lastError,
-          name: d.name,
-          serverName: d.serverName,
-          source: null,
-          status: d.status,
-          updatedAt: d.updatedAt,
-        })
-      ),
+      ...scope.stacks.map((s): GridItem => ({
+        domain: s.domain,
+        domainUrl: null,
+        id: s.id,
+        kind: "stack",
+        lastError: s.lastError,
+        name: s.name,
+        serverName: s.serverName,
+        // A stack always clones a repository; "Compose" here would
+        // repeat what the kind icon already says.
+        source: "git",
+        status: s.status,
+        updatedAt: "",
+      })),
+      ...scope.databases.map((d): GridItem => ({
+        domain: null,
+        domainUrl: null,
+        engine: d.engine,
+        id: d.id,
+        kind: "database",
+        lastError: d.lastError,
+        name: d.name,
+        serverName: d.serverName,
+        source: null,
+        status: d.status,
+        updatedAt: d.updatedAt,
+      })),
     ],
     [scope]
   );

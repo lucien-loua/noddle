@@ -1,6 +1,8 @@
-import { createWriteStream, type WriteStream } from "node:fs";
+import { createWriteStream } from 'node:fs';
+import type { WriteStream } from 'node:fs';
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
+
 import { redactUrlCredentials } from "@noddle/shared/redact";
 
 export interface LogSink {
@@ -45,7 +47,7 @@ export async function createLogSink(o: LogSinkOptions): Promise<LogSink> {
         return;
       }
       const chunk = redactUrlCredentials(raw);
-      bytes += Buffer.byteLength(chunk, "utf8");
+      bytes += Buffer.byteLength(chunk, "utf-8");
       stream.write(chunk);
       // The dashboard must never bring down a deployment. If the SSE stream
       // is dead, the build continues.

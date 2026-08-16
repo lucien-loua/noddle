@@ -27,7 +27,7 @@ export function useResourceList<TData extends readonly unknown[]>(
 } {
   const { queryFn, queryKey } = createQuery();
   if (typeof queryFn !== "function") {
-    throw new Error("useResourceList requires queryFn");
+    throw new TypeError("useResourceList requires queryFn");
   }
 
   const queryClient = useQueryClient();

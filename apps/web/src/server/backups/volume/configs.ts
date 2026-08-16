@@ -11,6 +11,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
@@ -129,68 +130,66 @@ export const createVolumeBackupConfig = createServerFn({ method: "POST" })
 
 export const updateVolumeBackupConfig = createServerFn({ method: "POST" })
   .validator(updateVolumeBackupConfigSchema)
-  .handler(
-    async ({ data }): Promise<{ saved: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.volumeBackupConfigs.findFirst({
-            where: eq(volumeBackupConfigs.id, data.configId),
-            with: { service: true },
-          }),
-        notFoundMessage: "volume backup config not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row: existing }) => {
-          const destination = await db.query.s3Destinations.findFirst({
-            where: eq(s3Destinations.id, data.destinationId),
-          });
-          if (!destination) {
-            throw new Error("S3 destination not found");
-          }
-
-          await db
-            .update(volumeBackupConfigs)
-            .set({
-              destinationId: data.destinationId,
-              enabled: data.enabled,
-              keepLatestCount: data.keepLatestCount,
-              mountPath: await resolveMountPath(
-                existing.serviceId,
-                data.volumeName,
-                data.mountPath
-              ),
-              prefix: data.prefix,
-              schedule: data.schedule.trim(),
-              updatedAt: new Date(),
-              volumeName: data.volumeName,
-            })
-            .where(eq(volumeBackupConfigs.id, existing.id));
-          return { saved: true as const };
-        },
-        target: ({ row }) => ({
-          id: row.id,
-          name: row.service.name,
+  .handler(async ({ data }): Promise<{ saved: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.volumeBackupConfigs.findFirst({
+          where: eq(volumeBackupConfigs.id, data.configId),
+          with: { service: true },
         }),
-      })
+      notFoundMessage: "volume backup config not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: existing }) => {
+        const destination = await db.query.s3Destinations.findFirst({
+          where: eq(s3Destinations.id, data.destinationId),
+        });
+        if (!destination) {
+          throw new Error("S3 destination not found");
+        }
+
+        await db
+          .update(volumeBackupConfigs)
+          .set({
+            destinationId: data.destinationId,
+            enabled: data.enabled,
+            keepLatestCount: data.keepLatestCount,
+            mountPath: await resolveMountPath(
+              existing.serviceId,
+              data.volumeName,
+              data.mountPath
+            ),
+            prefix: data.prefix,
+            schedule: data.schedule.trim(),
+            updatedAt: new Date(),
+            volumeName: data.volumeName,
+          })
+          .where(eq(volumeBackupConfigs.id, existing.id));
+        return { saved: true as const };
+      },
+      target: ({ row }) => ({
+        id: row.id,
+        name: row.service.name,
+      }),
+    })
   );
 
 export const deleteVolumeBackupConfig = createServerFn({ method: "POST" })
   .validator(volumeBackupConfigIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.volumeBackupConfigs.findFirst({
-            where: eq(volumeBackupConfigs.id, data.configId),
-            with: { service: true },
-          }),
-        notFoundMessage: "volume backup config not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row }) => {
-          await db
-            .delete(volumeBackupConfigs)
-            .where(eq(volumeBackupConfigs.id, row.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.service.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.volumeBackupConfigs.findFirst({
+          where: eq(volumeBackupConfigs.id, data.configId),
+          with: { service: true },
+        }),
+      notFoundMessage: "volume backup config not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row }) => {
+        await db
+          .delete(volumeBackupConfigs)
+          .where(eq(volumeBackupConfigs.id, row.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.service.name }),
+    })
   );

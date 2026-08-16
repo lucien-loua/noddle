@@ -4,7 +4,8 @@
     "paths": {
       "#verify-seed": ["./src/verify/verify-seed.ts"],
       "#*": ["./src/*"]
-    }
+    },
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts"]
 }

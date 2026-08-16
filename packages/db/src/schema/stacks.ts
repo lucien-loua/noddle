@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 import { deploymentStatus, deploymentTrigger } from "#schema/deployments";
 import { environments } from "#schema/projects";

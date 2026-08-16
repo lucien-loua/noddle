@@ -43,7 +43,7 @@ export function joinBackupPrefix(
   configPrefix = ""
 ): string {
   return [destinationPrefix, configPrefix]
-    .map((p) => p.replace(/^\/+|\/+$/g, ""))
+    .map((p) => p.replaceAll(/^\/+|\/+$/g, ""))
     .filter((p) => p !== "")
     .join("/");
 }

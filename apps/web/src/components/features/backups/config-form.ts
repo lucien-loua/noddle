@@ -4,6 +4,7 @@ import {
 } from "@noddle/shared/validation/backup";
 import { dockerVolumeNameSchema } from "@noddle/shared/validation/volume-backup";
 import { z } from "zod";
+
 import { DEFAULT_CRON } from "@/components/features/backups/schedule";
 import type { BackupConfigRow } from "@/server/backups/configs";
 import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
@@ -29,7 +30,7 @@ export function parseKeepLatestCount(raw: string): number | null {
   }
   const parsed = Number.parseInt(trimmed, 10);
   if (!Number.isFinite(parsed)) {
-    throw new Error("Keep latest must be a number");
+    throw new TypeError("Keep latest must be a number");
   }
   return parsed;
 }

@@ -3,9 +3,11 @@ import {
   getRequestHeaders,
   setResponseStatus,
 } from "@tanstack/react-start/server";
+
 import type { Session } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
-import { can, type Permission } from "@/lib/permissions";
+import { can } from '@/lib/permissions';
+import type { Permission } from '@/lib/permissions';
 import { requireSession } from "@/lib/session.server";
 
 export class ForbiddenError extends Error {
@@ -207,9 +209,9 @@ async function record(
       role: roleOf(session),
       userAgent,
     });
-  } catch (err) {
+  } catch (error) {
     process.stderr.write(
-      `audit log write failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
   }
 }

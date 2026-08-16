@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+
 import { safeEqual } from "@noddle/crypto";
 
 export function verifyWebhookSignature(

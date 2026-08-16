@@ -1,9 +1,11 @@
 import { ChartLineIcon } from "@phosphor-icons/react";
-import { areaY, type ChartPoint, defineChart, lineY } from "@tanstack/charts";
+import { areaY, defineChart, lineY } from '@tanstack/charts';
+import type { ChartPoint } from '@tanstack/charts';
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts/tooltip";
 import { scaleLinear } from "d3-scale";
 import { useLayoutEffect, useRef, useState } from "react";
+
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";

@@ -1,6 +1,7 @@
 // tier: pure
 // bun run packages/compose-engine/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
+
 import {
   injectDeployConfig,
   listComposeServiceKeys,

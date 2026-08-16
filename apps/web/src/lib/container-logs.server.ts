@@ -1,9 +1,6 @@
-import {
-  exec,
-  openExecPty,
-  quoteArg,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { exec, openExecPty, quoteArg } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
+
 import type { SseChannel } from "@/lib/sse-channel.server";
 
 /** The catch-up window. Enough to see a full startup. */
@@ -81,7 +78,7 @@ function pipePty(
 ): void {
   pty.onData((chunk) => {
     channel.send({
-      data: chunk.toString("utf8").replaceAll("\r", ""),
+      data: chunk.toString("utf-8").replaceAll("\r", ""),
       type: "chunk",
     });
     channel.flush();

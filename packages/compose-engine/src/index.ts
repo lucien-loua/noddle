@@ -35,10 +35,10 @@ export function parseCompose(text: string, path: string): ComposeFile {
   let doc: unknown;
   try {
     doc = parse(text);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     throw new Error(`invalid compose file (${path}): ${message}`, {
-      cause: err,
+      cause: error,
     });
   }
   if (typeof doc !== "object" || doc === null || !("services" in doc)) {
@@ -85,7 +85,7 @@ export function injectDeployConfig(
     if (!svc) {
       continue;
     }
-    const deploy = { ...(svc.deploy ?? {}) } as Record<string, unknown>;
+    const deploy = { ...svc.deploy } as Record<string, unknown>;
 
     const deployPolicy = composeWorkloadDeploy();
     if (opts.placementNodeId) {
@@ -108,7 +108,7 @@ export function injectDeployConfig(
   }
 
   const swarmName = `${opts.stackName}_${opts.publicService}`;
-  const deploy = { ...(pub.deploy ?? {}) } as Record<string, unknown>;
+  const deploy = { ...pub.deploy } as Record<string, unknown>;
   deploy.labels = routeLabels({
     certResolver: opts.certResolver,
     domains: opts.domains,
@@ -129,7 +129,7 @@ export function injectDeployConfig(
   // IN ADDITION TO the stack's internal network — the stack's other
   // containers still need to keep reaching each other normally.
   doc.networks = {
-    ...(doc.networks ?? {}),
+    ...doc.networks,
     [opts.networkName]: { external: true },
   };
   if (Array.isArray(pub.networks)) {

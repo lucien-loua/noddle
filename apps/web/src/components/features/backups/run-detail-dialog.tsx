@@ -1,4 +1,5 @@
-import { type TerminalLogLine, TerminalLogs } from "@/components/terminal-logs";
+import { TerminalLogs } from '@/components/terminal-logs';
+import type { TerminalLogLine } from '@/components/terminal-logs';
 import { Badge } from "@/components/ui/badge";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import {
@@ -16,6 +17,7 @@ import {
   byteSize,
   duration,
 } from "@/lib/format";
+
 import type { BackupRunRow } from "./run-types";
 
 export function BackupRunDetailDialog<T extends BackupRunRow>({

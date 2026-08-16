@@ -13,6 +13,7 @@
 // RustFS is deliberately NOT checked: production ships no S3 at all — the
 // destination is the user's — so there is no counterpart to compare against.
 import { readFileSync } from "node:fs";
+
 import { check, runVerify } from "@noddle/testing";
 
 const at = (path: string) =>

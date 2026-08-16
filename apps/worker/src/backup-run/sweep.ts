@@ -1,6 +1,7 @@
 import { resolveDestination, resolveDestinationRow } from "@noddle/backup";
-import { isConfigDue } from "@noddle/backup/schedule";
 import { deleteObject } from "@noddle/backup-store";
+import { isConfigDue } from "@noddle/backup/schedule";
+
 import type { DeployContext } from "#runtime-context";
 
 export interface BackupSweepResult {
@@ -79,7 +80,7 @@ export interface BackupPruneSubject {
     configId: string,
     keepLatestCount: number
   ) => Promise<
-    Array<{ destinationId: string | null; id: string; objectKey: string }>
+    { destinationId: string | null; id: string; objectKey: string }[]
   >;
   loadKeepLatestCount: (
     ctx: DeployContext,

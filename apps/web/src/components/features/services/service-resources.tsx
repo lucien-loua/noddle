@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+
 import { ResourcePanel } from "@/components/resource-panel";
 import { queries } from "@/lib/queries";
 

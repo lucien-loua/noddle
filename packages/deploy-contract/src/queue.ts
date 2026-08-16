@@ -1,9 +1,8 @@
-import { type ConnectionOptions, Queue } from "bullmq";
-import {
-  DEPLOY_QUEUE_NAME,
-  type DeployJobData,
-  deployJobSchema,
-} from "./index.ts";
+import { Queue } from 'bullmq';
+import type { ConnectionOptions } from 'bullmq';
+
+import { DEPLOY_QUEUE_NAME, deployJobSchema } from './index.ts';
+import type { DeployJobData } from './index.ts';
 
 /**
  * Shared deploy-queue factory for web and worker.

@@ -1,5 +1,6 @@
 import type { FocusEvent, ReactNode } from "react";
 import { useCallback } from "react";
+
 import { TabsList } from "@/components/ui/tabs";
 
 export function TabRail({ children }: { children: ReactNode }) {

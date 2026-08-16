@@ -13,6 +13,7 @@ import { and, asc, count, desc, eq, gte, inArray } from "drizzle-orm";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 import z from "zod";
+
 import { loadDatabaseDashboardRows } from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
@@ -252,8 +253,8 @@ function toServiceRow(
     sourceType: service.sourceType,
     status: service.status,
     updatedAt: service.updatedAt.toISOString(),
-    watching,
     watchPaths: service.watchPaths,
+    watching,
   };
 }
 
@@ -754,42 +755,38 @@ export const getDeploymentLog = createServerFn({ method: "GET" }).handler(
     ]);
 
     const merged: DeploymentLogRow[] = [
-      ...serviceRows.map(
-        (d): DeploymentLogRow => ({
-          commitSha: d.commitSha,
-          createdAt: d.createdAt.toISOString(),
-          environment: d.service.environment.name,
-          environmentId: d.service.environmentId,
-          finishedAt: d.finishedAt?.toISOString() ?? null,
-          id: d.id,
-          kind: "service",
-          name: d.service.name,
-          project: d.service.environment.project.name,
-          projectId: d.service.environment.projectId,
-          resourceId: d.serviceId,
-          serverName: d.service.server.name,
-          status: d.status,
-          trigger: d.trigger,
-        })
-      ),
-      ...stackRows.map(
-        (d): DeploymentLogRow => ({
-          commitSha: d.commitSha,
-          createdAt: d.createdAt.toISOString(),
-          environment: d.stack.environment.name,
-          environmentId: d.stack.environmentId,
-          finishedAt: d.finishedAt?.toISOString() ?? null,
-          id: d.id,
-          kind: "stack",
-          name: d.stack.name,
-          project: d.stack.environment.project.name,
-          projectId: d.stack.environment.projectId,
-          resourceId: d.stackId,
-          serverName: d.stack.server.name,
-          status: d.status,
-          trigger: d.trigger,
-        })
-      ),
+      ...serviceRows.map((d): DeploymentLogRow => ({
+        commitSha: d.commitSha,
+        createdAt: d.createdAt.toISOString(),
+        environment: d.service.environment.name,
+        environmentId: d.service.environmentId,
+        finishedAt: d.finishedAt?.toISOString() ?? null,
+        id: d.id,
+        kind: "service",
+        name: d.service.name,
+        project: d.service.environment.project.name,
+        projectId: d.service.environment.projectId,
+        resourceId: d.serviceId,
+        serverName: d.service.server.name,
+        status: d.status,
+        trigger: d.trigger,
+      })),
+      ...stackRows.map((d): DeploymentLogRow => ({
+        commitSha: d.commitSha,
+        createdAt: d.createdAt.toISOString(),
+        environment: d.stack.environment.name,
+        environmentId: d.stack.environmentId,
+        finishedAt: d.finishedAt?.toISOString() ?? null,
+        id: d.id,
+        kind: "stack",
+        name: d.stack.name,
+        project: d.stack.environment.project.name,
+        projectId: d.stack.environment.projectId,
+        resourceId: d.stackId,
+        serverName: d.stack.server.name,
+        status: d.status,
+        trigger: d.trigger,
+      })),
     ];
 
     // Re-sorted AFTER merging: each table is already sorted on its own, but

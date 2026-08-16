@@ -12,6 +12,7 @@ import { useRouter } from "@tanstack/react-router";
 import type { MouseEvent, SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
+
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,13 +39,8 @@ import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
-import {
-  createEnvironment,
-  deleteEnvironment,
-  duplicateEnvironment,
-  type EnvironmentView,
-  renameEnvironment,
-} from "@/server/environments";
+import { createEnvironment, deleteEnvironment, duplicateEnvironment, renameEnvironment } from '@/server/environments';
+import type { EnvironmentView } from '@/server/environments';
 
 const environmentFormSchema = z.object({
   description: z.string().max(280),

@@ -6,7 +6,9 @@
 import type { DatabaseSwarmSettings } from "@noddle/db/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -48,7 +50,7 @@ type MenuId =
   | "stop-grace-period"
   | "update-config";
 
-const MENU: Array<{ description: string; id: MenuId; label: string }> = [
+const MENU: { description: string; id: MenuId; label: string }[] = [
   {
     description: "Configure health check settings",
     id: "health-check",

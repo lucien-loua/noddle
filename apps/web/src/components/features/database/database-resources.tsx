@@ -1,6 +1,7 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+
 import { ResourcePanel } from "@/components/resource-panel";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
@@ -14,8 +15,8 @@ import { queries } from "@/lib/queries";
 
 const WINDOW_LABEL: Record<1 | 6 | 24, string> = {
   1: "1h",
-  6: "6h",
   24: "24h",
+  6: "6h",
 };
 
 export function DatabaseResources({ databaseId }: { databaseId: string }) {

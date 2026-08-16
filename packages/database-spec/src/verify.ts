@@ -1,6 +1,7 @@
 // tier: pure
 // bun run packages/database-spec/src/verify.ts
 import { check, runVerify } from "@noddle/testing";
+
 import { ENGINE_SPECS, reservedEnvKeys, secretPathFor } from "./index.ts";
 
 await runVerify("database-spec", () => {

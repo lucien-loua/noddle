@@ -9,6 +9,7 @@ import {
 } from "@noddle/shared/validation/backup";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -66,61 +67,59 @@ export const getDestinations = createServerFn({ method: "GET" }).handler(
  */
 export const deleteDestination = createServerFn({ method: "POST" })
   .validator(destinationIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.s3Destinations.findFirst({
-            where: eq(s3Destinations.id, data.id),
-          }),
-        notFoundMessage: "destination not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row }) => {
-          const heldRun = await db.query.backups.findFirst({
-            where: eq(backups.destinationId, data.id),
-          });
-          if (heldRun) {
-            throw new Error(
-              "This destination still holds backups. Delete them first, or they could never be restored."
-            );
-          }
-          const heldConfig = await db.query.backupConfigs.findFirst({
-            where: eq(backupConfigs.destinationId, data.id),
-          });
-          if (heldConfig) {
-            throw new Error(
-              "This destination is still used by a backup config. Delete the config first."
-            );
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.s3Destinations.findFirst({
+          where: eq(s3Destinations.id, data.id),
+        }),
+      notFoundMessage: "destination not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row }) => {
+        const heldRun = await db.query.backups.findFirst({
+          where: eq(backups.destinationId, data.id),
+        });
+        if (heldRun) {
+          throw new Error(
+            "This destination still holds backups. Delete them first, or they could never be restored."
+          );
+        }
+        const heldConfig = await db.query.backupConfigs.findFirst({
+          where: eq(backupConfigs.destinationId, data.id),
+        });
+        if (heldConfig) {
+          throw new Error(
+            "This destination is still used by a backup config. Delete the config first."
+          );
+        }
 
-          await db.delete(s3Destinations).where(eq(s3Destinations.id, row.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db.delete(s3Destinations).where(eq(s3Destinations.id, row.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 export const testDestination = createServerFn({ method: "POST" })
   .validator(parseDestinationInput)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        permission: { action: "create", resource: "backup" },
-        run: async () => {
-          const secret = await resolveDestinationSecret(db, env.appKey, data);
-          await checkDestination({
-            accessKeyId: data.accessKeyId,
-            bucket: data.bucket,
-            endpoint: data.endpoint,
-            forcePathStyle: data.forcePathStyle,
-            prefix: data.prefix,
-            region: data.region,
-            secretAccessKey: secret,
-          });
-          return { ok: true as const };
-        },
-        target: () => ({ id: data.id ?? data.bucket, name: data.bucket }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      permission: { action: "create", resource: "backup" },
+      run: async () => {
+        const secret = await resolveDestinationSecret(db, env.appKey, data);
+        await checkDestination({
+          accessKeyId: data.accessKeyId,
+          bucket: data.bucket,
+          endpoint: data.endpoint,
+          forcePathStyle: data.forcePathStyle,
+          prefix: data.prefix,
+          region: data.region,
+          secretAccessKey: secret,
+        });
+        return { ok: true as const };
+      },
+      target: () => ({ id: data.id ?? data.bucket, name: data.bucket }),
+    })
   );
 
 export const saveDestination = createServerFn({ method: "POST" })

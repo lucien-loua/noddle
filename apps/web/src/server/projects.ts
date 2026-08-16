@@ -6,6 +6,7 @@ import {
 } from "@noddle/shared/validation/project";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, ne } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -97,36 +98,32 @@ export const createProject = createServerFn({ method: "POST" })
 
 export const renameProject = createServerFn({ method: "POST" })
   .validator(renameProjectSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.projects.findFirst({
-            where: eq(projects.id, data.projectId),
-          }),
-        notFoundMessage: "project not found",
-        permission: { action: "create", resource: "service" },
-        run: async ({ row: project }) => {
-          const clash = await db.query.projects.findFirst({
-            where: and(
-              eq(projects.name, data.name),
-              ne(projects.id, project.id)
-            ),
-          });
-          if (clash) {
-            throw new Error(`a project called "${data.name}" already exists`);
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.projects.findFirst({
+          where: eq(projects.id, data.projectId),
+        }),
+      notFoundMessage: "project not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row: project }) => {
+        const clash = await db.query.projects.findFirst({
+          where: and(eq(projects.name, data.name), ne(projects.id, project.id)),
+        });
+        if (clash) {
+          throw new Error(`a project called "${data.name}" already exists`);
+        }
 
-          await db
-            .update(projects)
-            .set({ description: data.description, name: data.name })
-            .where(eq(projects.id, project.id));
-          return { ok: true as const };
-        },
-        // The name recorded is the one BEFORE the rename: the audit line
-        // says what was acted on, not what it became.
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db
+          .update(projects)
+          .set({ description: data.description, name: data.name })
+          .where(eq(projects.id, project.id));
+        return { ok: true as const };
+      },
+      // The name recorded is the one BEFORE the rename: the audit line
+      // says what was acted on, not what it became.
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -142,43 +139,42 @@ export const renameProject = createServerFn({ method: "POST" })
  */
 export const deleteProject = createServerFn({ method: "POST" })
   .validator(projectIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.projects.findFirst({
-            where: eq(projects.id, data.projectId),
-            with: { environments: true },
-          }),
-        notFoundMessage: "project not found",
-        permission: { action: "delete", resource: "service" },
-        run: async ({ row: project }) => {
-          // `inArray` with an EMPTY list produces an `IN ()` that Postgres
-          // rejects: a project with no environment therefore skips the check,
-          // which is also just common sense — it can't contain anything.
-          const environmentIds = project.environments.map((e) => e.id);
-          if (environmentIds.length > 0) {
-            const [service, stack, database] = await Promise.all([
-              db.query.services.findFirst({
-                where: inArray(services.environmentId, environmentIds),
-              }),
-              db.query.stacks.findFirst({
-                where: inArray(stacks.environmentId, environmentIds),
-              }),
-              db.query.databases.findFirst({
-                where: inArray(databases.environmentId, environmentIds),
-              }),
-            ]);
-            if (service || stack || database) {
-              throw new Error(
-                "this project still has services, stacks or databases — remove them first"
-              );
-            }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.projects.findFirst({
+          where: eq(projects.id, data.projectId),
+          with: { environments: true },
+        }),
+      notFoundMessage: "project not found",
+      permission: { action: "delete", resource: "service" },
+      run: async ({ row: project }) => {
+        // `inArray` with an EMPTY list produces an `IN ()` that Postgres
+        // rejects: a project with no environment therefore skips the check,
+        // which is also just common sense — it can't contain anything.
+        const environmentIds = project.environments.map((e) => e.id);
+        if (environmentIds.length > 0) {
+          const [service, stack, database] = await Promise.all([
+            db.query.services.findFirst({
+              where: inArray(services.environmentId, environmentIds),
+            }),
+            db.query.stacks.findFirst({
+              where: inArray(stacks.environmentId, environmentIds),
+            }),
+            db.query.databases.findFirst({
+              where: inArray(databases.environmentId, environmentIds),
+            }),
+          ]);
+          if (service || stack || database) {
+            throw new Error(
+              "this project still has services, stacks or databases — remove them first"
+            );
           }
+        }
 
-          await db.delete(projects).where(eq(projects.id, project.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db.delete(projects).where(eq(projects.id, project.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

@@ -5,6 +5,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+
 import { BackupConfigCard } from "@/components/features/backups/config-card";
 import { BackupConfigDialog } from "@/components/features/backups/config-dialog";
 import { ConfigsListBody } from "@/components/features/backups/configs-list-body";
@@ -21,12 +22,8 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import {
-  type BackupSubject,
-  backupSubjectScopeId,
-  type DatabaseBackupSubject,
-  type VolumeBackupSubject,
-} from "@/lib/backup-subject";
+import { backupSubjectScopeId } from '@/lib/backup-subject';
+import type { BackupSubject, DatabaseBackupSubject, VolumeBackupSubject } from '@/lib/backup-subject';
 import { cache } from "@/lib/cache";
 import { queries } from "@/lib/queries";
 import type { BackupConfigRow } from "@/server/backups/configs";
@@ -35,7 +32,7 @@ import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
 
 type ScheduleRow = BackupConfigRow | VolumeBackupConfigRow;
 
-type DatabasePanelProps = {
+interface DatabasePanelProps {
   canCreate: boolean;
   canRestore: boolean;
   defaultDatabaseName: string;
@@ -43,16 +40,16 @@ type DatabasePanelProps = {
   onRestore: (target: BackupRestoreTarget) => void;
   resourceName: string;
   subject: DatabaseBackupSubject;
-};
+}
 
-type VolumePanelProps = {
+interface VolumePanelProps {
   canCreate: boolean;
   canRestore: boolean;
   destinations: DestinationRow[];
   onRestore: (target: BackupRestoreTarget) => void;
   resourceName: string;
   subject: VolumeBackupSubject;
-};
+}
 
 type BackupPanelProps = DatabasePanelProps | VolumePanelProps;
 
@@ -96,7 +93,7 @@ export function BackupPanel(props: BackupPanelProps) {
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   const invalidate = useCallback(() => {
-    cache.backupConfigsFor(queryClient, subject).catch(() => undefined);
+    cache.backupConfigsFor(queryClient, subject).catch(() => {});
   }, [queryClient, subject.kind, backupSubjectScopeId(subject)]);
 
   if (destinations.length === 0) {

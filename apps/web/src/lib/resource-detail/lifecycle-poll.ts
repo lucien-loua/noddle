@@ -1,4 +1,5 @@
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
+
 import { AWAITING_TIMEOUT_MS, DETAIL_POLL_MS } from "./constants";
 
 export interface AwaitingLifecycle {

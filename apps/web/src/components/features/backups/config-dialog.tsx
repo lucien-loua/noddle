@@ -5,12 +5,10 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+
 import { copyFor } from "@/components/features/backups/copy";
-import {
-  DEFAULT_CRON,
-  type ScheduleMode,
-  scheduleModeFor,
-} from "@/components/features/backups/schedule";
+import { DEFAULT_CRON, scheduleModeFor } from '@/components/features/backups/schedule';
+import type { ScheduleMode } from '@/components/features/backups/schedule';
 import { ScheduleCadence } from "@/components/features/backups/schedule-cadence";
 import { ServiceVolumePicker } from "@/components/features/backups/service-volume-picker";
 import { useAppForm } from "@/components/fields/lib/form";
@@ -37,26 +35,15 @@ import { toast } from "@/components/ui/toast";
 import type { BackupSubject } from "@/lib/backup-subject";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
-import {
-  type BackupConfigRow,
-  createBackupConfig,
-  updateBackupConfig,
-} from "@/server/backups/configs";
+import { createBackupConfig, updateBackupConfig } from '@/server/backups/configs';
+import type { BackupConfigRow } from '@/server/backups/configs';
 import type { DestinationRow } from "@/server/backups/destinations";
-import {
-  createVolumeBackupConfig,
-  updateVolumeBackupConfig,
-  type VolumeBackupConfigRow,
-} from "@/server/backups/volume/configs";
+import { createVolumeBackupConfig, updateVolumeBackupConfig } from '@/server/backups/volume/configs';
+import type { VolumeBackupConfigRow } from '@/server/backups/volume/configs';
 import type { ServiceVolumeRow } from "@/server/backups/volume/volumes";
-import {
-  configFormDefaults,
-  parseKeepLatestCount,
-  type VolumeBackupConfigFormValues,
-  volumeBackupConfigFormSchema,
-  volumeConfigFormDefaults,
-  volumeConfigFormToPayload,
-} from "./config-form";
+
+import { configFormDefaults, parseKeepLatestCount, volumeBackupConfigFormSchema, volumeConfigFormDefaults, volumeConfigFormToPayload } from './config-form';
+import type { VolumeBackupConfigFormValues } from './config-form';
 
 function EnabledField({
   checked,
@@ -135,13 +122,13 @@ function DatabaseScheduleForm({
           type: "success",
         });
         onSaved();
-      } catch (err) {
+      } catch (error) {
         toast.add({
-          description: errorMessage(err, "could not save schedule"),
+          description: errorMessage(error, "could not save schedule"),
           title: "Could not save schedule",
           type: "error",
         });
-        throw err;
+        throw error;
       }
     },
   });
@@ -455,7 +442,7 @@ function VolumeScheduleForm({
   );
 }
 
-type DatabaseConfigDialogProps = {
+interface DatabaseConfigDialogProps {
   defaultDatabaseName: string;
   destinations: DestinationRow[];
   editing: BackupConfigRow | null;
@@ -463,16 +450,16 @@ type DatabaseConfigDialogProps = {
   onSaved: () => void;
   open: boolean;
   subject: Extract<BackupSubject, { kind: "database" }>;
-};
+}
 
-type VolumeConfigDialogProps = {
+interface VolumeConfigDialogProps {
   destinations: DestinationRow[];
   editing: VolumeBackupConfigRow | null;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
   open: boolean;
   subject: Extract<BackupSubject, { kind: "volume" }>;
-};
+}
 
 type BackupConfigDialogProps =
   | DatabaseConfigDialogProps

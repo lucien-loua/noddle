@@ -1,4 +1,5 @@
 import { ArchiveIcon, HardDrivesIcon } from "@phosphor-icons/react";
+
 import type { BackupSubject } from "@/lib/backup-subject";
 
 export type BackupKind = BackupSubject["kind"];
@@ -24,8 +25,8 @@ export const backupCopy = {
     historyTitle: "Dump history",
     noDestination:
       "Noddle needs somewhere to push dumps before a schedule can run. Add one under",
-    queuedToast: "Backup queued",
     queueErrorTitle: "Could not queue backup",
+    queuedToast: "Backup queued",
     restoreConfirmLabel: "Restore database",
     restoreLabel: "Restore dump",
     runTitle: "Dump run",
@@ -54,8 +55,8 @@ export const backupCopy = {
     historyTitle: "Volume backup history",
     noDestination:
       "Noddle needs somewhere to push volume archives before a schedule can run. Add one under",
-    queuedToast: "Volume backup queued",
     queueErrorTitle: "Could not queue volume backup",
+    queuedToast: "Volume backup queued",
     restoreConfirmLabel: "Restore volume",
     restoreLabel: "Restore volume backup",
     runTitle: "Volume backup run",

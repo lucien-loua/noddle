@@ -1,6 +1,8 @@
 import { open, stat } from "node:fs/promises";
+
 import { deploymentLogs, stackDeploymentLogs } from "@noddle/db/schema";
 import { desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 
 /**
@@ -43,7 +45,7 @@ export async function readArchive(
     try {
       const buffer = Buffer.alloc(size - start);
       await handle.read(buffer, 0, buffer.length, start);
-      const text = buffer.toString("utf8");
+      const text = buffer.toString("utf-8");
       return start > 0 ? `… ${start} earlier bytes omitted …\n${text}` : text;
     } finally {
       await handle.close();

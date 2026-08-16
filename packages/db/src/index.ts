@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
 // Drizzle's relational API requires the full schema object; listing tables one
 // by one would desync from the folder on every addition.
 // biome-ignore lint/performance/noNamespaceImport: required by drizzle({ schema })

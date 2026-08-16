@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
@@ -17,6 +18,7 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
+
 import { provisionDatabase, removeSecretIfExists } from "#database";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 

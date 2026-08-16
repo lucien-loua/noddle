@@ -11,6 +11,7 @@
 // hand-maintained list that no tool compares to the file tree.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { check, runVerify } from "@noddle/testing";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..");

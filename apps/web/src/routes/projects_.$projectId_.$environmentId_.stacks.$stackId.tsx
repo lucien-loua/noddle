@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { lazy, useCallback, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { DeleteStackAction } from "@/components/delete-stack-action";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
@@ -9,7 +10,8 @@ import { TabRail } from "@/components/tab-rail";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { serviceLabel } from "@/lib/format";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { queries } from "@/lib/queries";
 import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";

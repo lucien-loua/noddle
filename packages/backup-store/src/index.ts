@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -66,7 +67,7 @@ export function backupObjectKey(opts: {
   prefix: string;
   takenAt: Date;
 }): string {
-  const stamp = opts.takenAt.toISOString().replace(/[:.]/g, "-");
+  const stamp = opts.takenAt.toISOString().replaceAll(/[:.]/g, "-");
   const name = `${stamp}-${opts.backupId}.${opts.extension}`;
   const parts = [opts.prefix, opts.databaseName, name].filter((p) => p !== "");
   return parts.join("/");
@@ -79,7 +80,7 @@ export function volumeBackupObjectKey(opts: {
   takenAt: Date;
   volumeName: string;
 }): string {
-  const stamp = opts.takenAt.toISOString().replace(/[:.]/g, "-");
+  const stamp = opts.takenAt.toISOString().replaceAll(/[:.]/g, "-");
   const name = `${stamp}-${opts.backupId}.tar.gz`;
   const parts = [opts.prefix, opts.serviceName, opts.volumeName, name].filter(
     (p) => p !== ""
@@ -112,23 +113,23 @@ export async function checkDestination(
 
   try {
     await client.send(new HeadBucketCommand({ Bucket: destination.bucket }));
-  } catch (err) {
-    const status = httpStatus(err);
+  } catch (error) {
+    const status = httpStatus(error);
     if (status === 403) {
       throw new BackupStoreError(
         "credentials rejected: check the access key and secret key",
-        { cause: err }
+        { cause: error }
       );
     }
     if (status === 404) {
       throw new BackupStoreError(
         `bucket "${destination.bucket}" not found on ${destination.endpoint}`,
-        { cause: err }
+        { cause: error }
       );
     }
     throw new BackupStoreError(
-      `bucket "${destination.bucket}" unreachable: ${describe(err)}`,
-      { cause: err }
+      `bucket "${destination.bucket}" unreachable: ${describe(error)}`,
+      { cause: error }
     );
   }
 
@@ -140,10 +141,10 @@ export async function checkDestination(
         Key: key,
       })
     );
-  } catch (err) {
+  } catch (error) {
     throw new BackupStoreError(
-      `write refused in "${destination.bucket}": ${describe(err)}`,
-      { cause: err }
+      `write refused in "${destination.bucket}": ${describe(error)}`,
+      { cause: error }
     );
   }
 
@@ -151,10 +152,10 @@ export async function checkDestination(
     await client.send(
       new DeleteObjectCommand({ Bucket: destination.bucket, Key: key })
     );
-  } catch (err) {
+  } catch (error) {
     throw new BackupStoreError(
-      `delete refused in "${destination.bucket}": ${describe(err)} — old backups cannot be purged`,
-      { cause: err }
+      `delete refused in "${destination.bucket}": ${describe(error)} — old backups cannot be purged`,
+      { cause: error }
     );
   }
 }
@@ -216,13 +217,13 @@ export async function objectExists(
   try {
     await objectSize(destination, key);
     return true;
-  } catch (err) {
-    if (err instanceof NotFound || err instanceof NoSuchKey) {
+  } catch (error) {
+    if (error instanceof NotFound || error instanceof NoSuchKey) {
       return false;
     }
     throw new BackupStoreError(
-      `unable to verify object ${key}: ${describe(err)}`,
-      { cause: err }
+      `unable to verify object ${key}: ${describe(error)}`,
+      { cause: error }
     );
   }
 }
@@ -298,10 +299,10 @@ export async function listObjects(
         lastModified: obj.LastModified?.toISOString() ?? null,
         sizeBytes: obj.Size ?? 0,
       }));
-  } catch (err) {
+  } catch (error) {
     throw new BackupStoreError(
-      `unable to list objects in "${destination.bucket}": ${describe(err)}`,
-      { cause: err }
+      `unable to list objects in "${destination.bucket}": ${describe(error)}`,
+      { cause: error }
     );
   }
 }

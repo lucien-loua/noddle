@@ -1,17 +1,12 @@
-import {
-  DATABASE_ENGINE_LABEL,
-  DATABASE_ENGINES,
-  type DatabaseEngine,
-  DEFAULT_DATABASE_IMAGE,
-  DEFAULT_DATABASE_USER,
-  HAS_NAMED_DATABASE,
-} from "@noddle/database-spec";
+import { DATABASE_ENGINE_LABEL, DATABASE_ENGINES, DEFAULT_DATABASE_IMAGE, DEFAULT_DATABASE_USER, HAS_NAMED_DATABASE } from '@noddle/database-spec';
+import type { DatabaseEngine } from '@noddle/database-spec';
 import { generateDatabasePassword } from "@noddle/shared/password";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -254,8 +249,8 @@ export function ConnectDatabaseDialog({
         onOpenChange(false);
         await queryClient.invalidateQueries();
         await router.invalidate();
-      } catch (err) {
-        setError(errorMessage(err, "could not create the database"));
+      } catch (error) {
+        setError(errorMessage(error, "could not create the database"));
       } finally {
         setPending(false);
       }

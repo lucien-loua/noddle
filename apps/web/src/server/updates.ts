@@ -1,5 +1,7 @@
-import { execArgv, type SshClient } from "@noddle/ssh-executor";
+import { execArgv } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import { createServerFn } from "@tanstack/react-start";
+
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 import { withManagerSession } from "@/lib/ssh.server";
@@ -149,8 +151,8 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
         ]);
         status.log = log.code === 0 ? log.stdout.trimEnd() || null : null;
       });
-    } catch (err) {
-      unreachable = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+      unreachable = error instanceof Error ? error.message : String(error);
     }
 
     status.unreachable = unreachable;

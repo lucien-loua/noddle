@@ -1,10 +1,8 @@
 import type { DatabaseEngine } from "@noddle/database-spec";
-import {
-  type DatabaseExtraMount,
-  type DatabaseSwarmSettings,
-  databases,
-} from "@noddle/db/schema";
+import { databases } from '@noddle/db/schema';
+import type { DatabaseExtraMount, DatabaseSwarmSettings } from '@noddle/db/schema';
 import { eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import type { DatabaseRow } from "@/server/databases/read";
 

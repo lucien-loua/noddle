@@ -5,7 +5,9 @@
 // is the JWT shape GitHub rejects silently, and that a token never leaks
 // into something loggable.
 import { generateKeyPairSync } from "node:crypto";
+
 import { check, expectThrowsAsync, runVerify } from "@noddle/testing";
+
 import {
   apiBase,
   appJwt,

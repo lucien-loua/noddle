@@ -1,5 +1,6 @@
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
+
 import { ConnectDatabaseDialog } from "@/components/features/database/connect-database-dialog";
 import { ConnectRepoDialog } from "@/components/features/services/connect-repo-dialog";
 import { ConnectStackDialog } from "@/components/features/stacks/connect-stack-dialog";

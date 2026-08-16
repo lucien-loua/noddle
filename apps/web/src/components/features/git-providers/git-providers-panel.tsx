@@ -2,6 +2,7 @@ import { PlugsIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   GithubIcon,
   GitlabIcon,
@@ -44,13 +45,8 @@ import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  deleteGitProvider,
-  type GitProviderView,
-  startGithubApp,
-  startGitlabApp,
-  syncGithubInstallation,
-} from "@/server/git-providers";
+import { deleteGitProvider, startGithubApp, startGitlabApp, syncGithubInstallation } from '@/server/git-providers';
+import type { GitProviderView } from '@/server/git-providers';
 
 const TRAILING_SLASHES = /\/+$/;
 

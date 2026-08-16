@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
@@ -47,11 +48,8 @@ import {
 } from "@/components/ui/table";
 import { badgeVariant, deploymentLabel, shortSha } from "@/lib/format";
 import { getAuthState } from "@/server/auth";
-import {
-  type DeploymentLogRow,
-  getDashboardGroups,
-  getDeploymentLog,
-} from "@/server/dashboard";
+import { getDashboardGroups, getDeploymentLog } from '@/server/dashboard';
+import type { DeploymentLogRow } from '@/server/dashboard';
 
 type TypeFilter = "all" | "service" | "stack";
 

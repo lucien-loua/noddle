@@ -3,8 +3,10 @@
 // node packages/backup-store/src/verify.ts
 import { createHash, randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
+
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { devStack } from "@noddle/testing/dev-stack";
+
 import {
   type BackupDestination,
   backupObjectKey,

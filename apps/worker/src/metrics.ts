@@ -7,8 +7,10 @@ import {
   services,
 } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { type DockerApi, disconnect, exec } from "@noddle/ssh-executor";
+import { disconnect, exec } from '@noddle/ssh-executor';
+import type { DockerApi } from '@noddle/ssh-executor';
 import { desc, eq, lt } from "drizzle-orm";
+
 import type { DeployContext } from "#runtime-context";
 
 /** Seven days. Beyond that, aggregation would be needed, so a time-series basis. */
@@ -107,10 +109,10 @@ interface DockerStats {
    * - op "Write" -> write bytes
    */
   blkio_stats?: {
-    io_service_bytes_recursive?: Array<{
+    io_service_bytes_recursive?: {
       op?: string;
       value?: number;
-    }>;
+    }[];
   };
   cpu_stats?: {
     cpu_usage?: { total_usage?: number };

@@ -8,17 +8,17 @@ import {
 } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useId, useState } from "react";
+import { useCallback, useId, useState } from 'react';
+import type { ReactNode } from 'react';
+
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import {
-  type LifecycleAction,
-  useLifecycleActions,
-} from "@/components/use-lifecycle-actions";
+import { useLifecycleActions } from '@/components/use-lifecycle-actions';
+import type { LifecycleAction } from '@/components/use-lifecycle-actions';
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";

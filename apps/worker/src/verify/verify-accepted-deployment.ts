@@ -2,6 +2,7 @@
 // bun run apps/worker/src/verify/verify-accepted-deployment.ts
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { createDatabase } from "@noddle/db";
 import {
   deployments,
@@ -16,6 +17,7 @@ import {
 import { WATCH_WINDOW_MS } from "@noddle/swarm-ops";
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 import { eq } from "drizzle-orm";
+
 import {
   recordAcceptedService,
   recordAcceptedStack,

@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useMemo } from "react";
 import type { z } from "zod";
+
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { useTestAndSave } from "@/components/features/settings-list/hooks/use-test-and-save";
@@ -46,12 +47,8 @@ import { Spinner } from "@/components/ui/spinner";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  deleteRegistry,
-  type RegistryView,
-  saveRegistry,
-  testRegistry,
-} from "@/server/registries";
+import { deleteRegistry, saveRegistry, testRegistry } from '@/server/registries';
+import type { RegistryView } from '@/server/registries';
 
 function RegistryRow({
   canEdit,

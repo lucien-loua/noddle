@@ -14,6 +14,7 @@ import {
 } from "@noddle/shared/validation/stack";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { queueStackDeploy } from "@/lib/deploy-queue.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
@@ -97,58 +98,56 @@ export const connectStack = createServerFn({ method: "POST" })
 
 export const triggerStackDeploy = createServerFn({ method: "POST" })
   .validator(stackDeployRequestSchema)
-  .handler(
-    async ({ data }): Promise<{ stackDeploymentId: string }> =>
-      runGuarded({
-        load: () =>
-          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
-        notFoundMessage: "stack not found",
-        permission: { action: "deploy", resource: "service" },
-        // Same path as the webhook, which queues the same row without a
-        // session.
-        run: ({ row }) => queueStackDeploy(row.id, { trigger: "manual" }),
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ stackDeploymentId: string }> =>
+    runGuarded({
+      load: () =>
+        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+      notFoundMessage: "stack not found",
+      permission: { action: "deploy", resource: "service" },
+      // Same path as the webhook, which queues the same row without a
+      // session.
+      run: ({ row }) => queueStackDeploy(row.id, { trigger: "manual" }),
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 export const triggerStackRollback = createServerFn({ method: "POST" })
   .validator(stackRollbackRequestSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      // The audit object is the Stack, not the deployment the caller named.
-      runGuarded({
-        load: () =>
-          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
-        notFoundMessage: "stack not found",
-        permission: { action: "rollback", resource: "service" },
-        run: async () => {
-          // Re-read from the database rather than trusted as given: the client
-          // sends a deployment id, not a compose text — same reason as
-          // `triggerRollback` for the single-service path.
-          const target = await db.query.stackDeployments.findFirst({
-            where: and(
-              eq(stackDeployments.id, data.sourceDeploymentId),
-              eq(stackDeployments.stackId, data.stackId)
-            ),
-          });
-          if (!target) {
-            throw new Error("deployment not found for this stack");
-          }
-          if (!target.composeSource) {
-            throw new Error(
-              "this deployment produced nothing — there is nothing to redeploy"
-            );
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    // The audit object is the Stack, not the deployment the caller named.
+    runGuarded({
+      load: () =>
+        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+      notFoundMessage: "stack not found",
+      permission: { action: "rollback", resource: "service" },
+      run: async () => {
+        // Re-read from the database rather than trusted as given: the client
+        // sends a deployment id, not a compose text — same reason as
+        // `triggerRollback` for the single-service path.
+        const target = await db.query.stackDeployments.findFirst({
+          where: and(
+            eq(stackDeployments.id, data.sourceDeploymentId),
+            eq(stackDeployments.stackId, data.stackId)
+          ),
+        });
+        if (!target) {
+          throw new Error("deployment not found for this stack");
+        }
+        if (!target.composeSource) {
+          throw new Error(
+            "this deployment produced nothing — there is nothing to redeploy"
+          );
+        }
 
-          await enqueueDeploy({
-            kind: "rollback-stack",
-            sourceDeploymentId: data.sourceDeploymentId,
-            stackId: data.stackId,
-          });
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await enqueueDeploy({
+          kind: "rollback-stack",
+          sourceDeploymentId: data.sourceDeploymentId,
+          stackId: data.stackId,
+        });
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 function toSummary(
@@ -198,24 +197,23 @@ export const getStackDeployments = createServerFn({ method: "GET" })
  */
 export const deleteStack = createServerFn({ method: "POST" })
   .validator(deleteStackSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        // Re-checked by the helper: a dialog box only protects the clients
-        // that display it.
-        confirmName: { expected: (row) => row.name, typed: data.confirmName },
-        load: () =>
-          db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
-        notFoundMessage: "stack not found",
-        permission: { action: "delete", resource: "service" },
-        run: async ({ row: stack }) => {
-          await db
-            .update(stacks)
-            .set(markDeleting(null))
-            .where(eq(stacks.id, stack.id));
-          await enqueueDeploy({ kind: "delete-stack", stackId: stack.id });
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      // Re-checked by the helper: a dialog box only protects the clients
+      // that display it.
+      confirmName: { expected: (row) => row.name, typed: data.confirmName },
+      load: () =>
+        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+      notFoundMessage: "stack not found",
+      permission: { action: "delete", resource: "service" },
+      run: async ({ row: stack }) => {
+        await db
+          .update(stacks)
+          .set(markDeleting(null))
+          .where(eq(stacks.id, stack.id));
+        await enqueueDeploy({ kind: "delete-stack", stackId: stack.id });
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

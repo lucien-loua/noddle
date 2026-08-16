@@ -206,7 +206,7 @@
    outside the panel. `inset` has no ring, so the surplus lands entirely to the
    right of the 32px buttons — 8px left, 10px right. */
 [data-slot="sidebar"][data-variant="inset"][data-collapsible="icon"]
-[data-slot="sidebar-container"] {
+  [data-slot="sidebar-container"] {
   width: calc(var(--sidebar-width-icon) + var(--spacing) * 4);
 }
 

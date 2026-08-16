@@ -7,6 +7,7 @@ import {
   updateProjectHook,
 } from "@noddle/git-provider/gitlab";
 import { and, eq } from "drizzle-orm";
+
 import { gitlabAccessToken, gitlabWebhookSecret } from "./index.ts";
 
 /**
@@ -94,8 +95,8 @@ export async function ensureRepositoryHook(
       lastError: null,
     });
     return { error: null, repositoryFullName };
-  } catch (err) {
-    const error = messageOf(err);
+  } catch (error) {
+    const error = messageOf(error);
     await record(db, gitProviderId, repositoryFullName, hookUrl, {
       hookId: null,
       lastError: error,
@@ -198,9 +199,9 @@ export async function reconcileRepositoryHooks(
     try {
       await removeRepositoryHook(db, appKey, row);
       result.removed.push(row.repositoryFullName);
-    } catch (err) {
+    } catch (error) {
       result.failed.push({
-        error: messageOf(err),
+        error: messageOf(error),
         repositoryFullName: row.repositoryFullName,
       });
     }

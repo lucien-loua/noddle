@@ -1,5 +1,6 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+
 import {
   Breadcrumb,
   BreadcrumbItem,

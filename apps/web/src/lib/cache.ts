@@ -7,11 +7,9 @@
  * architecture review asked for once GET already went through `queries`.
  */
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  type BackupSubject,
-  databaseBackupSubject,
-  volumeBackupSubject,
-} from "@/lib/backup-subject";
+
+import { databaseBackupSubject, volumeBackupSubject } from '@/lib/backup-subject';
+import type { BackupSubject } from '@/lib/backup-subject';
 import { queries } from "@/lib/queries";
 import type { EnvVarTarget } from "@/server/env-vars";
 
@@ -48,6 +46,9 @@ export const cache = {
   destinations: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.destinations().queryKey }),
 
+  envVars: (qc: QueryClient, target: EnvVarTarget) =>
+    qc.invalidateQueries({ queryKey: queries.envVars(target).queryKey }),
+
   environmentScope: (
     qc: QueryClient,
     projectId: string,
@@ -56,9 +57,6 @@ export const cache = {
     qc.invalidateQueries({
       queryKey: queries.environmentScope(projectId, environmentId).queryKey,
     }),
-
-  envVars: (qc: QueryClient, target: EnvVarTarget) =>
-    qc.invalidateQueries({ queryKey: queries.envVars(target).queryKey }),
 
   registries: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.registries().queryKey }),

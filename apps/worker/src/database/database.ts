@@ -1,19 +1,13 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import {
-  ENGINE_SPECS,
-  type EngineParams,
-  type EngineSpec,
-  SECRET_MODE_OWNER_READ_ONLY,
-} from "@noddle/database-spec";
-import {
-  type DatabaseSwarmSettings,
-  databases,
-  envVars,
-} from "@noddle/db/schema";
+import { ENGINE_SPECS, SECRET_MODE_OWNER_READ_ONLY } from '@noddle/database-spec';
+import type { EngineParams, EngineSpec } from '@noddle/database-spec';
+import { databases, envVars } from '@noddle/db/schema';
+import type { DatabaseSwarmSettings } from '@noddle/db/schema';
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
 import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
-import { type DockerApi, execArgv } from "@noddle/ssh-executor";
+import { execArgv } from '@noddle/ssh-executor';
+import type { DockerApi } from '@noddle/ssh-executor';
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -23,6 +17,7 @@ import {
   waitForRunningTask,
 } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
+
 import { withDeployClients } from "#job-run";
 import type { DeployContext, RouteOptions } from "#runtime-context";
 
@@ -63,7 +58,7 @@ function mergeEnv(engineEnv: string[], userEnv: string[]): string[] {
 
 async function ensureVolume(docker: DockerApi, name: string): Promise<void> {
   const list = (await docker.listVolumes()) as unknown as {
-    Volumes?: Array<{ Name?: string }>;
+    Volumes?: { Name?: string }[];
   };
   if (list.Volumes?.some((v) => v.Name === name)) {
     return;
@@ -88,7 +83,7 @@ async function ensureSecret(
     return existing.ID;
   }
   const created = (await managerDocker.createSecret({
-    Data: Buffer.from(plaintext, "utf8").toString("base64"),
+    Data: Buffer.from(plaintext, "utf-8").toString("base64"),
     Name: name,
   })) as unknown as { id: string };
   return created.id;
@@ -106,7 +101,7 @@ export async function removeSecretIfExists(
   try {
     const list = (await managerDocker.listSecrets({
       filters: JSON.stringify({ name: [name] }),
-    })) as unknown as Array<{ ID?: string; Spec?: { Name?: string } }>;
+    })) as unknown as { ID?: string; Spec?: { Name?: string } }[];
     const existing = list.find((s) => s.Spec?.Name === name);
     if (existing?.ID) {
       await managerDocker.getSecret(existing.ID).remove();
@@ -215,12 +210,12 @@ function buildEndpointSpec(opts: {
 }) {
   const endpointSpec: {
     Mode?: "dnsrr" | "vip";
-    Ports?: Array<{
+    Ports?: {
       Protocol: "tcp";
       PublishedPort: number;
       PublishMode: "ingress";
       TargetPort: number;
-    }>;
+    }[];
   } = {};
   if (opts.endpointMode) {
     endpointSpec.Mode = opts.endpointMode;
@@ -229,8 +224,8 @@ function buildEndpointSpec(opts: {
     endpointSpec.Ports = [
       {
         Protocol: "tcp",
-        PublishedPort: opts.externalPort,
         PublishMode: "ingress",
+        PublishedPort: opts.externalPort,
         TargetPort: opts.targetPort,
       },
     ];
@@ -243,11 +238,11 @@ function databaseServiceSpec(opts: {
   /** The port PUBLISHED on the host. `null` = reachable from the overlay only. */
   externalPort: number | null;
   /** User-added mounts (primary data volume is added separately). */
-  extraMounts: Array<{
+  extraMounts: {
     source: string;
     target: string;
     type: "bind" | "volume";
-  }>;
+  }[];
   /** The variables entered by the user, already decrypted. */
   extraEnv: string[];
   /** `databases.image`, or the engine's pinned default. Already resolved here. */
@@ -324,7 +319,7 @@ function databaseServiceSpec(opts: {
 
   const labels = {
     "traefik.enable": "false",
-    ...(swarmSettings?.labels ?? {}),
+    ...swarmSettings?.labels,
   };
 
   const mounts = [
@@ -547,12 +542,12 @@ export async function provisionDatabase(
           .where(eq(databases.id, database.id));
       }
     );
-  } catch (err) {
+  } catch (error) {
     await ctx.db
       .update(databases)
-      .set(markCrashed(null, err instanceof Error ? err.message : String(err)))
+      .set(markCrashed(null, error instanceof Error ? error.message : String(error)))
       .where(eq(databases.id, database.id));
-    throw err;
+    throw error;
   }
 }
 
@@ -624,12 +619,12 @@ export async function rebuildDatabase(
         }
       }
     );
-  } catch (err) {
+  } catch (error) {
     await ctx.db
       .update(databases)
-      .set({ lastError: err instanceof Error ? err.message : String(err) })
+      .set({ lastError: error instanceof Error ? error.message : String(error) })
       .where(eq(databases.id, databaseId));
-    throw err;
+    throw error;
   }
 
   // OUTSIDE the SSH block above: `provisionDatabase` opens its OWN

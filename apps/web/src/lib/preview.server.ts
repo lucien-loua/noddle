@@ -8,6 +8,7 @@ import {
 import { buildSpecOf } from "@noddle/shared/build-spec";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
@@ -63,8 +64,8 @@ export async function ensurePreview(opts: {
     where: eq(services.id, opts.parentServiceId),
     with: {
       domains: { orderBy: asc(serviceDomains.createdAt) },
-      environment: true,
       envVars: true,
+      environment: true,
     },
   });
   if (!parent) {

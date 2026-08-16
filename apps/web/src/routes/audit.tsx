@@ -1,5 +1,6 @@
 import { LockIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+
 import { AppShell } from "@/components/app-shell";
 import { AuditTable } from "@/components/audit-table";
 import { IconStack } from "@/components/icon-stack";

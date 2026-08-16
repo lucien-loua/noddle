@@ -1,18 +1,12 @@
 import { readFileSync } from "node:fs";
+
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { registries, servers } from "@noddle/db/schema";
-import {
-  ensureRegistryTrust,
-  REGISTRY_USER,
-  type RegistryConfig,
-} from "@noddle/registry";
-import {
-  type DockerApi,
-  disconnect,
-  dockerClient,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { ensureRegistryTrust, REGISTRY_USER } from '@noddle/registry';
+import type { RegistryConfig } from '@noddle/registry';
+import { disconnect, dockerClient } from '@noddle/ssh-executor';
+import type { DockerApi, SshClient } from '@noddle/ssh-executor';
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
@@ -38,8 +32,8 @@ export function loadRegistryConfig(): RegistryConfig | undefined {
   }
   let caCert: string;
   try {
-    caCert = readFileSync(CA_PATH, "utf8");
-  } catch (err) {
+    caCert = readFileSync(CA_PATH, "utf-8");
+  } catch (error) {
     // No silent fallback to local mode here: REGISTRY_HOST is present, so
     // the installation BELIEVES it has a registry. Starting anyway would
     // produce pinned deployments nobody asked for, and the bug wouldn't show
@@ -48,10 +42,10 @@ export function loadRegistryConfig(): RegistryConfig | undefined {
     // The cause is passed through as-is: "file missing" and "permission
     // denied" call for two different fixes, and the second one happens if
     // the mount was made on the directory instead of just the certificate.
-    const detail = err instanceof Error ? err.message : String(err);
+    const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `REGISTRY_HOST is set but the CA is unreadable (${CA_PATH}) — did the installer run? ${detail}`,
-      { cause: err }
+      { cause: error }
     );
   }
   return { caCert, host, password, username: REGISTRY_USER };

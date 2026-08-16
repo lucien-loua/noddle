@@ -1,4 +1,5 @@
 import { index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+
 import { user } from "#schema/auth";
 import { createdAt } from "#schema/columns";
 

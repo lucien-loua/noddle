@@ -1,9 +1,11 @@
 import { databases, servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { execArgv, type SshClient } from "@noddle/ssh-executor";
+import { execArgv } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
@@ -180,9 +182,9 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
           }
           view.containers.push(...parsePs(res.stdout, server));
         });
-      } catch (err) {
+      } catch (error) {
         view.unreachable.push({
-          reason: err instanceof Error ? err.message : String(err),
+          reason: error instanceof Error ? error.message : String(error),
           serverId: server.id,
           serverName: server.name,
         });
@@ -341,55 +343,54 @@ async function isManagedSwarmService(serviceName: string): Promise<boolean> {
  */
 export const restartSwarmService = createServerFn({ method: "POST" })
   .validator(restartServiceSchema)
-  .handler(
-    async ({ data }): Promise<{ queued: true }> =>
-      runGuarded({
-        permission: { action: "operate", resource: "container" },
-        // The Swarm service name IS the object here; there is no local row
-        // for it, so the target is built from the payload after the
-        // ownership check inside `run` has accepted it.
-        run: async () => {
-          if (!(await isManagedSwarmService(data.serviceName))) {
+  .handler(async ({ data }): Promise<{ queued: true }> =>
+    runGuarded({
+      permission: { action: "operate", resource: "container" },
+      // The Swarm service name IS the object here; there is no local row
+      // for it, so the target is built from the payload after the
+      // ownership check inside `run` has accepted it.
+      run: async () => {
+        if (!(await isManagedSwarmService(data.serviceName))) {
+          throw new Error(
+            `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
+          );
+        }
+
+        await withServerSessionById(data.serverId, async (client) => {
+          const res = await execArgv(client, [
+            "sudo",
+            "docker",
+            "ps",
+            "-a",
+            "--no-trunc",
+            "--filter",
+            `label=com.docker.swarm.service.name=${data.serviceName}`,
+            "--format",
+            PS_FORMAT,
+          ]);
+          if (res.code !== 0) {
+            throw new Error(res.stderr.trim() || "docker ps failed");
+          }
+          const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
+          if (rows.length === 0) {
             throw new Error(
-              `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
+              `no running task for Swarm service ${data.serviceName} on that server`
             );
           }
+          const foreign = rows.find((r) => r.kind !== "swarm");
+          if (foreign) {
+            throw new Error(
+              `${foreign.name} is part of Noddle itself and cannot be changed from here.`
+            );
+          }
+        });
 
-          await withServerSessionById(data.serverId, async (client) => {
-            const res = await execArgv(client, [
-              "sudo",
-              "docker",
-              "ps",
-              "-a",
-              "--no-trunc",
-              "--filter",
-              `label=com.docker.swarm.service.name=${data.serviceName}`,
-              "--format",
-              PS_FORMAT,
-            ]);
-            if (res.code !== 0) {
-              throw new Error(res.stderr.trim() || "docker ps failed");
-            }
-            const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
-            if (rows.length === 0) {
-              throw new Error(
-                `no running task for Swarm service ${data.serviceName} on that server`
-              );
-            }
-            const foreign = rows.find((r) => r.kind !== "swarm");
-            if (foreign) {
-              throw new Error(
-                `${foreign.name} is part of Noddle itself and cannot be changed from here.`
-              );
-            }
-          });
-
-          await enqueueDeploy({
-            kind: "restart-swarm-service",
-            serviceName: data.serviceName,
-          });
-          return { queued: true as const };
-        },
-        target: () => ({ id: data.serviceName, name: data.serviceName }),
-      })
+        await enqueueDeploy({
+          kind: "restart-swarm-service",
+          serviceName: data.serviceName,
+        });
+        return { queued: true as const };
+      },
+      target: () => ({ id: data.serviceName, name: data.serviceName }),
+    })
   );

@@ -2,6 +2,7 @@ import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,11 +13,8 @@ import {
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
-import {
-  type ContainerRow,
-  containerAction,
-  restartSwarmService,
-} from "@/server/containers";
+import { containerAction, restartSwarmService } from '@/server/containers';
+import type { ContainerRow } from '@/server/containers';
 
 export function ContainerActions({
   onError,

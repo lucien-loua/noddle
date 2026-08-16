@@ -120,10 +120,10 @@ export function sseChannel(
         if (typeof maybeCancel === "function") {
           cancel = maybeCancel;
         }
-      } catch (err) {
+      } catch (error) {
         if (!closed) {
           send({
-            data: `stream error: ${err instanceof Error ? err.message : String(err)}\n`,
+            data: `stream error: ${error instanceof Error ? error.message : String(error)}\n`,
             type: "chunk",
           });
           send({ status: "error", type: "end" });

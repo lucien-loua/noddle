@@ -10,6 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
+
 import { DeleteServerAction } from "@/components/delete-server-action";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { SettingsList } from "@/components/features/settings-list/settings-list";

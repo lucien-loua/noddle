@@ -2,7 +2,9 @@
 //   bun run apps/web/src/verify-permissions.ts
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { finish, ko, ok } from "@noddle/testing";
+
 import {
   can,
   isPermissionUniversal,

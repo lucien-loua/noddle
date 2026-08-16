@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect } from "react";
 import type { z } from "zod";
+
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
@@ -35,16 +36,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  addChannel,
-  type ChannelRow,
-  deleteChannel,
-  testChannel,
-  updateChannel,
-} from "@/server/notifications";
+import { addChannel, deleteChannel, testChannel, updateChannel } from '@/server/notifications';
+import type { ChannelRow } from '@/server/notifications';
 
 const KINDS: { label: string; value: ChannelRow["kind"] }[] = [
   { label: "Discord", value: "discord" },

@@ -5,6 +5,7 @@ import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
+
 import type { DeployContext } from "#runtime-context";
 
 async function connectAsRow(
@@ -131,10 +132,10 @@ export async function provisionServer(
           : null,
       })
       .where(eq(servers.id, server.id));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     await markFailed(ctx, serverId, message);
-    throw err;
+    throw error;
   } finally {
     if (managerClient) {
       disconnect(managerClient);

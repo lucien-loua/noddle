@@ -6,7 +6,9 @@
 // silently, and the symptom would be two servers building differently with
 // nothing in the diff to explain it.
 import { readFileSync } from "node:fs";
+
 import { check, runVerify } from "@noddle/testing";
+
 import {
   BUILDKIT_IMAGE,
   RAILPACK_VERSION,

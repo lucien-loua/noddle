@@ -27,15 +27,14 @@
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const port = Number(process.env.PORT) || 3000;
-const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
+const fixtureDir = import.meta.dirname;
 
 let raw = "healthy";
 try {
   raw =
-    fs.readFileSync(path.join(fixtureDir, "mode.txt"), "utf8").trim() ||
+    fs.readFileSync(path.join(fixtureDir, "mode.txt"), "utf-8").trim() ||
     "healthy";
 } catch {
   // pas de mode.txt → healthy

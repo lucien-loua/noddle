@@ -1,4 +1,5 @@
-import { execStream, quoteArg, type SshClient } from "@noddle/ssh-executor";
+import { execStream, quoteArg } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 
 const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -34,7 +35,7 @@ export async function findDatabaseContainer(
     `docker ps --no-trunc --filter ${quoteArg(`label=com.docker.swarm.service.name=${serviceName}`)} --format ${quoteArg("{{.ID}}")}`,
     async ({ stdout }) => {
       let out = "";
-      stdout.setEncoding("utf8");
+      stdout.setEncoding("utf-8");
       for await (const chunk of stdout) {
         out += chunk as string;
       }

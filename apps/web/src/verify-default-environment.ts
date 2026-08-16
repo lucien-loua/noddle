@@ -2,7 +2,9 @@
 // bun run apps/web/src/verify-default-environment.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { check, expectThrows, runVerify } from "@noddle/testing";
+
 import { assertNotDefaultEnvironment } from "@/lib/environment-guard";
 
 const ROOT = join(import.meta.dirname, "../../..");

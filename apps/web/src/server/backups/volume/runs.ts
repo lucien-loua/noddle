@@ -17,6 +17,7 @@ import {
 } from "@noddle/shared/validation/volume-backup";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -108,88 +109,86 @@ export const triggerVolumeBackup = createServerFn({ method: "POST" })
 
 export const deleteVolumeBackup = createServerFn({ method: "POST" })
   .validator(deleteVolumeBackupRunSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.volumeBackups.findFirst({
-            where: eq(volumeBackups.id, data.backupId),
-          }),
-        notFoundMessage: "volume backup not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row: backup }) => {
-          if (backup.status === "queued" || backup.status === "running") {
-            throw new Error("cannot delete a backup that is still in progress");
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.volumeBackups.findFirst({
+          where: eq(volumeBackups.id, data.backupId),
+        }),
+      notFoundMessage: "volume backup not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: backup }) => {
+        if (backup.status === "queued" || backup.status === "running") {
+          throw new Error("cannot delete a backup that is still in progress");
+        }
 
-          if (backup.destinationId) {
-            try {
-              const { destination } = await resolveDestination(
-                db,
-                env.appKey,
-                backup.destinationId
-              );
-              await deleteObject(destination, backup.objectKey);
-            } catch {
-              // Object may already be gone; still drop the row.
-            }
+        if (backup.destinationId) {
+          try {
+            const { destination } = await resolveDestination(
+              db,
+              env.appKey,
+              backup.destinationId
+            );
+            await deleteObject(destination, backup.objectKey);
+          } catch {
+            // Object may already be gone; still drop the row.
           }
+        }
 
-          await db.delete(volumeBackups).where(eq(volumeBackups.id, backup.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.objectKey }),
-      })
+        await db.delete(volumeBackups).where(eq(volumeBackups.id, backup.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.objectKey }),
+    })
   );
 
 export const triggerVolumeRestore = createServerFn({ method: "POST" })
   .validator(volumeRestoreRequestSchema)
-  .handler(
-    async ({ data }): Promise<{ queued: true }> =>
-      runGuarded({
-        confirmName: { expected: (row) => row.name, typed: data.confirmName },
-        load: () =>
-          db.query.services.findFirst({
-            where: eq(services.id, data.serviceId),
-          }),
-        notFoundMessage: "service not found",
-        permission: { action: "restore", resource: "backup" },
-        run: async ({ row: service }) => {
-          if (data.backupId) {
-            const backup = await db.query.volumeBackups.findFirst({
-              where: eq(volumeBackups.id, data.backupId),
-            });
-            if (!backup || backup.serviceId !== service.id) {
-              throw new Error("volume backup not found for this service");
-            }
-            if (backup.status !== "completed") {
-              throw new Error(
-                "only a completed volume backup can be restored — this one is not"
-              );
-            }
-            await enqueueDeploy({
-              kind: "volume-restore",
-              serviceId: service.id,
-              volumeBackupId: data.backupId,
-            });
-            return { queued: true as const };
+  .handler(async ({ data }): Promise<{ queued: true }> =>
+    runGuarded({
+      confirmName: { expected: (row) => row.name, typed: data.confirmName },
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "restore", resource: "backup" },
+      run: async ({ row: service }) => {
+        if (data.backupId) {
+          const backup = await db.query.volumeBackups.findFirst({
+            where: eq(volumeBackups.id, data.backupId),
+          });
+          if (!backup || backup.serviceId !== service.id) {
+            throw new Error("volume backup not found for this service");
           }
-
-          if (!(data.destinationId && data.objectKey && data.volumeName)) {
+          if (backup.status !== "completed") {
             throw new Error(
-              "destinationId, objectKey and volumeName are required"
+              "only a completed volume backup can be restored — this one is not"
             );
           }
-
           await enqueueDeploy({
-            destinationId: data.destinationId,
             kind: "volume-restore",
-            objectKey: data.objectKey,
             serviceId: service.id,
-            volumeName: data.volumeName,
+            volumeBackupId: data.backupId,
           });
           return { queued: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        }
+
+        if (!(data.destinationId && data.objectKey && data.volumeName)) {
+          throw new Error(
+            "destinationId, objectKey and volumeName are required"
+          );
+        }
+
+        await enqueueDeploy({
+          destinationId: data.destinationId,
+          kind: "volume-restore",
+          objectKey: data.objectKey,
+          serviceId: service.id,
+          volumeName: data.volumeName,
+        });
+        return { queued: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

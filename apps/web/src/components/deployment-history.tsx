@@ -1,12 +1,8 @@
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  type Row,
-  useReactTable,
-} from "@tanstack/react-table";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import type { Row } from '@tanstack/react-table';
 import type { MouseEvent } from "react";
 import { useCallback, useMemo } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

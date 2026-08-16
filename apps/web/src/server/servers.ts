@@ -14,6 +14,7 @@ import { exec } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
@@ -126,22 +127,21 @@ const setServerPruneEnabledSchema = z.object({
  */
 export const setServerPruneEnabled = createServerFn({ method: "POST" })
   .validator(setServerPruneEnabledSchema)
-  .handler(
-    async ({ data }): Promise<{ done: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
-        notFoundMessage: "server not found",
-        permission: { action: "update", resource: "server" },
-        run: async ({ row }) => {
-          await db
-            .update(servers)
-            .set({ pruneEnabled: data.enabled })
-            .where(eq(servers.id, row.id));
-          return { done: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ done: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+      notFoundMessage: "server not found",
+      permission: { action: "update", resource: "server" },
+      run: async ({ row }) => {
+        await db
+          .update(servers)
+          .set({ pruneEnabled: data.enabled })
+          .where(eq(servers.id, row.id));
+        return { done: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -163,33 +163,32 @@ export const setServerPruneEnabled = createServerFn({ method: "POST" })
  */
 export const deleteServer = createServerFn({ method: "POST" })
   .validator(deleteServerSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        confirmName: { expected: (row) => row.name, typed: data.confirmName },
-        load: () =>
-          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
-        notFoundMessage: "server not found",
-        permission: { action: "delete", resource: "server" },
-        run: async ({ row: server }) => {
-          if (server.role === "manager") {
-            throw new Error(
-              "this is the Swarm manager: removing it would leave the installation unable to deploy anything"
-            );
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      confirmName: { expected: (row) => row.name, typed: data.confirmName },
+      load: () =>
+        db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+      notFoundMessage: "server not found",
+      permission: { action: "delete", resource: "server" },
+      run: async ({ row: server }) => {
+        if (server.role === "manager") {
+          throw new Error(
+            "this is the Swarm manager: removing it would leave the installation unable to deploy anything"
+          );
+        }
 
-          const held = await heldBy(server.id);
-          if (held) {
-            throw new Error(
-              `this server still hosts ${held} — move or delete them first`
-            );
-          }
+        const held = await heldBy(server.id);
+        if (held) {
+          throw new Error(
+            `this server still hosts ${held} — move or delete them first`
+          );
+        }
 
-          await enqueueDeploy({ kind: "delete-server", serverId: server.id });
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await enqueueDeploy({ kind: "delete-server", serverId: server.id });
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /** What the server still hosts, in plain text, or `null`. */
@@ -274,17 +273,16 @@ export const checkServerTools = createServerFn({ method: "GET" })
  */
 export const setupServer = createServerFn({ method: "POST" })
   .validator(serverIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
-        notFoundMessage: "server not found",
-        permission: { action: "create", resource: "server" },
-        run: async ({ row }) => {
-          await enqueueDeploy({ kind: "provision-server", serverId: row.id });
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.servers.findFirst({ where: eq(servers.id, data.serverId) }),
+      notFoundMessage: "server not found",
+      permission: { action: "create", resource: "server" },
+      run: async ({ row }) => {
+        await enqueueDeploy({ kind: "provision-server", serverId: row.id });
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

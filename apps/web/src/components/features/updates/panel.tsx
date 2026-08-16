@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Frame,
@@ -12,11 +13,8 @@ import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  getUpdateStatus,
-  startUpdate,
-  type UpdateStatus,
-} from "@/server/updates";
+import { getUpdateStatus, startUpdate } from '@/server/updates';
+import type { UpdateStatus } from '@/server/updates';
 
 /**
  * The polling cadence once the update is launched.
@@ -41,7 +39,7 @@ const SHORT = 12;
  * machine produced, since it's what gets read back afterward.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: this is precisely the ESC character we're targeting
-const ANSI = /\u001b\[[0-9;]*m/g;
+const ANSI = /\u001B\[[0-9;]*m/g;
 
 function Commit({ sha }: { sha: string | null }) {
   if (!sha) {

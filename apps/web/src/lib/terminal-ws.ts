@@ -4,6 +4,7 @@
  * Shared by production `server.ts` and the Bun front in `scripts/dev-web.ts`.
  */
 import type { ServerWebSocket } from "bun";
+
 import type { TerminalSocketData } from "@/lib/terminal.server";
 import {
   isTerminalPath,
@@ -94,8 +95,8 @@ export const terminalWebsocket = {
           ws.close(1000, "session ended");
         }
       });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       try {
         ws.send(`\r\n${msg}\r\n`);
       } catch {

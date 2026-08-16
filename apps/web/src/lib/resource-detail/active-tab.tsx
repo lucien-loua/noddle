@@ -1,4 +1,5 @@
-import { type ReactNode, Suspense } from "react";
+import { Suspense } from 'react';
+import type { ReactNode } from 'react';
 
 import { Spinner } from "@/components/ui/spinner";
 

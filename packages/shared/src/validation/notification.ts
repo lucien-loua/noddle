@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { HTTP_OR_HTTPS_URL, HTTPS_URL } from "./common.ts";
 
 export const notificationKindSchema = z.enum(["webhook", "discord", "slack"]);

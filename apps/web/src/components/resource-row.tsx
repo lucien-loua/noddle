@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Item,
@@ -9,7 +10,8 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { badgeVariant, dotClass, type Tone } from "@/lib/format";
+import { badgeVariant, dotClass } from '@/lib/format';
+import type { Tone } from '@/lib/format';
 import { cn } from "@/lib/utils";
 
 interface Props {

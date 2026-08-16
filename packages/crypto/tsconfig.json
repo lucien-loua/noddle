@@ -1,4 +1,7 @@
 {
   "extends": "@noddle/tsconfig/base.json",
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
 }

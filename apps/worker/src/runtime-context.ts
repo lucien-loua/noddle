@@ -9,12 +9,8 @@ import type { Database } from "@noddle/db";
 import { servers } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
 import { credentialsFor } from "@noddle/ssh-credentials";
-import {
-  connect,
-  type DockerApi,
-  dockerClient,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { connect, dockerClient } from '@noddle/ssh-executor';
+import type { DockerApi, SshClient } from '@noddle/ssh-executor';
 import { eq } from "drizzle-orm";
 
 export type ServerRow = typeof servers.$inferSelect;

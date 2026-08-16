@@ -1,16 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
+
 import type { BackupSubject } from "@/lib/backup-subject";
 import { getAccounts } from "@/server/accounts";
-import {
-  type BackupConfigRow,
-  listBackupConfigs,
-} from "@/server/backups/configs";
+import { listBackupConfigs } from '@/server/backups/configs';
+import type { BackupConfigRow } from '@/server/backups/configs';
 import { getDestinations } from "@/server/backups/destinations";
 import { getBackups, listBackupObjects } from "@/server/backups/runs";
-import {
-  listVolumeBackupConfigs,
-  type VolumeBackupConfigRow,
-} from "@/server/backups/volume/configs";
+import { listVolumeBackupConfigs } from '@/server/backups/volume/configs';
+import type { VolumeBackupConfigRow } from '@/server/backups/volume/configs';
 import { getVolumeBackups } from "@/server/backups/volume/runs";
 import { listServiceVolumes } from "@/server/backups/volume/volumes";
 import {
@@ -129,7 +126,7 @@ export const queries = {
         getDatabaseMetrics({
           data: {
             databaseId,
-            windowHours: ({ 1: "1", 6: "6", 24: "24" } as const)[windowHours],
+            windowHours: ({ 1: "1", 24: "24", 6: "6" } as const)[windowHours],
           },
         }),
       queryKey: ["database-metrics", databaseId, windowHours],

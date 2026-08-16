@@ -2,6 +2,7 @@ import { gitlabProviders, gitProviders } from "@noddle/db/schema";
 import { exchangeCode } from "@noddle/git-provider/gitlab";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { gitlabAppFor, saveGitlabTokens } from "@/lib/gitlab.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -67,11 +68,11 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
               const { app } = await gitlabAppFor(state);
               const tokens = await exchangeCode(app, code);
               await saveGitlabTokens(state, tokens);
-            } catch (err) {
+            } catch (error) {
               // The code is single use. Retrying this URL cannot work, so
               // the pending row goes rather than being left looking
               // connected when it is not.
-              const detail = err instanceof Error ? err.message : String(err);
+              const detail = error instanceof Error ? error.message : String(error);
               await removePending();
               return new Response(
                 `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,

@@ -11,6 +11,7 @@
 // fresh install aborted at the adoption step, leaving no server #1 at all.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { check, runVerify } from "@noddle/testing";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..");

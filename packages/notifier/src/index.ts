@@ -152,11 +152,11 @@ export async function deliver(
       ok: false,
       status: response.status,
     };
-  } catch (err) {
+  } catch (error) {
     // The URL does NOT appear in the message: it's a bearer credential —
     // whoever holds it can post to the channel — and this message ends up
     // in a column displayed on screen.
-    return { error: describeFailure(err), ok: false };
+    return { error: describeFailure(error), ok: false };
   }
 }
 

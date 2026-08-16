@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 import { environments } from "#schema/projects";
 import { servers } from "#schema/servers";
@@ -44,11 +45,11 @@ export interface DatabaseSwarmSettings {
     Global?: Record<string, never>;
     Replicated?: { Replicas?: number };
   } | null;
-  networks?: Array<{ Aliases?: string[]; Target: string }> | null;
+  networks?: { Aliases?: string[]; Target: string }[] | null;
   placement?: {
     Constraints?: string[];
     MaxReplicas?: number;
-    Preferences?: Array<{ Spread: { SpreadDescriptor: string } }>;
+    Preferences?: { Spread: { SpreadDescriptor: string } }[];
   } | null;
   restartPolicy?: {
     Condition?: "any" | "none" | "on-failure";

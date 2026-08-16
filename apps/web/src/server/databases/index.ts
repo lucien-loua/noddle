@@ -12,11 +12,7 @@ export {
   rebuildDatabase,
   triggerDatabaseLifecycle,
 } from "./lifecycle";
-export {
-  type DatabaseRow,
-  getDatabase,
-  getDatabaseDashboard,
-} from "./read";
+export { type DatabaseRow, getDatabase, getDatabaseDashboard } from "./read";
 export {
   addDatabaseMount,
   changeDatabasePassword,

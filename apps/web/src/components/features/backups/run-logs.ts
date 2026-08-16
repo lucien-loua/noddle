@@ -1,8 +1,7 @@
-import {
-  formatLogStamp,
-  type TerminalLogLine,
-} from "@/components/terminal-logs";
+import { formatLogStamp } from '@/components/terminal-logs';
+import type { TerminalLogLine } from '@/components/terminal-logs';
 import { byteSize } from "@/lib/format";
+
 import type { BackupRunRow } from "./run-types";
 
 function runLogLines(

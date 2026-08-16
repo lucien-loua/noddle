@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 
 export const projects = pgTable(

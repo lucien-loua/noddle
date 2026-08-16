@@ -60,7 +60,7 @@ function parseLine(raw: string): EnvPair | null {
     )
   ) {
     const comment = value.indexOf(" #");
-    if (comment >= 0) {
+    if (comment !== -1) {
       value = value.slice(0, comment).trimEnd();
     }
   }
@@ -78,7 +78,7 @@ export function parseEnvPaste(text: string): EnvPair[] {
     }
     if (seen.has(pair.key)) {
       const index = pairs.findIndex((item) => item.key === pair.key);
-      if (index >= 0) {
+      if (index !== -1) {
         pairs[index] = pair;
       }
       continue;

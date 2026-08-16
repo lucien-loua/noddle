@@ -1,29 +1,21 @@
 import { randomUUID } from "node:crypto";
+
 import {
   buildImageFromDockerfile,
   computeBuildCap,
   ensureCappedBuilder,
   fetchSource,
 } from "@noddle/build-engine";
-import {
-  type ComposeBuildSpec,
-  type ComposeFile,
-  type ComposeService,
-  injectDeployConfig,
-  parseCompose,
-  SAFE_COMPOSE_KEY,
-} from "@noddle/compose-engine";
+import { injectDeployConfig, parseCompose, SAFE_COMPOSE_KEY } from '@noddle/compose-engine';
+import type { ComposeBuildSpec, ComposeFile, ComposeService } from '@noddle/compose-engine';
 import {
   stackDeploymentLogs,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import { markCrashed, settle } from "@noddle/shared/lifecycle";
-import {
-  execArgv,
-  type SshClient,
-  writeRemoteFile,
-} from "@noddle/ssh-executor";
+import { execArgv, writeRemoteFile } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -33,15 +25,14 @@ import {
 } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
+
 import { recordAcceptedStack } from "#deploy/accepted-deployment";
-import { type DeployClients, withDeployClients } from "#job-run";
-import { createLogSink, type LogSink } from "#log-sink";
-import {
-  BUILD_ROOT,
-  type BuildOptions,
-  type DeployContext,
-  type RouteOptions,
-} from "#runtime-context";
+import { withDeployClients } from '#job-run';
+import type { DeployClients } from '#job-run';
+import { createLogSink } from '#log-sink';
+import type { LogSink } from '#log-sink';
+import { BUILD_ROOT } from '#runtime-context';
+import type { BuildOptions, DeployContext, RouteOptions } from '#runtime-context';
 
 /** Relative file path, with no escape from the cloned directory. */
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\.\.)[\w./-]+$/;
@@ -78,8 +69,8 @@ async function writeAndDeployStack(
 ): Promise<DeployStackResult> {
   const { createDockerApi, managerClient, stackName, doc } = opts;
   const stream = opts.stream ?? {
-    onStderr: () => undefined,
-    onStdout: () => undefined,
+    onStderr: () => {},
+    onStdout: () => {},
   };
   const managerDocker = createDockerApi(managerClient);
   await ensureOverlayNetwork(managerDocker, route.networkName);
@@ -136,7 +127,7 @@ async function writeAndDeployStack(
     }
     return { accepted, swarmUpdateStates };
   } finally {
-    await execArgv(managerClient, ["rm", "-f", tmpPath]).catch(() => undefined);
+    await execArgv(managerClient, ["rm", "-f", tmpPath]).catch(() => {});
   }
 }
 
@@ -384,8 +375,8 @@ export async function runStackDeploy(
     await withDeployClients(ctx, stack.server, (clients) =>
       buildAndDeployStack(ctx, route, deployment, log, stream, clients)
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     sink?.write(`✗ ${message}\n`);
     await db
       .update(stackDeployments)
@@ -395,7 +386,7 @@ export async function runStackDeploy(
       .update(stacks)
       .set(markCrashed(null, message))
       .where(eq(stacks.id, stack.id));
-    throw err;
+    throw error;
   } finally {
     if (sink) {
       const { byteSize, storageUrl } = await sink.close();

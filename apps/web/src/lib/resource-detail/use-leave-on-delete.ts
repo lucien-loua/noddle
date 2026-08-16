@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { NavigateOptions } from "@tanstack/react-router";
 import { useCallback } from "react";
+
 import { cache } from "@/lib/cache";
 
 interface LeaveOnDeleteOpts {

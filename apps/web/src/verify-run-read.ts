@@ -2,6 +2,7 @@
 // bun run apps/web/src/verify-run-read.ts
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { check, runVerify } from "@noddle/testing";
 
 const SERVER_DIR = join(import.meta.dirname, "server");

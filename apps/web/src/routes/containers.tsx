@@ -5,6 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { ContainerActions } from "@/components/container-actions";
 import { IconStack } from "@/components/icon-stack";
@@ -32,8 +33,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { dotClass, type Tone } from "@/lib/format";
-import { type RoleName, roles } from "@/lib/permissions";
+import { dotClass } from '@/lib/format';
+import type { Tone } from '@/lib/format';
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { getAuthState } from "@/server/auth";
 import type { ContainerKind, ContainerRow } from "@/server/containers";
 import { getContainers } from "@/server/containers";

@@ -1,6 +1,7 @@
 // tier: pure
 // bun run packages/deploy-contract/src/verify.ts
 import { check, expectThrows, runVerify, suite } from "@noddle/testing";
+
 import { deployJobSchema, type JobKind, type PayloadOf } from "./index.ts";
 
 const ID = "11111111-1111-4111-8111-111111111111";

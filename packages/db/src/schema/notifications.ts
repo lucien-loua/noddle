@@ -6,6 +6,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 
 /**

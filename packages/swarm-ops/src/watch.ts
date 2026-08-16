@@ -31,9 +31,9 @@ export async function inspectServiceHealth(
   let failures = 0;
   let lastError: string | null = null;
 
-  for (const t of tasks as unknown as Array<{
+  for (const t of tasks as unknown as {
     Status?: { State?: string; Timestamp?: string; Err?: string };
-  }>) {
+  }[]) {
     const state = t.Status?.State;
     const ts = t.Status?.Timestamp ? Date.parse(t.Status.Timestamp) : 0;
 

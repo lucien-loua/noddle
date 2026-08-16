@@ -1,17 +1,10 @@
-import {
-  type DomainRoute,
-  routeLabels,
-  serviceRouteLabels,
-} from "@noddle/proxy-config";
+import { routeLabels, serviceRouteLabels } from '@noddle/proxy-config';
+import type { DomainRoute } from '@noddle/proxy-config';
 import type { RegistryConfig } from "@noddle/registry";
 import type { DockerApi } from "@noddle/ssh-executor";
-import {
-  deployService,
-  ensureOverlayNetwork,
-  isDeployAccepted,
-  readRunningNodeId,
-  type SwarmUpdateState,
-} from "@noddle/swarm-ops";
+import { deployService, ensureOverlayNetwork, isDeployAccepted, readRunningNodeId } from '@noddle/swarm-ops';
+import type { SwarmUpdateState } from '@noddle/swarm-ops';
+
 import { authFor, placementFor } from "#deploy/placement";
 
 export interface RolloutInput {

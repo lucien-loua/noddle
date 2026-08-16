@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
@@ -36,7 +37,8 @@ import {
 import { badgeVariant, deploymentLabel, serviceLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
-import { getOverview, type Overview } from "@/server/dashboard";
+import { getOverview } from '@/server/dashboard';
+import type { Overview } from '@/server/dashboard';
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {

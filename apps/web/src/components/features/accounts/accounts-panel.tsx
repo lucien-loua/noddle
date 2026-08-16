@@ -3,6 +3,7 @@ import { EnvelopeIcon, UserIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { RevealOnce } from "@/components/features/settings-list/reveal-once";
@@ -42,21 +43,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { errorMessage } from "@/lib/format";
-import {
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
-  ROLE_ORDER,
-  type RoleName,
-  roles,
-} from "@/lib/permissions";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_ORDER, roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  type AccountRow,
-  createAccount,
-  removeAccount,
-  setAccountRole,
-} from "@/server/accounts";
+import { createAccount, removeAccount, setAccountRole } from '@/server/accounts';
+import type { AccountRow } from '@/server/accounts';
 
 export function AccountsPanel({
   initial,

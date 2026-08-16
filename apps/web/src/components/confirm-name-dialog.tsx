@@ -1,6 +1,7 @@
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect } from "react";
+
 import { useCopyFeedback } from "@/components/copyable-value";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Badge } from "@/components/ui/badge";

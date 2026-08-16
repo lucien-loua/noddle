@@ -2,6 +2,7 @@
 // bun run apps/web/src/verify-resource-detail.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { check, runVerify } from "@noddle/testing";
 
 const WEB_SRC = join(import.meta.dirname);

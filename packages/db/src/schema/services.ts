@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 import { gitProviders } from "#schema/git-providers";
 import { environments } from "#schema/projects";
@@ -167,7 +168,10 @@ export const services = pgTable(
     updatedAt,
 
     /** Globs a webhook push must touch to deploy. Empty = every push does. */
-    watchPaths: text("watch_paths").array().notNull().default(sql`'{}'`),
+    watchPaths: text("watch_paths")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
 
     // Absent = no webhook configured. Shown once in plaintext, at the
     // moment it's generated — never read back afterward, even encrypted:

@@ -1,10 +1,9 @@
 # Architecture Decision Records
 
-Accepted decisions. Do not relitigate without explicit evidence and a stop for
-an answer. New ADRs: next number, short title, why — see `/domain-modeling`.
+Accepted decisions. Do not relitigate without explicit evidence and a stop for an answer. New ADRs: next number, short title, why — see `/domain-modeling`.
 
 | # | Decision |
-|---|---|
+| --- | --- |
 | [0001](./0001-docker-swarm-orchestration.md) | Docker Swarm orchestration |
 | [0002](./0002-build-on-target-server.md) | Build on the target server |
 | [0003](./0003-resource-capped-builds.md) | Resource-capped builds on a Noddle-owned BuildKit |

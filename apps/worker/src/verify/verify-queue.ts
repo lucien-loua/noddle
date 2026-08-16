@@ -9,6 +9,7 @@
 //
 //   DATABASE_URL=… REDIS_URL=… node apps/worker/src/verify/verify-queue.ts
 import { randomBytes } from "node:crypto";
+
 import { createDatabase } from "@noddle/db";
 import {
   deployments,
@@ -22,6 +23,7 @@ import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
+
 import { seedSshKey } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;

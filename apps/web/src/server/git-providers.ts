@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import {
   githubProviders,
@@ -6,6 +7,7 @@ import {
   gitProviders,
   services,
 } from "@noddle/db/schema";
+import { isConnected, providerFor } from "@noddle/git-provider-credentials";
 import {
   appManifest,
   installUrl,
@@ -13,10 +15,10 @@ import {
   listInstallations,
 } from "@noddle/git-provider/github";
 import { authorizeUrl } from "@noddle/git-provider/gitlab";
-import { isConnected, providerFor } from "@noddle/git-provider-credentials";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { githubAppCredentials } from "@/lib/git-provider.server";
@@ -243,31 +245,30 @@ const deleteGitProviderSchema = z.object({ gitProviderId: z.uuid() });
  */
 export const deleteGitProvider = createServerFn({ method: "POST" })
   .validator(deleteGitProviderSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.gitProviders.findFirst({
-            where: eq(gitProviders.id, data.gitProviderId),
-          }),
-        notFoundMessage: "git provider not found",
-        permission: { action: "delete", resource: "gitProvider" },
-        run: async ({ row }) => {
-          const used = await db.query.services.findMany({
-            where: eq(services.gitProviderId, row.id),
-          });
-          if (used.length > 0) {
-            throw new Error(
-              `this connection still clones for ${used.length} service(s): ${used
-                .map((s) => s.name)
-                .join(", ")} — change their provider first`
-            );
-          }
-          await db.delete(gitProviders).where(eq(gitProviders.id, row.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.gitProviders.findFirst({
+          where: eq(gitProviders.id, data.gitProviderId),
+        }),
+      notFoundMessage: "git provider not found",
+      permission: { action: "delete", resource: "gitProvider" },
+      run: async ({ row }) => {
+        const used = await db.query.services.findMany({
+          where: eq(services.gitProviderId, row.id),
+        });
+        if (used.length > 0) {
+          throw new Error(
+            `this connection still clones for ${used.length} service(s): ${used
+              .map((s) => s.name)
+              .join(", ")} — change their provider first`
+          );
+        }
+        await db.delete(gitProviders).where(eq(gitProviders.id, row.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 const syncInstallationSchema = z.object({ gitProviderId: z.uuid() });
@@ -282,34 +283,33 @@ const syncInstallationSchema = z.object({ gitProviderId: z.uuid() });
  */
 export const syncGithubInstallation = createServerFn({ method: "POST" })
   .validator(syncInstallationSchema)
-  .handler(
-    async ({ data }): Promise<{ account: string } | { pending: true }> =>
-      runGuarded({
-        permission: { action: "create", resource: "gitProvider" },
-        run: async () => {
-          const app = await githubAppCredentials(data.gitProviderId);
-          const installations = await listInstallations(app);
-          const [found] = installations;
-          if (!found) {
-            return { pending: true as const };
-          }
-          if (installations.length > 1) {
-            // One connection points at one installation. Picking silently
-            // would bind repositories the operator did not choose.
-            throw new Error(
-              `this App is installed on ${installations.length} accounts (${installations
-                .map((i) => i.account)
-                .join(", ")}) — connect one App per account`
-            );
-          }
-          await db
-            .update(githubProviders)
-            .set({ installationId: found.id })
-            .where(eq(githubProviders.gitProviderId, data.gitProviderId));
-          return { account: found.account };
-        },
-        target: () => ({ id: data.gitProviderId, name: "github" }),
-      })
+  .handler(async ({ data }): Promise<{ account: string } | { pending: true }> =>
+    runGuarded({
+      permission: { action: "create", resource: "gitProvider" },
+      run: async () => {
+        const app = await githubAppCredentials(data.gitProviderId);
+        const installations = await listInstallations(app);
+        const [found] = installations;
+        if (!found) {
+          return { pending: true as const };
+        }
+        if (installations.length > 1) {
+          // One connection points at one installation. Picking silently
+          // would bind repositories the operator did not choose.
+          throw new Error(
+            `this App is installed on ${installations.length} accounts (${installations
+              .map((i) => i.account)
+              .join(", ")}) — connect one App per account`
+          );
+        }
+        await db
+          .update(githubProviders)
+          .set({ installationId: found.id })
+          .where(eq(githubProviders.gitProviderId, data.gitProviderId));
+        return { account: found.account };
+      },
+      target: () => ({ id: data.gitProviderId, name: "github" }),
+    })
   );
 
 const providerRepositoriesSchema = z.object({ gitProviderId: z.uuid() });
@@ -340,17 +340,12 @@ const providerBranchesSchema = z.object({
 
 export const getProviderBranches = createServerFn({ method: "GET" })
   .validator(providerBranchesSchema)
-  .handler(
-    async ({ data }): Promise<string[]> =>
-      runRead({
-        permission: { action: "read", resource: "gitProvider" },
-        read: async () => {
-          const provider = await providerFor(
-            db,
-            env.appKey,
-            data.gitProviderId
-          );
-          return await provider.branches(data.fullName);
-        },
-      })
+  .handler(async ({ data }): Promise<string[]> =>
+    runRead({
+      permission: { action: "read", resource: "gitProvider" },
+      read: async () => {
+        const provider = await providerFor(db, env.appKey, data.gitProviderId);
+        return await provider.branches(data.fullName);
+      },
+    })
   );

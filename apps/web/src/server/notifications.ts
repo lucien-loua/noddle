@@ -8,6 +8,7 @@ import {
 } from "@noddle/shared/validation/notification";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -92,61 +93,59 @@ export const addChannel = createServerFn({ method: "POST" })
 
 export const updateChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelUpdateSchema)
-  .handler(
-    async ({ data }): Promise<{ saved: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.notificationChannels.findFirst({
-            where: eq(notificationChannels.id, data.channelId),
-          }),
-        notFoundMessage: "channel not found",
-        permission: { action: "manage", resource: "notification" },
-        run: async ({ row: existing }) => {
-          // Missing URL = "keep the previous one": the form can't redisplay it to
-          // send it back, since it never comes out.
-          const urlEncrypted = data.url
-            ? encryptSecret(
-                data.url,
-                env.appKey,
-                secretContext.notificationChannel(existing.id)
-              )
-            : existing.urlEncrypted;
+  .handler(async ({ data }): Promise<{ saved: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.notificationChannels.findFirst({
+          where: eq(notificationChannels.id, data.channelId),
+        }),
+      notFoundMessage: "channel not found",
+      permission: { action: "manage", resource: "notification" },
+      run: async ({ row: existing }) => {
+        // Missing URL = "keep the previous one": the form can't redisplay it to
+        // send it back, since it never comes out.
+        const urlEncrypted = data.url
+          ? encryptSecret(
+              data.url,
+              env.appKey,
+              secretContext.notificationChannel(existing.id)
+            )
+          : existing.urlEncrypted;
 
-          await db
-            .update(notificationChannels)
-            .set({
-              enabled: data.enabled,
-              name: data.name,
-              notifySuccess: data.notifySuccess,
-              updatedAt: new Date(),
-              urlEncrypted,
-            })
-            .where(eq(notificationChannels.id, existing.id));
-          return { saved: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db
+          .update(notificationChannels)
+          .set({
+            enabled: data.enabled,
+            name: data.name,
+            notifySuccess: data.notifySuccess,
+            updatedAt: new Date(),
+            urlEncrypted,
+          })
+          .where(eq(notificationChannels.id, existing.id));
+        return { saved: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 export const deleteChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelIdSchema)
-  .handler(
-    async ({ data }): Promise<{ deleted: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.notificationChannels.findFirst({
-            where: eq(notificationChannels.id, data.channelId),
-          }),
-        notFoundMessage: "channel not found",
-        permission: { action: "manage", resource: "notification" },
-        run: async ({ row }) => {
-          await db
-            .delete(notificationChannels)
-            .where(eq(notificationChannels.id, row.id));
-          return { deleted: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ deleted: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.notificationChannels.findFirst({
+          where: eq(notificationChannels.id, data.channelId),
+        }),
+      notFoundMessage: "channel not found",
+      permission: { action: "manage", resource: "notification" },
+      run: async ({ row }) => {
+        await db
+          .delete(notificationChannels)
+          .where(eq(notificationChannels.id, row.id));
+        return { deleted: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -159,41 +158,40 @@ export const deleteChannel = createServerFn({ method: "POST" })
  */
 export const testChannel = createServerFn({ method: "POST" })
   .validator(notificationChannelIdSchema)
-  .handler(
-    async ({ data }): Promise<{ error?: string; ok: boolean }> =>
-      runGuarded({
-        load: () =>
-          db.query.notificationChannels.findFirst({
-            where: eq(notificationChannels.id, data.channelId),
-          }),
-        notFoundMessage: "channel not found",
-        permission: { action: "manage", resource: "notification" },
-        run: async ({ row: channel }) => {
-          const url = decryptSecret(
-            channel.urlEncrypted,
-            env.appKey,
-            secretContext.notificationChannel(channel.id)
-          );
-          const result = await deliver(
-            { kind: channel.kind, url },
-            {
-              detail: "If you are reading this, the channel works.",
-              resource: "test",
-              type: "deploy_succeeded",
-            }
-          );
+  .handler(async ({ data }): Promise<{ error?: string; ok: boolean }> =>
+    runGuarded({
+      load: () =>
+        db.query.notificationChannels.findFirst({
+          where: eq(notificationChannels.id, data.channelId),
+        }),
+      notFoundMessage: "channel not found",
+      permission: { action: "manage", resource: "notification" },
+      run: async ({ row: channel }) => {
+        const url = decryptSecret(
+          channel.urlEncrypted,
+          env.appKey,
+          secretContext.notificationChannel(channel.id)
+        );
+        const result = await deliver(
+          { kind: channel.kind, url },
+          {
+            detail: "If you are reading this, the channel works.",
+            resource: "test",
+            type: "deploy_succeeded",
+          }
+        );
 
-          await db
-            .update(notificationChannels)
-            .set(
-              result.ok
-                ? { lastError: null, lastSuccessAt: new Date() }
-                : { lastError: result.error ?? "unknown failure" }
-            )
-            .where(eq(notificationChannels.id, channel.id));
+        await db
+          .update(notificationChannels)
+          .set(
+            result.ok
+              ? { lastError: null, lastSuccessAt: new Date() }
+              : { lastError: result.error ?? "unknown failure" }
+          )
+          .where(eq(notificationChannels.id, channel.id));
 
-          return { error: result.error, ok: result.ok };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        return { error: result.error, ok: result.ok };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

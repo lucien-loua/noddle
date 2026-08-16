@@ -3,6 +3,7 @@
 //
 // Idempotent: rerunning the installer does not create a second server.
 import { readFileSync } from "node:fs";
+
 import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { servers, sshKeys } from "@noddle/db/schema";
@@ -11,6 +12,7 @@ import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { publicKeyOf } from "@noddle/ssh-executor/keys";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { and, eq } from "drizzle-orm";
+
 import { loadRegistryConfig } from "#registry";
 
 function required(name: string): string {
@@ -27,7 +29,7 @@ const appKey = loadAppKey(process.env.APP_KEY);
 const host = required("HOST_IP");
 const user = required("HOST_USER");
 const port = Number(process.env.HOST_SSH_PORT ?? 22);
-const privateKey = readFileSync(required("HOST_SSH_KEY"), "utf8");
+const privateKey = readFileSync(required("HOST_SSH_KEY"), "utf-8");
 const registry = loadRegistryConfig();
 
 /** Records the same facts as `provisionServer` for a machine added to the
@@ -77,13 +79,13 @@ async function recordReachability(serverId: string): Promise<void> {
       })
       .where(eq(servers.id, serverId));
     process.stdout.write(`  reachable: Docker ${version.Version ?? "?"}\n`);
-  } catch (err) {
+  } catch (error) {
     // The installation does NOT fail because of this: the stack is
     // running, the administrator account can be created, and the
     // dashboard must be able to show WHY the machine is unreachable.
     // Exiting with an error here would leave the user staring at an empty
     // screen with no explanation.
-    const message = err instanceof Error ? err.message : String(err);
+    const message = error instanceof Error ? error.message : String(error);
     await db
       .update(servers)
       .set({ lastError: message, status: "unreachable" })

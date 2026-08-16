@@ -13,13 +13,14 @@ import {
 } from "@noddle/shared/validation/project";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import {
   copyEnvironment,
   loadEnvironmentForDuplicate,
 } from "@/lib/duplicate-environment.server";
-import { insertProjectEnvironment } from "@/lib/environment.server";
 import { assertNotDefaultEnvironment } from "@/lib/environment-guard";
+import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -93,36 +94,35 @@ export const createEnvironment = createServerFn({ method: "POST" })
 
 export const renameEnvironment = createServerFn({ method: "POST" })
   .validator(renameEnvironmentSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.environments.findFirst({
-            where: eq(environments.id, data.environmentId),
-          }),
-        notFoundMessage: "environment not found",
-        permission: { action: "create", resource: "service" },
-        run: async ({ row: environment }) => {
-          assertNotDefaultEnvironment(environment, "rename");
-          const existing = await db.query.environments.findFirst({
-            where: and(
-              eq(environments.projectId, environment.projectId),
-              eq(environments.name, data.name),
-              ne(environments.id, environment.id)
-            ),
-          });
-          if (existing) {
-            throw new Error(`"${data.name}" already exists in this project`);
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.environments.findFirst({
+          where: eq(environments.id, data.environmentId),
+        }),
+      notFoundMessage: "environment not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row: environment }) => {
+        assertNotDefaultEnvironment(environment, "rename");
+        const existing = await db.query.environments.findFirst({
+          where: and(
+            eq(environments.projectId, environment.projectId),
+            eq(environments.name, data.name),
+            ne(environments.id, environment.id)
+          ),
+        });
+        if (existing) {
+          throw new Error(`"${data.name}" already exists in this project`);
+        }
 
-          await db
-            .update(environments)
-            .set({ description: data.description, name: data.name })
-            .where(eq(environments.id, environment.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db
+          .update(environments)
+          .set({ description: data.description, name: data.name })
+          .where(eq(environments.id, environment.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -138,41 +138,40 @@ export const renameEnvironment = createServerFn({ method: "POST" })
  */
 export const deleteEnvironment = createServerFn({ method: "POST" })
   .validator(environmentIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.environments.findFirst({
-            where: eq(environments.id, data.environmentId),
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.environments.findFirst({
+          where: eq(environments.id, data.environmentId),
+        }),
+      notFoundMessage: "environment not found",
+      permission: { action: "delete", resource: "service" },
+      run: async ({ row: environment }) => {
+        assertNotDefaultEnvironment(environment, "delete");
+        const [service, stack, database] = await Promise.all([
+          db.query.services.findFirst({
+            where: eq(services.environmentId, environment.id),
           }),
-        notFoundMessage: "environment not found",
-        permission: { action: "delete", resource: "service" },
-        run: async ({ row: environment }) => {
-          assertNotDefaultEnvironment(environment, "delete");
-          const [service, stack, database] = await Promise.all([
-            db.query.services.findFirst({
-              where: eq(services.environmentId, environment.id),
-            }),
-            db.query.stacks.findFirst({
-              where: eq(stacks.environmentId, environment.id),
-            }),
-            db.query.databases.findFirst({
-              where: eq(databases.environmentId, environment.id),
-            }),
-          ]);
-          if (service || stack || database) {
-            throw new Error(
-              "this environment still has services, stacks or databases — remove them first"
-            );
-          }
+          db.query.stacks.findFirst({
+            where: eq(stacks.environmentId, environment.id),
+          }),
+          db.query.databases.findFirst({
+            where: eq(databases.environmentId, environment.id),
+          }),
+        ]);
+        if (service || stack || database) {
+          throw new Error(
+            "this environment still has services, stacks or databases — remove them first"
+          );
+        }
 
-          await db
-            .delete(environments)
-            .where(eq(environments.id, environment.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db
+          .delete(environments)
+          .where(eq(environments.id, environment.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**

@@ -5,6 +5,7 @@
 // side, so what matters is that it is renewed before it is used and that
 // the renewed pair is the one kept.
 import { check, expectThrowsAsync, runVerify } from "@noddle/testing";
+
 import {
   apiBase,
   authorizeUrl,

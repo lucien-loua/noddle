@@ -1,4 +1,5 @@
 import { boolean, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 
 export const s3Destinations = pgTable(

@@ -1,4 +1,5 @@
 import { unlink } from "node:fs/promises";
+
 import { deployments, services } from "@noddle/db/schema";
 import {
   deleteManifest,
@@ -7,11 +8,15 @@ import {
 } from "@noddle/registry";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { type dockerClient, execArgv } from "@noddle/ssh-executor";
+import { execArgv } from '@noddle/ssh-executor';
+import type { dockerClient } from '@noddle/ssh-executor';
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import { type DeployClients, withDeployClients } from "#job-run";
-import { BUILD_ROOT, type DeployContext } from "#runtime-context";
+
+import { withDeployClients } from '#job-run';
+import type { DeployClients } from '#job-run';
+import { BUILD_ROOT } from '#runtime-context';
+import type { DeployContext } from '#runtime-context';
 
 /** The registry container in the control-plane Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";
@@ -102,17 +107,17 @@ export async function runServiceTeardown(
     await withDeployClients(ctx, service.server, (clients) =>
       teardownService(ctx, service, rows, opts, clients)
     );
-  } catch (err) {
+  } catch (error) {
     // If step 2 already succeeded, the row no longer exists: the update
     // then touches nothing, which is the desired result — not a second
     // error to handle.
     await ctx.db
       .update(services)
       .set(
-        markFailed("deleting", err instanceof Error ? err.message : String(err))
+        markFailed("deleting", error instanceof Error ? error.message : String(error))
       )
       .where(eq(services.id, serviceId));
-    throw err;
+    throw error;
   }
 }
 
@@ -138,14 +143,14 @@ async function purgeBytes(
     "rm",
     "-rf",
     `${BUILD_ROOT}/${o.serviceId}`,
-  ]).catch(() => undefined);
+  ]).catch(() => {});
 
   // Local images, if any remain (a pre-registry version, or an image
   // re-pulled by the node that was running the service).
   for (const tag of o.imageTags) {
     // biome-ignore lint/performance/noAwaitInLoops: one image at a time, deliberately
     await execArgv(o.buildClient, ["sudo", "docker", "rmi", "-f", tag]).catch(
-      () => undefined
+      () => {}
     );
   }
 
@@ -164,7 +169,7 @@ async function purgeBytes(
     }
     if (deletedAny) {
       await garbageCollect(o.managerClient, o.registryContainer).catch(
-        () => undefined
+        () => {}
       );
     }
   }
@@ -172,6 +177,6 @@ async function purgeBytes(
   // Log files, on the control plane — not on the target.
   for (const path of o.logPaths) {
     // biome-ignore lint/performance/noAwaitInLoops: one file at a time, deliberately
-    await unlink(path).catch(() => undefined);
+    await unlink(path).catch(() => {});
   }
 }

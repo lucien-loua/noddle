@@ -1,13 +1,13 @@
 import type { Readable } from "node:stream";
+
 import { resolveDestination } from "@noddle/backup";
+import { deleteObject, uploadStream } from '@noddle/backup-store';
+import type { BackupDestination } from '@noddle/backup-store';
 import { uploadedSize } from "@noddle/backup/uploaded-size";
-import {
-  type BackupDestination,
-  deleteObject,
-  uploadStream,
-} from "@noddle/backup-store";
 import type { servers } from "@noddle/db/schema";
-import { disconnect, execStream, type SshClient } from "@noddle/ssh-executor";
+import { disconnect, execStream } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
+
 import { notify } from "#notify";
 import type { DeployContext } from "#runtime-context";
 
@@ -105,15 +105,15 @@ export async function runBackupPipeline<T extends BackupRunRow>(
     } catch {
       // Retention can retry on the next successful run.
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     await subject.markFailed(ctx, runId, message);
     await notify(ctx, {
       detail: message,
       resource: subject.notifyResource(run),
       type: "backup_failed",
     });
-    throw err;
+    throw error;
   } finally {
     disconnect(client);
   }

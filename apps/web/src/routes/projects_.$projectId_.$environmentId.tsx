@@ -6,6 +6,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { useCallback } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { CreateServiceMenu } from "@/components/features/environment/create-service-menu";
@@ -18,7 +19,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, getEnvironmentScope } from "@/server/dashboard";
 import { getProjectEnvironments } from "@/server/environments";

@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm";
+
 import { backupConfigs, backups } from "#schema/backups";
 import { databases } from "#schema/databases";
 import { deploymentLogs, deployments } from "#schema/deployments";
@@ -48,11 +49,11 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
   }),
   deployments: many(deployments),
   domains: many(serviceDomains),
+  envVars: many(envVars),
   environment: one(environments, {
     fields: [services.environmentId],
     references: [environments.id],
   }),
-  envVars: many(envVars),
   gitProvider: one(gitProviders, {
     fields: [services.gitProviderId],
     references: [gitProviders.id],

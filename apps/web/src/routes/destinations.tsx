@@ -1,17 +1,17 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import { S3DestinationPanel } from "@/components/features/destinations/s3-destination-panel";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import {
-  type DestinationRow,
-  getDestinations,
-} from "@/server/backups/destinations";
+import { getDestinations } from '@/server/backups/destinations';
+import type { DestinationRow } from '@/server/backups/destinations';
 
 export const Route = createFileRoute("/destinations")({
   beforeLoad: async () => {

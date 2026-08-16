@@ -6,6 +6,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
 import { createdAt, updatedAt } from "#schema/columns";
 
 export const gitProviderType = pgEnum("git_provider_type", [

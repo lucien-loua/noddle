@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {

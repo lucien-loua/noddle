@@ -1,11 +1,14 @@
 import { setTimeout as sleep } from "node:timers/promises";
+
 import { databases, stacks } from "@noddle/db/schema";
 import type { DockerApi } from "@noddle/ssh-executor";
 import { execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
+
 import { removeSecretIfExists } from "#database";
-import { type DeployClients, withDeployClients } from "#job-run";
+import { withDeployClients } from '#job-run';
+import type { DeployClients } from '#job-run';
 import type { DeployContext } from "#runtime-context";
 
 // Docker 29 answers "volume <name> not found", not "no such volume" —
@@ -101,14 +104,14 @@ export async function runStackTeardown(
     await withDeployClients(ctx, stack.server, (clients) =>
       teardownStack(ctx, stack, clients)
     );
-  } catch (err) {
+  } catch (error) {
     // If step 2 already succeeded, the row no longer exists: the UPDATE
     // then touches nothing, which is the desired result.
     await ctx.db
       .update(stacks)
-      .set({ lastError: err instanceof Error ? err.message : String(err) })
+      .set({ lastError: error instanceof Error ? error.message : String(error) })
       .where(eq(stacks.id, stackId));
-    throw err;
+    throw error;
   }
 }
 
@@ -212,11 +215,11 @@ export async function runDatabaseTeardown(
     await withDeployClients(ctx, database.server, (clients) =>
       teardownDatabase(ctx, database, clients)
     );
-  } catch (err) {
+  } catch (error) {
     await ctx.db
       .update(databases)
-      .set({ lastError: err instanceof Error ? err.message : String(err) })
+      .set({ lastError: error instanceof Error ? error.message : String(error) })
       .where(eq(databases.id, databaseId));
-    throw err;
+    throw error;
   }
 }

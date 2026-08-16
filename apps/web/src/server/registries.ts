@@ -12,6 +12,7 @@ import {
 } from "@noddle/shared/validation/registry";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
@@ -164,18 +165,17 @@ async function resolvePassword(data: {
 
 export const testRegistry = createServerFn({ method: "POST" })
   .validator(registrySchema)
-  .handler(
-    async ({ data }): Promise<{ error: string | null }> =>
-      // A connection test, not a change: the object is the registry URL
-      // being probed, which may not be a saved row yet.
-      runGuarded({
-        permission: { action: "create", resource: "registry" },
-        run: async () => {
-          const password = await resolvePassword(data);
-          return await pingRegistry(data.registryUrl, data.username, password);
-        },
-        target: () => ({ id: data.id ?? data.registryUrl, name: data.name }),
-      })
+  .handler(async ({ data }): Promise<{ error: string | null }> =>
+    // A connection test, not a change: the object is the registry URL
+    // being probed, which may not be a saved row yet.
+    runGuarded({
+      permission: { action: "create", resource: "registry" },
+      run: async () => {
+        const password = await resolvePassword(data);
+        return await pingRegistry(data.registryUrl, data.username, password);
+      },
+      target: () => ({ id: data.id ?? data.registryUrl, name: data.name }),
+    })
   );
 
 export const saveRegistry = createServerFn({ method: "POST" })
@@ -233,19 +233,18 @@ export const saveRegistry = createServerFn({ method: "POST" })
 
 export const deleteRegistry = createServerFn({ method: "POST" })
   .validator(registryIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.registries.findFirst({ where: eq(registries.id, data.id) }),
-        notFoundMessage: "registry not found",
-        permission: { action: "delete", resource: "registry" },
-        run: async ({ row }) => {
-          await db.delete(registries).where(eq(registries.id, row.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.registries.findFirst({ where: eq(registries.id, data.id) }),
+      notFoundMessage: "registry not found",
+      permission: { action: "delete", resource: "registry" },
+      run: async ({ row }) => {
+        await db.delete(registries).where(eq(registries.id, row.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -257,7 +256,7 @@ export const deleteRegistry = createServerFn({ method: "POST" })
  * URL, no username, no password.
  */
 export const getRegistryOptions = createServerFn({ method: "GET" }).handler(
-  async (): Promise<Array<{ id: string; name: string }>> =>
+  async (): Promise<{ id: string; name: string }[]> =>
     runRead({
       permission: { action: "create", resource: "service" },
       read: async () => {
@@ -272,22 +271,21 @@ export const getRegistryOptions = createServerFn({ method: "GET" }).handler(
 
 export const setServiceRegistry = createServerFn({ method: "POST" })
   .validator(serviceRegistrySchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.services.findFirst({
-            where: eq(services.id, data.serviceId),
-          }),
-        notFoundMessage: "service not found",
-        permission: { action: "create", resource: "service" },
-        run: async ({ row }) => {
-          await db
-            .update(services)
-            .set({ registryId: data.registryId, updatedAt: new Date() })
-            .where(eq(services.id, row.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row }) => {
+        await db
+          .update(services)
+          .set({ registryId: data.registryId, updatedAt: new Date() })
+          .where(eq(services.id, row.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

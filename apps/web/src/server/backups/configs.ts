@@ -7,6 +7,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
@@ -91,56 +92,54 @@ export const createBackupConfig = createServerFn({ method: "POST" })
 
 export const updateBackupConfig = createServerFn({ method: "POST" })
   .validator(updateBackupConfigSchema)
-  .handler(
-    async ({ data }): Promise<{ saved: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.backupConfigs.findFirst({
-            where: eq(backupConfigs.id, data.configId),
-          }),
-        notFoundMessage: "backup config not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row: existing }) => {
-          const destination = await db.query.s3Destinations.findFirst({
-            where: eq(s3Destinations.id, data.destinationId),
-          });
-          if (!destination) {
-            throw new Error("S3 destination not found");
-          }
+  .handler(async ({ data }): Promise<{ saved: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.backupConfigs.findFirst({
+          where: eq(backupConfigs.id, data.configId),
+        }),
+      notFoundMessage: "backup config not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: existing }) => {
+        const destination = await db.query.s3Destinations.findFirst({
+          where: eq(s3Destinations.id, data.destinationId),
+        });
+        if (!destination) {
+          throw new Error("S3 destination not found");
+        }
 
-          await db
-            .update(backupConfigs)
-            .set({
-              databaseName: data.databaseName,
-              destinationId: data.destinationId,
-              enabled: data.enabled,
-              keepLatestCount: data.keepLatestCount,
-              prefix: data.prefix,
-              schedule: data.schedule.trim(),
-              updatedAt: new Date(),
-            })
-            .where(eq(backupConfigs.id, existing.id));
-          return { saved: true };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.databaseName }),
-      })
+        await db
+          .update(backupConfigs)
+          .set({
+            databaseName: data.databaseName,
+            destinationId: data.destinationId,
+            enabled: data.enabled,
+            keepLatestCount: data.keepLatestCount,
+            prefix: data.prefix,
+            schedule: data.schedule.trim(),
+            updatedAt: new Date(),
+          })
+          .where(eq(backupConfigs.id, existing.id));
+        return { saved: true };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.databaseName }),
+    })
   );
 
 export const deleteBackupConfig = createServerFn({ method: "POST" })
   .validator(backupConfigIdSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.backupConfigs.findFirst({
-            where: eq(backupConfigs.id, data.configId),
-          }),
-        notFoundMessage: "backup config not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row }) => {
-          await db.delete(backupConfigs).where(eq(backupConfigs.id, row.id));
-          return { ok: true };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.databaseName }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.backupConfigs.findFirst({
+          where: eq(backupConfigs.id, data.configId),
+        }),
+      notFoundMessage: "backup config not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row }) => {
+        await db.delete(backupConfigs).where(eq(backupConfigs.id, row.id));
+        return { ok: true };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.databaseName }),
+    })
   );

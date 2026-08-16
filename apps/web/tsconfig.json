@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["bun", "vite/client"]
+    "types": ["bun", "vite/client"],
+    "strictNullChecks": true
   },
   "include": [
     "src/**/*.ts",

@@ -1,7 +1,9 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import { notificationChannels } from "@noddle/db/schema";
-import { deliver, isFailure, type NotificationEvent } from "@noddle/notifier";
+import { deliver, isFailure } from '@noddle/notifier';
+import type { NotificationEvent } from '@noddle/notifier';
 import { eq } from "drizzle-orm";
+
 import type { DeployContext } from "#runtime-context";
 
 /**
@@ -50,11 +52,11 @@ export async function notify(
           .where(eq(notificationChannels.id, channel.id));
       })
     );
-  } catch (err) {
+  } catch (error) {
     // Including an unreachable database or a decryption failure. Nothing
     // that happens here is allowed to propagate up to the job.
     process.stderr.write(
-      `notification not sent: ${err instanceof Error ? err.message : String(err)}\n`
+      `notification not sent: ${error instanceof Error ? error.message : String(error)}\n`
     );
   }
 }

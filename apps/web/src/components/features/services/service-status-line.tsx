@@ -1,10 +1,6 @@
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
-import {
-  deploymentLabel,
-  dotClass,
-  serviceLabel,
-  type Tone,
-} from "@/lib/format";
+import { deploymentLabel, dotClass, serviceLabel } from '@/lib/format';
+import type { Tone } from '@/lib/format';
 import { cn } from "@/lib/utils";
 import type { ServiceRow } from "@/server/dashboard";
 
@@ -55,8 +51,8 @@ export function ServiceStatusLine({
     service.status === "deploying" ||
     Boolean(
       service.lastDeployment &&
-        !service.lastDeployment.finishedAt &&
-        IN_FLIGHT_DEPLOYMENT.has(service.lastDeployment.status)
+      !service.lastDeployment.finishedAt &&
+      IN_FLIGHT_DEPLOYMENT.has(service.lastDeployment.status)
     );
   const tone = pending ? "busy" : status.tone;
 

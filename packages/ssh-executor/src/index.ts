@@ -1,7 +1,9 @@
 import http from "node:http";
 import type { Duplex } from "node:stream";
+
 import Docker from "dockerode";
-import { Client, type ConnectConfig } from "ssh2";
+import { Client } from 'ssh2';
+import type { ConnectConfig } from 'ssh2';
 
 /**
  * The SSH client.
@@ -112,12 +114,12 @@ export function exec(
       let signal: string | undefined;
 
       stream.on("data", (d: Buffer) => {
-        const s = d.toString("utf8");
+        const s = d.toString("utf-8");
         stdout += s;
         opts.onStdout?.(s);
       });
       stream.stderr.on("data", (d: Buffer) => {
-        const s = d.toString("utf8");
+        const s = d.toString("utf-8");
         stderr += s;
         opts.onStderr?.(s);
       });
@@ -198,7 +200,7 @@ export function execStream<T>(
 
       stream.stderr.on("data", (d: Buffer) => {
         if (stderr.length < STREAM_STDERR_MAX) {
-          stderr += d.toString("utf8");
+          stderr += d.toString("utf-8");
         }
       });
       stream.on("exit", (c: number | null, sig?: string) => {
@@ -218,12 +220,12 @@ export function execStream<T>(
           await closed;
           resolve({ code, signal, stderr, value });
         })
-        .catch((consumeErr: unknown) => {
+        .catch((error: unknown) => {
           // Without this, the remote command keeps running and producing
           // into the void: the channel stays open and the promise never
           // settles.
           stream.destroy();
-          reject(consumeErr);
+          reject(error);
         });
     });
   });

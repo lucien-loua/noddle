@@ -7,6 +7,7 @@ import {
 import { generateKeyPair, publicKeyOf } from "@noddle/ssh-executor/keys";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
@@ -114,42 +115,41 @@ export const createSshKey = createServerFn({ method: "POST" })
  */
 export const deleteSshKey = createServerFn({ method: "POST" })
   .validator(deleteSshKeySchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.sshKeys.findFirst({ where: eq(sshKeys.id, data.sshKeyId) }),
-        notFoundMessage: "ssh key not found",
-        permission: { action: "delete", resource: "sshKey" },
-        run: async ({ row }) => {
-          const used = await db.query.servers.findMany({
-            where: eq(servers.sshKeyId, data.sshKeyId),
-          });
-          if (used.length > 0) {
-            throw new Error(
-              `this key still opens ${used.length} server(s): ${used
-                .map((s) => s.name)
-                .join(", ")} — remove them first`
-            );
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.sshKeys.findFirst({ where: eq(sshKeys.id, data.sshKeyId) }),
+      notFoundMessage: "ssh key not found",
+      permission: { action: "delete", resource: "sshKey" },
+      run: async ({ row }) => {
+        const used = await db.query.servers.findMany({
+          where: eq(servers.sshKeyId, data.sshKeyId),
+        });
+        if (used.length > 0) {
+          throw new Error(
+            `this key still opens ${used.length} server(s): ${used
+              .map((s) => s.name)
+              .join(", ")} — remove them first`
+          );
+        }
 
-          // Same reasoning one table over: the FK is `restrict`, so the
-          // delete would fail anyway — but with a constraint name instead
-          // of the list of services that would stop deploying.
-          const deploying = await db.query.services.findMany({
-            where: eq(services.deployKeyId, data.sshKeyId),
-          });
-          if (deploying.length > 0) {
-            throw new Error(
-              `this key still clones for ${deploying.length} service(s): ${deploying
-                .map((s) => s.name)
-                .join(", ")} — change their provider first`
-            );
-          }
+        // Same reasoning one table over: the FK is `restrict`, so the
+        // delete would fail anyway — but with a constraint name instead
+        // of the list of services that would stop deploying.
+        const deploying = await db.query.services.findMany({
+          where: eq(services.deployKeyId, data.sshKeyId),
+        });
+        if (deploying.length > 0) {
+          throw new Error(
+            `this key still clones for ${deploying.length} service(s): ${deploying
+              .map((s) => s.name)
+              .join(", ")} — change their provider first`
+          );
+        }
 
-          await db.delete(sshKeys).where(eq(sshKeys.id, row.id));
-          return { ok: true };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        await db.delete(sshKeys).where(eq(sshKeys.id, row.id));
+        return { ok: true };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

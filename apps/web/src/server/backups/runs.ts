@@ -14,6 +14,7 @@ import {
 } from "@noddle/shared/validation/backup";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
@@ -108,25 +109,24 @@ export const triggerBackup = createServerFn({ method: "POST" })
 
 export const listBackupObjects = createServerFn({ method: "GET" })
   .validator(listBackupObjectsSchema)
-  .handler(
-    async ({ data }): Promise<BackupObjectRow[]> =>
-      runRead({
-        permission: { action: "restore", resource: "backup" },
-        read: async () => {
-          const { destination } = await resolveDestination(
-            db,
-            env.appKey,
-            data.destinationId
-          );
-          // Destination prefix is already applied inside listObjects; pass only
-          // the optional extra path from the picker.
-          const listed = await listObjects(
-            { ...destination, prefix: destination.prefix },
-            { prefix: data.prefix }
-          );
-          return listed;
-        },
-      })
+  .handler(async ({ data }): Promise<BackupObjectRow[]> =>
+    runRead({
+      permission: { action: "restore", resource: "backup" },
+      read: async () => {
+        const { destination } = await resolveDestination(
+          db,
+          env.appKey,
+          data.destinationId
+        );
+        // Destination prefix is already applied inside listObjects; pass only
+        // the optional extra path from the picker.
+        const listed = await listObjects(
+          { ...destination, prefix: destination.prefix },
+          { prefix: data.prefix }
+        );
+        return listed;
+      },
+    })
   );
 
 /**
@@ -134,36 +134,35 @@ export const listBackupObjects = createServerFn({ method: "GET" })
  */
 export const deleteBackup = createServerFn({ method: "POST" })
   .validator(deleteBackupRunSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.backups.findFirst({ where: eq(backups.id, data.backupId) }),
-        notFoundMessage: "backup not found",
-        permission: { action: "create", resource: "backup" },
-        run: async ({ row: backup }) => {
-          if (backup.status === "queued" || backup.status === "running") {
-            throw new Error("cannot delete a backup that is still in progress");
-          }
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.backups.findFirst({ where: eq(backups.id, data.backupId) }),
+      notFoundMessage: "backup not found",
+      permission: { action: "create", resource: "backup" },
+      run: async ({ row: backup }) => {
+        if (backup.status === "queued" || backup.status === "running") {
+          throw new Error("cannot delete a backup that is still in progress");
+        }
 
-          if (backup.destinationId) {
-            try {
-              const { destination } = await resolveDestination(
-                db,
-                env.appKey,
-                backup.destinationId
-              );
-              await deleteObject(destination, backup.objectKey);
-            } catch {
-              // Object may already be gone; still drop the row.
-            }
+        if (backup.destinationId) {
+          try {
+            const { destination } = await resolveDestination(
+              db,
+              env.appKey,
+              backup.destinationId
+            );
+            await deleteObject(destination, backup.objectKey);
+          } catch {
+            // Object may already be gone; still drop the row.
           }
+        }
 
-          await db.delete(backups).where(eq(backups.id, backup.id));
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.objectKey }),
-      })
+        await db.delete(backups).where(eq(backups.id, backup.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.objectKey }),
+    })
   );
 
 /**
@@ -171,49 +170,48 @@ export const deleteBackup = createServerFn({ method: "POST" })
  */
 export const triggerRestore = createServerFn({ method: "POST" })
   .validator(restoreRequestSchema)
-  .handler(
-    async ({ data }): Promise<{ queued: true }> =>
-      runGuarded({
-        confirmName: { expected: (row) => row.name, typed: data.confirmName },
-        load: () =>
-          db.query.databases.findFirst({
-            where: eq(databases.id, data.databaseId),
-          }),
-        notFoundMessage: "database not found",
-        permission: { action: "restore", resource: "backup" },
-        run: async ({ row: database }) => {
-          if (data.backupId) {
-            const backup = await db.query.backups.findFirst({
-              where: eq(backups.id, data.backupId),
-            });
-            if (!backup || backup.databaseId !== database.id) {
-              throw new Error("backup not found for this database");
-            }
-            if (backup.status !== "completed") {
-              throw new Error(
-                "only a completed backup can be restored — this one is not"
-              );
-            }
-            await enqueueDeploy({
-              backupId: backup.id,
-              databaseId: database.id,
-              kind: "restore",
-            });
-            return { queued: true };
+  .handler(async ({ data }): Promise<{ queued: true }> =>
+    runGuarded({
+      confirmName: { expected: (row) => row.name, typed: data.confirmName },
+      load: () =>
+        db.query.databases.findFirst({
+          where: eq(databases.id, data.databaseId),
+        }),
+      notFoundMessage: "database not found",
+      permission: { action: "restore", resource: "backup" },
+      run: async ({ row: database }) => {
+        if (data.backupId) {
+          const backup = await db.query.backups.findFirst({
+            where: eq(backups.id, data.backupId),
+          });
+          if (!backup || backup.databaseId !== database.id) {
+            throw new Error("backup not found for this database");
           }
-
-          if (!(data.destinationId && data.objectKey)) {
-            throw new Error("destinationId and objectKey are required");
+          if (backup.status !== "completed") {
+            throw new Error(
+              "only a completed backup can be restored — this one is not"
+            );
           }
-
           await enqueueDeploy({
+            backupId: backup.id,
             databaseId: database.id,
-            destinationId: data.destinationId,
             kind: "restore",
-            objectKey: data.objectKey,
           });
           return { queued: true };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        }
+
+        if (!(data.destinationId && data.objectKey)) {
+          throw new Error("destinationId and objectKey are required");
+        }
+
+        await enqueueDeploy({
+          databaseId: database.id,
+          destinationId: data.destinationId,
+          kind: "restore",
+          objectKey: data.objectKey,
+        });
+        return { queued: true };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

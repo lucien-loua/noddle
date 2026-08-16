@@ -1,4 +1,5 @@
-import { connectionUrlFor, type DatabaseEngine } from "@noddle/database-spec";
+import { connectionUrlFor } from '@noddle/database-spec';
+import type { DatabaseEngine } from '@noddle/database-spec';
 
 const MASK = "••••••••";
 

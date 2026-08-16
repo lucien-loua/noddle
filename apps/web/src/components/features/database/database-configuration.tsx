@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
+
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
@@ -17,7 +18,8 @@ import {
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { type DatabaseRow, setDatabaseConfiguration } from "@/server/databases";
+import { setDatabaseConfiguration } from '@/server/databases';
+import type { DatabaseRow } from '@/server/databases';
 
 const configurationFormSchema = z.object({
   image: imageRefSchema,

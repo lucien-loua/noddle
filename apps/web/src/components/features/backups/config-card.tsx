@@ -10,6 +10,7 @@ import {
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
@@ -20,6 +21,7 @@ import { mutations } from "@/lib/mutations";
 import { cn } from "@/lib/utils";
 import { deleteBackupConfig } from "@/server/backups/configs";
 import { deleteVolumeBackupConfig } from "@/server/backups/volume/configs";
+
 import { copyFor } from "./copy";
 
 export interface BackupScheduleCard {
@@ -128,9 +130,9 @@ export function BackupConfigCard({
                   .then(() => {
                     toast.add({ title: copy.queuedToast, type: "success" });
                   })
-                  .catch((err) => {
+                  .catch((error) => {
                     toast.add({
-                      description: errorMessage(err, "backup failed"),
+                      description: errorMessage(error, "backup failed"),
                       title: copy.queueErrorTitle,
                       type: "error",
                     });

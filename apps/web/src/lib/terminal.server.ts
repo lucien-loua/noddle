@@ -8,19 +8,15 @@
  */
 import { auditLog, databases, servers, services } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import {
-  execArgv,
-  openExecPty,
-  openShell,
-  type PtySession,
-  quoteArg,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { execArgv, openExecPty, openShell, quoteArg } from '@noddle/ssh-executor';
+import type { PtySession, SshClient } from '@noddle/ssh-executor';
 import { eq } from "drizzle-orm";
+
 import type { Session } from "@/lib/auth.server";
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
-import { can, type Permission } from "@/lib/permissions";
+import { can } from '@/lib/permissions';
+import type { Permission } from '@/lib/permissions';
 import { connectToServer } from "@/lib/ssh.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -83,10 +79,10 @@ async function requireTerminalPermission(
       role: roleOf(session),
       userAgent: meta.userAgent,
     });
-  } catch (err) {
+  } catch (error) {
     // Same policy as permission.server: never block a shell on audit I/O.
     process.stderr.write(
-      `audit log write failed: ${err instanceof Error ? err.message : String(err)}\n`
+      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
   }
   return allowed;
@@ -191,9 +187,9 @@ async function openSshTerminal(
   try {
     const pty = await openShell(ssh, dims);
     return { label: server.name, ok: true, pty, ssh };
-  } catch (err) {
+  } catch (error) {
     ssh.end();
-    throw err;
+    throw error;
   }
 }
 
@@ -235,9 +231,9 @@ async function openContainerExec(
       opts.dims
     );
     return { label: opts.label, ok: true, pty, ssh };
-  } catch (err) {
+  } catch (error) {
     ssh.end();
-    throw err;
+    throw error;
   }
 }
 

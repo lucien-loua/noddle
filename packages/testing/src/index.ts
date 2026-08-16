@@ -9,10 +9,10 @@
 let pass = 0;
 let fail = 0;
 let currentSuite = "";
-const cleanups: Array<() => void | Promise<void>> = [];
+const cleanups: (() => void | Promise<void>)[] = [];
 
-const GREEN = "\x1b[32m✓\x1b[0m";
-const RED = "\x1b[31m✗\x1b[0m";
+const GREEN = "\x1B[32m✓\x1B[0m";
+const RED = "\x1B[31m✗\x1B[0m";
 
 function prefix(): string {
   return currentSuite ? `${currentSuite} — ` : "";
@@ -53,12 +53,12 @@ export function expectThrows(
   try {
     fn();
     check(`${label} — SHOULD HAVE FAILED`, false);
-  } catch (e) {
-    if (match && !match(e)) {
+  } catch (error) {
+    if (match && !match(error)) {
       check(
         label,
         false,
-        `wrong error: ${e instanceof Error ? e.message : String(e)}`
+        `wrong error: ${error instanceof Error ? error.message : String(error)}`
       );
       return;
     }
@@ -75,12 +75,12 @@ export async function expectThrowsAsync(
   try {
     await fn();
     check(`${label} — SHOULD HAVE FAILED`, false);
-  } catch (e) {
-    if (match && !match(e)) {
+  } catch (error) {
+    if (match && !match(error)) {
       check(
         label,
         false,
-        `wrong error: ${e instanceof Error ? e.message : String(e)}`
+        `wrong error: ${error instanceof Error ? error.message : String(error)}`
       );
       return;
     }
@@ -98,7 +98,7 @@ export async function suite(
 ): Promise<void> {
   const previous = currentSuite;
   currentSuite = name;
-  console.log(`\n\x1b[1m${name}\x1b[0m`);
+  console.log(`\n\u001b[1m${name}\x1B[0m`);
   try {
     await fn();
   } finally {
@@ -127,14 +127,14 @@ export async function finish(): Promise<never> {
     try {
       // biome-ignore lint/performance/noAwaitInLoops: cleanups must run in order.
       await fn();
-    } catch (e) {
+    } catch (error) {
       fail += 1;
       console.log(
-        `  ${RED} cleanup failed: ${e instanceof Error ? e.message : String(e)}`
+        `  ${RED} cleanup failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
-  console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+  console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
   process.exit(fail === 0 ? 0 : 1);
 }
 
@@ -146,16 +146,16 @@ export async function runVerify(
   body: () => void | Promise<void>
 ): Promise<never> {
   const runtime =
-    typeof (globalThis as { Bun?: unknown }).Bun === "undefined"
+    (globalThis as { Bun?: unknown }).Bun === undefined
       ? `Node ${process.version}`
       : `Bun ${(globalThis as { Bun: { version: string } }).Bun.version}`;
-  console.log(`\n\x1b[1m${runtime} — ${title}\x1b[0m`);
+  console.log(`\n\x1B[1m${runtime} — ${title}\x1B[0m`);
   try {
     await body();
-  } catch (e) {
+  } catch (error) {
     fail += 1;
     console.log(
-      `  ${RED} suite crashed: ${e instanceof Error ? e.message : String(e)}`
+      `  ${RED} suite crashed: ${error instanceof Error ? error.message : String(error)}`
     );
   }
   return await finish();

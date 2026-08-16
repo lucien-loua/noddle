@@ -1,13 +1,15 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import {
   AddServerDialog,
   ServersList,
 } from "@/components/features/servers/servers-panel";
 import { Button } from "@/components/ui/button";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServers } from "@/server/servers";

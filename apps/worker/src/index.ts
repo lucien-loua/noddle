@@ -1,17 +1,14 @@
 import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { deployments, stackDeployments } from "@noddle/db/schema";
-import {
-  DEPLOY_QUEUE_CONCURRENCY,
-  DEPLOY_QUEUE_NAME,
-  type DeployJobData,
-  deployJobSchema,
-} from "@noddle/deploy-contract";
+import { DEPLOY_QUEUE_CONCURRENCY, DEPLOY_QUEUE_NAME, deployJobSchema } from '@noddle/deploy-contract';
+import type { DeployJobData } from '@noddle/deploy-contract';
 import { createDeployQueue } from "@noddle/deploy-contract/queue";
 import { startSchedule } from "@noddle/deploy-contract/schedule";
 import { UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
+
 import { recoverStaleDatabaseBackups } from "#backup-run/subjects/database";
 import { recoverStaleVolumeBackups } from "#backup-run/subjects/volume";
 import { dispatch, handlers } from "#handlers";

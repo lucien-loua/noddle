@@ -1,11 +1,9 @@
 import type { DatabaseEngine } from "@noddle/database-spec";
-import {
-  type DatabaseExtraMount,
-  type DatabaseSwarmSettings,
-  databases,
-} from "@noddle/db/schema";
+import { databases } from '@noddle/db/schema';
+import type { DatabaseExtraMount, DatabaseSwarmSettings } from '@noddle/db/schema';
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
+
 import {
   loadDatabaseDashboardRows,
   toDatabaseRow,

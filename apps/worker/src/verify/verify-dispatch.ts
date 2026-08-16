@@ -6,6 +6,7 @@ import type {
   PayloadOf,
 } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/testing";
+
 import { dispatch, type Handlers, handlerModules } from "#handlers";
 import type { WorkerDeps } from "#runtime-context";
 

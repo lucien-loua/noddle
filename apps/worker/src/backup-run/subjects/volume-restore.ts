@@ -1,24 +1,16 @@
 import { pipeline } from "node:stream/promises";
+
 import { buildVolumeBackupInsert, resolveDestinationRow } from "@noddle/backup";
-import {
-  type servers,
-  services,
-  volumeBackupConfigs,
-  volumeBackups,
-} from "@noddle/db/schema";
+import { services, volumeBackupConfigs, volumeBackups } from '@noddle/db/schema';
+import type { servers } from '@noddle/db/schema';
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import {
-  disconnect,
-  execStream,
-  quoteArg,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { disconnect, execStream, quoteArg } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import { scaleServiceAndWait } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
-import {
-  type RestoreSubject,
-  runRestorePipeline,
-} from "#backup-run/restore-pipeline";
+
+import { runRestorePipeline } from '#backup-run/restore-pipeline';
+import type { RestoreSubject } from '#backup-run/restore-pipeline';
 import {
   ALPINE_IMAGE,
   assertSafeVolumeName,

@@ -2,6 +2,7 @@ import { githubProviders, gitProviders } from "@noddle/db/schema";
 import { exchangeManifestCode } from "@noddle/git-provider/github";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
+
 import { db } from "@/lib/db.server";
 import { saveCreatedApp } from "@/lib/git-provider.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -91,11 +92,11 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
             },
             target: () => ({ id: state, name: provider.name }),
           });
-        } catch (err) {
+        } catch (error) {
           // The code is single-use: retrying this URL cannot work, so the
           // message has to send the operator back to the start rather than
           // read as a transient failure.
-          const detail = err instanceof Error ? err.message : String(err);
+          const detail = error instanceof Error ? error.message : String(error);
           // Only if the App was never created. A permission denial lands
           // here too, and it must not destroy a working connection.
           const pending = await db.query.githubProviders.findFirst({

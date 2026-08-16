@@ -1,13 +1,10 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { passwordChangeFor } from "@noddle/database-spec";
 import { databases } from "@noddle/db/schema";
-import {
-  type DockerApi,
-  execStream,
-  quoteArg,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { execStream, quoteArg } from '@noddle/ssh-executor';
+import type { DockerApi, SshClient } from '@noddle/ssh-executor';
 import { eq } from "drizzle-orm";
+
 import { assertSafeIdentifier, findDatabaseContainer } from "#database-runtime";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
@@ -79,7 +76,7 @@ async function rotateSecret(
   const spec = service.Spec as Record<string, unknown>;
   const container = (spec.TaskTemplate as Record<string, unknown> | undefined)
     ?.ContainerSpec as
-    | { Secrets?: Array<{ File?: { Name?: string }; SecretName?: string }> }
+    | { Secrets?: { File?: { Name?: string }; SecretName?: string }[] }
     | undefined;
   const mount = container?.Secrets?.[0];
   if (!mount?.File?.Name) {
@@ -92,7 +89,7 @@ async function rotateSecret(
   // hence a spec pointing at a secret that doesn't exist.
   const nextName = `${serviceName}-password-${Date.now()}`;
   const created = (await managerDocker.createSecret({
-    Data: Buffer.from(password, "utf8").toString("base64"),
+    Data: Buffer.from(password, "utf-8").toString("base64"),
     Name: nextName,
   })) as unknown as { ID?: string; id?: string };
 
@@ -118,7 +115,7 @@ async function rotateSecret(
     try {
       const olds = (await managerDocker.listSecrets({
         filters: JSON.stringify({ name: [previousName] }),
-      })) as unknown as Array<{ ID?: string; Spec?: { Name?: string } }>;
+      })) as unknown as { ID?: string; Spec?: { Name?: string } }[];
       const old = olds.find((x) => x.Spec?.Name === previousName);
       if (old?.ID) {
         await managerDocker.getSecret(old.ID).remove();

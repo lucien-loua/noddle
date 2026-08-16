@@ -1,6 +1,8 @@
-import { isPortableImage, type RegistryConfig } from "@noddle/registry";
+import { isPortableImage } from '@noddle/registry';
+import type { RegistryConfig } from '@noddle/registry';
 import type { DockerApi } from "@noddle/ssh-executor";
-import { getSwarmNodeId, type RegistryAuth } from "@noddle/swarm-ops";
+import { getSwarmNodeId } from '@noddle/swarm-ops';
+import type { RegistryAuth } from '@noddle/swarm-ops';
 
 /**
  * Should this image be pinned to a node, and which one?

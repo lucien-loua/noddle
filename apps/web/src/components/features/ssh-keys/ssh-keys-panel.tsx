@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
+
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { RevealOnceAlert } from "@/components/features/settings-list/reveal-once";
@@ -41,7 +42,8 @@ import { mutations } from "@/lib/mutations";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { deleteSshKey, type SshKeyView } from "@/server/ssh-keys";
+import { deleteSshKey } from '@/server/ssh-keys';
+import type { SshKeyView } from '@/server/ssh-keys';
 
 /** The algorithm, READ off the public key rather than stored:
  *  `ssh-ed25519 …` and `ssh-rsa …` already carry it. One more column

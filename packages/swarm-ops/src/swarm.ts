@@ -112,10 +112,10 @@ export async function waitForRunningTask(
     // biome-ignore lint/performance/noAwaitInLoops: deliberate polling loop
     const tasks = (await docker.listTasks({
       filters: JSON.stringify({ service: [serviceName] }),
-    })) as unknown as Array<{
+    })) as unknown as {
       DesiredState?: string;
       Status?: { Err?: string; State?: string };
-    }>;
+    }[];
 
     if (tasks.some((t) => t.Status?.State === "running")) {
       return;
@@ -230,10 +230,10 @@ export async function readRunningNodeId(
 ): Promise<string | null> {
   const tasks = (await docker.listTasks({
     filters: JSON.stringify({ service: [serviceName] }),
-  })) as unknown as Array<{
+  })) as unknown as {
     NodeID?: string;
     Status?: { State?: string };
-  }>;
+  }[];
   const running = tasks.find((t) => t.Status?.State === "running");
   return running?.NodeID ?? null;
 }
@@ -378,7 +378,7 @@ export async function scaleServiceAndWait(
       // biome-ignore lint/performance/noAwaitInLoops: deliberate polling loop
       const tasks = (await docker.listTasks({
         filters: JSON.stringify({ service: [serviceName] }),
-      })) as unknown as Array<{ Status?: { State?: string } }>;
+      })) as unknown as { Status?: { State?: string } }[];
       const alive = tasks.filter((t) => {
         const state = t.Status?.State;
         return (

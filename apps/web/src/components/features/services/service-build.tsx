@@ -1,10 +1,9 @@
-import {
-  type ServiceBuildInput,
-  serviceBuildSchema,
-} from "@noddle/shared/validation/service";
+import { serviceBuildSchema } from '@noddle/shared/validation/service';
+import type { ServiceBuildInput } from '@noddle/shared/validation/service';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
+
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";

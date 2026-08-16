@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import {
@@ -140,7 +141,7 @@ export const DEFAULT_I18N: FilterI18nConfig = {
 
   // Helper functions
   helpers: {
-    formatOperator: (operator: string) => operator.replace(/_/g, " "),
+    formatOperator: (operator: string) => operator.replaceAll(/_/g, " "),
   },
   loadingOptions: "Loading...",
   max: "Max",
@@ -286,7 +287,7 @@ function FilterInput<T = unknown>({
 
   // Handle blur event - validate when user leaves input
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const {value} = e.target;
     const pattern = field?.pattern || props.pattern;
 
     // Only validate if there's a value and (pattern or validation function)
@@ -400,8 +401,7 @@ function FilterInput<T = unknown>({
   );
 }
 
-interface FilterRemoveButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface FilterRemoveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
@@ -418,9 +418,9 @@ function FilterRemoveButton({
       size={
         context.size === "sm"
           ? "icon-sm"
-          : context.size === "lg"
+          : (context.size === "lg"
             ? "icon-lg"
-            : "icon"
+            : "icon")
       }
       variant="outline"
       {...props}
@@ -539,19 +539,20 @@ export interface FilterFieldConfig<T = unknown> {
 }
 
 // Helper functions to handle both flat and grouped field configurations
-const isFieldGroup = <T = unknown>(
+const isFieldGroup = <T = unknown,>(
   item: FilterFieldConfig<T> | FilterFieldGroup<T>
 ): item is FilterFieldGroup<T> =>
   "fields" in item && Array.isArray(item.fields);
 
 // Helper function to check if a FilterFieldConfig is a group-level configuration
-const isGroupLevelField = <T = unknown>(field: FilterFieldConfig<T>): boolean =>
-  Boolean(field.group && field.fields);
+const isGroupLevelField = <T = unknown,>(
+  field: FilterFieldConfig<T>
+): boolean => Boolean(field.group && field.fields);
 
-const flattenFields = <T = unknown>(
+const flattenFields = <T = unknown,>(
   fields: FilterFieldsConfig<T>
-): FilterFieldConfig<T>[] => {
-  return fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
+): FilterFieldConfig<T>[] => 
+  fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
     if (isFieldGroup(item)) {
       return [...acc, ...item.fields];
     }
@@ -560,10 +561,10 @@ const flattenFields = <T = unknown>(
       return [...acc, ...item.fields!];
     }
     return [...acc, item];
-  }, []);
-};
+  }, [])
+;
 
-const getFieldsMap = <T = unknown>(
+const getFieldsMap = <T = unknown,>(
   fields: FilterFieldsConfig<T>
 ): Record<string, FilterFieldConfig<T>> => {
   const flatFields = flattenFields(fields);
@@ -583,7 +584,7 @@ const getFieldsMap = <T = unknown>(
 // IMPORTANT: never gate on `field.options?.length` once `loadOptions` exists —
 // a function's `.length` is its arity, not an option count, which silently
 // breaks the submenu gate for async fields.
-const fieldHasOptions = <T = unknown>(field: FilterFieldConfig<T>): boolean =>
+const fieldHasOptions = <T = unknown,>(field: FilterFieldConfig<T>): boolean =>
   (field.options?.length ?? 0) > 0 || typeof field.loadOptions === "function";
 
 interface ResolvedFieldOptions<T = unknown> {
@@ -604,7 +605,7 @@ interface ResolvedFieldOptions<T = unknown> {
 // otherwise. This keeps a value selected in the submenu labelled in the chip.
 const fieldOptionCaches = new WeakMap<object, Map<unknown, FilterOption>>();
 
-const getFieldOptionCache = <T = unknown>(
+const getFieldOptionCache = <T = unknown,>(
   field: FilterFieldConfig<T>
 ): Map<T, FilterOption<T>> => {
   let cache = fieldOptionCaches.get(field as object);
@@ -733,12 +734,12 @@ function useFieldOptions<T = unknown>(
  * guaranteed, and leaves the uncertainty where it actually is: a field's
  * type, which comes from the user.
  */
-type OperatorSets = {
+interface OperatorSets {
   custom: FilterOperator[];
   multiselect: FilterOperator[];
   select: FilterOperator[];
   text: FilterOperator[];
-};
+}
 
 const createOperatorsFromI18n = (i18n: FilterI18nConfig): OperatorSets => ({
   custom: [
@@ -778,7 +779,7 @@ export const DEFAULT_OPERATORS: Record<string, FilterOperator[]> =
   createOperatorsFromI18n(DEFAULT_I18N);
 
 // Helper function to get operators for a field
-const getOperatorsForField = <T = unknown>(
+const getOperatorsForField = <T = unknown,>(
   field: FilterFieldConfig<T>,
   values: T[],
   i18n: FilterI18nConfig
@@ -868,7 +869,8 @@ function FilterOperatorDropdown<T = unknown>({
                 "ms-auto text-primary",
                 op.value === operator ? "opacity-100" : "opacity-0"
               )}
-            weight="regular" />
+              weight="regular"
+            />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -973,9 +975,9 @@ function SelectOptionsPopover<T = unknown>({
     const isSelected = effectiveValues.includes(option.value);
     const next = isSelected
       ? (effectiveValues.filter((v) => v !== option.value) as T[])
-      : isMultiSelect
+      : (isMultiSelect
         ? ([...effectiveValues, option.value] as T[])
-        : ([option.value] as T[]);
+        : ([option.value] as T[]));
 
     if (
       !isSelected &&
@@ -1076,9 +1078,9 @@ function SelectOptionsPopover<T = unknown>({
                   );
                   const next = isSelected
                     ? (effectiveValues.filter((v) => v !== option.value) as T[])
-                    : isMultiSelect
+                    : (isMultiSelect
                       ? ([...effectiveValues, option.value] as T[])
-                      : ([option.value] as T[]);
+                      : ([option.value] as T[]));
 
                   if (
                     !isSelected &&
@@ -1205,9 +1207,9 @@ function SelectOptionsPopover<T = unknown>({
                   )}
                   {selectedOptions.length === 1
                     ? selectedOptions[0]?.label
-                    : selectedOptions.length > 1
+                    : (selectedOptions.length > 1
                       ? `${selectedOptions.length} ${context.i18n.selectedCount}`
-                      : context.i18n.select}
+                      : context.i18n.select)}
                 </>
               )}
             </div>
@@ -1288,7 +1290,7 @@ interface FiltersContentProps<T = unknown> {
   onChange: (filters: Filter<T>[]) => void;
 }
 
-export const FiltersContent = <T = unknown>({
+export const FiltersContent = <T = unknown,>({
   filters,
   fields,
   onChange,
@@ -2203,18 +2205,18 @@ export function Filters<T = unknown>({
   );
 }
 
-export const createFilter = <T = unknown>(
+export const createFilter = <T = unknown,>(
   field: string,
   operator?: string,
   values: T[] = []
 ): Filter<T> => ({
   field,
-  id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
   operator: operator || "is",
   values,
 });
 
-export const createFilterGroup = <T = unknown>(
+export const createFilterGroup = <T = unknown,>(
   id: string,
   label: string,
   fields: FilterFieldConfig<T>[],

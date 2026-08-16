@@ -14,29 +14,24 @@ import {
   services,
 } from "@noddle/db/schema";
 import type { DomainRoute } from "@noddle/proxy-config";
-import {
-  pushImage,
-  type RegistryConfig,
-  registryImageTag,
-} from "@noddle/registry";
+import { pushImage, registryImageTag } from '@noddle/registry';
+import type { RegistryConfig } from '@noddle/registry';
 import { markFailed } from "@noddle/shared/lifecycle";
 import { redactUrlCredentials } from "@noddle/shared/redact";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
 import { and, desc, eq } from "drizzle-orm";
+
 import { recordAcceptedService } from "#deploy/accepted-deployment";
 import { providerCloneUrl } from "#deploy/provider-clone";
 import { rolloutService } from "#deploy/rollout";
-import { type DeployClients, withDeployClients } from "#job-run";
+import { withDeployClients } from '#job-run';
+import type { DeployClients } from '#job-run';
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
 import { resolveRegistry } from "#registry";
-import {
-  BUILD_ROOT,
-  type BuildOptions,
-  type DeployContext,
-  type RouteOptions,
-} from "#runtime-context";
+import { BUILD_ROOT } from '#runtime-context';
+import type { BuildOptions, DeployContext, RouteOptions } from '#runtime-context';
 
 type RunDeployment = NonNullable<
   Awaited<ReturnType<typeof loadDeploymentForRun>>
@@ -387,12 +382,12 @@ export async function runDeploy(
         clients
       )
     );
-  } catch (err) {
+  } catch (error) {
     // `check` folds the failing command's stderr into the message, and git
     // echoes the clone URL in several of its errors. This one is persisted
     // and notified, so it does not pass through the sink's redaction.
     const message = redactUrlCredentials(
-      err instanceof Error ? err.message : String(err)
+      error instanceof Error ? error.message : String(error)
     );
     sink?.write(`✗ ${message}\n`);
     await db
@@ -412,7 +407,7 @@ export async function runDeploy(
       resource: service.name,
       type: "deploy_failed",
     });
-    throw err;
+    throw error;
   } finally {
     if (sink) {
       const { byteSize, storageUrl } = await sink.close();

@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { createDatabase } from "@noddle/db";
 import {
   deployments,
@@ -34,6 +35,7 @@ import {
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { desc, eq } from "drizzle-orm";
+
 import { runDeploy } from "#deploy";
 import type { BuildOptions, RouteOptions } from "#runtime-context";
 import { sweepWatch } from "#sweep";

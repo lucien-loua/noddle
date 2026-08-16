@@ -4,6 +4,7 @@
 // A deployment log is written to disk AND streamed to the dashboard. If a
 // token survives this function, it survives in both.
 import { check, runVerify } from "@noddle/testing";
+
 import { redactUrlCredentials } from "#redact";
 
 const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";

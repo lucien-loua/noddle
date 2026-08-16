@@ -8,11 +8,9 @@ How engineering skills consume this repo's domain documentation.
 2. **`docs/adr/`** — decisions for the area you touch ([index](../adr/README.md))
 3. **`.claude/CLAUDE.md`** — operating instructions only (hard rules, UI, phase, topology)
 
-If a term or decision is missing, proceed from what exists and note the gap for
-`/domain-modeling`. Do not invent parallel glossaries in chat or in `CLAUDE.md`.
+If a term or decision is missing, proceed from what exists and note the gap for `/domain-modeling`. Do not invent parallel glossaries in chat or in `CLAUDE.md`.
 
-New decisions → **`docs/adr/`**. New terms → **`CONTEXT.md`**. Update `CLAUDE.md`
-only when an operating rule or measured hard constraint changes.
+New decisions → **`docs/adr/`**. New terms → **`CONTEXT.md`**. Update `CLAUDE.md` only when an operating rule or measured hard constraint changes.
 
 ## File structure
 
@@ -32,8 +30,7 @@ only when an operating rule or measured hard constraint changes.
 
 ## Use the glossary's vocabulary
 
-When naming a domain concept, use `CONTEXT.md`. Don't drift to synonyms listed
-under `_Avoid_`. Missing term → gap for `/domain-modeling`.
+When naming a domain concept, use `CONTEXT.md`. Don't drift to synonyms listed under `_Avoid_`. Missing term → gap for `/domain-modeling`.
 
 ## Flag ADR conflicts
 

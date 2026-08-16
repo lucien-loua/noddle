@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMemo } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import {
   CreateProjectButton,
@@ -22,10 +23,13 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { getAuthState } from "@/server/auth";
-import { getDashboardGroups, type ProjectGroup } from "@/server/dashboard";
-import { getProjects, type ProjectView } from "@/server/projects";
+import { getDashboardGroups } from '@/server/dashboard';
+import type { ProjectGroup } from '@/server/dashboard';
+import { getProjects } from '@/server/projects';
+import type { ProjectView } from '@/server/projects';
 
 export const Route = createFileRoute("/projects")({
   beforeLoad: async () => {

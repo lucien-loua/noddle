@@ -64,10 +64,10 @@ export function encryptSecret(
 ): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGORITHM, key, iv);
-  cipher.setAAD(Buffer.from(ctx.aad, "utf8"));
+  cipher.setAAD(Buffer.from(ctx.aad, "utf-8"));
 
   const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
+    cipher.update(plaintext, "utf-8"),
     cipher.final(),
   ]);
   const tag = cipher.getAuthTag();
@@ -106,14 +106,14 @@ export function decryptSecret(
   }
 
   const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAAD(Buffer.from(ctx.aad, "utf8"));
+  decipher.setAAD(Buffer.from(ctx.aad, "utf-8"));
   decipher.setAuthTag(tag);
 
   try {
     return Buffer.concat([
       decipher.update(Buffer.from(ctB64, "base64url")),
       decipher.final(),
-    ]).toString("utf8");
+    ]).toString("utf-8");
   } catch {
     // biome-ignore lint/style/useErrorCause: the cause is deliberately hidden
     throw new CryptoError("cannot decrypt: invalid key, context or data");
@@ -126,8 +126,8 @@ export function decryptSecret(
  * differing byte and leaks the length of the matching prefix.
  */
 export function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, "utf8");
-  const bufB = Buffer.from(b, "utf8");
+  const bufA = Buffer.from(a, "utf-8");
+  const bufB = Buffer.from(b, "utf-8");
   if (bufA.length !== bufB.length) {
     return false;
   }

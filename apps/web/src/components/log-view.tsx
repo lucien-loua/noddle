@@ -1,5 +1,6 @@
 import type { ReactNode, UIEvent } from "react";
 import { useCallback, useEffect, useRef } from "react";
+
 import { TerminalLogs } from "@/components/terminal-logs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,7 +48,7 @@ const ERROR_PATTERN = /\berror\b|\bfailed\b|\bERR!|^✗|\bfatal\b/i;
  * archive file must remain the exact bytes the VM produced.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: it's precisely ESC that we're targeting
-const ANSI = /\u001b\[[0-9;]*m/g;
+const ANSI = /\u001B\[[0-9;]*m/g;
 
 /** Splits the received text into lines, ANSI stripped, window capped. */
 export function parse(text: string, classify: (line: string) => LineKind) {

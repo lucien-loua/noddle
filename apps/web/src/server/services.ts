@@ -10,6 +10,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
+
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
@@ -183,25 +184,24 @@ async function armRepositoryHook(serviceId: string): Promise<void> {
 
 export const updateServiceSettings = createServerFn({ method: "POST" })
   .validator(updateServiceSettingsSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.services.findFirst({
-            where: eq(services.id, data.serviceId),
-          }),
-        notFoundMessage: "service not found",
-        permission: { action: "deploy", resource: "service" },
-        run: async ({ row }) => {
-          const patch = serviceSettingsPatch(data);
-          if (Object.keys(patch).length > 0) {
-            await db.update(services).set(patch).where(eq(services.id, row.id));
-          }
-          await armRepositoryHook(row.id);
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "deploy", resource: "service" },
+      run: async ({ row }) => {
+        const patch = serviceSettingsPatch(data);
+        if (Object.keys(patch).length > 0) {
+          await db.update(services).set(patch).where(eq(services.id, row.id));
+        }
+        await armRepositoryHook(row.id);
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -221,35 +221,34 @@ export const updateServiceSettings = createServerFn({ method: "POST" })
  */
 export const deleteService = createServerFn({ method: "POST" })
   .validator(deleteServiceSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        // Re-checked by the helper, not only in the dialog box: the
-        // operation destroys history, images and variables with no way
-        // back.
-        confirmName: { expected: (row) => row.name, typed: data.confirmName },
-        load: () =>
-          db.query.services.findFirst({
-            where: eq(services.id, data.serviceId),
-          }),
-        notFoundMessage: "service not found",
-        permission: { action: "delete", resource: "service" },
-        run: async ({ row: service }) => {
-          await db
-            .update(services)
-            .set(markDeleting(null))
-            .where(eq(services.id, service.id));
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      // Re-checked by the helper, not only in the dialog box: the
+      // operation destroys history, images and variables with no way
+      // back.
+      confirmName: { expected: (row) => row.name, typed: data.confirmName },
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "delete", resource: "service" },
+      run: async ({ row: service }) => {
+        await db
+          .update(services)
+          .set(markDeleting(null))
+          .where(eq(services.id, service.id));
 
-          // Deliberately replayable: `removeService` and the registry purge are
-          // idempotent, so an interrupted teardown resumes with another click.
-          await enqueueDeploy({
-            kind: "delete-service",
-            serviceId: service.id,
-          });
-          return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        // Deliberately replayable: `removeService` and the registry purge are
+        // idempotent, so an interrupted teardown resumes with another click.
+        await enqueueDeploy({
+          kind: "delete-service",
+          serviceId: service.id,
+        });
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );
 
 /**
@@ -265,45 +264,44 @@ export const deleteService = createServerFn({ method: "POST" })
  */
 export const moveService = createServerFn({ method: "POST" })
   .validator(moveServiceSchema)
-  .handler(
-    async ({ data }): Promise<{ ok: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.services.findFirst({
-            where: eq(services.id, data.serviceId),
-          }),
-        notFoundMessage: "service not found",
-        permission: { action: "create", resource: "service" },
-        run: async ({ row: service }) => {
-          const target = await db.query.environments.findFirst({
-            where: eq(environments.id, data.environmentId),
-          });
-          if (!target) {
-            throw new Error("environment not found");
-          }
-          if (target.id === service.environmentId) {
-            return { ok: true as const };
-          }
-
-          const collision = await db.query.services.findFirst({
-            where: and(
-              eq(services.environmentId, target.id),
-              eq(services.name, service.name),
-              ne(services.id, service.id)
-            ),
-          });
-          if (collision) {
-            throw new Error(
-              `"${service.name}" already exists in the target environment`
-            );
-          }
-
-          await db
-            .update(services)
-            .set({ environmentId: target.id })
-            .where(eq(services.id, service.id));
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row: service }) => {
+        const target = await db.query.environments.findFirst({
+          where: eq(environments.id, data.environmentId),
+        });
+        if (!target) {
+          throw new Error("environment not found");
+        }
+        if (target.id === service.environmentId) {
           return { ok: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.name }),
-      })
+        }
+
+        const collision = await db.query.services.findFirst({
+          where: and(
+            eq(services.environmentId, target.id),
+            eq(services.name, service.name),
+            ne(services.id, service.id)
+          ),
+        });
+        if (collision) {
+          throw new Error(
+            `"${service.name}" already exists in the target environment`
+          );
+        }
+
+        await db
+          .update(services)
+          .set({ environmentId: target.id })
+          .where(eq(services.id, service.id));
+        return { ok: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
   );

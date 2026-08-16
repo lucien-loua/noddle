@@ -7,6 +7,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
+
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -78,58 +79,54 @@ export const createAccount = createServerFn({ method: "POST" })
 
 export const setAccountRole = createServerFn({ method: "POST" })
   .validator(accountRoleSchema)
-  .handler(
-    async ({ data }): Promise<{ saved: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.user.findFirst({ where: eq(user.id, data.userId) }),
-        notFoundMessage: "This account no longer exists.",
-        permission: { action: "set-role", resource: "user" },
-        run: async ({ row }) => {
-          await assertNotLastOwner(row.id, data.role);
+  .handler(async ({ data }): Promise<{ saved: true }> =>
+    runGuarded({
+      load: () => db.query.user.findFirst({ where: eq(user.id, data.userId) }),
+      notFoundMessage: "This account no longer exists.",
+      permission: { action: "set-role", resource: "user" },
+      run: async ({ row }) => {
+        await assertNotLastOwner(row.id, data.role);
 
-          await auth.api.setRole({
-            body: { role: data.role, userId: row.id },
-            headers: getRequestHeaders(),
-          });
-          return { saved: true as const };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.email }),
-      })
+        await auth.api.setRole({
+          body: { role: data.role, userId: row.id },
+          headers: getRequestHeaders(),
+        });
+        return { saved: true as const };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.email }),
+    })
   );
 
 export const removeAccount = createServerFn({ method: "POST" })
   .validator(deleteAccountSchema)
-  .handler(
-    async ({ data }): Promise<{ removed: true }> =>
-      runGuarded({
-        load: () =>
-          db.query.user.findFirst({ where: eq(user.id, data.userId) }),
-        notFoundMessage: "This account no longer exists.",
-        permission: { action: "delete", resource: "user" },
-        // The retyped address is checked here rather than through the
-        // helper's `confirmName`, for two reasons: the order matters —
-        // self-deletion is refused first — and the helper's message echoes
-        // the expected value back, which for an account is somebody else's
-        // address.
-        run: async ({ row, session }) => {
-          if (row.id === session.user.id) {
-            throw new Error("You cannot delete your own account.");
-          }
-          if (data.confirmEmail !== row.email) {
-            throw new Error("The address typed does not match this account.");
-          }
+  .handler(async ({ data }): Promise<{ removed: true }> =>
+    runGuarded({
+      load: () => db.query.user.findFirst({ where: eq(user.id, data.userId) }),
+      notFoundMessage: "This account no longer exists.",
+      permission: { action: "delete", resource: "user" },
+      // The retyped address is checked here rather than through the
+      // helper's `confirmName`, for two reasons: the order matters —
+      // self-deletion is refused first — and the helper's message echoes
+      // the expected value back, which for an account is somebody else's
+      // address.
+      run: async ({ row, session }) => {
+        if (row.id === session.user.id) {
+          throw new Error("You cannot delete your own account.");
+        }
+        if (data.confirmEmail !== row.email) {
+          throw new Error("The address typed does not match this account.");
+        }
 
-          await assertNotLastOwner(row.id, "viewer");
+        await assertNotLastOwner(row.id, "viewer");
 
-          await auth.api.removeUser({
-            body: { userId: row.id },
-            headers: getRequestHeaders(),
-          });
-          return { removed: true };
-        },
-        target: ({ row }) => ({ id: row.id, name: row.email }),
-      })
+        await auth.api.removeUser({
+          body: { userId: row.id },
+          headers: getRequestHeaders(),
+        });
+        return { removed: true };
+      },
+      target: ({ row }) => ({ id: row.id, name: row.email }),
+    })
   );
 
 /**

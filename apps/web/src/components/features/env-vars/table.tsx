@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-table";
 import type { ChangeEvent, ClipboardEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,11 +30,9 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { EnvVarView } from "@/server/env-vars";
-import {
-  type EnvPair,
-  parseEnvPaste,
-  shouldInterceptEnvPaste,
-} from "./parse-env-paste";
+
+import { parseEnvPaste, shouldInterceptEnvPaste } from './parse-env-paste';
+import type { EnvPair } from './parse-env-paste';
 
 export interface DraftVar {
   isSecret: boolean;
@@ -122,7 +121,7 @@ function applyEnvPaste(
 
   const next = [...rows];
   const index = next.findIndex((row) => row.uid === uid);
-  if (index < 0) {
+  if (index === -1) {
     return rows;
   }
 
@@ -139,7 +138,7 @@ function applyEnvPaste(
     const existing = next.findIndex(
       (row, rowIndex) => rowIndex !== index && row.key === pair.key
     );
-    const existingRow = existing >= 0 ? next[existing] : undefined;
+    const existingRow = existing !== -1 ? next[existing] : undefined;
     if (existingRow) {
       next[existing] = {
         ...existingRow,

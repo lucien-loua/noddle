@@ -1,6 +1,7 @@
 import { PlusIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
+
 import { AppShell } from "@/components/app-shell";
 import {
   ConnectGithubDialog,
@@ -18,7 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { type RoleName, roles } from "@/lib/permissions";
+import { roles } from '@/lib/permissions';
+import type { RoleName } from '@/lib/permissions';
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getGitProviders } from "@/server/git-providers";
