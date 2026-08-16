@@ -1,6 +1,5 @@
 import type { GitlabApp } from "@noddle/git-provider/gitlab";
 import {
-  gitlabAccessToken as accessToken,
   gitlabAppFor as appFor,
   type GitlabProviderRow,
   saveGitlabTokens as saveTokens,
@@ -26,10 +25,4 @@ export function saveGitlabTokens(
   tokens: { accessToken: string; expiresAt: number; refreshToken: string }
 ): Promise<void> {
   return saveTokens(db, env.appKey, gitProviderId, tokens);
-}
-
-export function gitlabAccessToken(
-  gitProviderId: string
-): Promise<{ token: string; url: string }> {
-  return accessToken(db, env.appKey, gitProviderId);
 }

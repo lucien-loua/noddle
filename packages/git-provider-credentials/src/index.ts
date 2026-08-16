@@ -3,12 +3,16 @@ import type { Database } from "@noddle/db";
 import { gitlabProviders } from "@noddle/db/schema";
 import {
   type GithubApp,
+  listBranches as githubBranches,
   cloneUrlWithToken as githubCloneUrl,
+  listRepositories as githubRepositories,
   installationToken,
 } from "@noddle/git-provider/github";
 import {
   type GitlabApp,
+  listBranches as gitlabBranches,
   cloneUrlWithToken as gitlabCloneUrl,
+  listProjects,
   needsRefresh,
   refreshTokens,
 } from "@noddle/git-provider/gitlab";
@@ -276,33 +280,89 @@ export async function gitlabWebhookSecret(
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// The seam
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProviderRepo {
+  defaultBranch: string;
+  /** The forge's own name — `owner/name`, or a GitLab subgroup path. */
+  fullName: string;
+  url: string;
+}
+
 /**
- * The URL git clones with, carrying a freshly minted token.
- *
- * The returned string is a SECRET that looks like a URL (ADR-0019): it goes
- * straight into the clone command and nowhere else. Minted per call and
- * never stored — a cached GitHub installation token starts failing about an
- * hour in, which surfaces as a clone that "randomly" 403s.
+ * What both forges genuinely answer. Callers stop knowing which one they
+ * hold; the token models stay behind here, where ADR-0019 wants them.
  */
-export async function providerCloneUrl(
+export interface GitProviderAdapter {
+  branches: (repositoryFullName: string) => Promise<string[]>;
+  /** Carries a freshly minted token. A SECRET (ADR-0019). */
+  cloneUrl: (repoUrl: string) => Promise<string>;
+  repositories: () => Promise<ProviderRepo[]>;
+}
+
+/**
+ * Credentials are fetched per call rather than captured: GitLab refreshes
+ * before use, and an adapter held across a slow listing would otherwise
+ * hand out a token that expired in the meantime.
+ */
+export async function providerFor(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
-  repoUrl: string
-): Promise<string> {
+  gitProviderId: string
+): Promise<GitProviderAdapter> {
   const provider = await loadProvider(db, gitProviderId);
 
   if (provider.providerType === "gitlab") {
-    const { token } = await gitlabAccessToken(db, appKey, gitProviderId);
-    return gitlabCloneUrl(repoUrl, token);
+    const credentials = () => gitlabAccessToken(db, appKey, gitProviderId);
+    return {
+      branches: async (fullName) => {
+        const { token, url } = await credentials();
+        return await gitlabBranches(url, token, fullName);
+      },
+      cloneUrl: async (repoUrl) => {
+        const { token } = await credentials();
+        return gitlabCloneUrl(repoUrl, token);
+      },
+      repositories: async () => {
+        const { token, url } = await credentials();
+        return await listProjects(url, token);
+      },
+    };
   }
 
-  const app = githubAppWithInstallation(
-    appKey,
-    gitProviderId,
-    provider.name,
-    provider.github
-  );
-  const { token } = await installationToken(app);
-  return githubCloneUrl(repoUrl, token);
+  const app = () =>
+    Promise.resolve(
+      githubAppWithInstallation(
+        appKey,
+        gitProviderId,
+        provider.name,
+        provider.github
+      )
+    );
+  return {
+    branches: async (fullName) => await githubBranches(await app(), fullName),
+    cloneUrl: async (repoUrl) => {
+      const { token } = await installationToken(await app());
+      return githubCloneUrl(repoUrl, token);
+    },
+    repositories: async () =>
+      (await githubRepositories(await app())).map((r) => ({
+        defaultBranch: r.defaultBranch,
+        fullName: r.fullName,
+        url: r.url,
+      })),
+  };
+}
+
+/** Whether a connection can actually list anything, per forge. */
+export function isConnected(row: {
+  github?: { appId: string | null; installationId: string | null } | null;
+  gitlab?: { accessTokenEncrypted: string | null } | null;
+  providerType: "github" | "gitlab";
+}): boolean {
+  return row.providerType === "gitlab"
+    ? Boolean(row.gitlab?.accessTokenEncrypted)
+    : Boolean(row.github?.appId && row.github.installationId);
 }

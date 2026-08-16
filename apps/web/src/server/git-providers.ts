@@ -10,22 +10,16 @@ import {
   appManifest,
   installUrl,
   isPubliclyReachable,
-  listBranches,
   listInstallations,
-  listRepositories,
 } from "@noddle/git-provider/github";
-import {
-  authorizeUrl,
-  listBranches as gitlabBranches,
-  listProjects,
-} from "@noddle/git-provider/gitlab";
+import { authorizeUrl } from "@noddle/git-provider/gitlab";
+import { isConnected, providerFor } from "@noddle/git-provider-credentials";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
-import { githubAppCredentials, githubAppFor } from "@/lib/git-provider.server";
-import { gitlabAccessToken } from "@/lib/gitlab.server";
+import { githubAppCredentials } from "@/lib/git-provider.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 import { requestOrigin } from "@/lib/request-origin.server";
 
@@ -60,10 +54,7 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
           // AND an installation, GitLab needs a token it was actually
           // given. Reading only the GitHub half left every GitLab
           // connection permanently "Not installed".
-          connected:
-            row.providerType === "gitlab"
-              ? Boolean(row.gitlab?.accessTokenEncrypted)
-              : Boolean(row.github?.appId && row.github.installationId),
+          connected: isConnected(row),
           createdAt: row.createdAt.toISOString(),
           id: row.id,
           // Only offered once the App exists: before that there is nothing
@@ -332,25 +323,12 @@ export const getProviderRepositories = createServerFn({ method: "GET" })
       runRead({
         permission: { action: "read", resource: "gitProvider" },
         read: async () => {
-          const provider = await db.query.gitProviders.findFirst({
-            where: eq(gitProviders.id, data.gitProviderId),
-          });
-          if (provider?.providerType === "gitlab") {
-            const { token, url } = await gitlabAccessToken(data.gitProviderId);
-            const projects = await listProjects(url, token);
-            return projects.map((r) => ({
-              defaultBranch: r.defaultBranch,
-              fullName: r.fullName,
-              url: r.url,
-            }));
-          }
-          const app = await githubAppFor(data.gitProviderId);
-          const repos = await listRepositories(app);
-          return repos.map((r) => ({
-            defaultBranch: r.defaultBranch,
-            fullName: r.fullName,
-            url: r.url,
-          }));
+          const provider = await providerFor(
+            db,
+            env.appKey,
+            data.gitProviderId
+          );
+          return await provider.repositories();
         },
       })
   );
@@ -367,15 +345,12 @@ export const getProviderBranches = createServerFn({ method: "GET" })
       runRead({
         permission: { action: "read", resource: "gitProvider" },
         read: async () => {
-          const provider = await db.query.gitProviders.findFirst({
-            where: eq(gitProviders.id, data.gitProviderId),
-          });
-          if (provider?.providerType === "gitlab") {
-            const { token, url } = await gitlabAccessToken(data.gitProviderId);
-            return await gitlabBranches(url, token, data.fullName);
-          }
-          const app = await githubAppFor(data.gitProviderId);
-          return await listBranches(app, data.fullName);
+          const provider = await providerFor(
+            db,
+            env.appKey,
+            data.gitProviderId
+          );
+          return await provider.branches(data.fullName);
         },
       })
   );

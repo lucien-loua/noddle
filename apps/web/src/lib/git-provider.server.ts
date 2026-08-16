@@ -1,10 +1,6 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { githubProviders } from "@noddle/db/schema";
-import type { GithubApp } from "@noddle/git-provider/github";
-import {
-  githubAppCredentials as appCredentials,
-  githubAppFor as appFor,
-} from "@noddle/git-provider-credentials";
+import { githubAppCredentials as appCredentials } from "@noddle/git-provider-credentials";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
@@ -23,10 +19,6 @@ export function githubAppCredentials(
   gitProviderId: string
 ): Promise<{ appId: string; privateKeyPem: string; url: string }> {
   return appCredentials(db, env.appKey, gitProviderId);
-}
-
-export function githubAppFor(gitProviderId: string): Promise<GithubApp> {
-  return appFor(db, env.appKey, gitProviderId);
 }
 
 /** Persist what the manifest exchange returned. Called by the callback. */

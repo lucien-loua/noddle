@@ -1,4 +1,4 @@
-import { providerCloneUrl as cloneUrlFor } from "@noddle/git-provider-credentials";
+import { providerFor } from "@noddle/git-provider-credentials";
 import type { DeployContext } from "#runtime-context";
 
 interface ProviderService {
@@ -28,5 +28,6 @@ export async function providerCloneUrl(
   if (!(provider && service.gitRepoUrl)) {
     return null;
   }
-  return await cloneUrlFor(ctx.db, ctx.appKey, provider.id, service.gitRepoUrl);
+  const adapter = await providerFor(ctx.db, ctx.appKey, provider.id);
+  return await adapter.cloneUrl(service.gitRepoUrl);
 }
