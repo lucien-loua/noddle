@@ -16,6 +16,7 @@ import {
 import {
   Link,
   type LinkProps,
+  useRouteContext,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
@@ -94,6 +95,10 @@ export function AppShell({
   role,
   title,
 }: Props) {
+  // From the ROOT context: the sidebar's persisted state, resolved before
+  // the first paint so a collapsed sidebar does not render open and then
+  // snap shut.
+  const { sidebarOpen } = useRouteContext({ from: "__root__" });
   const knownRole = role && role in roles ? (role as RoleName) : null;
   const canReadAudit = useCan(knownRole, "audit", "read");
   const canReadSshKey = useCan(knownRole, "sshKey", "read");
@@ -117,7 +122,10 @@ export function AppShell({
     // the card must stay planted on screen and scroll from the inside.
     // Otherwise the whole page scrolls and the card — its rounded corners,
     // its header — drifts upward.
-    <SidebarProvider className="h-svh overflow-hidden">
+    <SidebarProvider
+      className="h-svh overflow-hidden"
+      defaultOpen={sidebarOpen}
+    >
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>

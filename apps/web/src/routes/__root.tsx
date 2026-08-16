@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
+import { readSidebarOpen } from "@/lib/sidebar-state";
 import appCss from "../styles.css?url";
 
 /**
@@ -17,6 +18,9 @@ import appCss from "../styles.css?url";
 const THEME_SCRIPT = `try{var t=localStorage.getItem('noddle-theme');document.documentElement.classList.toggle('dark',t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))}catch(e){}`;
 
 export const Route = createRootRoute({
+  // In the ROOT context, so every screen inherits it without a prop
+  // threaded through twenty routes.
+  beforeLoad: () => ({ sidebarOpen: readSidebarOpen() }),
   head: () => ({
     links: [
       { href: appCss, rel: "stylesheet" },
