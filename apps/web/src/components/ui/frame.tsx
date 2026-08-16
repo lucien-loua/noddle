@@ -17,22 +17,15 @@ import { cn } from "@/lib/utils";
 const frameVariants = cva(
   [
     "relative flex flex-col gap-(--frame-gap) rounded-(--frame-radius) bg-muted/50 px-(--frame-px) py-(--frame-py)",
-    "(--radius-xl)] [--frame-radius:var(--radius-xl)]",
-    "(--radius-none)] (--radius-2xl)] (--radius-lg)] (--radius-none)]",
+    "[--frame-radius:var(--radius-2xl)]",
     "[--frame-gap:--spacing(0.75)] [--frame-panel-footer-gap:--spacing(1)] [--frame-panel-header-gap:0rem] [--frame-px:--spacing(0.75)] [--frame-py:--spacing(0.75)]",
     "[--frame-panel-footer-px-adjust:0px] [--frame-panel-footer-py-adjust:0px] [--frame-panel-header-px-adjust:0px] [--frame-panel-header-py-adjust:0px] [--frame-panel-px-adjust:0px] [--frame-panel-py-adjust:0px]",
     "[--frame-panel-footer-px:calc(var(--frame-panel-footer-px-base)_+_var(--frame-panel-footer-px-adjust))] [--frame-panel-footer-py:calc(var(--frame-panel-footer-py-base)_+_var(--frame-panel-footer-py-adjust))] [--frame-panel-header-px:calc(var(--frame-panel-header-px-base)_+_var(--frame-panel-header-px-adjust))] [--frame-panel-header-py:calc(var(--frame-panel-header-py-base)_+_var(--frame-panel-header-py-adjust))] [--frame-panel-px:calc(var(--frame-panel-px-base)_+_var(--frame-panel-px-adjust))] [--frame-panel-py:calc(var(--frame-panel-py-base)_+_var(--frame-panel-py-adjust))]",
-    "(1)] (1)] (1.25)] (1.5)] (1.5)] (0.5)] (1)] (1)]",
     // Default panel token values — overridden per-variant below
     "[--frame-border-color:var(--color-border)] [--frame-panel-bg:var(--color-card)] [--frame-panel-border-color:var(--color-border)]",
-    // Concentric inner radius: the panel corner nests smoothly inside the frame
-    // corner instead of matching it. The panel sits inset from the frame's outer
-    // edge by the frame's 1px border + --frame-px padding, so its radius is
-    // reduced by that same gap (radius − gap keeps the two arcs parallel). This
-    // base value assumes the bordered default/inverse frame; `ghost` drops the
-    // 1px border term and `dense` pins it back to the frame radius (its panels
-    // are pulled flush to the edge).
-    "[--frame-panel-radius:calc(var(--frame-radius)_-_var(--frame-px)_-_1px)]",
+    // Concentric radius: inner = outer − offset, where the offset is the 1px
+    // border + --frame-px here, --frame-px alone on `ghost`, 0 on `dense`.
+    "[--frame-panel-radius:max(0px,calc(var(--frame-radius)_-_var(--frame-px)_-_1px))]",
   ],
   {
     defaultVariants: {
@@ -81,7 +74,7 @@ const frameVariants = cva(
         default: "border border-[var(--frame-border-color)] bg-clip-padding",
         // No frame border, so the panel is inset by --frame-px padding only.
         ghost:
-          "[--frame-panel-radius:calc(var(--frame-radius)_-_var(--frame-px))]",
+          "[--frame-panel-radius:max(0px,calc(var(--frame-radius)_-_var(--frame-px)))]",
         inverse:
           "border border-[var(--frame-border-color)] bg-background bg-clip-padding [--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)]",
       },
