@@ -107,6 +107,9 @@ export function computeBuildCap(opts: {
 // Capped builder
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** `buildx inspect` has no --format on the pinned version; parse its output. */
+const REMOTE_DRIVER = /^Driver:\s+remote$/m;
+
 /** The BuildKit daemon Noddle runs. Both build paths go through it. */
 export const BUILDKIT_CONTAINER = "noddle-buildkit";
 /** buildx alias pointing at that same daemon, for the Dockerfile path. */
@@ -181,7 +184,7 @@ export async function ensureCappedBuilder(
     client,
     `sudo docker buildx inspect ${quoteArg(BUILDX_BUILDER)}`
   );
-  const onRemoteDriver = /^Driver:\s+remote$/m.test(builder.stdout);
+  const onRemoteDriver = REMOTE_DRIVER.test(builder.stdout);
   if (builder.code === 0 && !onRemoteDriver) {
     check(
       "stale builder removal",
