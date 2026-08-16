@@ -399,9 +399,27 @@ function ProviderRepositoryField({
   repoUrl: string;
 }) {
   const providers = useQuery({ ...queries.gitProviders(), enabled: canEdit });
+
+  // Scoped to THIS tab's forge. Offering every connection made the tabs
+  // interchangeable — the GitHub tab listed GitLab connections, which is
+  // the thing that made them all look the same.
+  //
+  // And only connections that can actually list something: an App created
+  // but never installed would offer an empty list with no way to tell why.
+  const connected = (providers.data ?? []).filter(
+    (p) => p.connected && p.providerType === forge
+  );
+
+  // A Service stores ONE connection, and every forge tab reads it. On the
+  // tab it does not belong to, it is not a selectable value — left as-is the
+  // trigger renders the raw id, because no item carries that label.
+  const selected = connected.some((p) => p.id === providerId)
+    ? providerId
+    : null;
+
   const repos = useQuery({
-    ...queries.providerRepositories(providerId ?? ""),
-    enabled: canEdit && providerId !== null,
+    ...queries.providerRepositories(selected ?? ""),
+    enabled: canEdit && selected !== null,
   });
 
   const handleProvider = useCallback(
@@ -425,30 +443,6 @@ function ProviderRepositoryField({
     [onPick]
   );
 
-  // Scoped to THIS tab's forge. Offering every connection made the tabs
-  // interchangeable — the GitHub tab listed GitLab connections, which is
-  // the thing that made them all look the same.
-  //
-  // And only connections that can actually list something: an App created
-  // but never installed would offer an empty list with no way to tell why.
-  const connected = (providers.data ?? []).filter(
-    (p) => p.connected && p.providerType === forge
-  );
-
-  // One connection is not a choice, so it is not asked for. Two or more
-  // stays unselected until the user says which — picking silently would
-  // bind the repository to an account they did not choose.
-  //
-  // This also repairs a service left over from when this tab offered
-  // "Paste a URL": it sits on a forge tab with no connection at all, a
-  // state the screen no longer has any way to represent.
-  const only = connected.length === 1 ? connected[0] : undefined;
-  useEffect(() => {
-    if (providerId === null && only) {
-      onProviderChange(only.id);
-    }
-  }, [onProviderChange, only, providerId]);
-
   // The unconnected case never reaches here — `ForgeTab` replaces the whole
   // tab with an empty state before this renders.
   return (
@@ -463,7 +457,7 @@ function ProviderRepositoryField({
           disabled={!canEdit}
           items={connected.map((p) => ({ label: p.name, value: p.id }))}
           onValueChange={handleProvider}
-          value={providerId}
+          value={selected}
         >
           <SelectTrigger aria-label="Connection" id="git-provider">
             <SelectValue placeholder="Choose a connection" />
@@ -489,7 +483,7 @@ function ProviderRepositoryField({
         </Select>
       </Field>
 
-      {providerId ? (
+      {selected ? (
         <Field>
           <FieldLabel htmlFor="git-repository">Repository</FieldLabel>
           {repos.isError ? (
@@ -527,13 +521,13 @@ function ProviderRepositoryField({
         </Field>
       ) : null}
 
-      {providerId && selectedRepo ? (
+      {selected && selectedRepo ? (
         <ProviderBranchField
           branch={branch}
           canEdit={canEdit}
           fullName={selectedRepo.fullName}
           onChange={onBranchChange}
-          providerId={providerId}
+          providerId={selected}
         />
       ) : null}
     </>
