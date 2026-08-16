@@ -1,6 +1,18 @@
 // Prerequisites: the Multipass VM, Postgres, Redis, migrations applied.
 //
-//   bun run src/verify-webhook.ts
+//   DATABASE_URL=postgres://postgres:noddle@localhost:55432/noddle_verify \
+//   REDIS_URL=redis://localhost:56379/1 \
+//   TARGET_HOST=<vm ip> bun run apps/web/src/verify-webhook.ts
+//
+// DESTRUCTIVE. `cleanupDb` runs FIRST and its deletes have no WHERE: every
+// user, session, service, environment, project and server in the target
+// database is removed, and the deploy queue is obliterated. Point
+// DATABASE_URL at a scratch database, never at an installation.
+//
+// REDIS_URL matters for the same reason: this spawns its own worker on the
+// deploy queue, so on a Redis a running worker also watches, that worker
+// picks up these jobs and runs them against ITS database — where the
+// deployment rows do not exist. It surfaces as an unexplained timeout.
 //
 // Expect a few minutes: the build is real.
 import { createHmac } from "node:crypto";
@@ -631,7 +643,10 @@ try {
   // `closed`: the preview is torn down.
   {
     const r = await postPr(githubPr("closed", 7, headSha, "feature/x"));
-    if (r.status === 200 && r.body.destroyed) {
+    const outcomes = Array.isArray(r.body.outcomes)
+      ? (r.body.outcomes as { destroyed?: string }[])
+      : [];
+    if (r.status === 200 && outcomes.some((o) => o.destroyed)) {
       ok("PR closed → teardown queued");
     } else {
       ko(`closed: status ${r.status}, body ${JSON.stringify(r.body)}`);
