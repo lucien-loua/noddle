@@ -26,14 +26,6 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@/components/ui/item";
-import {
   Table,
   TableBody,
   TableCell,
@@ -203,61 +195,97 @@ function AttentionPanel({
   rows: Overview["attention"];
 }) {
   return (
-    <section className="min-w-0">
-      <h2 className="mb-2 px-1 font-semibold text-foreground text-sm">
-        Needs attention
-      </h2>
-
+    <Frame className="min-w-0" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>Needs attention</FrameTitle>
+      </FrameHeader>
       {rows.length === 0 ? (
-        <Frame variant="ghost">
-          <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
-            {idle ? (
-              "Nothing to report."
-            ) : (
-              <>
-                <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
-                Everything is running.
-              </>
-            )}
-          </FramePanel>
-        </Frame>
+        <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
+          {idle ? (
+            "Nothing to report."
+          ) : (
+            <>
+              <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
+              Everything is running.
+            </>
+          )}
+        </FramePanel>
       ) : (
-        // `render`: `Item` then applies hover and focus to the anchor
-        // itself, rather than to a wrapping container.
-        <ItemGroup>
-          {rows.map((row) => {
-            const status = serviceLabel(row.status);
-            return (
-              <Item
-                key={row.id}
-                render={<Link to={row.href} />}
-                size="sm"
-                variant="outline"
-              >
-                <ItemContent>
-                  <ItemTitle>
-                    {row.name}
-                    <span className="font-normal text-muted-foreground text-xs">
-                      {row.scope}
-                    </span>
-                  </ItemTitle>
-                  {row.detail ? (
-                    <ItemDescription className="text-destructive">
-                      {row.detail}
-                    </ItemDescription>
-                  ) : null}
-                </ItemContent>
-                <ItemActions>
-                  <Badge variant={badgeVariant(status.tone)}>
-                    {status.label}
-                  </Badge>
-                </ItemActions>
-              </Item>
-            );
-          })}
-        </ItemGroup>
+        rows.map((row) => <AttentionRow key={row.id} row={row} />)
       )}
-    </section>
+    </Frame>
+  );
+}
+
+function AttentionRow({ row }: { row: Overview["attention"][number] }) {
+  const status = serviceLabel(row.status);
+
+  return (
+    <FramePanel className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="flex min-w-0 items-center gap-2 font-medium text-sm">
+          <AttentionLink row={row}>{row.name}</AttentionLink>
+          <span className="truncate font-normal text-muted-foreground text-xs">
+            {row.scope}
+          </span>
+        </p>
+        {row.detail ? (
+          <p className="mt-1 text-destructive text-sm">{row.detail}</p>
+        ) : null}
+      </div>
+      <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
+    </FramePanel>
+  );
+}
+
+/** Stretched over the panel: the whole card navigates, same pattern as a
+ *  project card. Three `to`s because the three resources do not share a
+ *  route. */
+function AttentionLink({
+  children,
+  row,
+}: {
+  children: ReactNode;
+  row: Overview["attention"][number];
+}) {
+  const className = "truncate after:absolute after:inset-0 after:z-10";
+  const params = {
+    environmentId: row.environmentId,
+    projectId: row.projectId,
+  };
+
+  if (row.kind === "service") {
+    return (
+      <Link
+        className={className}
+        params={{ ...params, serviceId: row.id }}
+        to="/projects/$projectId/$environmentId/services/$serviceId"
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  if (row.kind === "stack") {
+    return (
+      <Link
+        className={className}
+        params={{ ...params, stackId: row.id }}
+        to="/projects/$projectId/$environmentId/stacks/$stackId"
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      className={className}
+      params={{ ...params, databaseId: row.id }}
+      to="/projects/$projectId/$environmentId/databases/$databaseId"
+    >
+      {children}
+    </Link>
   );
 }
 

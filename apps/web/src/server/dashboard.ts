@@ -824,15 +824,19 @@ export interface OverviewCounts {
   stacks: number;
 }
 
+export type AttentionKind = "database" | "service" | "stack";
+
 export interface Overview {
   activity: ActivityRow[];
   /** What ISN'T running, across all types — the only list worth reading
    *  first. Empty = everything is fine, and the screen says so. */
   attention: {
     detail: string | null;
-    href: string;
+    environmentId: string;
     id: string;
+    kind: AttentionKind;
     name: string;
+    projectId: string;
     scope: string;
     status: string;
   }[];
@@ -844,8 +848,9 @@ export interface Overview {
  *  where something got stuck matter. */
 const NEEDS_ATTENTION = new Set(["crashed", "deleting"]);
 
-/** The three types only differ by their URL prefix: a single pass rather
- *  than three near-identical blocks. */
+/** The three types only differ by their kind (and thus their detail
+ *  route). One pass rather than three near-identical blocks. A resource
+ *  URL carries project and environment — `/services/:id` is not a route. */
 function collectAttention(
   rows: {
     id: string;
@@ -853,18 +858,20 @@ function collectAttention(
     name: string;
     status: string;
   }[],
-  prefix: string,
-  scope: string,
+  kind: AttentionKind,
+  scope: { environmentId: string; label: string; projectId: string },
   into: Overview["attention"]
 ): void {
   for (const row of rows) {
     if (NEEDS_ATTENTION.has(row.status)) {
       into.push({
         detail: row.lastError,
-        href: `${prefix}/${row.id}`,
+        environmentId: scope.environmentId,
         id: row.id,
+        kind,
         name: row.name,
-        scope,
+        projectId: scope.projectId,
+        scope: scope.label,
         status: row.status,
       });
     }
@@ -888,10 +895,14 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
     const attention: Overview["attention"] = [];
     for (const group of groups) {
       for (const scope of group.scopes) {
-        const label = `${group.project} / ${scope.environment}`;
-        collectAttention(scope.services, "/services", label, attention);
-        collectAttention(scope.stacks, "/stacks", label, attention);
-        collectAttention(scope.databases, "/databases", label, attention);
+        const context = {
+          environmentId: scope.environmentId,
+          label: `${group.project} / ${scope.environment}`,
+          projectId: group.projectId,
+        };
+        collectAttention(scope.services, "service", context, attention);
+        collectAttention(scope.stacks, "stack", context, attention);
+        collectAttention(scope.databases, "database", context, attention);
       }
     }
 
