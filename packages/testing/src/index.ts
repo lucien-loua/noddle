@@ -11,8 +11,8 @@ let fail = 0;
 let currentSuite = "";
 const cleanups: (() => void | Promise<void>)[] = [];
 
-const GREEN = "\x1B[32m✓\x1B[0m";
-const RED = "\x1B[31m✗\x1B[0m";
+const GREEN = "\u001B[32m✓\u001B[0m";
+const RED = "\u001B[31m✗\u001B[0m";
 
 function prefix(): string {
   return currentSuite ? `${currentSuite} — ` : "";
@@ -98,7 +98,7 @@ export async function suite(
 ): Promise<void> {
   const previous = currentSuite;
   currentSuite = name;
-  console.log(`\n\u001b[1m${name}\x1B[0m`);
+  console.log(`\n\u001B[1m${name}\u001B[0m`);
   try {
     await fn();
   } finally {
@@ -134,7 +134,7 @@ export async function finish(): Promise<never> {
       );
     }
   }
-  console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+  console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
   process.exit(fail === 0 ? 0 : 1);
 }
 
@@ -149,7 +149,7 @@ export async function runVerify(
     (globalThis as { Bun?: unknown }).Bun === undefined
       ? `Node ${process.version}`
       : `Bun ${(globalThis as { Bun: { version: string } }).Bun.version}`;
-  console.log(`\n\x1B[1m${runtime} — ${title}\x1B[0m`);
+  console.log(`\n\u001B[1m${runtime} — ${title}\u001B[0m`);
   try {
     await body();
   } catch (error) {

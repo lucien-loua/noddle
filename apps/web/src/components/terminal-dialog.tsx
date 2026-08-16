@@ -4,8 +4,15 @@ import { TerminalIcon } from "@phosphor-icons/react";
 
 import "@wterm/dom/src/terminal.css";
 import type { TerminalHandle, WTerm } from "@wterm/react";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { RefObject } from "react";
 
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -164,7 +171,7 @@ function TerminalSession({
         return;
       }
       onStatus("closed");
-      term.write("\r\n\x1B[90mConnection closed.\x1B[0m\r\n");
+      term.write("\r\n\u001B[90mConnection closed.\u001B[0m\r\n");
     });
     ws.addEventListener("error", () => {
       onStatus("closed");

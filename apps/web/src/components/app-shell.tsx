@@ -13,8 +13,13 @@ import {
   StackIcon,
   UsersIcon,
 } from "@phosphor-icons/react";
-import { Link, useRouteContext, useRouter, useRouterState } from '@tanstack/react-router';
-import type { LinkProps } from '@tanstack/react-router';
+import {
+  Link,
+  useRouteContext,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
+import type { LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 
@@ -35,8 +40,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 
 interface Props {

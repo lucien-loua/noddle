@@ -8,15 +8,20 @@
  */
 import { auditLog, databases, servers, services } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { execArgv, openExecPty, openShell, quoteArg } from '@noddle/ssh-executor';
-import type { PtySession, SshClient } from '@noddle/ssh-executor';
+import {
+  execArgv,
+  openExecPty,
+  openShell,
+  quoteArg,
+} from "@noddle/ssh-executor";
+import type { PtySession, SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
 import type { Session } from "@/lib/auth.server";
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
-import { can } from '@/lib/permissions';
-import type { Permission } from '@/lib/permissions';
+import { can } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { connectToServer } from "@/lib/ssh.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;

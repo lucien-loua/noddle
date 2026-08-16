@@ -12,10 +12,10 @@ import { PauseIcon, PlayIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
-import { classifyPlain, LogView, parse } from '@/components/log-view';
-import type { Line } from '@/components/log-view';
-import { classifyLogLevel } from '@/components/terminal-logs';
-import type { TerminalLogLevel } from '@/components/terminal-logs';
+import { classifyPlain, LogView, parse } from "@/components/log-view";
+import type { Line } from "@/components/log-view";
+import { classifyLogLevel } from "@/components/terminal-logs";
+import type { TerminalLogLevel } from "@/components/terminal-logs";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
@@ -56,15 +56,14 @@ const SINCE_OPTIONS = [
   { label: "Last 30 days", value: "720h" },
 ] as const;
 
-const LEVEL_OPTIONS: { label: string; value: "all" | TerminalLogLevel }[] =
-  [
-    { label: "All levels", value: "all" },
-    { label: "Info", value: "info" },
-    { label: "Success", value: "success" },
-    { label: "Warning", value: "warning" },
-    { label: "Debug", value: "debug" },
-    { label: "Error", value: "error" },
-  ];
+const LEVEL_OPTIONS: { label: string; value: "all" | TerminalLogLevel }[] = [
+  { label: "All levels", value: "all" },
+  { label: "Info", value: "info" },
+  { label: "Success", value: "success" },
+  { label: "Warning", value: "warning" },
+  { label: "Debug", value: "debug" },
+  { label: "Error", value: "error" },
+];
 
 function emptyPlaceholder(
   name: string,

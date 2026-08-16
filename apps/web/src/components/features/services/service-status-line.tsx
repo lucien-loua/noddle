@@ -1,6 +1,6 @@
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
-import { deploymentLabel, dotClass, serviceLabel } from '@/lib/format';
-import type { Tone } from '@/lib/format';
+import { deploymentLabel, dotClass, serviceLabel } from "@/lib/format";
+import type { Tone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ServiceRow } from "@/server/dashboard";
 

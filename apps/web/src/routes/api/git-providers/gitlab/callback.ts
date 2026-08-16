@@ -72,7 +72,8 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
               // The code is single use. Retrying this URL cannot work, so
               // the pending row goes rather than being left looking
               // connected when it is not.
-              const detail = error instanceof Error ? error.message : String(error);
+              const detail =
+                error instanceof Error ? error.message : String(error);
               await removePending();
               return new Response(
                 `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,

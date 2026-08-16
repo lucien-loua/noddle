@@ -7,8 +7,8 @@ import {
   services,
 } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { disconnect, exec } from '@noddle/ssh-executor';
-import type { DockerApi } from '@noddle/ssh-executor';
+import { disconnect, exec } from "@noddle/ssh-executor";
+import type { DockerApi } from "@noddle/ssh-executor";
 import { desc, eq, lt } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";

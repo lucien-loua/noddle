@@ -1,8 +1,12 @@
 import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { deployments, stackDeployments } from "@noddle/db/schema";
-import { DEPLOY_QUEUE_CONCURRENCY, DEPLOY_QUEUE_NAME, deployJobSchema } from '@noddle/deploy-contract';
-import type { DeployJobData } from '@noddle/deploy-contract';
+import {
+  DEPLOY_QUEUE_CONCURRENCY,
+  DEPLOY_QUEUE_NAME,
+  deployJobSchema,
+} from "@noddle/deploy-contract";
+import type { DeployJobData } from "@noddle/deploy-contract";
 import { createDeployQueue } from "@noddle/deploy-contract/queue";
 import { startSchedule } from "@noddle/deploy-contract/schedule";
 import { UnrecoverableError, Worker } from "bullmq";

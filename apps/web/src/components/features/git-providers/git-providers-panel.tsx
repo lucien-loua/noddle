@@ -45,8 +45,13 @@ import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { deleteGitProvider, startGithubApp, startGitlabApp, syncGithubInstallation } from '@/server/git-providers';
-import type { GitProviderView } from '@/server/git-providers';
+import {
+  deleteGitProvider,
+  startGithubApp,
+  startGitlabApp,
+  syncGithubInstallation,
+} from "@/server/git-providers";
+import type { GitProviderView } from "@/server/git-providers";
 
 const TRAILING_SLASHES = /\/+$/;
 

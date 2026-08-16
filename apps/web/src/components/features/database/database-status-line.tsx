@@ -2,8 +2,8 @@ import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
 
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
-import { dotClass, serviceLabel } from '@/lib/format';
-import type { Tone } from '@/lib/format';
+import { dotClass, serviceLabel } from "@/lib/format";
+import type { Tone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DatabaseRow } from "@/server/databases";
 

@@ -50,16 +50,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-stack", privateKey);
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -315,8 +315,8 @@ try {
   } else {
     ko(`after rollback, expected v1, received "${body3}"`);
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (managerSsh) {
     try {
@@ -332,7 +332,7 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 
 // A bench that doesn't return an exit code can't be chained: a RED run would
 // be indistinguishable from a green one to the caller. And without an

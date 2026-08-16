@@ -36,16 +36,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-lifecycle", privateKey);
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -56,13 +56,13 @@ async function swarmState(
 ): Promise<{ replicas: number | null; taskIds: string[] }> {
   const list = (await docker.listServices({
     filters: JSON.stringify({ name: [name] }),
-  })) as unknown as Array<{
+  })) as unknown as {
     Spec?: { Mode?: { Replicated?: { Replicas?: number } }; Name?: string };
-  }>;
+  }[];
   const found = list.find((s) => s.Spec?.Name === name);
   const tasks = (await docker.listTasks({
     filters: JSON.stringify({ service: [name] }),
-  })) as unknown as Array<{ ID?: string; Status?: { State?: string } }>;
+  })) as unknown as { ID?: string; Status?: { State?: string } }[];
   return {
     replicas: found?.Spec?.Mode?.Replicated?.Replicas ?? null,
     taskIds: tasks
@@ -269,8 +269,8 @@ try {
   } else {
     ko(`status after restart: ${afterRestart?.status}`);
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (ssh) {
     const docker = dockerClient(ssh);

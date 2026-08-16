@@ -19,11 +19,8 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  type BackupDestination,
-  backupObjectKey,
-  deleteObject,
-} from "@noddle/backup-store";
+import { backupObjectKey, deleteObject } from '@noddle/backup-store';
+import type { BackupDestination } from '@noddle/backup-store';
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
@@ -70,11 +67,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 async function must(
@@ -92,7 +89,7 @@ async function must(
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-restore", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -104,7 +101,7 @@ await db.delete(environments);
 await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [HOST]));
 
-console.log(`\n\x1b[1mRestore — VM ${HOST}, S3 ${S3_ENDPOINT}\x1b[0m`);
+console.log(`\n\x1B[1mRestore — VM ${HOST}, S3 ${S3_ENDPOINT}\x1B[0m`);
 
 const destination: BackupDestination = {
   accessKeyId: S3_KEY,
@@ -390,10 +387,10 @@ try {
       `Redis poorly restored: ${JSON.stringify(rAfter)} — did the AOF win over the RDB?`
     );
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 5).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 5).join("\n"));
   }
 } finally {
   if (ssh) {
@@ -410,5 +407,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

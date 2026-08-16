@@ -1,5 +1,11 @@
-import { encodeLogMessage, LOG_BUFFER_MAX_ENTRIES, LOG_BUFFER_TTL_SECONDS, logBufferKey, logChannel } from '@noddle/shared/logs';
-import type { LogMessage } from '@noddle/shared/logs';
+import {
+  encodeLogMessage,
+  LOG_BUFFER_MAX_ENTRIES,
+  LOG_BUFFER_TTL_SECONDS,
+  logBufferKey,
+  logChannel,
+} from "@noddle/shared/logs";
+import type { LogMessage } from "@noddle/shared/logs";
 import type IORedis from "ioredis";
 
 export interface LogBus {

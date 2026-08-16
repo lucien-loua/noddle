@@ -8,15 +8,15 @@ import {
 } from "@noddle/registry";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { execArgv } from '@noddle/ssh-executor';
-import type { dockerClient } from '@noddle/ssh-executor';
+import { execArgv } from "@noddle/ssh-executor";
+import type { dockerClient } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
-import { withDeployClients } from '#job-run';
-import type { DeployClients } from '#job-run';
-import { BUILD_ROOT } from '#runtime-context';
-import type { DeployContext } from '#runtime-context';
+import { withDeployClients } from "#job-run";
+import type { DeployClients } from "#job-run";
+import { BUILD_ROOT } from "#runtime-context";
+import type { DeployContext } from "#runtime-context";
 
 /** The registry container in the control-plane Compose stack. */
 const REGISTRY_CONTAINER = "noddle-registry-1";
@@ -114,7 +114,10 @@ export async function runServiceTeardown(
     await ctx.db
       .update(services)
       .set(
-        markFailed("deleting", error instanceof Error ? error.message : String(error))
+        markFailed(
+          "deleting",
+          error instanceof Error ? error.message : String(error)
+        )
       )
       .where(eq(services.id, serviceId));
     throw error;

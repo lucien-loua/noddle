@@ -6,13 +6,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import {
-  DATABASE_PORT,
-  type DatabaseEngine,
-  DEFAULT_DATABASE_IMAGE,
-  DEFAULT_DATABASE_USER,
-  HAS_NAMED_DATABASE,
-} from "@noddle/database-spec";
+import { DATABASE_PORT, DEFAULT_DATABASE_IMAGE, DEFAULT_DATABASE_USER, HAS_NAMED_DATABASE } from '@noddle/database-spec';
+import type { DatabaseEngine } from '@noddle/database-spec';
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
 import {
@@ -39,16 +34,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(
   db,
   appKey,
@@ -83,7 +78,7 @@ async function removeSecretsByPrefix(
   try {
     const list = (await docker.listSecrets({
       filters: JSON.stringify({ name: [prefix] }),
-    })) as unknown as Array<{ ID?: string; Spec?: { Name?: string } }>;
+    })) as unknown as { ID?: string; Spec?: { Name?: string } }[];
     for (const secret of list) {
       if (secret.ID && secret.Spec?.Name?.startsWith(prefix)) {
         // biome-ignore lint/performance/noAwaitInLoops: sequential removal
@@ -394,7 +389,7 @@ try {
     for (const engine of ENGINES) {
       const name = swarmNameOf(engine);
       // biome-ignore lint/performance/noAwaitInLoops: sequential cleanup
-      await removeService(managerDocker, name).catch(() => undefined);
+      await removeService(managerDocker, name).catch(() => {});
       await removeSecretsByPrefix(managerDocker, `${name}-password`);
     }
     disconnect(managerSsh);

@@ -47,8 +47,12 @@ import { Spinner } from "@/components/ui/spinner";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { deleteRegistry, saveRegistry, testRegistry } from '@/server/registries';
-import type { RegistryView } from '@/server/registries';
+import {
+  deleteRegistry,
+  saveRegistry,
+  testRegistry,
+} from "@/server/registries";
+import type { RegistryView } from "@/server/registries";
 
 function RegistryRow({
   canEdit,

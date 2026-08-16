@@ -5,11 +5,8 @@ import { join } from "node:path";
 
 import { finish, ko, ok } from "@noddle/testing";
 
-import {
-  can,
-  isPermissionUniversal,
-  type PermissionResource,
-} from "@/lib/permissions";
+import { can, isPermissionUniversal } from '@/lib/permissions';
+import type { PermissionResource } from '@/lib/permissions';
 
 const SERVER_DIR = join(import.meta.dirname, "server");
 
@@ -29,11 +26,11 @@ const EXPECT_FALSE_LABEL = /CANNOT|cannot|denies|NOTHING|^a viewer cannot/;
  * getEnvVars class of hole. Derived from resources where some role lacks
  * `read` (or the closest action), not a hand-maintained function allowlist.
  */
-const RESTRICTED_SOURCE_MARKERS: Array<{
+const RESTRICTED_SOURCE_MARKERS: {
   action: string;
   marker: RegExp;
   resource: PermissionResource;
-}> = [
+}[] = [
   { action: "read", marker: /\bauditLog\b/, resource: "audit" },
   { action: "read", marker: /\benvVars\b/, resource: "envVar" },
   // findMany = listing the library toward the client. findFirst is the
@@ -105,7 +102,7 @@ function parseRequirePermission(
   return { action: "dynamic", resource: "unknown" };
 }
 
-console.log("\n\x1b[1mPermission guards on server functions\x1b[0m");
+console.log("\n\x1B[1mPermission guards on server functions\x1B[0m");
 
 /** Every `.ts` under `server/`, including nested dirs like `databases/`.
  *  A non-recursive readdir misses those handlers entirely — measured: 18
@@ -149,7 +146,7 @@ let mutating = 0;
 let reads = 0;
 
 for (const file of files) {
-  const source = readFileSync(join(SERVER_DIR, file), "utf8");
+  const source = readFileSync(join(SERVER_DIR, file), "utf-8");
   for (const decl of declarations(source)) {
     const perm = parseRequirePermission(decl.body);
     const hasSession =
@@ -261,7 +258,7 @@ if (restrictedWithoutGuard.length === 0) {
 // assertions exist so that weakening it requires MODIFYING a test, not
 // just forgetting one.
 
-console.log("\n\x1b[1mRole matrix (via can)\x1b[0m");
+console.log("\n\x1B[1mRole matrix (via can)\x1B[0m");
 
 const cases: [string, boolean][] = [
   ["a viewer cannot deploy", can("viewer", "service", "deploy")],
@@ -358,5 +355,5 @@ for (const [label, actual] of cases) {
   }
 }
 
-console.log("\n\x1b[1mPermission guards — finishing\x1b[0m");
+console.log("\n\x1B[1mPermission guards — finishing\x1B[0m");
 await finish();

@@ -1,12 +1,12 @@
 import type { Readable } from "node:stream";
 
 import { resolveDestination } from "@noddle/backup";
-import { deleteObject, uploadStream } from '@noddle/backup-store';
-import type { BackupDestination } from '@noddle/backup-store';
+import { deleteObject, uploadStream } from "@noddle/backup-store";
+import type { BackupDestination } from "@noddle/backup-store";
 import { uploadedSize } from "@noddle/backup/uploaded-size";
 import type { servers } from "@noddle/db/schema";
-import { disconnect, execStream } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { disconnect, execStream } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 
 import { notify } from "#notify";
 import type { DeployContext } from "#runtime-context";

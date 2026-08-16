@@ -51,17 +51,17 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
-const step = (m: string) => console.log(`\n\x1b[1m${m}\x1b[0m`);
+const step = (m: string) => console.log(`\n\x1B[1m${m}\x1B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-external", privateKey);
 const extPassword = randomBytes(16).toString("hex");
 const extHost = `${MANAGER_HOST}:${EXT_PORT}`;
@@ -365,8 +365,8 @@ try {
       `sudo docker node update --availability active ${buildNode}`
     );
   }
-} catch (err) {
-  ko(`interrupted: ${err instanceof Error ? err.message : String(err)}`);
+} catch (error) {
+  ko(`interrupted: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (managerSsh) {
     await exec(managerSsh, `sudo docker rm -f ${EXT_CONTAINER}`);
@@ -378,6 +378,6 @@ try {
 }
 
 console.log(
-  `\n\x1b[1m${pass} passed, ${fail} failed\x1b[0m ${fail === 0 ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m"}`
+  `\n\x1B[1m${pass} passed, ${fail} failed\x1B[0m ${fail === 0 ? "\x1B[32m✓\x1B[0m" : "\x1B[31m✗\x1B[0m"}`
 );
 process.exit(fail === 0 ? 0 : 1);

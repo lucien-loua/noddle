@@ -1,5 +1,5 @@
-import { exec, openExecPty, quoteArg } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { exec, openExecPty, quoteArg } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 
 import type { SseChannel } from "@/lib/sse-channel.server";
 

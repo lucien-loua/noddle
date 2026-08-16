@@ -1,8 +1,8 @@
 import { IconContext } from "@phosphor-icons/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useState } from "react";
+import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";

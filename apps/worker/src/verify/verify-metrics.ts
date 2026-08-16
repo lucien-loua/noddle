@@ -38,16 +38,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-metrics", privateKey);
 
 const HUMAN_SIZE = /^([\d.]+)\s*([kMGTP]?B)$/;
@@ -71,10 +71,10 @@ function humanToBytes(size: string): number {
   const scale: Record<string, number> = {
     B: 1,
     GB: 1e9,
-    kB: 1e3,
     MB: 1e6,
     PB: 1e15,
     TB: 1e12,
+    kB: 1e3,
   };
   return (
     Number.parseFloat(match[1] as string) * (scale[match[2] as string] ?? 1)
@@ -107,7 +107,7 @@ async function reset(): Promise<void> {
 
 await reset();
 
-console.log(`\n\x1b[1mResource collection — VM ${HOST}\x1b[0m`);
+console.log(`\n\x1B[1mResource collection — VM ${HOST}\u001b[0m`);
 
 try {
   // ── 1. Parsing, no network ──────────────────────────────────────────────
@@ -531,14 +531,14 @@ try {
 
   await exec(managerSsh, `docker service rm ${probeName}`);
   disconnect(managerSsh);
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 4).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 4).join("\n"));
   }
 } finally {
   await reset();
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

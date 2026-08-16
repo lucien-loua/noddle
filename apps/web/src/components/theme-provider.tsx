@@ -1,8 +1,21 @@
-import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
 
-import { applyTheme, isTypingTarget, resolvedTheme as readResolved, readTheme, writeTheme } from '@/lib/theme';
-import type { Theme } from '@/lib/theme';
+import {
+  applyTheme,
+  isTypingTarget,
+  resolvedTheme as readResolved,
+  readTheme,
+  writeTheme,
+} from "@/lib/theme";
+import type { Theme } from "@/lib/theme";
 
 interface ThemeContextValue {
   resolvedTheme: "light" | "dark";

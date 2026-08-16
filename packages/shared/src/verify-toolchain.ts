@@ -32,7 +32,7 @@ await runVerify("toolchain pinning", () => {
     `got "${RAILPACK_VERSION}"`
   );
 
-  const installer = readFileSync(INSTALLER, "utf8");
+  const installer = readFileSync(INSTALLER, "utf-8");
   check(
     "the installer pins the SAME version",
     installer.includes(`RAILPACK_VERSION=${RAILPACK_VERSION}`),

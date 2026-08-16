@@ -8,12 +8,12 @@ import {
   RegistryDialog,
 } from "@/components/features/registries/registries-panel";
 import { Button } from "@/components/ui/button";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
-import { getRegistries } from '@/server/registries';
-import type { RegistryView } from '@/server/registries';
+import { getRegistries } from "@/server/registries";
+import type { RegistryView } from "@/server/registries";
 
 export const Route = createFileRoute("/registries")({
   beforeLoad: async () => {

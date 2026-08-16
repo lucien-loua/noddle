@@ -47,16 +47,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-multi", privateKey);
 const domain = `${SERVICE_NAME}.${WORKER_HOST.replaceAll(".", "-")}.sslip.io`;
 
@@ -134,11 +134,11 @@ try {
   // ── Swarm truth: two nodes, not one ─────────────────────────────────────
   managerSsh = await connect({ host: MANAGER_HOST, privateKey, user: USER });
   const managerDocker = dockerClient(managerSsh);
-  const nodes = (await managerDocker.listNodes()) as Array<{
+  const nodes = (await managerDocker.listNodes()) as {
     ID?: string;
     Spec?: { Role?: string };
     Status?: { State?: string };
-  }>;
+  }[];
   const workerNodes = nodes.filter((n) => n.Spec?.Role === "worker");
   if (nodes.length >= 2 && workerNodes.length >= 1) {
     ok(
@@ -226,7 +226,7 @@ try {
   // without a registry, the image built on the worker only exists THERE.
   const tasks = (await managerDocker.listTasks({
     filters: JSON.stringify({ service: [SERVICE_NAME] }),
-  })) as Array<{ NodeID?: string; Status?: { State?: string } }>;
+  })) as { NodeID?: string; Status?: { State?: string } }[];
   const [workerNode] = workerNodes;
   const running = tasks.find((t) => t.Status?.State === "running");
 
@@ -301,7 +301,7 @@ try {
 
     const tasksAfter = (await managerDocker.listTasks({
       filters: JSON.stringify({ service: [SERVICE_NAME] }),
-    })) as Array<{ NodeID?: string; Status?: { State?: string } }>;
+    })) as { NodeID?: string; Status?: { State?: string } }[];
     const runningAfter = tasksAfter.find((t) => t.Status?.State === "running");
     if (runningAfter && workerNode && runningAfter.NodeID === workerNode.ID) {
       ok("after rollback, the task is STILL on the worker node");
@@ -309,8 +309,8 @@ try {
       ko(`after rollback, node ${runningAfter?.NodeID ?? "?"}`);
     }
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (managerSsh) {
     try {
@@ -325,5 +325,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

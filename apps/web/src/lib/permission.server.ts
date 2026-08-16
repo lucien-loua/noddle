@@ -6,8 +6,8 @@ import {
 
 import type { Session } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
-import { can } from '@/lib/permissions';
-import type { Permission } from '@/lib/permissions';
+import { can } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { requireSession } from "@/lib/session.server";
 
 export class ForbiddenError extends Error {

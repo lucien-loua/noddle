@@ -23,13 +23,13 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServerDiskUsage, getServerMetrics } from "@/server/metrics";
-import { getServers } from '@/server/servers';
-import type { ServerView } from '@/server/servers';
+import { getServers } from "@/server/servers";
+import type { ServerView } from "@/server/servers";
 
 const STATUS_LABEL: Record<ServerView["status"], string> = {
   connected: "Connected",

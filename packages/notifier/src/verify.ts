@@ -1,17 +1,13 @@
 // tier: pure
 //   bun  run packages/notifier/src/verify.ts
 //   node packages/notifier/src/verify.ts
-import { createServer, type Server } from "node:http";
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 
-import {
-  buildPayload,
-  deliver,
-  eventLabel,
-  isFailure,
-  type NotificationEvent,
-} from "#index";
+import { buildPayload, deliver, eventLabel, isFailure } from '#index';
+import type { NotificationEvent } from '#index';
 
 interface Received {
   body: string;

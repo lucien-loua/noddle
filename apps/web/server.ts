@@ -4,8 +4,8 @@ import {
   terminalWebsocket,
   tryUpgradeTerminal,
 } from "./src/lib/terminal-ws.ts";
-import { isTerminalPath } from './src/lib/terminal.server.ts';
-import type { TerminalSocketData } from './src/lib/terminal.server.ts';
+import { isTerminalPath } from "./src/lib/terminal.server.ts";
+import type { TerminalSocketData } from "./src/lib/terminal.server.ts";
 
 const CLIENT_DIR = `${import.meta.dirname}/dist/client`;
 const port = Number(process.env.PORT ?? 3000);

@@ -1,5 +1,5 @@
-import { execStream, quoteArg } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { execStream, quoteArg } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 
 const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

@@ -7,15 +7,8 @@ import { Readable } from "node:stream";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { devStack } from "@noddle/testing/dev-stack";
 
-import {
-  type BackupDestination,
-  backupObjectKey,
-  checkDestination,
-  deleteObject,
-  downloadStream,
-  objectExists,
-  uploadStream,
-} from "#index";
+import { backupObjectKey, checkDestination, deleteObject, downloadStream, objectExists, uploadStream } from '#index';
+import type { BackupDestination } from '#index';
 
 const ENDPOINT = devStack().s3.endpoint;
 const ACCESS_KEY = devStack().s3.accessKeyId;
@@ -23,7 +16,7 @@ const SECRET_KEY = devStack().s3.secretAccessKey;
 const BUCKET = devStack().s3.bucket;
 
 const runtime =
-  typeof globalThis.Bun === "undefined"
+  globalThis.Bun === undefined
     ? `Node ${process.version}`
     : `Bun ${globalThis.Bun.version}`;
 
@@ -31,11 +24,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const destination: BackupDestination = {
@@ -48,7 +41,7 @@ const destination: BackupDestination = {
   secretAccessKey: SECRET_KEY,
 };
 
-console.log(`\n\x1b[1m${runtime} — backup store on ${ENDPOINT}\x1b[0m`);
+console.log(`\n\x1B[1m${runtime} — backup store on ${ENDPOINT}\x1B[0m`);
 
 // 24 MiB: three 8 MiB parts, so a real multipart. A single-PUT object would
 // prove nothing about the path a real dump takes.
@@ -213,12 +206,12 @@ try {
   } else {
     ok("deleteObject actually removes the object");
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 4).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 4).join("\n"));
   }
 }
 
-console.log(`\n\x1b[1m${runtime} — passed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1m${runtime} — passed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

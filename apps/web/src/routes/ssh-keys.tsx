@@ -8,8 +8,8 @@ import {
   SshKeysList,
 } from "@/components/features/ssh-keys/ssh-keys-panel";
 import { Button } from "@/components/ui/button";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getSshKeys } from "@/server/ssh-keys";

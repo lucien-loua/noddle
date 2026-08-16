@@ -18,8 +18,8 @@ import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
 import { cache } from "@/lib/cache";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
@@ -27,8 +27,11 @@ import {
   DETAIL_POLL_MS,
   DETAIL_TAB_PANEL_CLASS,
 } from "@/lib/resource-detail/constants";
-import { isLifecycleSettled, lifecyclePollInterval } from '@/lib/resource-detail/lifecycle-poll';
-import type { AwaitingLifecycle } from '@/lib/resource-detail/lifecycle-poll';
+import {
+  isLifecycleSettled,
+  lifecyclePollInterval,
+} from "@/lib/resource-detail/lifecycle-poll";
+import type { AwaitingLifecycle } from "@/lib/resource-detail/lifecycle-poll";
 import { parseDetailTab } from "@/lib/resource-detail/parse-tab";
 import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
 import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";

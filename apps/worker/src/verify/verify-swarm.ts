@@ -12,12 +12,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { routeLabels } from "@noddle/proxy-config";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import {
   deployService,
   ensureOverlayNetwork,
@@ -76,7 +72,7 @@ let client: SshClient | undefined;
 try {
   client = await connect({
     host: HOST,
-    privateKey: readFileSync(KEY, "utf8"),
+    privateKey: readFileSync(KEY, "utf-8"),
     user: USER,
   });
   const docker = dockerClient(client);
@@ -142,8 +138,8 @@ try {
   } else {
     ko(`unexpected served image: ${broken.runningImage}`);
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (client) {
     try {

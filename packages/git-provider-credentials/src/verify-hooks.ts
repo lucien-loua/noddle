@@ -117,7 +117,7 @@ await runVerify("git-provider-credentials/hooks", async () => {
   check("the same hook comes back", repointed.id === "9");
 
   // ── removal ──────────────────────────────────────────────────────────
-  const gone = stub(404, undefined);
+  const gone = stub(404);
   await deleteProjectHook(URL_BASE, TOKEN, NESTED, "9", gone.fetchImpl);
   check(
     "a hook already deleted by hand is success, not a failure",

@@ -4,8 +4,8 @@
  */
 
 import { generateTestDomain } from "@noddle/shared/generate-domain";
-import { serviceDomainsSchema } from '@noddle/shared/validation/service';
-import type { ServiceDomainsInput } from '@noddle/shared/validation/service';
+import { serviceDomainsSchema } from "@noddle/shared/validation/service";
+import type { ServiceDomainsInput } from "@noddle/shared/validation/service";
 import { DiceFiveIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";

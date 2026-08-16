@@ -33,7 +33,7 @@ function resolveInvocation(invoked: string): string {
 }
 
 await runVerify("installer script paths", () => {
-  const script = readFileSync(INSTALL_SH, "utf8");
+  const script = readFileSync(INSTALL_SH, "utf-8");
   const invoked = [...script.matchAll(INVOCATION)].map((match) => match[1]);
 
   // Guards the guard. Without a floor, the day the pattern stops matching this

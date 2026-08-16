@@ -2,8 +2,8 @@ import { CheckIcon } from "@phosphor-icons/react";
 import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire";
 import * as React from "react";
 
-import { buttonVariants } from '@/components/ui/button';
-import type { Button } from '@/components/ui/button';
+import { buttonVariants } from "@/components/ui/button";
+import type { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function Questionnaire({

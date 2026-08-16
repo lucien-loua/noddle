@@ -9,8 +9,12 @@ import {
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect } from "react";
 
-import { applyProvider, applyRegion, useS3DestinationForm } from '@/components/features/destinations/s3-destination-form';
-import type { DestinationFormValues } from '@/components/features/destinations/s3-destination-form';
+import {
+  applyProvider,
+  applyRegion,
+  useS3DestinationForm,
+} from "@/components/features/destinations/s3-destination-form";
+import type { DestinationFormValues } from "@/components/features/destinations/s3-destination-form";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { useTestAndSave } from "@/components/features/settings-list/hooks/use-test-and-save";
@@ -51,12 +55,16 @@ import {
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { deleteDestination, saveDestination, testDestination } from '@/server/backups/destinations';
-import type { DestinationRow } from '@/server/backups/destinations';
+import {
+  deleteDestination,
+  saveDestination,
+  testDestination,
+} from "@/server/backups/destinations";
+import type { DestinationRow } from "@/server/backups/destinations";
 
 interface Props {
   destinations: DestinationRow[];

@@ -70,10 +70,10 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
   await suite("arming lives in one module", () => {
     const accepted = readFileSync(
       join(WORKER_SRC, "deploy/accepted-deployment.ts"),
-      "utf8"
+      "utf-8"
     );
-    const deploy = readFileSync(join(WORKER_SRC, "deploy/deploy.ts"), "utf8");
-    const compose = readFileSync(join(WORKER_SRC, "deploy/compose.ts"), "utf8");
+    const deploy = readFileSync(join(WORKER_SRC, "deploy/deploy.ts"), "utf-8");
+    const compose = readFileSync(join(WORKER_SRC, "deploy/compose.ts"), "utf-8");
 
     check(
       "accepted-deployment imports watchUntilFor",
@@ -89,7 +89,7 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
     );
 
     const armingFiles = walkTs(WORKER_SRC).filter((path) =>
-      readFileSync(path, "utf8").includes("watchUntilFor")
+      readFileSync(path, "utf-8").includes("watchUntilFor")
     );
     const armingNames = armingFiles.map((path) => path.split("/").at(-1));
     check(

@@ -34,7 +34,7 @@ await runVerify("Dockerfile workspace manifests", () => {
   check(`workspace has members (${members.length})`, members.length >= 10);
 
   for (const dockerfile of DOCKERFILES) {
-    const content = readFileSync(join(REPO_ROOT, dockerfile), "utf8");
+    const content = readFileSync(join(REPO_ROOT, dockerfile), "utf-8");
 
     for (const member of members) {
       check(

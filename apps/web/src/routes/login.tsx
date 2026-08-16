@@ -10,8 +10,8 @@ import {
 } from "@noddle/shared/validation/account";
 import { GithubLogoIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useCallback, useState } from 'react';
-import type { SubmitEvent } from 'react';
+import { useCallback, useState } from "react";
+import type { SubmitEvent } from "react";
 
 import { useAppForm } from "@/components/fields/lib/form";
 import { NoddleMark } from "@/components/noddle-mark";

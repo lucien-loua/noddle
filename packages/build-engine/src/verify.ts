@@ -4,13 +4,8 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  connect,
-  disconnect,
-  exec,
-  quoteArg,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, exec, quoteArg } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 
 import {
   BUILDKIT_CONTAINER,
@@ -68,7 +63,7 @@ let client: SshClient | undefined;
 try {
   client = await connect({
     host: HOST,
-    privateKey: readFileSync(KEY, "utf8"),
+    privateKey: readFileSync(KEY, "utf-8"),
     user: USER,
   });
   ok(`connected to ${USER}@${HOST}`);
@@ -130,11 +125,11 @@ try {
           ...override,
         });
         return { label, outcome: "passed" as const };
-      } catch (e) {
-        return e instanceof BuildError && e.stage === "validation"
+      } catch (error) {
+        return error instanceof BuildError && error.stage === "validation"
           ? { label, outcome: "blocked" as const }
           : {
-              detail: e instanceof Error ? e.message : String(e),
+              detail: error instanceof Error ? error.message : String(error),
               label,
               outcome: "error" as const,
             };
@@ -216,8 +211,8 @@ try {
   } else {
     ko("curl is MISSING from the built image — every healthcheck would fail");
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (client) {
     await exec(
@@ -234,5 +229,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

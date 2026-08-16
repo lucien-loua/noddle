@@ -1,7 +1,7 @@
 import { servers } from "@noddle/db/schema";
 import { credentialsFor } from "@noddle/ssh-credentials";
-import { connect, disconnect } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { connect, disconnect } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";

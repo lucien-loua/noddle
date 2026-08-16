@@ -47,7 +47,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-e2e", privateKey);
 const domain = `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`;
 
@@ -258,8 +258,8 @@ try {
   } else {
     ko("environment variable missing from the container");
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (ssh) {
     try {

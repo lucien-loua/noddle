@@ -4,8 +4,8 @@
  * blocks; this is the single teardown.
  */
 import type { servers } from "@noddle/db/schema";
-import { disconnect } from '@noddle/ssh-executor';
-import type { DockerApi, SshClient } from '@noddle/ssh-executor';
+import { disconnect } from "@noddle/ssh-executor";
+import type { DockerApi, SshClient } from "@noddle/ssh-executor";
 
 import type { DeployContext } from "#runtime-context";
 

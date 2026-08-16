@@ -20,14 +20,8 @@ import {
   user,
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME, deployJobSchema } from "@noddle/deploy-contract";
-import {
-  encodeLogMessage,
-  LOG_BUFFER_MAX_ENTRIES,
-  LOG_BUFFER_TTL_SECONDS,
-  type LogMessage,
-  logBufferKey,
-  logChannel,
-} from "@noddle/shared/logs";
+import { encodeLogMessage, LOG_BUFFER_MAX_ENTRIES, LOG_BUFFER_TTL_SECONDS, logBufferKey, logChannel } from '@noddle/shared/logs';
+import type { LogMessage } from '@noddle/shared/logs';
 import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
@@ -45,11 +39,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const db = createDatabase({ url: DB_URL });
@@ -471,8 +465,8 @@ try {
       );
     }
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   server?.kill();
   await cleanup();
@@ -480,5 +474,5 @@ try {
   await redis.quit();
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

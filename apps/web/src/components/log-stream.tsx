@@ -1,5 +1,12 @@
-import { createContext, use, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import {
+  createContext,
+  use,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
 import type { Line, LineKind } from "@/components/log-view";

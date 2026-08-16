@@ -215,8 +215,8 @@ function Toaster({
   );
 }
 
-const {createToastManager} = ToastPrimitive;
-const {useToastManager} = ToastPrimitive;
+const { createToastManager } = ToastPrimitive;
+const { useToastManager } = ToastPrimitive;
 
 export {
   Toaster,

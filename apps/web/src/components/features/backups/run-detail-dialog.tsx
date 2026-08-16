@@ -1,5 +1,5 @@
-import { TerminalLogs } from '@/components/terminal-logs';
-import type { TerminalLogLine } from '@/components/terminal-logs';
+import { TerminalLogs } from "@/components/terminal-logs";
+import type { TerminalLogLine } from "@/components/terminal-logs";
 import { Badge } from "@/components/ui/badge";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import {

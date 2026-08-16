@@ -48,8 +48,8 @@ import {
 } from "@/components/ui/table";
 import { badgeVariant, deploymentLabel, shortSha } from "@/lib/format";
 import { getAuthState } from "@/server/auth";
-import { getDashboardGroups, getDeploymentLog } from '@/server/dashboard';
-import type { DeploymentLogRow } from '@/server/dashboard';
+import { getDashboardGroups, getDeploymentLog } from "@/server/dashboard";
+import type { DeploymentLogRow } from "@/server/dashboard";
 
 type TypeFilter = "all" | "service" | "stack";
 

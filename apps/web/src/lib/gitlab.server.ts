@@ -1,5 +1,8 @@
-import { gitlabAppFor as appFor, saveGitlabTokens as saveTokens } from '@noddle/git-provider-credentials';
-import type { GitlabProviderRow } from '@noddle/git-provider-credentials';
+import {
+  gitlabAppFor as appFor,
+  saveGitlabTokens as saveTokens,
+} from "@noddle/git-provider-credentials";
+import type { GitlabProviderRow } from "@noddle/git-provider-credentials";
 import type { GitlabApp } from "@noddle/git-provider/gitlab";
 
 import { db } from "@/lib/db.server";

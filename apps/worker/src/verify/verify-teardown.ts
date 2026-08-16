@@ -55,16 +55,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-teardown", privateKey);
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -95,7 +95,7 @@ const secretExists = async (
 ): Promise<boolean> => {
   const list = (await dockerClient(client).listSecrets({
     filters: JSON.stringify({ name: [name] }),
-  })) as unknown as Array<{ Spec?: { Name?: string } }>;
+  })) as unknown as { Spec?: { Name?: string } }[];
   return list.some((s) => s.Spec?.Name === name);
 };
 
@@ -279,8 +279,8 @@ try {
   } else {
     ok("the database row is gone");
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (ssh) {
     disconnect(ssh);

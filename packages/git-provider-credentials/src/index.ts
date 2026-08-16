@@ -1,10 +1,21 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { gitlabProviders } from "@noddle/db/schema";
-import { listBranches as githubBranches, cloneUrlWithToken as githubCloneUrl, listRepositories as githubRepositories, installationToken } from '@noddle/git-provider/github';
-import type { GithubApp } from '@noddle/git-provider/github';
-import { listBranches as gitlabBranches, cloneUrlWithToken as gitlabCloneUrl, listProjects, needsRefresh, refreshTokens } from '@noddle/git-provider/gitlab';
-import type { GitlabApp } from '@noddle/git-provider/gitlab';
+import {
+  listBranches as githubBranches,
+  cloneUrlWithToken as githubCloneUrl,
+  listRepositories as githubRepositories,
+  installationToken,
+} from "@noddle/git-provider/github";
+import type { GithubApp } from "@noddle/git-provider/github";
+import {
+  listBranches as gitlabBranches,
+  cloneUrlWithToken as gitlabCloneUrl,
+  listProjects,
+  needsRefresh,
+  refreshTokens,
+} from "@noddle/git-provider/gitlab";
+import type { GitlabApp } from "@noddle/git-provider/gitlab";
 import { eq } from "drizzle-orm";
 
 /**

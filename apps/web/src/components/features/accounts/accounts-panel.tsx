@@ -43,12 +43,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { errorMessage } from "@/lib/format";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_ORDER, roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import {
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  ROLE_ORDER,
+  roles,
+} from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { createAccount, removeAccount, setAccountRole } from '@/server/accounts';
-import type { AccountRow } from '@/server/accounts';
+import {
+  createAccount,
+  removeAccount,
+  setAccountRole,
+} from "@/server/accounts";
+import type { AccountRow } from "@/server/accounts";
 
 export function AccountsPanel({
   initial,

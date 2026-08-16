@@ -139,8 +139,8 @@ try {
   } else {
     ko(`${counts.waiting} job(s) still waiting`);
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   await queue.close();
   await connection.quit();

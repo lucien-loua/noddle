@@ -1,5 +1,5 @@
-import { createContext, use, useMemo } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, use, useMemo } from "react";
+import type { ReactNode } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
 import { Badge } from "@/components/ui/badge";

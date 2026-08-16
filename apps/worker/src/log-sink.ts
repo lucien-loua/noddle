@@ -1,5 +1,5 @@
-import { createWriteStream } from 'node:fs';
-import type { WriteStream } from 'node:fs';
+import { createWriteStream } from "node:fs";
+import type { WriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 

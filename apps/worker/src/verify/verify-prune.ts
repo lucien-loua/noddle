@@ -62,13 +62,8 @@ import {
   services,
 } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  execArgv,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, execArgv } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import { devStack } from "@noddle/testing/dev-stack";
 import { eq } from "drizzle-orm";
 
@@ -99,16 +94,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-prune", privateKey);
 
 async function reset(): Promise<void> {
@@ -210,7 +205,7 @@ const registry: RegistryConfig = {
 
 await reset();
 
-console.log(`\n\x1b[1mDocker prune — VM ${HOST}\x1b[0m`);
+console.log(`\n\x1B[1mDocker prune — VM ${HOST}\x1B[0m`);
 
 let ssh: SshClient | undefined;
 
@@ -489,10 +484,10 @@ try {
       `${clean.length} reading(s), reclaimable images = ${latest?.imageReclaimableBytes}`
     );
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 4).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 4).join("\n"));
   }
 } finally {
   if (ssh) {
@@ -504,5 +499,5 @@ try {
   await reset();
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

@@ -44,32 +44,32 @@ await runVerify("EngineSpec ownership (C5)", () => {
 
   const engines = readFileSync(
     join(REPO, "database-spec/src/index.ts"),
-    "utf8"
+    "utf-8"
   );
-  const dumpSpec = readFileSync(join(REPO, "backup/src/dump-spec.ts"), "utf8");
+  const dumpSpec = readFileSync(join(REPO, "backup/src/dump-spec.ts"), "utf-8");
   const restoreSpec = readFileSync(
     join(REPO, "backup/src/restore-spec.ts"),
-    "utf8"
+    "utf-8"
   );
   const connectionUrl = readFileSync(
     join(REPO, "../apps/web/src/server/databases/connection-url.ts"),
-    "utf8"
+    "utf-8"
   );
   const password = readFileSync(
     join(REPO, "../apps/worker/src/database/database-password.ts"),
-    "utf8"
+    "utf-8"
   );
   const backupSubject = readFileSync(
     join(REPO, "../apps/worker/src/backup-run/subjects/database.ts"),
-    "utf8"
+    "utf-8"
   );
   const restore = readFileSync(
     join(REPO, "../apps/worker/src/backup-run/subjects/database-restore.ts"),
-    "utf8"
+    "utf-8"
   );
   const runtime = readFileSync(
     join(REPO, "../apps/worker/src/database/runtime.ts"),
-    "utf8"
+    "utf-8"
   );
 
   check(

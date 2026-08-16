@@ -1,5 +1,11 @@
-import { DATABASE_ENGINE_LABEL, DATABASE_ENGINES, DEFAULT_DATABASE_IMAGE, DEFAULT_DATABASE_USER, HAS_NAMED_DATABASE } from '@noddle/database-spec';
-import type { DatabaseEngine } from '@noddle/database-spec';
+import {
+  DATABASE_ENGINE_LABEL,
+  DATABASE_ENGINES,
+  DEFAULT_DATABASE_IMAGE,
+  DEFAULT_DATABASE_USER,
+  HAS_NAMED_DATABASE,
+} from "@noddle/database-spec";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import { generateDatabasePassword } from "@noddle/shared/password";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";

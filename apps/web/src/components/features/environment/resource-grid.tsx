@@ -1,5 +1,5 @@
-import { DATABASE_ENGINE_LABEL } from '@noddle/database-spec';
-import type { DatabaseEngine } from '@noddle/database-spec';
+import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import {
   ArrowClockwiseIcon,
   ArrowSquareOutIcon,

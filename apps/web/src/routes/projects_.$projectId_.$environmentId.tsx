@@ -19,8 +19,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, getEnvironmentScope } from "@/server/dashboard";
 import { getProjectEnvironments } from "@/server/environments";

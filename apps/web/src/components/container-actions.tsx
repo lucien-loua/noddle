@@ -13,8 +13,8 @@ import {
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
-import { containerAction, restartSwarmService } from '@/server/containers';
-import type { ContainerRow } from '@/server/containers';
+import { containerAction, restartSwarmService } from "@/server/containers";
+import type { ContainerRow } from "@/server/containers";
 
 export function ContainerActions({
   onError,

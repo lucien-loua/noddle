@@ -13,8 +13,8 @@ import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { getUpdateStatus, startUpdate } from '@/server/updates';
-import type { UpdateStatus } from '@/server/updates';
+import { getUpdateStatus, startUpdate } from "@/server/updates";
+import type { UpdateStatus } from "@/server/updates";
 
 /**
  * The polling cadence once the update is launched.

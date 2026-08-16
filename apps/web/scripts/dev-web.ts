@@ -13,8 +13,8 @@
 import { join } from "node:path";
 
 import { terminalWebsocket, tryUpgradeTerminal } from "../src/lib/terminal-ws";
-import { isTerminalPath } from '../src/lib/terminal.server';
-import type { TerminalSocketData } from '../src/lib/terminal.server';
+import { isTerminalPath } from "../src/lib/terminal.server";
+import type { TerminalSocketData } from "../src/lib/terminal.server";
 
 const webRoot = join(import.meta.dir, "..");
 const publicPort = Number(process.env.PORT ?? 3000);

@@ -34,12 +34,12 @@ function listServerTs(dir: string, prefix = ""): string[] {
 
 await runVerify("runRead adoption", () => {
   const sources = listServerTs(SERVER_DIR).map((file) =>
-    readFileSync(join(SERVER_DIR, file), "utf8")
+    readFileSync(join(SERVER_DIR, file), "utf-8")
   );
   const combined = sources.join("\n");
   const perm = readFileSync(
     join(import.meta.dirname, "lib/permission.server.ts"),
-    "utf8"
+    "utf-8"
   );
 
   check(

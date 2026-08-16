@@ -36,12 +36,17 @@ import {
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { roles } from '@/lib/permissions';
-import type { RoleName } from '@/lib/permissions';
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { addChannel, deleteChannel, testChannel, updateChannel } from '@/server/notifications';
-import type { ChannelRow } from '@/server/notifications';
+import {
+  addChannel,
+  deleteChannel,
+  testChannel,
+  updateChannel,
+} from "@/server/notifications";
+import type { ChannelRow } from "@/server/notifications";
 
 const KINDS: { label: string; value: ChannelRow["kind"] }[] = [
   { label: "Discord", value: "discord" },

@@ -2,8 +2,8 @@ import http from "node:http";
 import type { Duplex } from "node:stream";
 
 import Docker from "dockerode";
-import { Client } from 'ssh2';
-import type { ConnectConfig } from 'ssh2';
+import { Client } from "ssh2";
+import type { ConnectConfig } from "ssh2";
 
 /**
  * The SSH client.

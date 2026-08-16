@@ -30,12 +30,8 @@ import { join } from "node:path";
 import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { serverDiskUsage, servers } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  execArgv,
-  type SshClient,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, execArgv } from '@noddle/ssh-executor';
+import type { SshClient } from '@noddle/ssh-executor';
 import { devStack } from "@noddle/testing/dev-stack";
 import { eq } from "drizzle-orm";
 
@@ -55,16 +51,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = loadAppKey(process.env.APP_KEY);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 
 async function docker(
   client: SshClient,
@@ -79,7 +75,7 @@ async function imageExists(client: SshClient, tag: string): Promise<boolean> {
   return res.code === 0;
 }
 
-console.log(`\n\x1b[1mPrune switch — VM ${HOST}\x1b[0m`);
+console.log(`\n\x1B[1mPrune switch — VM ${HOST}\x1B[0m`);
 
 let ssh: SshClient | undefined;
 let restoreTo: boolean | undefined;
@@ -161,10 +157,10 @@ try {
       `re-enabled node missing from pruned nodes: ${JSON.stringify(second.nodes)}`
     );
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 4).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 4).join("\n"));
   }
 } finally {
   if (ssh) {
@@ -180,5 +176,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

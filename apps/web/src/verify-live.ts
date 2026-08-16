@@ -53,11 +53,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = loadAppKey(process.env.APP_KEY);
@@ -174,7 +174,7 @@ try {
     id: sshKeyId,
     name: "live-target",
     privateKeyEncrypted: encryptSecret(
-      readFileSync(KEY, "utf8"),
+      readFileSync(KEY, "utf-8"),
       appKey,
       secretContext.sshKey(sshKeyId)
     ),
@@ -229,15 +229,12 @@ try {
       stderr: "pipe",
       stdout: "pipe",
     })
-  );
-  procs.push(
-    Bun.spawn(["bun", "run", "server.ts"], {
+  , Bun.spawn(["bun", "run", "server.ts"], {
       cwd: join(repoRoot, "apps/web"),
       env: { ...process.env, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",
-    })
-  );
+    }));
 
   if (await waitForWeb()) {
     ok("worker (Node) and web (Bun) started, two distinct processes");
@@ -387,8 +384,8 @@ try {
       ko(`rollback: status ${replayed?.status ?? "no deployment"}`);
     }
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   for (const p of procs) {
     p.kill();
@@ -397,5 +394,5 @@ try {
   await redis.quit();
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

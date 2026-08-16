@@ -10,8 +10,8 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { badgeVariant, dotClass } from '@/lib/format';
-import type { Tone } from '@/lib/format';
+import { badgeVariant, dotClass } from "@/lib/format";
+import type { Tone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface Props {

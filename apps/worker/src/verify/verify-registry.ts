@@ -32,14 +32,8 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import {
-  ensureRegistryTrust,
-  KEEP_PER_SERVICE,
-  pushImage,
-  REGISTRY_USER,
-  type RegistryConfig,
-  registryImageTag,
-} from "@noddle/registry";
+import { ensureRegistryTrust, KEEP_PER_SERVICE, pushImage, REGISTRY_USER, registryImageTag } from '@noddle/registry';
+import type { RegistryConfig } from '@noddle/registry';
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -77,17 +71,17 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
-const step = (m: string) => console.log(`\n\x1b[1m${m}\x1b[0m`);
+const step = (m: string) => console.log(`\n\x1B[1m${m}\x1B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-registry", privateKey);
 const registryPassword = randomBytes(16).toString("hex");
 const domain = `${SERVICE_NAME}.${MANAGER_HOST.replaceAll(".", "-")}.sslip.io`;
@@ -220,7 +214,7 @@ try {
     imageTag: `${registry.host}/probe-nocert:v1`,
   }).then(
     () => null,
-    (e: Error) => e.message
+    (error: Error) => error.message
   );
   if (beforeTrust?.includes("x509") || beforeTrust?.includes("certificate")) {
     ok("without the CA: push refused, and the error NAMES the certificate");
@@ -438,7 +432,7 @@ try {
   }> => {
     const list = (await managerDocker.listServices({
       filters: JSON.stringify({ name: [swarmName] }),
-    })) as unknown as Array<{
+    })) as unknown as {
       Spec?: {
         Name?: string;
         TaskTemplate?: {
@@ -446,7 +440,7 @@ try {
           Placement?: { Constraints?: string[] };
         };
       };
-    }>;
+    }[];
     const found = list.find((s) => s.Spec?.Name === swarmName);
     return {
       constraints: found?.Spec?.TaskTemplate?.Placement?.Constraints ?? [],
@@ -519,10 +513,10 @@ try {
     // biome-ignore lint/performance/noAwaitInLoops: intentional polling
     const tasks = (await managerDocker.listTasks({
       filters: JSON.stringify({ service: [swarmName] }),
-    })) as unknown as Array<{
+    })) as unknown as {
       NodeID?: string;
       Status?: { State?: string };
-    }>;
+    }[];
     const running = tasks.find((t) => t.Status?.State === "running");
     if (running?.NodeID && running.NodeID !== workerNodeId) {
       movedTo = running.NodeID;
@@ -842,16 +836,16 @@ try {
     containerName: REGISTRY_CONTAINER,
   });
   ok("teardown is replayable without error (idempotent)");
-} catch (err) {
+} catch (error) {
   // WITHOUT this block, an exception travels through to `finally`, which
   // exits with 0 because no `ko()` was counted — a bench that announces
   // "7 passed ✓" on a deployment that never went through. Paid on the first
   // run of this file, and it's the same lesson as the silent hang in
   // `verify-backup.ts`: a test must fail LOUDLY on its own failure, not only
   // on the assertions it had time to reach.
-  ko(`interrupted: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 5).join("\n"));
+  ko(`interrupted: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 5).join("\n"));
   }
 } finally {
   if (workerSsh) {
@@ -861,8 +855,8 @@ try {
     disconnect(managerSsh);
   }
   console.log(
-    `\n\x1b[1m${pass} passed, ${fail} failed\x1b[0m` +
-      (fail === 0 ? " \x1b[32m✓\x1b[0m\n" : " \x1b[31m✗\x1b[0m\n")
+    `\n\x1b[1m${pass} passed, ${fail} failed\x1b[0m${ 
+      fail === 0 ? " \x1b[32m✓\x1b[0m\n" : " \x1b[31m✗\x1b[0m\n"}`
   );
   process.exit(fail === 0 ? 0 : 1);
 }

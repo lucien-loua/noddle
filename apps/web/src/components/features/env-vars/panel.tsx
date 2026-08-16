@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { EnvVarTable } from '@/components/features/env-vars/table';
-import type { DraftVar } from '@/components/features/env-vars/table';
+import { EnvVarTable } from "@/components/features/env-vars/table";
+import type { DraftVar } from "@/components/features/env-vars/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";

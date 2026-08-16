@@ -1,6 +1,11 @@
 import { BUILDKIT_IMAGE } from "@noddle/shared/toolchain";
-import { exec, execArgv, quoteArg, writeRemoteFile } from '@noddle/ssh-executor';
-import type { ExecOptions, ExecResult, SshClient } from '@noddle/ssh-executor';
+import {
+  exec,
+  execArgv,
+  quoteArg,
+  writeRemoteFile,
+} from "@noddle/ssh-executor";
+import type { ExecOptions, ExecResult, SshClient } from "@noddle/ssh-executor";
 
 export class BuildError extends Error {
   readonly stage: string;
@@ -674,8 +679,8 @@ export async function buildImageFromDockerfile(
       client,
       `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
         ` --builder ${quoteArg(BUILDX_BUILDER)}` +
-        ` --progress=plain --load${ 
-        o.noCache ? " --no-cache" : "" 
+        ` --progress=plain --load${
+          o.noCache ? " --no-cache" : ""
         } -f ${quoteArg(o.dockerfilePath)}` +
         ` -t ${quoteArg(o.imageTag)} .`,
       o

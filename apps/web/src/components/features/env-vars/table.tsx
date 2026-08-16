@@ -31,8 +31,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { EnvVarView } from "@/server/env-vars";
 
-import { parseEnvPaste, shouldInterceptEnvPaste } from './parse-env-paste';
-import type { EnvPair } from './parse-env-paste';
+import { parseEnvPaste, shouldInterceptEnvPaste } from "./parse-env-paste";
+import type { EnvPair } from "./parse-env-paste";
 
 export interface DraftVar {
   isSecret: boolean;
@@ -138,7 +138,7 @@ function applyEnvPaste(
     const existing = next.findIndex(
       (row, rowIndex) => rowIndex !== index && row.key === pair.key
     );
-    const existingRow = existing !== -1 ? next[existing] : undefined;
+    const existingRow = existing === -1 ? undefined : next[existing];
     if (existingRow) {
       next[existing] = {
         ...existingRow,

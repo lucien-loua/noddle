@@ -5,15 +5,15 @@ import {
   TerminalIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useCallback, useState } from "react";
+import type { ReactNode } from "react";
 
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useDeleteDatabaseAction } from "@/components/delete-database-action";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useLifecycleActions } from '@/components/use-lifecycle-actions';
-import type { LifecycleAction } from '@/components/use-lifecycle-actions';
+import { useLifecycleActions } from "@/components/use-lifecycle-actions";
+import type { LifecycleAction } from "@/components/use-lifecycle-actions";
 import type { RoleName } from "@/lib/permissions";
 import type { DatabaseRow } from "@/server/databases";
 

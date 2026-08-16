@@ -25,7 +25,7 @@ function verifyCrypto(): void {
   const ctx = secretContext.sshKey("srv-1");
   const SECRET = "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END-----";
 
-  mustThrow("missing APP_KEY is rejected", () => loadAppKey(undefined));
+  mustThrow("missing APP_KEY is rejected", () => loadAppKey());
   mustThrow("too-short APP_KEY is rejected", () =>
     loadAppKey(Buffer.from("court").toString("base64"))
   );
@@ -108,7 +108,7 @@ function verifyCrypto(): void {
 async function verifySecretRetention(): Promise<void> {
   if (
     isRetainedSecret(null) &&
-    isRetainedSecret(undefined) &&
+    isRetainedSecret() &&
     isRetainedSecret("") &&
     !isRetainedSecret("s3cret")
   ) {
@@ -142,11 +142,11 @@ async function verifySecretRetention(): Promise<void> {
   try {
     await resolveRetainedSecret("", async () => null, "domain required msg");
     ko("resolveRetainedSecret should fail without a stored secret");
-  } catch (e) {
-    if (e instanceof Error && e.message === "domain required msg") {
+  } catch (error) {
+    if (error instanceof Error && error.message === "domain required msg") {
       ok("resolveRetainedSecret uses the caller requiredError");
     } else {
-      ko(`resolveRetainedSecret wrong error: ${e}`);
+      ko(`resolveRetainedSecret wrong error: ${error}`);
     }
   }
 }

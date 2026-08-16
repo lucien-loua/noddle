@@ -1,5 +1,9 @@
-import { decodeLogMessage, logBufferKey, logChannel } from '@noddle/shared/logs';
-import type { LogMessage } from '@noddle/shared/logs';
+import {
+  decodeLogMessage,
+  logBufferKey,
+  logChannel,
+} from "@noddle/shared/logs";
+import type { LogMessage } from "@noddle/shared/logs";
 import IORedis from "ioredis";
 
 import { env } from "@/lib/env.server";

@@ -14,8 +14,8 @@ import {
   services,
 } from "@noddle/db/schema";
 import type { DomainRoute } from "@noddle/proxy-config";
-import { pushImage, registryImageTag } from '@noddle/registry';
-import type { RegistryConfig } from '@noddle/registry';
+import { pushImage, registryImageTag } from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/registry";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { redactUrlCredentials } from "@noddle/shared/redact";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
@@ -25,13 +25,17 @@ import { and, desc, eq } from "drizzle-orm";
 import { recordAcceptedService } from "#deploy/accepted-deployment";
 import { providerCloneUrl } from "#deploy/provider-clone";
 import { rolloutService } from "#deploy/rollout";
-import { withDeployClients } from '#job-run';
-import type { DeployClients } from '#job-run';
+import { withDeployClients } from "#job-run";
+import type { DeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
 import { resolveRegistry } from "#registry";
-import { BUILD_ROOT } from '#runtime-context';
-import type { BuildOptions, DeployContext, RouteOptions } from '#runtime-context';
+import { BUILD_ROOT } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+} from "#runtime-context";
 
 type RunDeployment = NonNullable<
   Awaited<ReturnType<typeof loadDeploymentForRun>>

@@ -14,10 +14,7 @@ if (!url) {
 // The migrations folder travels with this file, so it resolves relative to it
 // — not relative to the current working directory, which depends on who runs
 // the command.
-const migrationsFolder = join(
-  import.meta.dirname,
-  "migrations"
-);
+const migrationsFolder = join(import.meta.dirname, "migrations");
 
 // A single connection, closed immediately: this process only exists for that.
 // `max: 1` also avoids two concurrent migrations crossing if a restart

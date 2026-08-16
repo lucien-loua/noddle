@@ -8,16 +8,8 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-  execStream,
-  quoteArg,
-  type ServerCredentials,
-} from "#index";
+import { connect, disconnect, dockerClient, exec, execArgv, execStream, quoteArg } from '#index';
+import type { ServerCredentials } from '#index';
 
 /** Digest recorded ON the VM, to compare against the one recomputed here. */
 let remoteDigest = "";
@@ -28,7 +20,7 @@ const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
 const runtime =
-  typeof globalThis.Bun === "undefined"
+  globalThis.Bun === undefined
     ? `Node ${process.version}`
     : `Bun ${globalThis.Bun.version}`;
 
@@ -36,20 +28,20 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m?\x1b[0m ${m}`);
+  console.log(`  \x1B[32m?\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m?\x1b[0m ${m}`);
+  console.log(`  \x1B[31m?\x1B[0m ${m}`);
 };
 
-console.log(`\n\x1b[1mRuntime: ${runtime}\x1b[0m`);
+console.log(`\n\x1B[1mRuntime: ${runtime}\x1B[0m`);
 console.log(`Target  : ${USER}@${HOST}\n`);
 
 // The key must never be logged, here or anywhere else.
 const creds: ServerCredentials = {
   host: HOST,
-  privateKey: readFileSync(KEY, "utf8"),
+  privateKey: readFileSync(KEY, "utf-8"),
   user: USER,
 };
 
@@ -196,7 +188,7 @@ try {
     "sha256sum | cut -d' ' -f1",
     async ({ stdin, stdout }) => {
       let out = "";
-      stdout.setEncoding("utf8");
+      stdout.setEncoding("utf-8");
       const collected = new Promise<void>((res) => {
         stdout.on("data", (d: string) => {
           out += d;
@@ -244,10 +236,10 @@ try {
       `dockerode: UpdateStatus.State = ${state ?? "(none)"} — readable without parsing text`
     );
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
-  if (err instanceof Error && err.stack) {
-    console.log(err.stack.split("\n").slice(1, 4).join("\n"));
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.log(error.stack.split("\n").slice(1, 4).join("\n"));
   }
 } finally {
   if (client) {
@@ -255,5 +247,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1m${runtime} — passed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1m${runtime} — passed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

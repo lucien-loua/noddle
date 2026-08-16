@@ -68,7 +68,7 @@ const step = (m: string) => console.log(`    ${m}`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(db, appKey, "verify-watch", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -264,8 +264,8 @@ try {
   } else {
     ko(`the service serves "${body || "nothing"}" instead of SAINE`);
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (ssh) {
     try {

@@ -6,16 +6,24 @@ import {
   ensureCappedBuilder,
   fetchSource,
 } from "@noddle/build-engine";
-import { injectDeployConfig, parseCompose, SAFE_COMPOSE_KEY } from '@noddle/compose-engine';
-import type { ComposeBuildSpec, ComposeFile, ComposeService } from '@noddle/compose-engine';
+import {
+  injectDeployConfig,
+  parseCompose,
+  SAFE_COMPOSE_KEY,
+} from "@noddle/compose-engine";
+import type {
+  ComposeBuildSpec,
+  ComposeFile,
+  ComposeService,
+} from "@noddle/compose-engine";
 import {
   stackDeploymentLogs,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import { markCrashed, settle } from "@noddle/shared/lifecycle";
-import { execArgv, writeRemoteFile } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -27,12 +35,16 @@ import { eq } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
 
 import { recordAcceptedStack } from "#deploy/accepted-deployment";
-import { withDeployClients } from '#job-run';
-import type { DeployClients } from '#job-run';
-import { createLogSink } from '#log-sink';
-import type { LogSink } from '#log-sink';
-import { BUILD_ROOT } from '#runtime-context';
-import type { BuildOptions, DeployContext, RouteOptions } from '#runtime-context';
+import { withDeployClients } from "#job-run";
+import type { DeployClients } from "#job-run";
+import { createLogSink } from "#log-sink";
+import type { LogSink } from "#log-sink";
+import { BUILD_ROOT } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+} from "#runtime-context";
 
 /** Relative file path, with no escape from the cloned directory. */
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\.\.)[\w./-]+$/;

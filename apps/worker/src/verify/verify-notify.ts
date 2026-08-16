@@ -18,11 +18,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
@@ -75,7 +75,7 @@ async function addChannel(opts: {
   return id;
 }
 
-console.log("\n\x1b[1mNotification delivery — real Postgres + HTTP\x1b[0m");
+console.log("\n\x1B[1mNotification delivery — real Postgres + HTTP\x1B[0m");
 
 await db.delete(notificationChannels);
 
@@ -188,12 +188,12 @@ try {
   } else {
     ko(`error not cleared: ${healed?.lastError}`);
   }
-} catch (err) {
-  ko(`exception: ${err instanceof Error ? err.message : String(err)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   await db.delete(notificationChannels);
   server.close();
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

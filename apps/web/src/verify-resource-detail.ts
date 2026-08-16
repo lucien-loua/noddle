@@ -17,20 +17,20 @@ const DETAIL_ROUTES = [
 ] as const;
 
 await runVerify("resource detail module (C6)", () => {
-  const workload = readFileSync(join(LIB, "constants.ts"), "utf8");
+  const workload = readFileSync(join(LIB, "constants.ts"), "utf-8");
   check(
     "shared constants export tab panel class",
     workload.includes("DETAIL_TAB_PANEL_CLASS")
   );
   check(
     "ActiveTabPanel helper exists",
-    readFileSync(join(LIB, "active-tab.tsx"), "utf8").includes(
+    readFileSync(join(LIB, "active-tab.tsx"), "utf-8").includes(
       "export function ActiveTabPanel"
     )
   );
 
   for (const file of DETAIL_ROUTES) {
-    const src = readFileSync(join(ROUTES, file), "utf8");
+    const src = readFileSync(join(ROUTES, file), "utf-8");
     check(
       `${file} uses resourceDetailBeforeLoad`,
       src.includes("resourceDetailBeforeLoad")
@@ -46,8 +46,8 @@ await runVerify("resource detail module (C6)", () => {
     );
   }
 
-  const service = readFileSync(join(ROUTES, DETAIL_ROUTES[0]), "utf8");
-  const database = readFileSync(join(ROUTES, DETAIL_ROUTES[1]), "utf8");
+  const service = readFileSync(join(ROUTES, DETAIL_ROUTES[0]), "utf-8");
+  const database = readFileSync(join(ROUTES, DETAIL_ROUTES[1]), "utf-8");
   check(
     "service/database share lifecycle poll helper",
     service.includes("lifecyclePollInterval") &&
@@ -63,7 +63,7 @@ await runVerify("resource detail module (C6)", () => {
   );
   check(
     "stack uses ResourceDetailFrame",
-    readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes(
+    readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf-8").includes(
       "ResourceDetailFrame"
     )
   );
@@ -71,7 +71,7 @@ await runVerify("resource detail module (C6)", () => {
     "service/database/stack mount heavy tabs via ActiveTabPanel",
     service.includes("ActiveTabPanel") &&
       database.includes("ActiveTabPanel") &&
-      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes(
+      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf-8").includes(
         "ActiveTabPanel"
       )
   );
@@ -79,14 +79,14 @@ await runVerify("resource detail module (C6)", () => {
     "service/stack lazy-load heavy tab panels",
     service.includes("lazy(") &&
       service.includes("ContainerLogs") &&
-      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf8").includes("lazy(")
+      readFileSync(join(ROUTES, DETAIL_ROUTES[2]), "utf-8").includes("lazy(")
   );
   check(
     "database header actions live in feature module",
     !database.includes("function DatabaseHeaderActions") &&
       readFileSync(
         join(FEATURES, "database/database-header-actions.tsx"),
-        "utf8"
+        "utf-8"
       ).includes("export function DatabaseHeaderActions")
   );
   check(
@@ -94,7 +94,7 @@ await runVerify("resource detail module (C6)", () => {
     (() => {
       const src = readFileSync(
         join(FEATURES, "database/database-header-actions.tsx"),
-        "utf8"
+        "utf-8"
       );
       return (
         src.includes("DatabaseActionsToolbar") &&
@@ -106,7 +106,7 @@ await runVerify("resource detail module (C6)", () => {
 
   const deploySettings = readFileSync(
     join(FEATURES, "services/service-deploy-settings.tsx"),
-    "utf8"
+    "utf-8"
   );
   check(
     "deploy toolbar composes children (no showDeploy props)",

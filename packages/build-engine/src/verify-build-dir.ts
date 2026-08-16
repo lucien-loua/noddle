@@ -19,7 +19,7 @@ await runVerify("build directory resolution", () => {
   check(
     "no build path builds the clone root",
     resolveBuildDir(CLONE, null) === CLONE &&
-      resolveBuildDir(CLONE, undefined) === CLONE &&
+      resolveBuildDir(CLONE) === CLONE &&
       resolveBuildDir(CLONE, "") === CLONE &&
       resolveBuildDir(CLONE, "   ") === CLONE
   );

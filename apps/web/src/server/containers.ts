@@ -1,7 +1,7 @@
 import { databases, servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { execArgv } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { execArgv } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

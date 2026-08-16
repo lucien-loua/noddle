@@ -141,7 +141,7 @@ export const DEFAULT_I18N: FilterI18nConfig = {
 
   // Helper functions
   helpers: {
-    formatOperator: (operator: string) => operator.replaceAll(/_/g, " "),
+    formatOperator: (operator: string) => operator.replaceAll('_', " "),
   },
   loadingOptions: "Loading...",
   max: "Max",
@@ -287,7 +287,7 @@ function FilterInput<T = unknown>({
 
   // Handle blur event - validate when user leaves input
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const {value} = e.target;
+    const { value } = e.target;
     const pattern = field?.pattern || props.pattern;
 
     // Only validate if there's a value and (pattern or validation function)
@@ -551,7 +551,7 @@ const isGroupLevelField = <T = unknown,>(
 
 const flattenFields = <T = unknown,>(
   fields: FilterFieldsConfig<T>
-): FilterFieldConfig<T>[] => 
+): FilterFieldConfig<T>[] =>
   fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
     if (isFieldGroup(item)) {
       return [...acc, ...item.fields];
@@ -561,8 +561,7 @@ const flattenFields = <T = unknown,>(
       return [...acc, ...item.fields!];
     }
     return [...acc, item];
-  }, [])
-;
+  }, []);
 
 const getFieldsMap = <T = unknown,>(
   fields: FilterFieldsConfig<T>

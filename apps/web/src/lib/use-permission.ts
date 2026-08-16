@@ -1,5 +1,9 @@
-import { can } from '@/lib/permissions';
-import type { PermissionAction, PermissionResource, RoleName } from '@/lib/permissions';
+import { can } from "@/lib/permissions";
+import type {
+  PermissionAction,
+  PermissionResource,
+  RoleName,
+} from "@/lib/permissions";
 
 export function useCan<R extends PermissionResource>(
   role: RoleName | null | undefined,

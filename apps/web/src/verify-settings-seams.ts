@@ -11,7 +11,7 @@ const LIB = join(WEB_SRC, "lib");
 const SERVER = join(WEB_SRC, "server");
 
 await runVerify("settings seams (SSH factory + SettingsList)", () => {
-  const ssh = readFileSync(join(LIB, "ssh.server.ts"), "utf8");
+  const ssh = readFileSync(join(LIB, "ssh.server.ts"), "utf-8");
   check(
     "ssh.server exports session factories",
     ssh.includes("export async function withServerSession") &&
@@ -19,11 +19,11 @@ await runVerify("settings seams (SSH factory + SettingsList)", () => {
       ssh.includes("export async function withServerSessionById")
   );
 
-  const containers = readFileSync(join(SERVER, "containers.ts"), "utf8");
-  const updates = readFileSync(join(SERVER, "updates.ts"), "utf8");
+  const containers = readFileSync(join(SERVER, "containers.ts"), "utf-8");
+  const updates = readFileSync(join(SERVER, "updates.ts"), "utf-8");
   const volumes = readFileSync(
     join(SERVER, "backups/volume/volumes.server.ts"),
-    "utf8"
+    "utf-8"
   );
   check(
     "containers use withServerSession helpers",
@@ -43,13 +43,13 @@ await runVerify("settings seams (SSH factory + SettingsList)", () => {
 
   const servers = readFileSync(
     join(FEATURES, "servers/servers-panel.tsx"),
-    "utf8"
+    "utf-8"
   );
   const accounts = readFileSync(
     join(FEATURES, "accounts/accounts-panel.tsx"),
-    "utf8"
+    "utf-8"
   );
-  const webhooks = readFileSync(join(FEATURES, "webhooks/panel.tsx"), "utf8");
+  const webhooks = readFileSync(join(FEATURES, "webhooks/panel.tsx"), "utf-8");
   check(
     "servers panel uses SettingsList empty/body",
     servers.includes("SettingsList") &&

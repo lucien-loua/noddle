@@ -1,5 +1,11 @@
-import { databases, deployments, services, stackDeployments, stacks } from '@noddle/db/schema';
-import type { deploymentTrigger } from '@noddle/db/schema';
+import {
+  databases,
+  deployments,
+  services,
+  stackDeployments,
+  stacks,
+} from "@noddle/db/schema";
+import type { deploymentTrigger } from "@noddle/db/schema";
 import { markDeploying } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
 

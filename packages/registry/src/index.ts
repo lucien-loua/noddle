@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { request } from "node:https";
 
-import { execArgv, writeRemoteFile } from '@noddle/ssh-executor';
-import type { ExecOptions, SshClient } from '@noddle/ssh-executor';
+import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
+import type { ExecOptions, SshClient } from "@noddle/ssh-executor";
 
 /**
  * The registry's account. A constant and not a setting: the installer

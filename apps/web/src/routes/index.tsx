@@ -37,8 +37,8 @@ import {
 import { badgeVariant, deploymentLabel, serviceLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
-import { getOverview } from '@/server/dashboard';
-import type { Overview } from '@/server/dashboard';
+import { getOverview } from "@/server/dashboard";
+import type { Overview } from "@/server/dashboard";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {

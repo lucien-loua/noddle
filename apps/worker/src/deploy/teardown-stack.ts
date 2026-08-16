@@ -7,8 +7,8 @@ import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { removeSecretIfExists } from "#database";
-import { withDeployClients } from '#job-run';
-import type { DeployClients } from '#job-run';
+import { withDeployClients } from "#job-run";
+import type { DeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 
 // Docker 29 answers "volume <name> not found", not "no such volume" —
@@ -109,7 +109,9 @@ export async function runStackTeardown(
     // then touches nothing, which is the desired result.
     await ctx.db
       .update(stacks)
-      .set({ lastError: error instanceof Error ? error.message : String(error) })
+      .set({
+        lastError: error instanceof Error ? error.message : String(error),
+      })
       .where(eq(stacks.id, stackId));
     throw error;
   }
@@ -218,7 +220,9 @@ export async function runDatabaseTeardown(
   } catch (error) {
     await ctx.db
       .update(databases)
-      .set({ lastError: error instanceof Error ? error.message : String(error) })
+      .set({
+        lastError: error instanceof Error ? error.message : String(error),
+      })
       .where(eq(databases.id, databaseId));
     throw error;
   }

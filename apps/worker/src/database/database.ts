@@ -1,13 +1,16 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import { ENGINE_SPECS, SECRET_MODE_OWNER_READ_ONLY } from '@noddle/database-spec';
-import type { EngineParams, EngineSpec } from '@noddle/database-spec';
-import { databases, envVars } from '@noddle/db/schema';
-import type { DatabaseSwarmSettings } from '@noddle/db/schema';
+import {
+  ENGINE_SPECS,
+  SECRET_MODE_OWNER_READ_ONLY,
+} from "@noddle/database-spec";
+import type { EngineParams, EngineSpec } from "@noddle/database-spec";
+import { databases, envVars } from "@noddle/db/schema";
+import type { DatabaseSwarmSettings } from "@noddle/db/schema";
 import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
 import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
-import { execArgv } from '@noddle/ssh-executor';
-import type { DockerApi } from '@noddle/ssh-executor';
+import { execArgv } from "@noddle/ssh-executor";
+import type { DockerApi } from "@noddle/ssh-executor";
 import {
   ensureOverlayNetwork,
   getSwarmNodeId,
@@ -545,7 +548,12 @@ export async function provisionDatabase(
   } catch (error) {
     await ctx.db
       .update(databases)
-      .set(markCrashed(null, error instanceof Error ? error.message : String(error)))
+      .set(
+        markCrashed(
+          null,
+          error instanceof Error ? error.message : String(error)
+        )
+      )
       .where(eq(databases.id, database.id));
     throw error;
   }
@@ -622,7 +630,9 @@ export async function rebuildDatabase(
   } catch (error) {
     await ctx.db
       .update(databases)
-      .set({ lastError: error instanceof Error ? error.message : String(error) })
+      .set({
+        lastError: error instanceof Error ? error.message : String(error),
+      })
       .where(eq(databases.id, databaseId));
     throw error;
   }

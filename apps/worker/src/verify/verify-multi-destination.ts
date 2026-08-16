@@ -51,16 +51,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1b[32m✓\x1b[0m ${m}`);
+  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1b[31m✗\x1b[0m ${m}`);
+  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf8");
+const privateKey = readFileSync(KEY, "utf-8");
 const sshKeyId = await seedSshKey(
   db,
   appKey,
@@ -78,7 +78,7 @@ await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [HOST]));
 
 console.log(
-  `\n\x1b[1mMultiple destinations — VM ${HOST}, S3 ${S3_ENDPOINT}\x1b[0m`
+  `\n\x1B[1mMultiple destinations — VM ${HOST}, S3 ${S3_ENDPOINT}\x1B[0m`
 );
 
 async function makeDestination(name: string, prefix: string) {
@@ -153,8 +153,8 @@ try {
   try {
     await resolveDestination(db, appKey, null);
     ko("no choice + two destinations: accepted when it must refuse");
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     if (message.includes("several S3 destinations")) {
       ok("no choice + two destinations: refused explicitly");
     } else {
@@ -285,16 +285,16 @@ try {
   try {
     await resolveDestination(db, appKey, destA.id);
     ko("a deleted destination is accepted");
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     if (message.includes("no longer exists")) {
       ok("a deleted destination is refused with a clear message");
     } else {
       ko(`refused, but for the wrong reason: ${message}`);
     }
   }
-} catch (e) {
-  ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (ssh) {
     try {
@@ -311,5 +311,5 @@ try {
   }
 }
 
-console.log(`\n\x1b[1mpassed ${pass}, failed ${fail}\x1b[0m\n`);
+console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

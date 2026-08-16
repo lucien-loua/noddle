@@ -7,7 +7,8 @@ import type {
 } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/testing";
 
-import { dispatch, type Handlers, handlerModules } from "#handlers";
+import { dispatch, handlerModules } from '#handlers';
+import type { Handlers } from '#handlers';
 import type { WorkerDeps } from "#runtime-context";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -110,11 +111,11 @@ await runVerify("worker dispatch", async () => {
             `#${name} loads and exports something`,
             Object.keys(mod).length > 0
           );
-        } catch (e) {
+        } catch (error) {
           check(
             `#${name} loads`,
             false,
-            e instanceof Error ? e.message : String(e)
+            error instanceof Error ? error.message : String(error)
           );
         }
       })

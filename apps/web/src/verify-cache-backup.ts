@@ -28,7 +28,7 @@ const LEGACY_MUTATIONS = [
 ] as const;
 
 function readFeature(path: string): string {
-  return readFileSync(join(ROOT, path), "utf8");
+  return readFileSync(join(ROOT, path), "utf-8");
 }
 
 function lacksLegacy(source: string, needles: readonly string[]): string[] {
@@ -38,9 +38,9 @@ function lacksLegacy(source: string, needles: readonly string[]): string[] {
 await runVerify("backup cache seam (C8)", () => {
   const mutations = readFileSync(
     join(import.meta.dirname, "lib/mutations.ts"),
-    "utf8"
+    "utf-8"
   );
-  const cache = readFileSync(join(import.meta.dirname, "lib/cache.ts"), "utf8");
+  const cache = readFileSync(join(import.meta.dirname, "lib/cache.ts"), "utf-8");
 
   check(
     "deleteBackupRun invalidates via cache.backupRunsFor",

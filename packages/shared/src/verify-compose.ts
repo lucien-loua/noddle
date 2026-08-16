@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { check, runVerify } from "@noddle/testing";
 
 const at = (path: string) =>
-  readFileSync(new URL(`../../../${path}`, import.meta.url).pathname, "utf8");
+  readFileSync(new URL(`../../../${path}`, import.meta.url).pathname, "utf-8");
 
 const PROD = at("installer/docker-compose.yml");
 const DEV = at("compose.dev.yml");

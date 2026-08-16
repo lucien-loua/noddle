@@ -1,5 +1,5 @@
-import { Queue, Worker } from 'bullmq';
-import type { ConnectionOptions } from 'bullmq';
+import { Queue, Worker } from "bullmq";
+import type { ConnectionOptions } from "bullmq";
 
 /**
  * A recurring sweep: one queue, one interval, one body.

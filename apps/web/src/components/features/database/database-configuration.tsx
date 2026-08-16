@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { setDatabaseConfiguration } from '@/server/databases';
-import type { DatabaseRow } from '@/server/databases';
+import { setDatabaseConfiguration } from "@/server/databases";
+import type { DatabaseRow } from "@/server/databases";
 
 const configurationFormSchema = z.object({
   image: imageRefSchema,

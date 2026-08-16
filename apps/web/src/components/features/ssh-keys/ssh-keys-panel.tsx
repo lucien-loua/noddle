@@ -42,8 +42,8 @@ import { mutations } from "@/lib/mutations";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { deleteSshKey } from '@/server/ssh-keys';
-import type { SshKeyView } from '@/server/ssh-keys';
+import { deleteSshKey } from "@/server/ssh-keys";
+import type { SshKeyView } from "@/server/ssh-keys";
 
 /** The algorithm, READ off the public key rather than stored:
  *  `ssh-ed25519 …` and `ssh-rsa …` already carry it. One more column

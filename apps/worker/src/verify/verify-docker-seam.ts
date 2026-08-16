@@ -33,8 +33,8 @@ const PRODUCTION_FILES = [
 ] as const;
 
 await runVerify("DockerApi seam (C4)", async () => {
-  const runtime = readFileSync(join(WORKER_SRC, "runtime-context.ts"), "utf8");
-  const jobRun = readFileSync(join(WORKER_SRC, "jobs/job-run.ts"), "utf8");
+  const runtime = readFileSync(join(WORKER_SRC, "runtime-context.ts"), "utf-8");
+  const jobRun = readFileSync(join(WORKER_SRC, "jobs/job-run.ts"), "utf-8");
 
   check("DeployContext exposes connectTo", CONNECT_TO_PATTERN.test(runtime));
   check(
@@ -63,7 +63,7 @@ await runVerify("DockerApi seam (C4)", async () => {
   );
 
   for (const file of PRODUCTION_FILES) {
-    const src = readFileSync(join(WORKER_SRC, file), "utf8");
+    const src = readFileSync(join(WORKER_SRC, file), "utf-8");
     check(`${file} avoids connectTo(ctx`, !src.includes(LEGACY_CONNECT));
     if (file === "jobs/job-run.ts") {
       check(
@@ -74,7 +74,7 @@ await runVerify("DockerApi seam (C4)", async () => {
   }
 
   let createDockerApiCalls = 0;
-  const mockClient = { end: () => undefined } as unknown as SshClient;
+  const mockClient = { end: () => {} } as unknown as SshClient;
   const server = {
     id: "11111111-1111-4111-8111-111111111111",
   } as typeof servers.$inferSelect;

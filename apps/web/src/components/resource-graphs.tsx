@@ -1,6 +1,6 @@
 import { ChartLineIcon } from "@phosphor-icons/react";
-import { areaY, defineChart, lineY } from '@tanstack/charts';
-import type { ChartPoint } from '@tanstack/charts';
+import { areaY, defineChart, lineY } from "@tanstack/charts";
+import type { ChartPoint } from "@tanstack/charts";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts/tooltip";
 import { scaleLinear } from "d3-scale";

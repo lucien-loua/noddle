@@ -36,7 +36,7 @@ const APP = {
 const BASE64_UNSAFE = /[+/=]/;
 
 function decodeSegment(segment: string): Record<string, unknown> {
-  return JSON.parse(Buffer.from(segment, "base64url").toString("utf8"));
+  return JSON.parse(Buffer.from(segment, "base64url").toString("utf-8"));
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

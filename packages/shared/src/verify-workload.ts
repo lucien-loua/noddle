@@ -52,15 +52,15 @@ await runVerify("workload policy (C2)", () => {
 
   const swarmOps = readFileSync(
     join(REPO, "packages/swarm-ops/src/swarm.ts"),
-    "utf8"
+    "utf-8"
   );
   const composeEngine = readFileSync(
     join(REPO, "packages/compose-engine/src/index.ts"),
-    "utf8"
+    "utf-8"
   );
   const database = readFileSync(
     join(REPO, "apps/worker/src/database/database.ts"),
-    "utf8"
+    "utf-8"
   );
 
   check(

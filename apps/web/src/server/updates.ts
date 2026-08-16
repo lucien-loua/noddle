@@ -1,5 +1,5 @@
-import { execArgv } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { execArgv } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 
 import { runGuarded } from "@/lib/permission.server";

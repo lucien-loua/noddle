@@ -34,7 +34,7 @@ await runVerify("default environment (cannot delete)", () => {
 
   const environments = readFileSync(
     join(WEB_SRC, "server/environments.ts"),
-    "utf8"
+    "utf-8"
   );
   check(
     "deleteEnvironment calls the default guard",
@@ -47,7 +47,7 @@ await runVerify("default environment (cannot delete)", () => {
 
   const selector = readFileSync(
     join(WEB_SRC, "components/environment-selector.tsx"),
-    "utf8"
+    "utf-8"
   );
   check(
     "selector hides rename/delete on the default environment",
@@ -64,7 +64,7 @@ await runVerify("default environment (cannot delete)", () => {
   for (const file of insertCallers) {
     check(
       `${file} inserts via insertProjectEnvironment`,
-      readFileSync(join(WEB_SRC, file), "utf8").includes(
+      readFileSync(join(WEB_SRC, file), "utf-8").includes(
         "insertProjectEnvironment"
       )
     );
@@ -72,7 +72,7 @@ await runVerify("default environment (cannot delete)", () => {
 
   const migration = readFileSync(
     join(DB, "migrations/0049_environment_is_default.sql"),
-    "utf8"
+    "utf-8"
   );
   check("0049 adds is_default", migration.includes('ADD COLUMN "is_default"'));
   check(
@@ -88,7 +88,7 @@ await runVerify("default environment (cannot delete)", () => {
     "0049 snapshot exists",
     readFileSync(
       join(DB, "migrations/meta/0049_snapshot.json"),
-      "utf8"
+      "utf-8"
     ).includes('"is_default"')
   );
 });

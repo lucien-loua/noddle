@@ -34,10 +34,10 @@ const RUNTIME: Record<string, string> = {
   vm: "node",
 };
 
-const RED = "\x1B[31m";
-const GREEN = "\x1B[32m";
-const BOLD = "\x1B[1m";
-const OFF = "\x1B[0m";
+const RED = "\u001B[31m";
+const GREEN = "\u001B[32m";
+const BOLD = "\u001B[1m";
+const OFF = "\u001B[0m";
 
 function walk(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

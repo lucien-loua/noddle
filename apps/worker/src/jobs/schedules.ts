@@ -6,8 +6,8 @@
  * record of why 30 s and not 5, why daily and not hourly.
  */
 import type { DeployJobData } from "@noddle/deploy-contract";
-import { defineSchedule } from '@noddle/deploy-contract/schedule';
-import type { ScheduleSpec } from '@noddle/deploy-contract/schedule';
+import { defineSchedule } from "@noddle/deploy-contract/schedule";
+import type { ScheduleSpec } from "@noddle/deploy-contract/schedule";
 import { reconcileRepositoryHooks } from "@noddle/git-provider-credentials/hooks";
 
 import { sweepBackups } from "#backup-sweep";

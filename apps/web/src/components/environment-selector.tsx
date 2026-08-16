@@ -39,8 +39,13 @@ import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
-import { createEnvironment, deleteEnvironment, duplicateEnvironment, renameEnvironment } from '@/server/environments';
-import type { EnvironmentView } from '@/server/environments';
+import {
+  createEnvironment,
+  deleteEnvironment,
+  duplicateEnvironment,
+  renameEnvironment,
+} from "@/server/environments";
+import type { EnvironmentView } from "@/server/environments";
 
 const environmentFormSchema = z.object({
   description: z.string().max(280),
