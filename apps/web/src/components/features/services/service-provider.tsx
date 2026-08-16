@@ -98,12 +98,6 @@ function providerTab(sourceType: ServiceRow["sourceType"]): ProviderTab {
   return "git";
 }
 
-function selectProviderId(state: {
-  values: { gitProviderId: string | null };
-}): string | null {
-  return state.values.gitProviderId;
-}
-
 function selectRegistryChoice(state: {
   values: { registryChoice: string };
 }): string {
@@ -289,9 +283,6 @@ function DeployKeyField({
   );
 }
 
-/** What `null` means in the selector: a value, not an absence. */
-const CLONE_BY_URL = "url";
-
 interface ProviderRepo {
   defaultBranch: string;
   fullName: string;
@@ -388,7 +379,7 @@ function ProviderRepositoryField({
   forge: "github" | "gitlab";
   onBranchChange: (next: string) => void;
   onPick: (repo: ProviderRepo) => void;
-  onProviderChange: (next: string | null) => void;
+  onProviderChange: (next: string) => void;
   providerId: string | null;
   repoUrl: string;
 }) {
@@ -400,8 +391,8 @@ function ProviderRepositoryField({
 
   const handleProvider = useCallback(
     (next: unknown) => {
-      if (typeof next === "string") {
-        onProviderChange(next === CLONE_BY_URL ? null : next);
+      if (typeof next === "string" && next !== "") {
+        onProviderChange(next);
       }
     },
     [onProviderChange]
@@ -429,6 +420,20 @@ function ProviderRepositoryField({
     (p) => p.connected && p.providerType === forge
   );
 
+  // One connection is not a choice, so it is not asked for. Two or more
+  // stays unselected until the user says which — picking silently would
+  // bind the repository to an account they did not choose.
+  //
+  // This also repairs a service left over from when this tab offered
+  // "Paste a URL": it sits on a forge tab with no connection at all, a
+  // state the screen no longer has any way to represent.
+  const only = connected.length === 1 ? connected[0] : undefined;
+  useEffect(() => {
+    if (providerId === null && only) {
+      onProviderChange(only.id);
+    }
+  }, [onProviderChange, only, providerId]);
+
   // The unconnected case never reaches here — `ForgeTab` replaces the whole
   // tab with an empty state before this renders.
   return (
@@ -436,23 +441,20 @@ function ProviderRepositoryField({
       <Field>
         <FieldLabel htmlFor="git-provider">Connection</FieldLabel>
         <FieldDescription>
-          Clone through a connected forge, or paste a URL below.
+          Which connected account clones this repository. To clone a public
+          repository by URL instead, use the Git tab.
         </FieldDescription>
         <Select
           disabled={!canEdit}
-          items={[
-            { label: "Paste a URL", value: CLONE_BY_URL },
-            ...connected.map((p) => ({ label: p.name, value: p.id })),
-          ]}
+          items={connected.map((p) => ({ label: p.name, value: p.id }))}
           onValueChange={handleProvider}
-          value={providerId ?? CLONE_BY_URL}
+          value={providerId}
         >
           <SelectTrigger aria-label="Connection" id="git-provider">
-            <SelectValue />
+            <SelectValue placeholder="Choose a connection" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value={CLONE_BY_URL}>Paste a URL</SelectItem>
               {connected.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {/* The forge, not just the name a user typed: two
@@ -638,37 +640,29 @@ function GitSourceForm({
             )}
           </form.AppField>
         )}
-        <form.Subscribe selector={selectProviderId}>
-          {(providerId) =>
-            providerId && sourceType !== "git" ? null : (
-              <form.AppField name="gitRepoUrl">
-                {(f) => (
-                  <f.FieldText
-                    disabled={!canEdit}
-                    label="Repository URL"
-                    placeholder={GIT_URL_PLACEHOLDER[sourceType]}
-                  />
-                )}
-              </form.AppField>
-            )
-          }
-        </form.Subscribe>
-        <form.Subscribe selector={selectProviderId}>
-          {(providerId) =>
-            providerId && sourceType !== "git" ? null : (
-              <form.AppField name="gitBranch">
-                {(f) => (
-                  <f.FieldText
-                    disabled={!canEdit}
-                    label="Branch"
-                    placeholder="main"
-                    required
-                  />
-                )}
-              </form.AppField>
-            )
-          }
-        </form.Subscribe>
+        {sourceType === "git" ? (
+          <>
+            <form.AppField name="gitRepoUrl">
+              {(f) => (
+                <f.FieldText
+                  disabled={!canEdit}
+                  label="Repository URL"
+                  placeholder={GIT_URL_PLACEHOLDER[sourceType]}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="gitBranch">
+              {(f) => (
+                <f.FieldText
+                  disabled={!canEdit}
+                  label="Branch"
+                  placeholder="main"
+                  required
+                />
+              )}
+            </form.AppField>
+          </>
+        ) : null}
         <form.AppField name="buildPath">
           {(f) => (
             <f.FieldText
