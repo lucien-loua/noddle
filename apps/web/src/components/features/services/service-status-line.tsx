@@ -11,7 +11,7 @@ import type { ServiceRow } from "@/server/dashboard";
 const BUILD_METHOD_LABEL: Record<ServiceRow["buildMethod"], string> = {
   dockerfile: "Dockerfile",
   image: "Image",
-  nixpacks: "Nixpacks",
+  railpack: "Railpack",
 };
 
 const PENDING_LABEL: Record<LifecycleAction, string> = {

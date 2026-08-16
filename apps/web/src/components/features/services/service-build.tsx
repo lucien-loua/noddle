@@ -25,8 +25,8 @@ import { updateServiceSettings } from "@/server/services";
 const BUILD_OPTIONS = [
   {
     description: "Detects the language and generates a Dockerfile.",
-    label: "Nixpacks",
-    value: "nixpacks",
+    label: "Railpack",
+    value: "railpack",
   },
   {
     description: "Uses the Dockerfile at the repository root.",
@@ -42,7 +42,7 @@ function selectBuildMethod(state: { values: { buildMethod: string } }) {
 function buildMethodValue(
   method: ServiceRow["buildMethod"]
 ): ServiceBuildInput["buildMethod"] {
-  return method === "dockerfile" ? "dockerfile" : "nixpacks";
+  return method === "dockerfile" ? "dockerfile" : "railpack";
 }
 
 export function ServiceBuild({
@@ -112,11 +112,11 @@ export function ServiceBuild({
 
           <form.Subscribe selector={selectBuildMethod}>
             {(buildMethod) =>
-              buildMethod === "nixpacks" ? (
+              buildMethod === "railpack" ? (
                 <form.AppField name="publishDirectory">
                   {(f) => (
                     <f.FieldText
-                      description="Relative path to the build output (for example dist or build). Nixpacks serves it as a static site on the next Deploy. Set port to 80 on Domains when using this."
+                      description="Relative path to the build output (for example dist or build). Railpack serves it as a static site on the next Deploy. Set port to 80 on Domains when using this."
                       disabled={!canEdit}
                       label="Publish directory"
                       placeholder="dist"

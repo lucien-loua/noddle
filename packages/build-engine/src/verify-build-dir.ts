@@ -5,12 +5,13 @@
 import { check, expectThrows, runVerify } from "@noddle/testing";
 import {
   BuildError,
+  FORCED_DEPLOY_PACKAGES,
   looksOutOfMemory,
-  nixpacksNodeFlag,
   resolveBuildDir,
 } from "#index";
 
 const CLONE = "/var/lib/noddle/builds/abc";
+const WHITESPACE = /\s+/;
 
 await runVerify("build directory resolution", () => {
   check(
@@ -47,14 +48,22 @@ await runVerify("build directory resolution", () => {
     (e) => e instanceof BuildError
   );
 
-  // Measured on 1.41.0: the process environment is IGNORED, and
-  // `--env NODE_VERSION` is the wrong name. Only this shape moves the plan
-  // off the dead default, and `--env` leaves the nix overlay intact where
-  // `--apt` and `--pkgs` wipe it.
+  // The leading `...` means "extend railpack's generated package list".
+  // Without it the list is REPLACED, and the image silently loses whatever
+  // the provider put there — a build that still succeeds and an image that
+  // is quietly wrong, which is the worst shape a failure can take.
   check(
-    "the Node fallback is passed as --env, the only form nixpacks reads",
-    nixpacksNodeFlag(false).startsWith(" --env NIXPACKS_NODE_VERSION=") &&
-      nixpacksNodeFlag(true) === ""
+    "the forced package list EXTENDS rather than replaces",
+    FORCED_DEPLOY_PACKAGES.trimStart().startsWith("...")
+  );
+
+  // Measured inside a built image, under the same non-login `sh -c` a
+  // HEALTHCHECK runs in: railpack's Debian base has NO curl and NO wget.
+  // The deploy healthcheck is a curl probe, so Noddle has to put it there
+  // or every task fails to converge and it reads as a routing bug.
+  check(
+    "curl is forced into every image Noddle builds from source",
+    FORCED_DEPLOY_PACKAGES.split(WHITESPACE).includes("curl")
   );
 
   // Measured on a 2 GB VM: Next.js compiled, then TypeScript was killed and

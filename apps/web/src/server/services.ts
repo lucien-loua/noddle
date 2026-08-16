@@ -16,7 +16,7 @@ import { enqueueDeploy } from "@/lib/queue.server";
 
 interface ServiceSettingsPatch {
   autoDeploy?: boolean;
-  buildMethod?: "nixpacks" | "dockerfile" | "image";
+  buildMethod?: "railpack" | "dockerfile" | "image";
   buildPath?: string | null;
   cleanCache?: boolean;
   deployKeyId?: string | null;
@@ -118,7 +118,7 @@ export const connectRepo = createServerFn({ method: "POST" })
           const [service] = await db
             .insert(services)
             .values({
-              buildMethod: "nixpacks",
+              buildMethod: "railpack",
               environmentId: environment.id,
               gitBranch: "main",
               name: data.name,

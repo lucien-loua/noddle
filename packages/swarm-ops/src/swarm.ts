@@ -74,10 +74,11 @@ function serviceSpec(s: DeploySpec) {
         : {}),
       ContainerSpec: {
         Env: Object.entries(s.env).map(([k, v]) => `${k}=${v}`),
-        // curl is present in nixpacks's base image, wget isn't, and node
-        // isn't in a non-login shell's PATH — and HEALTHCHECK runs in a
-        // non-login `sh -c`. Measured in Phase 0; all three look identical
-        // until you actually run them.
+        // HEALTHCHECK runs in a non-login `sh -c`, so what matters is what
+        // is on THAT path. Railpack's Debian base ships neither curl nor
+        // wget — the build engine forces curl in on every image Noddle builds
+        // (FORCED_DEPLOY_PACKAGES). For a user's own Dockerfile it is their
+        // image's business, and a missing curl reads as a routing bug.
         Healthcheck: renderDockerodeHttpHealthcheck(s.port),
         Image: s.image,
       },

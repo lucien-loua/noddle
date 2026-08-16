@@ -263,7 +263,7 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      buildMethod: "nixpacks",
+      buildMethod: "railpack",
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: "https://example.invalid/repo.git",

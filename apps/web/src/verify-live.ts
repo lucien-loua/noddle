@@ -45,7 +45,7 @@ const ORIGIN = "/opt/noddle-live-origin";
 const EMAIL = "admin@noddle.test";
 const PASSWORD = "a-reasonably-long-password";
 
-/** A real nixpacks build takes minutes, not seconds. */
+/** A real railpack build takes minutes, not seconds. */
 const DEPLOY_TIMEOUT_MS = 8 * 60 * 1000;
 
 let pass = 0;
@@ -318,8 +318,8 @@ try {
   // What the dashboard ACTUALLY received, coming straight from the VM.
   const markers: [string, string][] = [
     ["▸ build capped at", "the build cap announced by the worker"],
-    ["nixpacks", "nixpacks' output"],
-    ["#", "buildx's output (--progress=plain)"],
+    ["Railpack", "railpack's own output"],
+    ["#", "BuildKit's output (--progress plain)"],
     ["▸ Swarm switchover", "the Swarm switchover"],
     ["✓ deployment accepted", "the deployment being accepted"],
   ];

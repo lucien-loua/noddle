@@ -98,7 +98,7 @@ try {
   await exec(
     ssh,
     `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN} && ` +
-      // A NODE server, not `python3 -m http.server`: a nixpacks image for a
+      // A NODE server, not `python3 -m http.server`: a railpack image for a
       // Node project does not ship python3, and the task exited 127
       // (command not found) — faulty staging that blamed the code.
       `cd ${ORIGIN} && ` +
@@ -141,7 +141,7 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      buildMethod: "nixpacks",
+      buildMethod: "railpack",
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,

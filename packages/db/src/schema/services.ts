@@ -26,7 +26,7 @@ export const sourceType = pgEnum("source_type", [
 ]);
 
 export const buildMethod = pgEnum("build_method", [
-  "nixpacks",
+  "railpack",
   "dockerfile",
   "image",
 ]);
@@ -54,7 +54,7 @@ export const services = pgTable(
     // provider's side, it just stops deploying.
     autoDeploy: boolean("auto_deploy").notNull().default(true),
 
-    buildMethod: buildMethod("build_method").notNull().default("nixpacks"),
+    buildMethod: buildMethod("build_method").notNull().default("railpack"),
 
     /** Build context inside the repo. `null` = repository root. */
     buildPath: text("build_path"),
@@ -126,7 +126,9 @@ export const services = pgTable(
 
     /**
      * Relative path to static build output (e.g. `dist`, `build`). When set,
-     * Nixpacks serves that folder as a static site via `NIXPACKS_SPA_OUT_DIR`.
+     * railpack serves that folder as a static site (Caddy) via
+     * `RAILPACK_SPA_OUTPUT_DIR`, and setting it FORCES static mode even when
+     * framework detection would not have fired.
      * `null` = run the detected server process instead.
      */
     publishDirectory: text("publish_directory"),

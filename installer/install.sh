@@ -164,17 +164,27 @@ else
   echo "authorized for $TARGET_USER (sources: $SSH_FROM)"
 fi
 
-# The worker builds on the target, so this machine needs nixpacks locally.
+# The worker builds on the target, so this machine needs railpack locally.
 #
-# PINNED, and it has to stay in step with NIXPACKS_VERSION in
+# PINNED, and it has to stay in step with RAILPACK_VERSION in
 # packages/shared/src/toolchain.ts: the project's build rules were measured
 # on this version, and a server provisioned later must not get a different
-# one.
-NIXPACKS_VERSION=1.41.0
-if ! command -v nixpacks >/dev/null 2>&1; then
-  say "nixpacks $NIXPACKS_VERSION"
-  export NIXPACKS_VERSION
-  curl -sSL https://nixpacks.com/install.sh | $SUDO -E bash
+# one. `verify-toolchain` fails if the two drift.
+RAILPACK_VERSION=0.36.4
+if ! command -v railpack >/dev/null 2>&1; then
+  say "railpack $RAILPACK_VERSION"
+  export RAILPACK_VERSION
+  curl -sSL https://railpack.com/install.sh | $SUDO -E sh
+fi
+
+# Railpack builds straight to BuildKit rather than emitting a Dockerfile, so the
+# daemon is now part of the toolchain rather than something buildx conjures up.
+# Pre-pulled here, pinned for the same reason: the build cap lives on this
+# container's cgroup, and both build paths share it.
+BUILDKIT_IMAGE=moby/buildkit:v0.27.0
+if ! $SUDO docker image inspect "$BUILDKIT_IMAGE" >/dev/null 2>&1; then
+  say "$BUILDKIT_IMAGE"
+  $SUDO docker pull "$BUILDKIT_IMAGE"
 fi
 
 # ── 5. Image registry ────────────────────────────────────────────────────────

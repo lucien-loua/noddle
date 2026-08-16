@@ -1,6 +1,6 @@
 import { servers } from "@noddle/db/schema";
 import { ensureRegistryTrust } from "@noddle/registry";
-import { nixpacksInstallCommand } from "@noddle/shared/toolchain";
+import { railpackInstallCommand } from "@noddle/shared/toolchain";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
@@ -102,9 +102,9 @@ export async function provisionServer(
       }
     }
 
-    const nixpacksCheck = await exec(client, "command -v nixpacks");
-    if (nixpacksCheck.code !== 0) {
-      await exec(client, nixpacksInstallCommand());
+    const railpackCheck = await exec(client, "command -v railpack");
+    if (railpackCheck.code !== 0) {
+      await exec(client, railpackInstallCommand());
     }
 
     if (ctx.registry) {

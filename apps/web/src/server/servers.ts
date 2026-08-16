@@ -5,7 +5,7 @@ import {
   sshKeys,
   stacks,
 } from "@noddle/db/schema";
-import { NIXPACKS_VERSION } from "@noddle/shared/toolchain";
+import { RAILPACK_VERSION } from "@noddle/shared/toolchain";
 import {
   deleteServerSchema,
   serverInputSchema,
@@ -95,7 +95,7 @@ export const addServer = createServerFn({ method: "POST" })
 
         // The worker does the rest: Docker if missing, joining the Swarm
         // cluster AS A WORKER (never manager — a second manager would change
-        // the Raft quorum size without being asked to), nixpacks, then the same
+        // the Raft quorum size without being asked to), railpack, then the same
         // facts as machine #1.
         await enqueueDeploy({ kind: "provision-server", serverId: created.id });
 
@@ -212,9 +212,9 @@ const serverIdSchema = z.object({ serverId: z.uuid() });
 export interface ServerToolReport {
   /** `null` when the tool is absent. */
   docker: string | null;
-  nixpacks: string | null;
+  railpack: string | null;
   /** The version Noddle provisions. A mismatch is worth seeing. */
-  nixpacksExpected: string;
+  railpackExpected: string;
   swarm: string;
 }
 
@@ -222,7 +222,7 @@ export interface ServerToolReport {
  * What a server actually has, reported and NOT installed.
  *
  * A server added by adoption never went through provisioning, so it can
- * clone and fail to build — which surfaces as `nixpacks: command not found`
+ * clone and fail to build — which surfaces as `railpack: command not found`
  * in the middle of a deploy, minutes in, pointing at the build rather than
  * at the machine. This makes that legible before a deploy instead of during
  * one.
@@ -245,8 +245,8 @@ export const checkServerTools = createServerFn({ method: "POST" })
             };
             return {
               docker: await version("docker --version"),
-              nixpacks: await version("nixpacks --version"),
-              nixpacksExpected: NIXPACKS_VERSION,
+              railpack: await version("railpack --version"),
+              railpackExpected: RAILPACK_VERSION,
               // Queried directly, never `docker info | grep`: these scripts
               // run under pipefail and grep -q makes it a race.
               swarm:
@@ -264,7 +264,7 @@ export const checkServerTools = createServerFn({ method: "POST" })
  *
  * It is the SAME job as the one an added server gets, and it is idempotent
  * throughout — it checks before installing Docker, joining the Swarm and
- * installing nixpacks. So this repairs a server rather than requiring it be
+ * installing railpack. So this repairs a server rather than requiring it be
  * removed and added again.
  */
 export const setupServer = createServerFn({ method: "POST" })

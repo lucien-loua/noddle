@@ -1,7 +1,7 @@
 # Rejoue la chaîne de déploiement complète sur un vrai hôte Linux.
 #
 # Pourquoi ce workflow existe : sur les sept ruptures rencontrées en Phase 0,
-# SIX venaient de dépendances tierces — un flag nixpacks qui écrase les overlays
+# SIX venaient de dépendances tierces — un flag nixpacks qui écrasait les overlays
 # nix, une image de base sans wget, Traefik < 3.6 incapable de parler à Docker 29.
 # Aucune n'était dans notre code. C'est le vrai profil de risque du projet, et
 # rien d'autre que ce spike ne le détecte. D'autres outils comparables
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Libérer du disque
-        # Les images nixpacks et les couches de build sont volumineuses, et le
+        # Les images railpack et les couches de build sont volumineuses, et le
         # runner arrive chargé d'outils dont on n'a aucun usage.
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
@@ -104,7 +104,8 @@ jobs:
             echo "| Docker Engine | $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') |"
             echo "| Docker API | $(docker version --format '{{.Server.APIVersion}}' 2>/dev/null || echo '?') (min $(docker version --format '{{.Server.MinAPIVersion}}' 2>/dev/null || echo '?')) |"
             echo "| Traefik | $(grep -oE 'traefik:v[0-9.]+' scripts/spike-local.sh | head -1) |"
-            echo "| nixpacks | $(nixpacks --version 2>/dev/null || echo 'non installé') |"
+            echo "| railpack | $(railpack --version 2>/dev/null || echo 'non installé') |"
+            echo "| BuildKit | $(grep -oE 'moby/buildkit:v[0-9.]+' scripts/spike-local.sh | head -1) |"
             echo "| Runner | $(uname -sr) |"
           } >> "$GITHUB_STEP_SUMMARY"
 

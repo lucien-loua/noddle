@@ -97,7 +97,7 @@ export const serviceSourceTypeSchema = z.enum([
 ]);
 
 export const serviceInputSchema = z.object({
-  buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).default("nixpacks"),
+  buildMethod: z.enum(["railpack", "dockerfile", "image"]).default("railpack"),
   domain: domainSchema.optional(),
   gitBranch: gitBranchSchema.default("main"),
   gitRepoUrl: gitRepoUrlSchema.optional(),
@@ -153,7 +153,7 @@ export const serviceDockerProviderSchema = z.object({
 export const serviceProviderSchema = serviceGitProviderSchema;
 
 export const serviceBuildSchema = z.object({
-  buildMethod: z.enum(["nixpacks", "dockerfile"]),
+  buildMethod: z.enum(["railpack", "dockerfile"]),
   publishDirectory: optionalPublishDirectory,
 });
 
@@ -235,7 +235,7 @@ export const generateServiceDomainHostSchema = z.object({
  */
 export const updateServiceSettingsSchema = z.object({
   autoDeploy: z.boolean().optional(),
-  buildMethod: z.enum(["nixpacks", "dockerfile", "image"]).optional(),
+  buildMethod: z.enum(["railpack", "dockerfile", "image"]).optional(),
   buildPath: buildPathSchema.optional(),
   cleanCache: z.boolean().optional(),
   deployKeyId: z.union([z.uuid(), z.null()]).optional(),

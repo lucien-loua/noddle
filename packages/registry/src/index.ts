@@ -230,7 +230,7 @@ export function registryImageTag(
  * limit still exists, it's "until the disk is full", and that one is
  * announced nowhere and arrives without warning.
  *
- * Ten, because nixpacks's base layer is SHARED across all of a service's
+ * Ten, because railpack's base layer is SHARED across all of a service's
  * versions: measured, a second image only costs its own application layer.
  * The cost of ten versions is therefore close to that of one.
  */

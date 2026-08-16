@@ -117,7 +117,7 @@ export function injectDeployConfig(
   });
   pub.deploy = deploy;
 
-  // curl is present in the nixpacks base image and in most Node/Python
+  // curl is present in most Node/Python
   // images; wget isn't and node isn't on a non-login shell's PATH — same
   // pitfall as `serviceSpec()`. We only inject it if the user doesn't
   // already have their own healthcheck: theirs takes priority.

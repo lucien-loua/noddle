@@ -290,7 +290,7 @@ export function AddServerDialog({
           <DialogDescription>
             A host and a key from your library are all it takes. Noddle installs
             Docker if missing, joins its Swarm cluster as a worker, and installs
-            nixpacks — with nothing else to do by hand on that machine.
+            railpack — with nothing else to do by hand on that machine.
           </DialogDescription>
         </DialogHeader>
 

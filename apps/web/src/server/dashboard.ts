@@ -55,7 +55,7 @@ export interface ServiceDomainRow {
 export interface ServiceRow {
   /** Whether a webhook push deploys. The secret survives it being off. */
   autoDeploy: boolean;
-  buildMethod: "nixpacks" | "dockerfile" | "image";
+  buildMethod: "railpack" | "dockerfile" | "image";
   /** Build context inside the repo. `null` = repository root. */
   buildPath: string | null;
   cleanCache: boolean;
@@ -166,7 +166,7 @@ function toSummary(
 
 interface ServiceJoined {
   autoDeploy: boolean;
-  buildMethod: "nixpacks" | "dockerfile" | "image";
+  buildMethod: "railpack" | "dockerfile" | "image";
   buildPath: string | null;
   cleanCache: boolean;
   deployKeyId: string | null;

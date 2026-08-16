@@ -7,28 +7,24 @@
  * build differently, and an upstream regression arrives without a line of
  * Noddle changing.
  *
- * `NIXPACKS_VERSION` in particular is what the project's build rules were
- * MEASURED against: on 1.41.0, `--apt` and `--pkgs` wipe the nix overlay
- * list and break every Node build. That measurement is only true of the
- * version it was taken on.
+ * `RAILPACK_VERSION` in particular is what the project's build rules were
+ * MEASURED against. That measurement is only true of the version it was
+ * taken on.
  */
-export const NIXPACKS_VERSION = "1.41.0";
+export const RAILPACK_VERSION = "0.36.4";
 
 /** The install line, with the version pinned. */
-export function nixpacksInstallCommand(sudo = "sudo"): string {
-  return `export NIXPACKS_VERSION=${NIXPACKS_VERSION} && curl -sSL https://nixpacks.com/install.sh | ${sudo} -E bash`;
+export function railpackInstallCommand(sudo = "sudo"): string {
+  return `export RAILPACK_VERSION=${RAILPACK_VERSION} && curl -sSL https://railpack.com/install.sh | ${sudo} -E sh`;
 }
 
 /**
- * Node version Noddle supplies when a repository declares none.
+ * The BuildKit daemon Noddle runs to carry the build cap.
  *
- * Nixpacks defaults to Node 18, which nixpkgs has REMOVED as end-of-life —
- * so a repository that says nothing about Node does not build at all, and
- * fails deep inside a nix evaluation rather than anywhere legible.
- *
- * Only a fallback: `NIXPACKS_NODE_VERSION` has the HIGHEST precedence in
- * nixpacks, above `engines.node`, `.nvmrc` and `.node-version`, so setting
- * it unconditionally would override the very choice a user made explicitly.
- * It is applied only when the repository is silent.
+ * Pinned for the same reason as the rest: Noddle starts this container itself,
+ * so an upstream change to `latest` would alter build behaviour on existing
+ * servers with nothing in the diff. Both build paths share this one daemon —
+ * railpack over `BUILDKIT_HOST`, buildx over its `remote` driver — so one
+ * cgroup covers every build on the host.
  */
-export const FALLBACK_NODE_VERSION = "22";
+export const BUILDKIT_IMAGE = "moby/buildkit:v0.27.0";

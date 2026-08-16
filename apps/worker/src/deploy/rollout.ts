@@ -66,7 +66,7 @@ export async function rolloutService(
 
   const outcome = await deployService(input.managerDocker, {
     // The healthcheck and Traefik both target `port`. Apps that read
-    // `process.env.PORT` (Heroku, nixpacks, Express) must listen there —
+    // `process.env.PORT` (Heroku, railpack, Express) must listen there —
     // a user env var named PORT would otherwise desync the probe.
     env: { ...input.env, PORT: String(input.port) },
     image: input.image,

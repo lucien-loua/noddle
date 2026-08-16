@@ -42,7 +42,7 @@ only. See `docs/agents/domain.md`.
 | Auth | better-auth |
 | Job queue | BullMQ + Redis |
 | Remote exec | `ssh2` over SSH, `dockerode` tunneled through SSH |
-| Builds | Nixpacks (shelled out), or Dockerfile if present |
+| Builds | Railpack → BuildKit, or Dockerfile via buildx if present |
 | Realtime | SSE via a Start server function stream |
 | Package manager | Bun (workspaces) — everywhere |
 | Runtime | Bun, except `apps/worker` on Node (ADR-0015) |
@@ -61,7 +61,7 @@ licenses.
 /packages
   /backup              Backup orchestration
   /backup-store        S3-compatible backup storage
-  /build-engine        Nixpacks / image build
+  /build-engine        Railpack / image build
   /db                  Drizzle schema + migrations
   /deploy-contract     Shared deploy job contract
   /notifier            Notification channels
@@ -116,7 +116,7 @@ Spike reference (still the contract for the deploy chain):
 
 | Run | Proves |
 |---|---|
-| `./scripts/spike-local.sh` | SSH → Swarm → clone → Nixpacks → service → Traefik → HTTP |
+| `./scripts/spike-local.sh` | SSH → Swarm → clone → Railpack → service → Traefik → HTTP |
 | `./scripts/spike-local.sh` (again) | `docker service update` zero-downtime path |
 | `./scripts/spike-local.sh break` | broken image does not take down the running version |
 | `./scripts/spike-local.sh cap` | memory-hungry build killed; running service untouched |
@@ -169,7 +169,7 @@ rather than never having run. `bun run --cwd apps/worker dev` uses
 `node --watch`, which does reload.
 
 **Infrastructure code is not done when it typechecks.** Anything touching SSH,
-Swarm, Nixpacks or Traefik must be run against a real VPS before it is considered
+Swarm, Railpack or Traefik must be run against a real VPS before it is considered
 working. If you cannot test it, say so plainly instead of implying it works.
 
 **Verify scripts (`verify*.ts`) are the project's real risk net.** Discover them
@@ -218,74 +218,80 @@ Phase 0 run: `docker info | grep -q 'Swarm: active'` intermittently re-ran
 `swarm init` on an already-swarmed node. Query state directly instead:
 `docker info --format '{{.Swarm.LocalNodeState}}'`. Same trap with `| head`.
 
-**Capping a build: cap the builder, not the build command.**
+**Capping a build: cap the DAEMON, not the build command.**
 
 `docker build --memory` / `--cpus` **does not work.** BuildKit accepts the flags and
 ignores them ([moby/buildkit#1362](https://github.com/moby/buildkit/issues/1362);
 [docker/buildx#644](https://github.com/docker/buildx/issues/644) proposes deleting
 them outright). A cap written that way is a silent no-op — the worst failure shape,
-because the build succeeds and the protection looks like it works. `nixpacks build`
-also has **no `--docker-opts` flag** — only `--docker-host`, `--docker-tls-verify`,
-`--docker-cert-path`.
+because the build succeeds and the protection looks like it works.
 
-The working shape, implemented in `scripts/spike-local.sh`:
+Railpack does not emit a Dockerfile at all: it builds the LLB graph and hands it to
+BuildKit over `BUILDKIT_HOST`. So **Noddle starts `buildkitd` itself** and both
+build paths attach to that one container (`ensureCappedBuilder`):
 
-1. `nixpacks build . --out .` — generate the Dockerfile, don't build. `--out .` (into the source dir), never a separate directory: nixpacks writes only `.nixpacks/` and does **not** copy your source, while the Dockerfile it generates does `COPY .nixpacks/…`. So `.nixpacks` has to sit inside the build context or the build dies on a missing COPY.
-2. `docker buildx create --driver docker-container --driver-opt memory=… --driver-opt cpu-quota=…`
-3. `docker buildx build --builder … --load --progress=plain -f DIR/…/Dockerfile CONTEXT`
+1. `docker run -d --privileged --memory=… --cpu-quota=… --cpu-period=… moby/buildkit`
+2. railpack → `sudo -E env BUILDKIT_HOST=docker-container://noddle-buildkit railpack build DIR --name TAG --progress plain`
+3. a user's Dockerfile → `docker buildx create --driver remote docker-container://noddle-buildkit`, then the usual `buildx build --load`
 
-The cgroup lands on the buildkitd container, so it covers all build work.
-`--progress=plain` is required: buildx's default TTY renderer rewrites the screen
-and is unusable as an SSE stream.
+**One daemon on purpose.** Two separately capped daemons would each get the full
+cap, so a Compose build beside an app build takes twice what the machine has. And
+`ensureCappedBuilder` checks the builder's **DRIVER**, not just that it exists: a
+server from before railpack has `noddle-builder` on `docker-container` with its own
+daemon, and it must be removed and recreated. `--progress plain` is required either
+way — the TTY renderer rewrites the screen and is unusable as an SSE stream.
 
-**Never pass `--apt` or `--pkgs` to nixpacks.** On 1.41.0 both flags wipe the
-generated nix `overlays` list. The Node provider declares
-`railwayapp/nix-npm-overlay` there, and that overlay is what *defines* `npm-9_x`.
-Drop it and every Node build dies with `error: undefined variable 'npm-9_x'`.
-Re-injecting the overlay through `nixpacks.toml` does not help — `--apt` clobbers
-it regardless. Measured:
+**`sudo -E` is load-bearing, for TWO reasons at once.** Railpack reads
+`BUILDKIT_HOST` from its environment and exits if it is unset, and plain `sudo`
+drops it. And the image only reaches the daemon because railpack pipes BuildKit's
+`ExporterDocker` tarball into a bare **`docker load`** — the binary name is
+hardcoded in railpack, with no sudo and no override — so the invoking user has to
+reach the docker socket already. `--output` is NOT that path: it exports a
+filesystem, not an image. There is also **no registry-push exporter**; the embedded
+registry keeps its own `docker push` step.
 
-| invocation | `overlays` | Node build |
+**Railpack config variables go through `--env`, and only `--env`.** The process
+environment is not read for them. Same shape as the old nixpacks rule, new prefix:
+`RAILPACK_DEPLOY_APT_PACKAGES`, `RAILPACK_SPA_OUTPUT_DIR` (note `OUTPUT`, where
+nixpacks said `OUT`). Setting the SPA dir *forces* static mode even when framework
+detection would not have fired.
+
+**Package injection WORKS now, and Noddle depends on it.** This is the rule that
+inverted. Nixpacks' `--apt`/`--pkgs` wiped the nix `overlays` list and broke every
+Node build, so nothing could be added to an image. Railpack has no overlay to lose:
+`RAILPACK_BUILD_APT_PACKAGES` / `RAILPACK_DEPLOY_APT_PACKAGES` work, and a leading
+`...` **extends** railpack's generated list — omit it and the list is REPLACED,
+silently. Guarded by `verify-build-dir`.
+
+**The base image inverted too, and this one fails silently.** Measured inside a
+built image under the same non-login `sh -c` a HEALTHCHECK runs in:
+
+| | `nixpacks:ubuntu` | railpack (Debian 12) |
 |---|---|---|
-| `nixpacks build . --out .` | overlay present | works |
-| `… --apt wget` | `[ ]` | fails |
-| `… --pkgs wget` | `[ ]` | fails |
+| `curl` | present, `/bin/curl` | **ABSENT** |
+| `wget` | absent | absent |
+| `node` | **not** on PATH (login-shell nix profile) | present, `/mise/shims/node` |
 
-Consequence for the product: **there is no way to inject a package through the
-nixpacks CLI.** Anything Noddle needs inside a user's image has to come from the
-base image, or from a build stage Noddle controls — never from a nixpacks flag.
+The deploy healthcheck is a curl probe, so `build-engine` forces `curl` into every
+image Noddle builds from source (`FORCED_DEPLOY_PACKAGES`). Drop that and no task
+ever converges — and it presents as a Traefik routing bug, not a missing binary.
+For a user's own Dockerfile it stays their image's problem, as before.
 
-**`--env` is the exception, and it is the ONLY way to set a nixpacks config
-variable.** The process environment is ignored, and the un-prefixed name is not
-read. Measured on 1.41.0 against a real repository:
-
-| invocation | plan |
-|---|---|
-| `NIXPACKS_NODE_VERSION=22 nixpacks build …` | `nodejs_18` — ignored |
-| `nixpacks build … --env NODE_VERSION=22` | `nodejs_18` — wrong name |
-| `nixpacks build … --env NIXPACKS_NODE_VERSION=22` | `nodejs_22` |
-
-`--env` leaves the `overlays` list intact — checked, because that is exactly how
-`--apt` fails and losing it is silent.
-
-**Nixpacks defaults to Node 18, which nixpkgs has REMOVED as end-of-life.** So a
-repository that declares no version does not build at all, and dies inside a nix
-evaluation naming neither the project nor the setting. Upgrading nixpacks does
-not help: the default is still 18 on `main`. Noddle supplies
-`FALLBACK_NODE_VERSION` **only when the clone is silent** — the variable outranks
-`engines.node`, `.nvmrc` and `.node-version`, so setting it always would override
-the very thing a user chose deliberately.
+**Railpack resolves Node 24 for a repository that declares nothing** — the
+Node-18-is-EOL failure has no analogue, and `FALLBACK_NODE_VERSION` was deleted
+with it. Explicit `engines.node` / `.nvmrc` / `.node-version` still win.
 
 **The versions Noddle installs are PINNED** (`packages/shared/src/toolchain.ts`,
-mirrored in `installer/install.sh`, kept in step by `verify-toolchain`). Noddle
-installs nixpacks itself, so it owns both halves of the compatibility pair — the
-same reasoning as the Traefik pin below. Unpinned, two servers added a month
-apart build differently with nothing in the diff to explain it. Note `sudo -E`:
-without it the exported version is dropped and the install silently takes the
-latest, which looks like a correct command.
+mirrored in `installer/install.sh`, kept in step by `verify-toolchain`). That now
+covers `RAILPACK_VERSION` **and `BUILDKIT_IMAGE`** — Noddle starts the daemon
+itself, so it owns that half of the pair too, same reasoning as the Traefik pin
+below. Unpinned, two servers added a month apart build differently with nothing in
+the diff to explain it. Note `sudo -E` again: without it the exported version is
+dropped and the install silently takes the latest, which looks like a correct
+command.
 
 **Swarm gotchas that will silently break things:**
-- `HEALTHCHECK` needs a binary **inside** the image, and it runs under a **non-login `sh -c`**. Measured in `nixpacks:ubuntu-1745885067`: `curl` is present at `/bin/curl` and on `PATH`; `wget` is absent; `node` is **not** on `PATH` because it lives in the nix profile that only a *login* shell sources. So the healthcheck uses `curl`, and a `node -e` healthcheck would fail just as silently as `wget`. Either way it presents as a Traefik routing bug.
+- `HEALTHCHECK` needs a binary **inside** the image, and it runs under a **non-login `sh -c`** — see the base-image table above. Noddle forces `curl` in on the railpack path; for any other image the binary has to already be there, and its absence presents as a Traefik routing bug.
 - `docker service create/update --no-resolve-image` for locally-built images. Without it Swarm tries to resolve the digest against a registry, fails, warns, then falls back to the tag — slow and noisy on one node.
 - **Local builds pin a service to the node that built it.** The image exists nowhere else, so Swarm's scheduler cannot move it. **No longer true since Phase 4 for SERVICES**: the image is pushed to the embedded registry and placement is free — but the constraint remains, conditionally, for any image that was never pushed (rollback to a pre-registry version), and for Compose stacks and databases, which carry volumes. See `placementFor` in `deploy.ts`.
 - Traefik reads labels on the **service**, not the container

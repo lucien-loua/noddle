@@ -23,7 +23,7 @@ function ToolRow({
   version: string | null;
 }) {
   // A version that differs from the one Noddle installs is worth seeing:
-  // the project's build rules were measured on a specific nixpacks, so a
+  // the project's build rules were measured on a specific railpack, so a
   // machine running another one can build differently for no visible reason.
   const drifted = Boolean(expected && version && !version.includes(expected));
 
@@ -84,7 +84,7 @@ export function ServerToolchain({
     onSuccess: () =>
       toast.add({
         description:
-          "Docker, the Swarm join and nixpacks are installed if missing. Check again once it finishes.",
+          "Docker, the Swarm join and railpack are installed if missing. Check again once it finishes.",
         title: "Setup queued",
         type: "success",
       }),
@@ -120,9 +120,9 @@ export function ServerToolchain({
         <div className="rounded-2xl border px-4 py-2">
           <ToolRow name="Docker" version={report.docker} />
           <ToolRow
-            expected={report.nixpacksExpected}
-            name="Nixpacks"
-            version={report.nixpacks}
+            expected={report.railpackExpected}
+            name="Railpack"
+            version={report.railpack}
           />
           <ToolRow name="Swarm" version={report.swarm} />
         </div>

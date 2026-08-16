@@ -5,7 +5,7 @@
 # Provisionne une VM locale qui se comporte comme un vrai VPS, puis fait
 # tourner la chaîne complète dessus :
 #
-#   SSH → Swarm → git clone → Nixpacks → build capé → docker service → Traefik → HTTP
+#   SSH → Swarm → git clone → Railpack → build capé → docker service → Traefik → HTTP
 #
 # Pourquoi une VM et pas Docker-in-Docker : les réseaux overlay de Swarm créent
 # des interfaces VXLAN même sur un seul nœud. En DinD ça marche "généralement",
@@ -61,6 +61,10 @@ TRAEFIK_NET="noddle-public"
 TRAEFIK_IMAGE="${TRAEFIK_IMAGE:-traefik:v3.7.9}"
 WORK="/opt/noddle-spike"
 BUILDER="noddle-builder"
+BUILDKIT="noddle-buildkit"
+# Épinglé : le cap du build vit sur le cgroup de ce conteneur, et les DEUX
+# chemins de build (railpack et buildx) le partagent.
+BUILDKIT_IMAGE="${BUILDKIT_IMAGE:-moby/buildkit:v0.27.0}"
 
 # Cap du build. 1 Go sur une VM de 2 Go : il reste de quoi faire tourner les
 # services pendant qu'un build tourne. C'est la valeur que le produit devra
@@ -179,6 +183,8 @@ BASE_ENV=(
   "TRAEFIK_IMAGE=$TRAEFIK_IMAGE"
   "WORK=$WORK"
   "BUILDER=$BUILDER"
+  "BUILDKIT=$BUILDKIT"
+  "BUILDKIT_IMAGE=$BUILDKIT_IMAGE"
   "BUILD_MEM=$BUILD_MEM"
   "BUILD_CPU_QUOTA=$BUILD_CPU_QUOTA"
   "BUILD_CPU_PERIOD=$BUILD_CPU_PERIOD"
@@ -207,9 +213,9 @@ REMOTE
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Socle : Docker, Swarm, Nixpacks, builder capé, Traefik
+# Socle : Docker, Swarm, Railpack, builder capé, Traefik
 # ─────────────────────────────────────────────────────────────────────────────
-log "Socle (Docker, Swarm, Nixpacks, builder capé, Traefik)"
+log "Socle (Docker, Swarm, Railpack, builder capé, Traefik)"
 
 rexec "${BASE_ENV[@]}" <<'REMOTE'
 # git n'est pas garanti sur une image cloud Ubuntu minimale.
@@ -233,10 +239,10 @@ if [ "$SWARM_STATE" != "active" ]; then
   sudo docker swarm init --advertise-addr "$(hostname -I | awk '{print $1}')"
 fi
 
-if ! command -v nixpacks >/dev/null 2>&1; then
-  curl -sSL https://nixpacks.com/install.sh | sudo bash
+if ! command -v railpack >/dev/null 2>&1; then
+  curl -sSL https://railpack.com/install.sh | sudo sh
 fi
-nixpacks --version
+railpack --version
 
 # ── LE CAP DU BUILD ──────────────────────────────────────────────────────────
 # On ne peut PAS caper un build avec `docker build --memory` : BuildKit ignore
@@ -249,16 +255,40 @@ nixpacks --version
 # fait tourner buildkitd dans un conteneur, et ce conteneur accepte memory /
 # cpu-quota / cpu-period en --driver-opt. Le cgroup s'applique alors à tout le
 # travail de build.
-if ! sudo docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
+# Railpack ne génère PAS de Dockerfile : il parle directement à BuildKit via
+# BUILDKIT_HOST. On fait donc tourner buildkitd nous-mêmes, et c'est ce
+# conteneur qui porte le cgroup.
+#
+# buildx s'y raccorde ensuite par le driver `remote` au lieu de créer le sien.
+# Deux démons capés séparément auraient chacun droit au cap entier : un build
+# Compose à côté d'un build d'app prendrait le double de ce que la machine a.
+# Un seul démon, un seul cgroup, tous les builds dedans.
+if ! sudo docker inspect "$BUILDKIT" >/dev/null 2>&1; then
+  sudo docker run -d --privileged --restart unless-stopped \
+    --name "$BUILDKIT" \
+    --memory="$BUILD_MEM" \
+    --cpu-quota="$BUILD_CPU_QUOTA" \
+    --cpu-period="$BUILD_CPU_PERIOD" \
+    "$BUILDKIT_IMAGE"
+fi
+
+# Un serveur d'avant railpack a déjà un "$BUILDER" sur le driver
+# docker-container, avec SON buildkitd capé à lui. Tel quel, inspect réussit,
+# on ne recrée rien, et le chemin Dockerfile continue sur ce second démon :
+# deux caps sur une machine dimensionnée pour un seul. C'est donc le DRIVER
+# qui décide, pas l'existence du builder.
+BUILDER_DRIVER="$(sudo docker buildx inspect "$BUILDER" 2>/dev/null | awk '/^Driver:/ {print $2}')"
+if [ "$BUILDER_DRIVER" != "remote" ]; then
+  [ -n "$BUILDER_DRIVER" ] && sudo docker buildx rm "$BUILDER"
   sudo docker buildx create \
     --name "$BUILDER" \
-    --driver docker-container \
-    --driver-opt "memory=$BUILD_MEM" \
-    --driver-opt "cpu-quota=$BUILD_CPU_QUOTA" \
-    --driver-opt "cpu-period=$BUILD_CPU_PERIOD" \
-    --bootstrap
+    --driver remote \
+    "docker-container://$BUILDKIT"
 fi
-echo "Builder capé : mem=$BUILD_MEM cpu-quota=$BUILD_CPU_QUOTA/$BUILD_CPU_PERIOD"
+
+# On lit le cgroup, pas ce que la commande prétend avoir fait : toute cette
+# histoire vient d'un flag accepté puis ignoré.
+echo "Builder capé : mem=$(sudo docker inspect "$BUILDKIT" --format '{{.HostConfig.Memory}}') octets, quota=$(sudo docker inspect "$BUILDKIT" --format '{{.HostConfig.CpuQuota}}')"
 
 sudo docker network create --driver=overlay --attachable "$TRAEFIK_NET" 2>/dev/null || true
 
@@ -350,44 +380,37 @@ build_image() {
   local name="$1" tag="$2"
 
   # Regarde bien comment sort ce flux : c'est exactement ce que le worker devra
-  # streamer en SSE. --progress=plain force un rendu ligne par ligne au lieu du
-  # renderer TTY de buildx, qui réécrit l'écran et est inexploitable en stream.
+  # streamer en SSE. --progress plain force un rendu ligne par ligne au lieu du
+  # renderer TTY, qui réécrit l'écran et est inexploitable en stream.
   rexec "${BASE_ENV[@]}" "NAME=$name" "TAG=$tag" <<'REMOTE'
 cd "$WORK/src-$NAME"
 
-# Nixpacks n'a PAS de --docker-opts (seulement --docker-host / --docker-tls-verify
-# / --docker-cert-path). On sépare donc les deux étapes : Nixpacks génère le
-# Dockerfile, buildx le construit avec le builder capé.
+# Railpack ne produit pas de Dockerfile : il construit le graphe LLB et le donne
+# à BuildKit. L'image arrive dans le démon Docker parce que railpack pipe le
+# tarball de l'exporter `docker` dans un `docker load` — binaire codé en dur,
+# sans sudo. D'où le `sudo -E` ici, qui sert DEUX choses :
+#   - `docker load` tourne alors sous un utilisateur qui atteint la socket
+#   - `-E` conserve BUILDKIT_HOST, sans quoi railpack sort en disant qu'il
+#     n'est pas défini. Même piège que le `sudo -E` de l'installeur.
 #
-# `--out .` et pas `--out ailleurs/` : nixpacks n'écrit QUE le répertoire
-# .nixpacks/ (Dockerfile, build.sh, le .nix), il NE COPIE PAS les sources. Or le
-# Dockerfile généré fait `COPY .nixpacks/nixpkgs-<hash>.nix ...`, donc .nixpacks
-# doit se trouver À L'INTÉRIEUR du contexte de build. En sortant ailleurs, le
-# contexte ne contient pas les sources et le COPY échoue sur un fichier
-# introuvable.
+# `--output` n'est PAS le chemin de l'image : il exporte un système de fichiers.
 #
-# NE JAMAIS passer --apt ni --pkgs ici. Sur nixpacks 1.41.0 ces deux flags
-# écrasent la liste d'overlays nix générée. Or le provider Node y déclare
-# railwayapp/nix-npm-overlay, qui est ce qui DÉFINIT npm-9_x. Sans l'overlay :
+# curl est FORCÉ dans l'image : la base Debian de railpack ne l'a pas, et le
+# HEALTHCHECK du service est une sonde curl qui tourne dans un `sh -c` non-login.
+# Mesuré dans l'image construite : ni curl ni wget, mais node présent — l'exact
+# inverse de la base nixpacks. Sans ça la task ne converge jamais et ça
+# ressemble à un problème de routage Traefik.
 #
-#   error: undefined variable 'npm-9_x'
-#
-# et tout build Node échoue. Injecter l'overlay à la main via nixpacks.toml ne
-# rattrape rien : --apt l'écrase quand même. Il n'existe donc aucun moyen
-# d'injecter un paquet par la CLI nixpacks — le healthcheck ne doit dépendre
-# d'aucune injection (voir deploy_image : on utilise curl, déjà dans l'image).
-rm -rf .nixpacks
-nixpacks build . --out .
+# Le `...` en tête ÉTEND la liste générée ; sans lui elle est REMPLACÉE.
+RAILPACK_BIN="$(command -v railpack)"
+sudo -E env "BUILDKIT_HOST=docker-container://$BUILDKIT" \
+  "$RAILPACK_BIN" build . \
+    --name "$APP_NAME:$TAG" \
+    --progress plain \
+    --env "RAILPACK_DEPLOY_APT_PACKAGES=... curl"
 
-[[ -f .nixpacks/Dockerfile ]] || { echo "nixpacks n'a pas généré .nixpacks/Dockerfile"; exit 1; }
-
-sudo docker buildx build \
-  --builder "$BUILDER" \
-  --progress=plain \
-  --load \
-  -f .nixpacks/Dockerfile \
-  -t "$APP_NAME:$TAG" \
-  .
+# L'image doit être DANS le démon, pas seulement construite.
+sudo docker image inspect "$APP_NAME:$TAG" >/dev/null
 REMOTE
 }
 
@@ -468,9 +491,12 @@ diagnose() {
    2. loadbalancer.server.port manquant ou faux
    3. Service pas sur le même réseau overlay que Traefik
    4. Binaire du healthcheck absent de l'image → la task ne converge jamais et
-      ça ressemble à un problème de routage. Vérifié dans l'image de base
-      nixpacks:ubuntu : curl OUI (/bin/curl), wget NON, node PAS dans le PATH
-      d'un shell non-login — or HEALTHCHECK tourne en sh -c non-login.
+      ça ressemble à un problème de routage. Mesuré dans une image railpack
+      (base Debian 12) : curl NON, wget NON, node OUI (/mise/shims/node) — or
+      HEALTHCHECK tourne en sh -c non-login. C'est build_image qui force curl
+      via RAILPACK_DEPLOY_APT_PACKAGES ; vérifier qu'il y est toujours :
+        ssh -i $SSH_KEY $VPS sudo docker run --rm --entrypoint /bin/sh \\
+          $APP_NAME:TAG -c 'command -v curl'
 HINTS
 }
 

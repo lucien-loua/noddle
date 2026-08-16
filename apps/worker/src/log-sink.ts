@@ -38,7 +38,7 @@ export async function createLogSink(o: LogSinkOptions): Promise<LogSink> {
     },
     // Redaction lives HERE and not at each call site: everything written to
     // a deployment log passes through this one function, including output
-    // from git, nixpacks and buildx that nobody here composed. A clone URL
+    // from git, railpack and buildx that nobody here composed. A clone URL
     // carries a bearer token — see @noddle/shared/redact.
     write(raw: string) {
       if (closed) {

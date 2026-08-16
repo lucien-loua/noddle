@@ -7,15 +7,17 @@
 import { readFileSync } from "node:fs";
 import { check, runVerify } from "@noddle/testing";
 import {
-  FALLBACK_NODE_VERSION,
-  NIXPACKS_VERSION,
-  nixpacksInstallCommand,
+  BUILDKIT_IMAGE,
+  RAILPACK_VERSION,
+  railpackInstallCommand,
 } from "#toolchain";
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
-const MAJOR = /^\d+$/;
 const UNPINNED_INSTALL =
-  /curl[^\n]*nixpacks\.com\/install\.sh[^\n]*\|\s*\$SUDO bash\s*$/m;
+  /curl[^\n]*railpack\.com\/install\.sh[^\n]*\|\s*\$SUDO sh\s*$/m;
+// A tag, never `latest`: the point of running buildkitd ourselves is that its
+// version stops moving underneath existing servers.
+const PINNED_IMAGE = /^moby\/buildkit:v\d+\.\d+\.\d+$/;
 
 const INSTALLER = new URL("../../../installer/install.sh", import.meta.url)
   .pathname;
@@ -23,41 +25,46 @@ const INSTALLER = new URL("../../../installer/install.sh", import.meta.url)
 await runVerify("toolchain pinning", () => {
   check(
     "the version is pinned, not a range or a tag",
-    SEMVER.test(NIXPACKS_VERSION),
-    `got "${NIXPACKS_VERSION}"`
+    SEMVER.test(RAILPACK_VERSION),
+    `got "${RAILPACK_VERSION}"`
   );
 
   const installer = readFileSync(INSTALLER, "utf8");
   check(
     "the installer pins the SAME version",
-    installer.includes(`NIXPACKS_VERSION=${NIXPACKS_VERSION}`),
-    `installer does not carry NIXPACKS_VERSION=${NIXPACKS_VERSION}`
+    installer.includes(`RAILPACK_VERSION=${RAILPACK_VERSION}`),
+    `installer does not carry RAILPACK_VERSION=${RAILPACK_VERSION}`
   );
 
   check(
-    "the installer never installs nixpacks unpinned",
+    "the installer never installs railpack unpinned",
     !UNPINNED_INSTALL.test(installer),
     "an unpinned install line is still present"
   );
 
-  // `-E` is what carries NIXPACKS_VERSION across sudo. Without it the
+  // `-E` is what carries RAILPACK_VERSION across sudo. Without it the
   // variable is dropped and the install silently takes the latest — the
   // exact failure this pinning exists to prevent, wearing the disguise of
   // a correct-looking command.
-  const command = nixpacksInstallCommand();
+  const command = railpackInstallCommand();
   check(
     "sudo preserves the environment, or the pin is a no-op",
-    command.includes(`NIXPACKS_VERSION=${NIXPACKS_VERSION}`) &&
+    command.includes(`RAILPACK_VERSION=${RAILPACK_VERSION}`) &&
       command.includes("-E"),
     `got "${command}"`
   );
 
-  // Nixpacks defaults to Node 18 and nixpkgs removed it as end-of-life, so
-  // a repository that names no version does not build at all. The fallback
-  // exists for that case and must not itself be dead.
+  // Noddle starts buildkitd itself, so it owns this version too. `latest`
+  // here would move the build cap's host out from under existing servers.
   check(
-    "the Node fallback is a real major, and not the dead default",
-    MAJOR.test(FALLBACK_NODE_VERSION) && Number(FALLBACK_NODE_VERSION) >= 20,
-    `got "${FALLBACK_NODE_VERSION}"`
+    "the BuildKit daemon image is pinned to an exact tag",
+    PINNED_IMAGE.test(BUILDKIT_IMAGE),
+    `got "${BUILDKIT_IMAGE}"`
+  );
+
+  check(
+    "the installer pins the SAME BuildKit image",
+    installer.includes(BUILDKIT_IMAGE),
+    `installer does not carry ${BUILDKIT_IMAGE}`
   );
 });

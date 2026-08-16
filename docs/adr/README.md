@@ -7,7 +7,7 @@ an answer. New ADRs: next number, short title, why — see `/domain-modeling`.
 |---|---|
 | [0001](./0001-docker-swarm-orchestration.md) | Docker Swarm orchestration |
 | [0002](./0002-build-on-target-server.md) | Build on the target server |
-| [0003](./0003-resource-capped-builds.md) | Resource-capped builds via buildx |
+| [0003](./0003-resource-capped-builds.md) | Resource-capped builds on a Noddle-owned BuildKit |
 | [0004](./0004-agentless-ssh-key-library.md) | Agentless SSH from key library |
 | [0005](./0005-public-repository.md) | Public repository |
 | [0006](./0006-installer-own-host-as-target.md) | Installer own host = target #1 |
@@ -24,3 +24,4 @@ an answer. New ADRs: next number, short title, why — see `/domain-modeling`.
 | [0017](./0017-terminal-websocket-on-web.md) | Terminal WebSocket on the dashboard |
 | [0018](./0018-default-environment.md) | Default environment is undeletable |
 | [0019](./0019-git-provider-integrations.md) | Git providers via a self-hosted GitHub App |
+| [0020](./0020-railpack-replaces-nixpacks.md) | Railpack replaces Nixpacks |

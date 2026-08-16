@@ -105,12 +105,12 @@ try {
   }
   ok("worker registered, pending (status=pending)");
 
-  // ── THE provisioning: Docker, Swarm join, nixpacks ──────────────────────
+  // ── THE provisioning: Docker, Swarm join, railpack ──────────────────────
   const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-multi-logs" };
 
-  console.log("    (provisioning the worker — Docker, join, nixpacks…)");
+  console.log("    (provisioning the worker — Docker, join, railpack…)");
   await provisionServer(ctx, workerRow.id);
 
   const provisioned = await db.query.servers.findFirst({
@@ -183,7 +183,7 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      buildMethod: "nixpacks",
+      buildMethod: "railpack",
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,

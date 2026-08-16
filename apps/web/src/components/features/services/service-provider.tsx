@@ -535,7 +535,7 @@ function GitSourceForm({
     mutationFn: (value: ServiceGitProviderInput) =>
       updateServiceSettings({
         data: {
-          buildMethod: service.buildMethod === "image" ? "nixpacks" : undefined,
+          buildMethod: service.buildMethod === "image" ? "railpack" : undefined,
           buildPath: value.buildPath,
           deployKeyId: value.deployKeyId,
           gitBranch: value.gitBranch,

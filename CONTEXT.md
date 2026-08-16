@@ -63,8 +63,8 @@ agentless; nothing installed on the target.
 _Avoid_: Agent, sidecar, daemon on target
 
 **Build**:
-Producing a Docker image on the **target server** (Nixpacks or Dockerfile), under
-a resource-capped buildx builder.
+Producing a Docker image on the **target server** (Railpack or Dockerfile), under
+a resource-capped BuildKit daemon Noddle owns.
 _Avoid_: CI build (Noddle builds on the target, not in GitHub Actions)
 
 **Registry**:

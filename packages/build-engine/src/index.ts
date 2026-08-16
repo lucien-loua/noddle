@@ -1,4 +1,4 @@
-import { FALLBACK_NODE_VERSION } from "@noddle/shared/toolchain";
+import { BUILDKIT_IMAGE } from "@noddle/shared/toolchain";
 import {
   type ExecOptions,
   type ExecResult,
@@ -107,54 +107,111 @@ export function computeBuildCap(opts: {
 // Capped builder
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** The BuildKit daemon Noddle runs. Both build paths go through it. */
+export const BUILDKIT_CONTAINER = "noddle-buildkit";
+/** buildx alias pointing at that same daemon, for the Dockerfile path. */
+export const BUILDX_BUILDER = "noddle-builder";
+
 /**
- * Creates the buildx builder that will carry the cap.
+ * Starts the capped BuildKit daemon, and points buildx at it.
  *
  * `docker build --memory` DOES NOT WORK: BuildKit accepts the flag and ignores
  * it (moby/buildkit#1362). A cap set there is a silent no-op — the worst case,
- * since the build succeeds and the protection appears active.
+ * since the build succeeds and the protection appears active. The cgroup has to
+ * sit on the DAEMON.
  *
- * The cgroup must therefore sit on the BUILDER. The docker-container driver
- * runs buildkitd in a container, and that container accepts
- * memory / cpu-quota / cpu-period as --driver-opt.
+ * Noddle runs that daemon itself rather than letting buildx create one, because
+ * there are now two build paths and they must share one cap:
+ *
+ *   railpack  → BUILDKIT_HOST=docker-container://<name>
+ *   Dockerfile → buildx, `remote` driver pointed at the same container
+ *
+ * Two separately capped daemons would each be allowed the full cap, so a
+ * Compose build running next to an app build could take twice the memory the
+ * server was measured to have. One daemon, one cgroup, every build inside it.
+ *
+ * Verified on a 2 GB VM: buildx's remote driver attaches to a container it did
+ * not create, builds through it, and the container's cgroup is unchanged.
  */
 export async function ensureCappedBuilder(
   client: SshClient,
-  name: string,
   cap: BuildCap,
   opts: ExecOptions = {}
 ): Promise<void> {
-  const exists = await exec(
+  const running = await exec(
     client,
-    `sudo docker buildx inspect ${quoteArg(name)}`
+    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)}`
   );
-  if (exists.code === 0) {
-    return;
+  if (running.code !== 0) {
+    check(
+      "buildkit daemon",
+      await execArgv(
+        client,
+        [
+          "sudo",
+          "docker",
+          "run",
+          "-d",
+          "--privileged",
+          "--restart",
+          "unless-stopped",
+          "--name",
+          BUILDKIT_CONTAINER,
+          `--memory=${cap.memory}`,
+          `--cpu-quota=${cap.cpuQuota}`,
+          `--cpu-period=${cap.cpuPeriod}`,
+          BUILDKIT_IMAGE,
+        ],
+        opts
+      )
+    );
   }
-  check(
-    "builder creation",
-    await execArgv(
-      client,
-      [
-        "sudo",
-        "docker",
-        "buildx",
-        "create",
-        "--name",
-        name,
-        "--driver",
-        "docker-container",
-        "--driver-opt",
-        `memory=${cap.memory}`,
-        "--driver-opt",
-        `cpu-quota=${cap.cpuQuota}`,
-        "--driver-opt",
-        `cpu-period=${cap.cpuPeriod}`,
-        "--bootstrap",
-      ],
-      opts
-    )
+
+  // A server provisioned before railpack already has a `noddle-builder` on the
+  // `docker-container` driver, carrying its OWN capped buildkitd. Left alone,
+  // `inspect` succeeds, this returns early, and the Dockerfile path keeps
+  // building on that second daemon — two caps on a machine sized for one, which
+  // is the exact failure the shared daemon exists to prevent. So the DRIVER is
+  // what decides, not the builder's existence.
+  //
+  // `buildx inspect` has no --format on the pinned version; the driver comes off
+  // its `Driver:` line. Read into a variable rather than piped to grep: these
+  // run under pipefail, where an early-exiting reader kills the producer.
+  const builder = await exec(
+    client,
+    `sudo docker buildx inspect ${quoteArg(BUILDX_BUILDER)}`
   );
+  const onRemoteDriver = /^Driver:\s+remote$/m.test(builder.stdout);
+  if (builder.code === 0 && !onRemoteDriver) {
+    check(
+      "stale builder removal",
+      await execArgv(
+        client,
+        ["sudo", "docker", "buildx", "rm", BUILDX_BUILDER],
+        opts
+      )
+    );
+  }
+  if (builder.code !== 0 || !onRemoteDriver) {
+    check(
+      "buildx builder",
+      await execArgv(
+        client,
+        [
+          "sudo",
+          "docker",
+          "buildx",
+          "create",
+          "--name",
+          BUILDX_BUILDER,
+          "--driver",
+          "remote",
+          `docker-container://${BUILDKIT_CONTAINER}`,
+        ],
+        opts
+      )
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -488,124 +545,104 @@ export async function fetchSource(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * ` --env NIXPACKS_NODE_VERSION=…` when the repository names no Node
- * version, and an empty string when it does.
+ * Packages Noddle forces into every image it builds from source.
  *
- * Nixpacks falls back to Node 18, which nixpkgs removed as end-of-life, so
- * a silent repository fails inside a nix evaluation — an error that names
- * neither the project nor the missing setting.
+ * `curl` is the deploy healthcheck (`httpHealthcheckTest`), and railpack's
+ * Debian base does NOT ship it. Measured inside a built image, under the same
+ * non-login `sh -c` a HEALTHCHECK runs in: curl ABSENT, wget ABSENT, node
+ * present at /mise/shims/node. That is the exact inverse of the nixpacks base,
+ * and left alone it fails silently — the task never converges and it presents
+ * as a Traefik routing bug, not as a missing binary.
  *
- * It has to be `--env` and NOT a variable in the process environment.
- * Measured on 1.41.0 against a real repository:
+ * The leading `...` is load-bearing: it means "extend railpack's generated
+ * package list". Without it the list is REPLACED and the image loses whatever
+ * the provider put there.
  *
- *   NIXPACKS_NODE_VERSION=22 nixpacks …       → nodejs_18  (ignored)
- *   nixpacks … --env NODE_VERSION=22          → nodejs_18  (wrong name)
- *   nixpacks … --env NIXPACKS_NODE_VERSION=22 → nodejs_22
- *
- * `--env` is safe here, unlike `--apt` and `--pkgs` which wipe the nix
- * overlay list: the overlay was checked present after this flag, because
- * losing it is silent and breaks every Node build.
- *
- * Applied ONLY when the repository is silent — the variable outranks
- * `engines.node`, `.nvmrc` and `.node-version`, so setting it always would
- * override the very thing a user chose deliberately.
+ * This is only possible because railpack has no nix overlay to lose. The
+ * equivalent nixpacks flags (`--apt`, `--pkgs`) wiped the overlay list and
+ * broke every Node build, which is why the healthcheck used to be constrained
+ * to whatever the base image already happened to carry.
  */
-export function nixpacksNodeFlag(declared: boolean): string {
-  return declared
-    ? ""
-    : ` --env NIXPACKS_NODE_VERSION=${FALLBACK_NODE_VERSION}`;
-}
-
-async function nodeVersionFallback(
-  client: SshClient,
-  dir: string
-): Promise<string> {
-  // A JSON field, so grep rather than a parser — but anchored on the key,
-  // and only to decide whether the user said something at all.
-  const declared = await exec(
-    client,
-    `cd ${quoteArg(dir)} && { test -f .nvmrc || test -f .node-version || grep -q '"node"' package.json 2>/dev/null; }`
-  );
-  return nixpacksNodeFlag(declared.code === 0);
-}
+export const FORCED_DEPLOY_PACKAGES = "... curl";
 
 export interface BuildOptions extends ExecOptions {
-  builderName: string;
   dir: string;
   imageTag: string;
-  /** Rebuild every layer — `--no-cache` on buildx. */
+  /** Rebuild every layer — `--no-cache`. */
   noCache?: boolean;
-  /** Relative path passed to Nixpacks as `NIXPACKS_SPA_OUT_DIR`. */
+  /** Relative path passed to railpack as `RAILPACK_SPA_OUTPUT_DIR`. */
   publishDirectory?: string | null;
 }
 
 /**
- * Nixpacks generates the Dockerfile; buildx builds it on the capped builder.
+ * Railpack builds straight to BuildKit — there is no intermediate Dockerfile.
  *
- * Two traps, both paid for in Phase 0:
+ * Three things this depends on, all measured on a real 2 GB VM:
  *
- * 1. `--out .` and never another directory. Nixpacks writes ONLY `.nixpacks/`
- *    and does not copy sources, while the generated Dockerfile does
- *    `COPY .nixpacks/…`. Written elsewhere, the context does not contain that
- *    COPY.
+ * 1. `sudo -E`, and `-E` is not optional. Railpack reads `BUILDKIT_HOST` from
+ *    its environment and exits if it is unset; plain `sudo` drops it. Same trap
+ *    as the pinned installer.
  *
- * 2. NEVER `--apt` nor `--pkgs`. On nixpacks 1.41, both overwrite the nix
- *    overlays list, where the Node provider declares nix-npm-overlay — which
- *    DEFINES npm-9_x. Without it, every Node build dies on
- *    `error: undefined variable 'npm-9_x'`. There is therefore no way to inject
- *    a package via the CLI: what the image needs must come from the base image.
+ * 2. The image reaches the daemon because railpack pipes BuildKit's
+ *    `ExporterDocker` tarball into a bare `docker load` — the binary name is
+ *    hardcoded in railpack, with no sudo and no override. So the whole
+ *    invocation has to run as a user that can already reach the docker socket.
+ *    (`--output` is NOT this: it exports a filesystem, not an image.)
+ *
+ * 3. `--progress plain`. The default renderer rewrites the screen and is
+ *    unusable as an SSE stream. That is the output the dashboard shows.
+ *
+ * Config variables go through `--env` and nowhere else — the process
+ * environment is not read for them.
  */
 export async function buildImage(
   client: SshClient,
   o: BuildOptions
 ): Promise<void> {
+  assertNotFlag(o.dir, "build directory");
+  assertNotFlag(o.imageTag, "image tag");
+
   const publishDirectory = o.publishDirectory?.trim();
-  const spaOut =
-    publishDirectory && publishDirectory.length > 0
-      ? `NIXPACKS_SPA_OUT_DIR=${quoteArg(publishDirectory)} `
-      : "";
 
-  const nodeFallback = await nodeVersionFallback(client, o.dir);
+  // The build directory is railpack's positional argument, so there is no
+  // `cd` and therefore no shell operator: every token stays a quoted argv
+  // element and `execArgv` can do its job.
+  const argv = [
+    "sudo",
+    "-E",
+    "env",
+    `BUILDKIT_HOST=docker-container://${BUILDKIT_CONTAINER}`,
+    "railpack",
+    "build",
+    o.dir,
+    "--name",
+    o.imageTag,
+    "--progress",
+    "plain",
+    "--env",
+    `RAILPACK_DEPLOY_APT_PACKAGES=${FORCED_DEPLOY_PACKAGES}`,
+  ];
 
-  check(
-    "nixpacks",
-    await exec(
-      client,
-      `cd ${quoteArg(o.dir)} && rm -rf .nixpacks && ${spaOut}nixpacks build . --out .${nodeFallback}`,
-      o
-    )
-  );
+  // Setting the output dir forces SPA mode even when framework detection
+  // would not have fired — which is what the user asked for by naming it.
+  if (publishDirectory && publishDirectory.length > 0) {
+    assertNotFlag(publishDirectory, "publish directory");
+    argv.push("--env", `RAILPACK_SPA_OUTPUT_DIR=${publishDirectory}`);
+  }
+  if (o.noCache) {
+    argv.push("--no-cache");
+  }
 
-  check(
-    "nixpacks plan check",
-    await exec(client, `test -f ${quoteArg(`${o.dir}/.nixpacks/Dockerfile`)}`)
-  );
-
-  // --progress=plain: buildx's default TTY renderer rewrites the screen and is
-  // unusable as an SSE stream. That is the output that goes to the dashboard.
-  check(
-    "docker buildx build",
-    await exec(
-      client,
-      `cd ${quoteArg(o.dir)} && sudo docker buildx build` +
-        ` --builder ${quoteArg(o.builderName)}` +
-        " --progress=plain --load" +
-        (o.noCache ? " --no-cache" : "") +
-        " -f .nixpacks/Dockerfile" +
-        ` -t ${quoteArg(o.imageTag)} .`,
-      o
-    )
-  );
+  check("railpack", await execArgv(client, argv, o));
 }
 
 export interface DockerfileBuildOptions extends ExecOptions {
-  builderName: string;
   /** Build context root — the directory from which `COPY` resolves. */
   contextDir: string;
   /**
    * Dockerfile path, RELATIVE to `contextDir`. A Compose deploy provides its
-   * own Dockerfile per service (what `build:` references in the file) — no
-   * nixpacks generation here, the user already has one.
+   * own Dockerfile per service (what `build:` references in the file) — railpack
+   * never sees this path, the user already has one.
    */
   dockerfilePath: string;
   imageTag: string;
@@ -614,11 +651,16 @@ export interface DockerfileBuildOptions extends ExecOptions {
 }
 
 /**
- * Same capped builder, same `--progress=plain`, but the Dockerfile comes from
- * the user instead of being generated by nixpacks. This is the build path for
- * a Compose service: each service with a `build:` in the file goes through
- * here, one by one, before `docker stack deploy` sees the rewritten file with
- * `image:` entries instead.
+ * The Dockerfile path, for a user who brought their own.
+ *
+ * Railpack cannot build an arbitrary Dockerfile, so this stays on buildx — which
+ * means Noddle carries TWO build front-ends. They are not two caps: the builder
+ * is a `remote` alias onto the same buildkitd container railpack uses, so one
+ * cgroup still covers everything (see `ensureCappedBuilder`).
+ *
+ * This is also the build path for a Compose service: each service with a
+ * `build:` in the file goes through here, one by one, before `docker stack
+ * deploy` sees the rewritten file with `image:` entries instead.
  */
 export async function buildImageFromDockerfile(
   client: SshClient,
@@ -635,7 +677,7 @@ export async function buildImageFromDockerfile(
     await exec(
       client,
       `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
-        ` --builder ${quoteArg(o.builderName)}` +
+        ` --builder ${quoteArg(BUILDX_BUILDER)}` +
         " --progress=plain --load" +
         (o.noCache ? " --no-cache" : "") +
         ` -f ${quoteArg(o.dockerfilePath)}` +

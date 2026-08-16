@@ -2,7 +2,7 @@
  * Strip credentials out of any URL appearing in free text.
  *
  * Deployment logs are assembled from output nobody here controls: git,
- * nixpacks, buildx, and whatever a user's Dockerfile prints. A clone URL
+ * railpack, buildx, and whatever a user's Dockerfile prints. A clone URL
  * carrying a token (`https://x-access-token:ghs_…@github.com/org/app.git`)
  * is a bearer credential that reads like a URL, and git echoes it back in
  * several of its own error messages.

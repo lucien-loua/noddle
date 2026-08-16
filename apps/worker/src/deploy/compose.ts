@@ -142,7 +142,7 @@ async function writeAndDeployStack(
 
 /**
  * Builds, one at a time, every compose service that declares a `build:` —
- * on the SAME capped builder as the nixpacks path, never in parallel: the
+ * on the SAME capped builder as the railpack path, never in parallel: the
  * memory cap protects the machine, not each build individually. Rewrites
  * `services` IN PLACE, with `build:` replaced by the built tag.
  */
@@ -173,7 +173,6 @@ async function buildComposeServices(opts: {
     opts.onServiceStart(key);
     // biome-ignore lint/performance/noAwaitInLoops: sequential builds on the SAME capped builder — parallelizing would exceed the memory cap it exists to enforce
     await buildImageFromDockerfile(opts.buildClient, {
-      builderName: "noddle-builder",
       contextDir,
       dockerfilePath,
       imageTag,
@@ -230,7 +229,7 @@ async function buildAndDeployStack(
 
   const cap = computeBuildCap({ totalMemoryMb: server.totalMemoryMb ?? 2048 });
   sink.write(`▸ build capped at ${cap.memory}\n`);
-  await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
+  await ensureCappedBuilder(buildClient, cap, stream);
 
   const workDir = `${BUILD_ROOT}/stacks/${stack.id}`;
   const sha = await fetchSource(buildClient, {

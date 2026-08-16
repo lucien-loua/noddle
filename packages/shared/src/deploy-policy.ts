@@ -12,7 +12,7 @@ export const MONITOR_SECONDS = 45;
 export const SECOND_NS = 1_000_000_000;
 
 export const DeployPolicy = {
-  /** App-service HTTP healthcheck (nixpacks / Node images with curl). */
+  /** App-service HTTP healthcheck — needs curl on the image's PATH. */
   healthcheck: {
     intervalSeconds: 3,
     retries: 3,

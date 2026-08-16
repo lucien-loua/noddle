@@ -10,6 +10,8 @@ import {
   type SshClient,
 } from "@noddle/ssh-executor";
 import {
+  BUILDKIT_CONTAINER,
+  BUILDX_BUILDER,
   BuildError,
   buildImage,
   computeBuildCap,
@@ -21,7 +23,6 @@ const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
 const USER = process.env.TARGET_USER ?? "ubuntu";
 const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
-const BUILDER = "noddle-verify-builder";
 const WORK = "/opt/noddle-verify";
 const TAG = `noddle-verify:${Date.now()}`;
 
@@ -71,15 +72,22 @@ try {
 
   // ── 2. cap actually applied to the builder ────────────────────────────────
   const cap = computeBuildCap({ totalMemoryMb: 2048 });
-  await exec(client, `sudo docker buildx rm ${quoteArg(BUILDER)} 2>/dev/null`);
-  await ensureCappedBuilder(client, BUILDER, cap);
+  await exec(
+    client,
+    `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+  );
+  await exec(
+    client,
+    `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
+  );
+  await ensureCappedBuilder(client, cap);
   ok(`builder created (${cap.memory}, quota ${cap.cpuQuota}/${cap.cpuPeriod})`);
 
   // THE check. We read the buildkitd container's cgroup, not what the command
   // claims to have done.
   const inspect = await exec(
     client,
-    `sudo docker inspect buildx_buildkit_${BUILDER}0 --format '{{.HostConfig.Memory}} {{.HostConfig.CPUQuota}}'`
+    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)} --format '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'`
   );
   const [memBytes, quota] = inspect.stdout.trim().split(" ").map(Number);
   const expectedBytes = Number.parseInt(cap.memory, 10) * 1024 * 1024;
@@ -167,7 +175,6 @@ try {
   // ── 4. end-to-end build ───────────────────────────────────────────────────
   let lines = 0;
   await buildImage(client, {
-    builderName: BUILDER,
     dir: `${WORK}/src`,
     imageTag: TAG,
     onStderr: () => {
@@ -188,13 +195,35 @@ try {
   } else {
     ko("image not found after the build");
   }
+
+  // ── 5. the healthcheck binary is actually IN the image ────────────────────
+  // `verify-build-dir` only checks that Noddle ASKS for curl. This checks that
+  // it landed — and it runs the probe the way a HEALTHCHECK does, in a
+  // non-login `sh -c`, because that is where the PATH differs.
+  //
+  // Railpack's Debian base ships neither curl nor wget. If the forced package
+  // list ever stops working, every deployed task stops converging and it reads
+  // as a Traefik routing bug, so this failure has to be caught here instead.
+  const probe = await exec(
+    client,
+    `sudo docker run --rm --entrypoint /bin/sh ${quoteArg(TAG)} -c 'command -v curl'`
+  );
+  if (probe.code === 0 && probe.stdout.trim() !== "") {
+    ok(`curl is on the image's non-login PATH: ${probe.stdout.trim()}`);
+  } else {
+    ko("curl is MISSING from the built image — every healthcheck would fail");
+  }
 } catch (e) {
   ko(`exception: ${e instanceof Error ? e.message : String(e)}`);
 } finally {
   if (client) {
     await exec(
       client,
-      `sudo docker buildx rm ${quoteArg(BUILDER)} 2>/dev/null`
+      `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+    );
+    await exec(
+      client,
+      `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
     );
     await exec(client, `sudo docker image rm -f ${quoteArg(TAG)} 2>/dev/null`);
     await exec(client, `sudo rm -rf ${quoteArg(WORK)}`);

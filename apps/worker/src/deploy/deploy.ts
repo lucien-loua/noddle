@@ -137,7 +137,6 @@ async function buildAndPushImage(
   if (service.buildMethod === "dockerfile") {
     sink.write("▸ building from Dockerfile\n");
     await buildImageFromDockerfile(buildClient, {
-      builderName: "noddle-builder",
       contextDir: buildDir,
       dockerfilePath: "Dockerfile",
       imageTag,
@@ -149,7 +148,6 @@ async function buildAndPushImage(
       sink.write(`▸ static output: ${service.publishDirectory}\n`);
     }
     await buildImage(buildClient, {
-      builderName: "noddle-builder",
       dir: buildDir,
       imageTag,
       noCache: service.cleanCache,
@@ -214,7 +212,7 @@ async function buildAndDeployService(
       totalMemoryMb: server.totalMemoryMb ?? 2048,
     });
     sink.write(`▸ build capped at ${cap.memory}\n`);
-    await ensureCappedBuilder(buildClient, "noddle-builder", cap, stream);
+    await ensureCappedBuilder(buildClient, cap, stream);
 
     const workDir = `${BUILD_ROOT}/${service.id}`;
     const auth = await sourceCredentials(ctx, service, sink);

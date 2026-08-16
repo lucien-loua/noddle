@@ -343,7 +343,7 @@ try {
   const [svc] = await db
     .insert(services)
     .values({
-      buildMethod: "nixpacks",
+      buildMethod: "railpack",
       environmentId: env?.id ?? "",
       gitBranch: "main",
       gitRepoUrl: `file://${ORIGIN}`,
@@ -369,7 +369,7 @@ try {
     throw new Error("deployment insertion failed");
   }
 
-  console.log("    (nixpacks build on the worker, push, Swarm switch…)");
+  console.log("    (railpack build on the worker, push, Swarm switch…)");
   await runDeploy(ctx, route, build, { deploymentId: dep.id });
 
   const final = await db.query.deployments.findFirst({
