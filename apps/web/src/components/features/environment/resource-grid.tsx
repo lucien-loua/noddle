@@ -865,7 +865,14 @@ export function ResourceGrid({
         // empty state OCCUPIES the remaining space, like on /containers.
         <GridEmpty filtered={items.length > 0} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        // `auto-fill` and not `auto-fit`: `auto-fit` collapses the empty
+        // tracks, so a single service would stretch across the whole row.
+        // `min(100%, …)` is what keeps the track from overflowing a narrow
+        // screen — a bare `minmax(16rem, 1fr)` does not shrink below its
+        // floor and scrolls sideways on a phone. The clamp keeps a card
+        // between 16rem, where the name and the address start to collide,
+        // and 22rem, past which a card is mostly padding.
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,clamp(16rem,28vw,22rem)),1fr))] gap-3">
           {visible.map((item) => (
             <ResourceGridCard
               canDelete={canDelete}

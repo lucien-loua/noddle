@@ -76,7 +76,11 @@ function ProjectsPage() {
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        // Same track as the environment grid: the column count follows the
+        // room available, not three breakpoints. `auto-fill` keeps a lone
+        // project from stretching across the row, and `min(100%, …)` keeps
+        // the floor from overflowing a phone.
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,clamp(16rem,28vw,22rem)),1fr))] gap-4">
           {allProjects.map((project) => (
             <ProjectCard
               group={byId.get(project.id)}
