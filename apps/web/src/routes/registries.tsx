@@ -62,7 +62,7 @@ function RegistriesPage() {
       actions={
         canAdd ? (
           <Button onClick={handleAdd}>
-            <PlusIcon data-icon="inline-start" />
+            <PlusIcon data-icon="inline-start" weight="regular" />
             Add registry
           </Button>
         ) : null

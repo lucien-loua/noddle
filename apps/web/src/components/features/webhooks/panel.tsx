@@ -106,7 +106,7 @@ function WebhookManageButton({
         {generatePending ? (
           <Spinner data-icon="inline-start" />
         ) : (
-          <ArrowClockwiseIcon />
+          <ArrowClockwiseIcon weight="regular" />
         )}
       </InputGroupButton>
     );
@@ -156,7 +156,7 @@ function WebhookUrlInput({
               size="icon-xs"
               variant="outline"
             >
-              {copied ? <CheckIcon /> : <CopyIcon />}
+              {copied ? <CheckIcon weight="regular" /> : <CopyIcon />}
             </InputGroupButton>
           ) : null}
           {canManage ? (

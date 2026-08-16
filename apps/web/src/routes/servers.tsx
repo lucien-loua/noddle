@@ -40,7 +40,7 @@ function ServersPage() {
       actions={
         canAdd ? (
           <Button onClick={handleOpen}>
-            <PlusIcon data-icon="inline-start" />
+            <PlusIcon data-icon="inline-start" weight="regular" />
             Add server
           </Button>
         ) : null

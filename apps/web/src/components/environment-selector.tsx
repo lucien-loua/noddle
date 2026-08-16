@@ -130,6 +130,7 @@ export function EnvironmentSelector({
               <CaretDownIcon
                 className="text-muted-foreground"
                 data-icon="inline-end"
+                weight="regular"
               />
             </Button>
           }
@@ -153,7 +154,7 @@ export function EnvironmentSelector({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={openCreate}>
-                <PlusIcon />
+                <PlusIcon weight="regular" />
                 New environment
               </DropdownMenuItem>
             </>

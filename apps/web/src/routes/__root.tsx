@@ -1,3 +1,4 @@
+import { IconContext } from "@phosphor-icons/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
@@ -15,6 +16,17 @@ import appCss from "../styles.css?url";
  * Written by hand rather than imported from `lib/theme.ts`: it runs before
  * the bundle. The two are kept in sync together.
  */
+/**
+ * Two weights, and only two: `duotone` everywhere, `fill` where a glyph
+ * marks an active or engaged state.
+ *
+ * Set through the context rather than repeated on every call site — the
+ * default is then a single place to change, and any `weight=` left in the
+ * code reads as a deliberate exception. Hoisted so the provider is not
+ * handed a new object on every render.
+ */
+const ICON_DEFAULTS = Object.freeze({ weight: "duotone" });
+
 const THEME_SCRIPT = `try{var t=localStorage.getItem('noddle-theme');document.documentElement.classList.toggle('dark',t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))}catch(e){}`;
 
 export const Route = createRootRoute({
@@ -61,12 +73,14 @@ function RootDocument({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </QueryClientProvider>
+        <IconContext.Provider value={ICON_DEFAULTS}>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </QueryClientProvider>
+        </IconContext.Provider>
         <Scripts />
       </body>
     </html>

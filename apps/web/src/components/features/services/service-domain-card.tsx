@@ -92,7 +92,10 @@ export function ServiceDomainCard({
             >
               {domain.host}
               {publicPath ? publicPath : null}
-              <ArrowSquareOutIcon className="size-3.5 shrink-0" />
+              <ArrowSquareOutIcon
+                className="size-3.5 shrink-0"
+                weight="regular"
+              />
             </a>
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">

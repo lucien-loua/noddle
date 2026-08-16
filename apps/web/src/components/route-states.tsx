@@ -46,7 +46,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
       <Empty className="h-full">
         <EmptyMedia>
           <IconStack>
-            <WarningIcon className="size-5" weight="duotone" />
+            <WarningIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>
@@ -57,7 +57,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         </EmptyHeader>
         <EmptyContent>
           <Button onClick={handleRetry} variant="outline">
-            <ArrowClockwiseIcon data-icon="inline-start" />
+            <ArrowClockwiseIcon data-icon="inline-start" weight="regular" />
             Try again
           </Button>
         </EmptyContent>
@@ -73,7 +73,7 @@ export function RouteNotFound() {
       <Empty className="h-svh">
         <EmptyMedia>
           <IconStack>
-            <PlugsIcon className="size-5" weight="duotone" />
+            <PlugsIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>

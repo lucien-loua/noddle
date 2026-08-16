@@ -79,7 +79,7 @@ export function ContainerActions({
             size="icon-sm"
             variant="ghost"
           >
-            <DotsThreeIcon weight="bold" />
+            <DotsThreeIcon weight="regular" />
           </Button>
         }
       />

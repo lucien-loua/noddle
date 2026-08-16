@@ -50,7 +50,7 @@ export function CreateProjectButton({ role }: { role: RoleName | null }) {
   return (
     <>
       <Button onClick={handleOpen}>
-        <PlusIcon data-icon="inline-start" />
+        <PlusIcon data-icon="inline-start" weight="regular" />
         Create Project
       </Button>
       <ProjectFormDialog onOpenChange={setOpen} open={open} />
@@ -95,7 +95,7 @@ export function ProjectRowActions({
               size="icon-xs"
               variant="ghost"
             >
-              <DotsThreeIcon />
+              <DotsThreeIcon weight="regular" />
             </Button>
           }
         />

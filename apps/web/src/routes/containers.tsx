@@ -83,7 +83,7 @@ function KindBadge({ kind }: { kind: ContainerKind }) {
   const Icon = KIND_ICON[kind];
   return (
     <Badge variant={kind === "control-plane" ? "secondary" : "outline"}>
-      <Icon data-icon="inline-start" weight="duotone" />
+      <Icon data-icon="inline-start" />
       {KIND_LABEL[kind]}
     </Badge>
   );
@@ -154,7 +154,7 @@ function ContainersPage() {
         <Empty className="h-full">
           <EmptyMedia>
             <IconStack>
-              <CubeIcon className="size-5" weight="duotone" />
+              <CubeIcon className="size-5" />
             </IconStack>
           </EmptyMedia>
           <EmptyHeader>

@@ -177,7 +177,7 @@ export function ServersList({
       <SettingsList.Empty>
         <SettingsList.EmptyMedia>
           <IconStack>
-            <HardDrivesIcon className="size-5" weight="duotone" />
+            <HardDrivesIcon className="size-5" />
           </IconStack>
         </SettingsList.EmptyMedia>
         <SettingsList.EmptyHeader>

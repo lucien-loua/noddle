@@ -24,7 +24,7 @@ export function ScheduleActions({
   if (!canRestore) {
     return (
       <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
+        <PlusIcon data-icon="inline-start" weight="regular" />
         {createLabel}
       </Button>
     );
@@ -33,14 +33,14 @@ export function ScheduleActions({
   return (
     <ButtonGroup>
       <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" />
+        <PlusIcon data-icon="inline-start" weight="regular" />
         {createLabel}
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button size="icon-sm" variant="outline">
-              <CaretDownIcon />
+              <CaretDownIcon weight="regular" />
             </Button>
           }
         />

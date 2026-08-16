@@ -62,7 +62,7 @@ export function CopyButton({
         size="icon-sm"
         variant="outline"
       >
-        {copied ? <CheckIcon /> : <CopyIcon />}
+        {copied ? <CheckIcon weight="regular" /> : <CopyIcon />}
       </Button>
       {/* `aria-live`: the checkmark alone says nothing to whoever can't see
           it, and confirming that action is exactly the point. */}

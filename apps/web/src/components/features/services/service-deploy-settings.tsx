@@ -277,7 +277,7 @@ function DeployActionBar({
 
       {handlers.onTerminal ? (
         <Button onClick={handlers.onTerminal} variant="outline">
-          <TerminalIcon data-icon="inline-start" weight="bold" />
+          <TerminalIcon data-icon="inline-start" weight="regular" />
           Open Terminal
         </Button>
       ) : null}

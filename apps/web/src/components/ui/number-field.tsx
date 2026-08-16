@@ -145,7 +145,7 @@ function NumberFieldDecrement({
       data-slot="number-field-decrement"
       {...props}
     >
-      {children ?? <MinusIcon />}
+      {children ?? <MinusIcon weight="regular" />}
     </NumberFieldPrimitive.Decrement>
   );
 }
@@ -177,7 +177,7 @@ function NumberFieldIncrement({
       data-slot="number-field-increment"
       {...props}
     >
-      {children ?? <PlusIcon />}
+      {children ?? <PlusIcon weight="regular" />}
     </NumberFieldPrimitive.Increment>
   );
 }

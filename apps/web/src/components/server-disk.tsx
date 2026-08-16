@@ -127,7 +127,7 @@ export function ServerDiskUsage({
           <Empty>
             <EmptyMedia>
               <IconStack>
-                <HardDriveIcon className="size-5" weight="duotone" />
+                <HardDriveIcon className="size-5" />
               </IconStack>
             </EmptyMedia>
             <EmptyHeader>

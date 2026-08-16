@@ -80,7 +80,9 @@ function NavItem({
         render={<Link to={to} />}
         tooltip={label}
       >
-        <Icon weight={active ? "fill" : "regular"} />
+        {/* `undefined` and not "duotone": the default lives in one place,
+            the icon context in `__root`. */}
+        <Icon weight={active ? "fill" : undefined} />
         <span>{label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>

@@ -407,7 +407,7 @@ interface FilterRemoveButtonProps
 
 function FilterRemoveButton({
   className,
-  icon = <XIcon />,
+  icon = <XIcon weight="regular" />,
   ...props
 }: FilterRemoveButtonProps) {
   const context = useFilterContext();
@@ -868,7 +868,7 @@ function FilterOperatorDropdown<T = unknown>({
                 "ms-auto text-primary",
                 op.value === operator ? "opacity-100" : "opacity-0"
               )}
-            />
+            weight="regular" />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -1860,7 +1860,7 @@ export function Filters<T = unknown>({
     defaultTagName: "button",
     render: (trigger as React.ReactElement) ?? (
       <Button variant="outline">
-        <PlusIcon />
+        <PlusIcon weight="regular" />
         {mergedI18n.addFilter}
       </Button>
     ),

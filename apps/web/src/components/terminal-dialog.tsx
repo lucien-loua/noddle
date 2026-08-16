@@ -258,7 +258,7 @@ export function TerminalDialog({
       <FocusModalContent initialFocus={initialFocus}>
         <FocusModalHeader>
           <div className="flex min-w-0 items-center gap-2">
-            <TerminalIcon className="size-4 shrink-0" />
+            <TerminalIcon className="size-4 shrink-0" weight="regular" />
             <FocusModalTitle className="font-mono text-sm">
               {title}
             </FocusModalTitle>

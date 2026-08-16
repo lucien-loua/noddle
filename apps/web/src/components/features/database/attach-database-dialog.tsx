@@ -62,7 +62,7 @@ export function AttachDatabaseDialog({
     <Dialog onOpenChange={setOpen} open={open}>
       {showTrigger ? (
         <DialogTrigger render={<Button size="xs" variant="outline" />}>
-          <PlusIcon data-icon="inline-start" />
+          <PlusIcon data-icon="inline-start" weight="regular" />
           Attach
         </DialogTrigger>
       ) : null}

@@ -50,7 +50,7 @@ export function ConfigsListBody({
       <Empty>
         <EmptyMedia>
           <IconStack>
-            <EmptyIcon className="size-5" weight="duotone" />
+            <EmptyIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>
@@ -60,7 +60,7 @@ export function ConfigsListBody({
         {canCreate ? (
           <EmptyContent className="flex flex-row flex-wrap gap-2">
             <Button onClick={onCreate}>
-              <PlusIcon data-icon="inline-start" />
+              <PlusIcon data-icon="inline-start" weight="regular" />
               {createLabel}
             </Button>
             {canRestore ? (

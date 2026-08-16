@@ -255,7 +255,7 @@ export function ResourceGraphs({
       <Empty className="border">
         <EmptyMedia>
           <IconStack>
-            <ChartLineIcon className="size-5" weight="duotone" />
+            <ChartLineIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>

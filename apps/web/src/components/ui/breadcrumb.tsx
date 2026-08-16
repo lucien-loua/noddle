@@ -86,7 +86,7 @@ function BreadcrumbSeparator({
       {...props}
     >
       {children ?? (
-        <CaretRightIcon className="rtl:rotate-180" />
+        <CaretRightIcon className="rtl:rotate-180" weight="regular" />
       )}
     </li>
   )
@@ -108,7 +108,7 @@ function BreadcrumbEllipsis({
       {...props}
     >
       <DotsThreeIcon
-      />
+      weight="regular" />
       <span className="sr-only">More</span>
     </span>
   )

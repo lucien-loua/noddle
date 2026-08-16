@@ -103,7 +103,7 @@ function FocusModalHeader({
       <DialogPrimitive.Close
         render={<Button size="icon" type="button" variant="ghost" />}
       >
-        <XIcon />
+        <XIcon weight="regular" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
       <div className="min-w-0 flex-1">{children}</div>

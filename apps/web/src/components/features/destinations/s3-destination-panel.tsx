@@ -120,7 +120,7 @@ export function S3DestinationPanel({
         <SettingsList.Empty>
           <SettingsList.EmptyMedia>
             <IconStack>
-              <ArchiveIcon className="size-5" weight="duotone" />
+              <ArchiveIcon className="size-5" />
             </IconStack>
           </SettingsList.EmptyMedia>
           <SettingsList.EmptyHeader>

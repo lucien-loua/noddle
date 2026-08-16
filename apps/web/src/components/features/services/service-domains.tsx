@@ -85,7 +85,7 @@ export function ServiceDomains({
           </div>
           {canEdit && hasDomains ? (
             <Button onClick={handleOpenCreate} size="sm" variant="outline">
-              <PlusIcon data-icon="inline-start" />
+              <PlusIcon data-icon="inline-start" weight="regular" />
               Add domain
             </Button>
           ) : null}
@@ -122,7 +122,7 @@ export function ServiceDomains({
             <Empty>
               <EmptyMedia>
                 <IconStack>
-                  <GlobeIcon className="size-5" weight="duotone" />
+                  <GlobeIcon className="size-5" />
                 </IconStack>
               </EmptyMedia>
               <EmptyHeader>

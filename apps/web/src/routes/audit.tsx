@@ -52,7 +52,7 @@ function AuditDenied() {
       <Empty className="h-full">
         <EmptyMedia>
           <IconStack>
-            <LockIcon className="size-5" weight="duotone" />
+            <LockIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>

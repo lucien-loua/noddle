@@ -69,7 +69,7 @@ function GitProvidersPage() {
             <DropdownMenuTrigger
               render={
                 <Button>
-                  <PlusIcon data-icon="inline-start" />
+                  <PlusIcon data-icon="inline-start" weight="regular" />
                   Connect
                 </Button>
               }

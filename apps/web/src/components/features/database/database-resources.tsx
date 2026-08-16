@@ -41,7 +41,7 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
             <DropdownMenuTrigger
               render={
                 <Button className="ps-2!" size="sm" variant="outline">
-                  <CaretDownIcon />
+                  <CaretDownIcon weight="regular" />
                 </Button>
               }
             />

@@ -486,7 +486,7 @@ export function GitProvidersList({
       <SettingsList.Empty>
         <SettingsList.EmptyMedia>
           <IconStack>
-            <PlugsIcon className="size-5" weight="duotone" />
+            <PlugsIcon className="size-5" />
           </IconStack>
         </SettingsList.EmptyMedia>
         <SettingsList.EmptyHeader>

@@ -194,7 +194,7 @@ function ResourceAddress({ item }: { item: GridItem }) {
       target="_blank"
     >
       <span className="truncate">{item.domain}</span>
-      <ArrowSquareOutIcon className="size-3.5 shrink-0" />
+      <ArrowSquareOutIcon className="size-3.5 shrink-0" weight="regular" />
     </a>
   );
 }
@@ -330,9 +330,9 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
         <EmptyMedia>
           <IconStack>
             {filtered ? (
-              <MagnifyingGlassIcon className="size-5" weight="duotone" />
+              <MagnifyingGlassIcon className="size-5" />
             ) : (
-              <StackIcon className="size-5" weight="duotone" />
+              <StackIcon className="size-5" />
             )}
           </IconStack>
         </EmptyMedia>
@@ -1199,7 +1199,7 @@ function ResourceCardMenu({
             size="icon-xs"
             variant="ghost"
           >
-            <DotsThreeIcon />
+            <DotsThreeIcon weight="regular" />
           </Button>
         }
       />
@@ -1224,7 +1224,7 @@ function ResourceCardMenu({
         ) : null}
         {onMove && canMove ? (
           <DropdownMenuItem onClick={onMove}>
-            <DotsThreeIcon />
+            <DotsThreeIcon weight="regular" />
             Move to…
           </DropdownMenuItem>
         ) : null}

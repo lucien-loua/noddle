@@ -126,7 +126,7 @@ export function DatabaseVolumes({
             type="button"
             variant="outline"
           >
-            <PlusIcon data-icon="inline-start" />
+            <PlusIcon data-icon="inline-start" weight="regular" />
             Add Volume
           </Button>
         ) : null}

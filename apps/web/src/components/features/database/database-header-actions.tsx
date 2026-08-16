@@ -144,7 +144,7 @@ export function DatabaseHeaderActions({
 
         {onTerminal ? (
           <Button onClick={onTerminal} variant="outline">
-            <TerminalIcon data-icon="inline-start" weight="bold" />
+            <TerminalIcon data-icon="inline-start" weight="regular" />
             Open Terminal
           </Button>
         ) : null}

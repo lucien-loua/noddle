@@ -97,7 +97,7 @@ export function DetailBreadcrumb({
         size="icon"
         variant="ghost"
       >
-        <ArrowLeftIcon />
+        <ArrowLeftIcon weight="regular" />
       </Button>
 
       <Breadcrumb className="min-w-0">

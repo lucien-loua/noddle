@@ -122,7 +122,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <CaretRightIcon className="rtl:rotate-180 ms-auto" />
+      <CaretRightIcon className="rtl:rotate-180 ms-auto" weight="regular" />
     </MenuPrimitive.SubmenuTrigger>
   )
 }
@@ -177,7 +177,7 @@ function DropdownMenuCheckboxItem({
       >
         <MenuPrimitive.CheckboxItemIndicator>
           <CheckIcon
-          />
+          weight="regular" />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
@@ -218,7 +218,7 @@ function DropdownMenuRadioItem({
       >
         <MenuPrimitive.RadioItemIndicator>
           <CheckIcon
-          />
+          weight="regular" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
       {children}

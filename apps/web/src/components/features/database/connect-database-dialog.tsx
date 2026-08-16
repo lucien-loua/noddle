@@ -408,7 +408,7 @@ export function ConnectDatabaseDialog({
                             onClick={regenerate}
                             size="icon-xs"
                           >
-                            <ArrowsClockwiseIcon />
+                            <ArrowsClockwiseIcon weight="regular" />
                           </InputGroupButton>
                         }
                         label="Password"

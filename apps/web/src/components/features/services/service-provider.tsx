@@ -143,7 +143,7 @@ function WatchPathRow({
           size="icon-sm"
           variant="ghost"
         >
-          <XIcon />
+          <XIcon weight="regular" />
         </Button>
       </ItemActions>
     </Item>

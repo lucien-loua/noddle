@@ -67,7 +67,7 @@ function OverviewPage() {
       actions={
         <Button nativeButton={false} render={<Link to="/projects" />}>
           Go to projects
-          <ArrowRightIcon data-icon="inline-end" />
+          <ArrowRightIcon data-icon="inline-end" weight="regular" />
         </Button>
       }
       email={email}
@@ -259,7 +259,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
           variant="ghost"
         >
           View all
-          <ArrowRightIcon data-icon="inline-end" />
+          <ArrowRightIcon data-icon="inline-end" weight="regular" />
         </Button>
       </FrameHeader>
       <FramePanel className={empty ? "flex min-h-0 flex-1 flex-col" : "p-0"}>

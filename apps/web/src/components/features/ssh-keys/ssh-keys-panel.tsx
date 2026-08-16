@@ -186,7 +186,7 @@ export function SshKeysList({
       <SettingsList.Empty>
         <SettingsList.EmptyMedia>
           <IconStack>
-            <KeyIcon className="size-5" weight="duotone" />
+            <KeyIcon className="size-5" />
           </IconStack>
         </SettingsList.EmptyMedia>
         <SettingsList.EmptyHeader>

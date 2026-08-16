@@ -56,7 +56,10 @@ export function ServiceFacts({
                         target="_blank"
                       >
                         <span className="min-w-0 truncate">{d.host}</span>
-                        <ArrowSquareOutIcon className="size-3.5 shrink-0" />
+                        <ArrowSquareOutIcon
+                          className="size-3.5 shrink-0"
+                          weight="regular"
+                        />
                       </a>
                     </li>
                   );

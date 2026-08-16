@@ -99,7 +99,7 @@ export function NotificationChannels({
         <SettingsList.Empty>
           <SettingsList.EmptyMedia>
             <IconStack>
-              <BellIcon className="size-5" weight="duotone" />
+              <BellIcon className="size-5" />
             </IconStack>
           </SettingsList.EmptyMedia>
           <SettingsList.EmptyHeader>

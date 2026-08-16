@@ -41,7 +41,7 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
       <Empty className="h-full">
         <EmptyMedia>
           <IconStack>
-            <ScrollIcon className="size-5" weight="duotone" />
+            <ScrollIcon className="size-5" />
           </IconStack>
         </EmptyMedia>
         <EmptyHeader>

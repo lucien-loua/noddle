@@ -14,7 +14,7 @@ export function NoDestinationEmpty({ description }: { description: string }) {
     <Empty>
       <EmptyMedia>
         <IconStack>
-          <ArchiveIcon className="size-5" weight="duotone" />
+          <ArchiveIcon className="size-5" />
         </IconStack>
       </EmptyMedia>
       <EmptyHeader>

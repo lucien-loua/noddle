@@ -68,7 +68,7 @@ export function BackupHistoryTable<T extends BackupRunRow>({
         <Empty className="min-h-0 min-w-0 flex-1">
           <EmptyMedia>
             <IconStack>
-              <ClipboardTextIcon className="size-5" weight="duotone" />
+              <ClipboardTextIcon className="size-5" />
             </IconStack>
           </EmptyMedia>
           <EmptyHeader>

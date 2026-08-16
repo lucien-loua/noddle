@@ -114,7 +114,7 @@ function ServerDetail() {
         <div className="flex items-center gap-2">
           {canShell ? (
             <Button onClick={handleOpenTerminal} size="sm" variant="outline">
-              <TerminalIcon weight="bold" />
+              <TerminalIcon weight="regular" />
               Terminal
             </Button>
           ) : null}

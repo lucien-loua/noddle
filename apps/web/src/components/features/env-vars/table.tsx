@@ -429,7 +429,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Environment variables</FrameTitle>
         <Button onClick={addRow} size="sm" variant="outline">
-          <PlusIcon data-icon="inline-start" />
+          <PlusIcon data-icon="inline-start" weight="regular" />
           Add variable
         </Button>
       </FrameHeader>

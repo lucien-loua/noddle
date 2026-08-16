@@ -52,9 +52,9 @@ export function CreateServiceMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button />}>
-          <PlusIcon data-icon="inline-start" />
+          <PlusIcon data-icon="inline-start" weight="regular" />
           Create Service
-          <CaretDownIcon data-icon="inline-end" />
+          <CaretDownIcon data-icon="inline-end" weight="regular" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {canCreateService ? (

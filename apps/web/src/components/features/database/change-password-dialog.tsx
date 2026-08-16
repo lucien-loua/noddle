@@ -131,7 +131,7 @@ export function ChangeDatabasePasswordDialog({
                       onClick={regenerate}
                       size="icon-xs"
                     >
-                      <ArrowsClockwiseIcon />
+                      <ArrowsClockwiseIcon weight="regular" />
                     </InputGroupButton>
                   }
                   addonStart={<KeyIcon />}

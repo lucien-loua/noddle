@@ -76,7 +76,7 @@ export function ConfirmNameDialog({
                   >
                     {resourceName}
                     {copied ? (
-                      <CheckIcon data-icon="inline-end" />
+                      <CheckIcon data-icon="inline-end" weight="regular" />
                     ) : (
                       <CopyIcon data-icon="inline-end" />
                     )}

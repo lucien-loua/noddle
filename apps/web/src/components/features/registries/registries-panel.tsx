@@ -142,7 +142,7 @@ export function RegistriesList({
       <SettingsList.Empty>
         <SettingsList.EmptyMedia>
           <IconStack>
-            <PackageIcon className="size-5" weight="duotone" />
+            <PackageIcon className="size-5" />
           </IconStack>
         </SettingsList.EmptyMedia>
         <SettingsList.EmptyHeader>
