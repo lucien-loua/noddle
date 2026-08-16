@@ -104,6 +104,20 @@ function selectRegistryChoice(state: {
   return state.values.registryChoice;
 }
 
+/**
+ * Hoisted, like every other selector here: an inline one is recreated on
+ * each render and forces a resubscribe. Same shape as
+ * `selectProviderRegion` in `s3-destination-form.ts`.
+ */
+function selectRepoAndBranch(state: {
+  values: { gitBranch: string; gitRepoUrl: string };
+}) {
+  return {
+    branch: state.values.gitBranch,
+    repoUrl: state.values.gitRepoUrl,
+  };
+}
+
 function isProviderTab(value: string): value is ProviderTab {
   return value === "docker" || isGitSourceType(value);
 }
@@ -635,21 +649,32 @@ function GitSourceForm({
   return (
     <>
       <FieldGroup>
+        {/* SUBSCRIBED, and that is the fix: `form.state.values.x` is a
+            plain read that re-renders nothing. This block sat inside
+            `AppField name="gitProviderId"`, which only re-renders when THAT
+            field changes — while picking a repository writes `gitRepoUrl`,
+            `gitRepoFullName` and `gitBranch`, none of them that one. The
+            combobox therefore kept displaying the previous value until
+            something else forced a render, such as pressing Save. */}
         {sourceType === "git" ? null : (
-          <form.AppField name="gitProviderId">
-            {(f) => (
-              <ProviderRepositoryField
-                branch={form.state.values.gitBranch}
-                canEdit={canEdit}
-                forge={sourceType === "gitlab" ? "gitlab" : "github"}
-                onBranchChange={handleBranchPick}
-                onPick={handlePick}
-                onProviderChange={f.handleChange}
-                providerId={f.state.value}
-                repoUrl={form.state.values.gitRepoUrl}
-              />
+          <form.Subscribe selector={selectRepoAndBranch}>
+            {({ branch, repoUrl }) => (
+              <form.AppField name="gitProviderId">
+                {(f) => (
+                  <ProviderRepositoryField
+                    branch={branch}
+                    canEdit={canEdit}
+                    forge={sourceType === "gitlab" ? "gitlab" : "github"}
+                    onBranchChange={handleBranchPick}
+                    onPick={handlePick}
+                    onProviderChange={f.handleChange}
+                    providerId={f.state.value}
+                    repoUrl={repoUrl}
+                  />
+                )}
+              </form.AppField>
             )}
-          </form.AppField>
+          </form.Subscribe>
         )}
         {service.hookError ? <HookWarning error={service.hookError} /> : null}
         {sourceType === "git" ? (
