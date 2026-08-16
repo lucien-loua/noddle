@@ -1,3 +1,4 @@
+// tier: vm
 // A database's Swarm name can no longer collide — against a REAL VM.
 //
 // What's tested here is NOT that two strings differ: that's just form, and

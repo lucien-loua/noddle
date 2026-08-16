@@ -1,3 +1,4 @@
+// tier: vm
 // Verifies Swarm deployment via the API, against a REAL VM.
 //
 // The central assertion: detecting a rollback. Phase 0 measured that

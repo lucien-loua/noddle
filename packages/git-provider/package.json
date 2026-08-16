@@ -9,6 +9,9 @@
     "./github": "./src/github.ts",
     "./gitlab": "./src/gitlab.ts"
   },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
   "devDependencies": {
     "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*"

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/web/src/verify-default-environment.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

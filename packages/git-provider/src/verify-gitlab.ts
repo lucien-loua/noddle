@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/git-provider/src/verify-gitlab.ts
 //
 // Pure: `fetch` is injected. The token EXPIRES here, unlike the GitHub

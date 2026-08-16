@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/worker/src/verify/verify-docker-seam.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/git-provider-credentials/src/verify-hooks.ts
 //
 // Pure: no database, no GitLab. What is covered here is the HTTP shape of the

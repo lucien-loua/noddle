@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-compose.ts
 //
 // Two files describe the same services — `installer/docker-compose.yml` for an

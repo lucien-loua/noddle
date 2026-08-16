@@ -10,7 +10,8 @@
     "./hooks": "./src/hooks.ts"
   },
   "scripts": {
-    "verify": "bun run src/verify.ts"
+    "verify": "bun run src/verify.ts",
+    "verify:pure": "noddle-verify pure"
   },
   "dependencies": {
     "@noddle/crypto": "workspace:*",

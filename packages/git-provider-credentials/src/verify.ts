@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/git-provider-credentials/src/verify.ts
 import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { check, expectThrows, runVerify } from "@noddle/testing";

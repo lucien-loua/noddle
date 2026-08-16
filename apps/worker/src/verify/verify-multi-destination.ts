@@ -1,3 +1,4 @@
+// tier: vm
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

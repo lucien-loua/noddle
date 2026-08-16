@@ -1,3 +1,4 @@
+// tier: vm
 // node packages/build-engine/src/verify.ts
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";

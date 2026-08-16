@@ -1,3 +1,4 @@
+// tier: local
 // Prerequisites: Postgres and Redis reachable, migrations applied, and
 // `bun run build` already run.
 //

@@ -1,3 +1,4 @@
+// tier: vm
 // The prune switch, against the REAL VM.
 //
 //   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune-toggle.ts

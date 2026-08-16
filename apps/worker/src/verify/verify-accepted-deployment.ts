@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/worker/src/verify/verify-accepted-deployment.ts
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

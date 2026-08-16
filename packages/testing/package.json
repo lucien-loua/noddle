@@ -1,6 +1,9 @@
 {
   "name": "@noddle/testing",
   "private": true,
+  "bin": {
+    "noddle-verify": "./src/run-tier.ts"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/web/src/verify-build-spec.ts
 //
 // The point of this one: a new `services` column must be CLASSIFIED, not

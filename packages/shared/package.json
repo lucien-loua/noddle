@@ -20,6 +20,9 @@
     "./watch-paths": "./src/watch-paths.ts",
     "./workload": "./src/workload.ts"
   },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
   "dependencies": {
     "@noddle/database-spec": "workspace:*",
     "zod": "catalog:"

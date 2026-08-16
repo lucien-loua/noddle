@@ -1,3 +1,4 @@
+// tier: local
 // Verifies the BullMQ wiring: a job dropped into the queue is really picked
 // up by the worker PROCESS, not just by a direct call to runDeploy.
 //

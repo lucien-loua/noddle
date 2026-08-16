@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-deploy-policy.ts
 
 import { check, runVerify } from "@noddle/testing";

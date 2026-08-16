@@ -1,16 +1,6 @@
 {
-  "private": true,
   "name": "noddle",
-  "type": "module",
-  "scripts": {
-    "check": "ultracite check",
-    "fix": "ultracite fix",
-    "dev:stack": "docker compose -f compose.dev.yml up -d --wait",
-    "dev:stack:down": "docker compose -f compose.dev.yml down",
-    "dev:stack:reset": "docker compose -f compose.dev.yml down -v && docker compose -f compose.dev.yml up -d --wait && bun run --cwd packages/db migrate",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
-    "verify:unit": "bun run packages/crypto/src/verify.ts && bun run packages/shared/src/verify.ts && bun run packages/shared/src/verify-deploy-policy.ts && bun run packages/shared/src/verify-workload.ts && bun run packages/shared/src/verify-engine-spec.ts && bun run packages/shared/src/verify-lifecycle.ts && bun run packages/shared/src/verify-watch-paths.ts && bun run packages/shared/src/verify-source-type.ts && bun run packages/shared/src/verify-redact.ts && bun run packages/shared/src/verify-toolchain.ts && bun run packages/shared/src/verify-compose.ts && bun run packages/build-engine/src/verify-build-dir.ts && bun run packages/backup/src/verify.ts && bun run packages/proxy-config/src/verify.ts && bun run packages/ssh-credentials/src/verify.ts && bun run packages/git-provider-credentials/src/verify.ts && bun run packages/git-provider-credentials/src/verify-hooks.ts && bun run packages/compose-engine/src/verify.ts && bun run packages/database-spec/src/verify.ts && bun run packages/deploy-contract/src/verify.ts && bun run packages/notifier/src/verify.ts && bun run packages/git-provider/src/verify-github.ts && bun run packages/git-provider/src/verify-gitlab.ts && bun run apps/worker/src/verify/verify-dispatch.ts && bun run apps/worker/src/verify/verify-accepted-deployment.ts && bun run apps/worker/src/verify/verify-docker-seam.ts && bun run apps/worker/src/verify/verify-installer-paths.ts && bun run apps/worker/src/verify/verify-dockerfile-workspaces.ts && bun run apps/web/src/verify-permissions.ts && bun run apps/web/src/verify-run-read.ts && bun run apps/web/src/verify-webhook-payloads.ts && bun run apps/web/src/verify-build-spec.ts && bun run apps/web/src/verify-backup-subject.ts && bun run apps/web/src/verify-cache-backup.ts && bun run apps/web/src/verify-resource-detail.ts && bun run apps/web/src/verify-default-environment.ts"
-  },
+  "private": true,
   "workspaces": {
     "packages": [
       "apps/*",
@@ -55,13 +45,28 @@
       "zod": "^4.4.3"
     }
   },
+  "type": "module",
+  "scripts": {
+    "check": "ultracite check",
+    "dev:stack": "docker compose -f compose.dev.yml up -d --wait",
+    "dev:stack:down": "docker compose -f compose.dev.yml down",
+    "dev:stack:reset": "docker compose -f compose.dev.yml down -v && docker compose -f compose.dev.yml up -d --wait && bun run --cwd packages/db migrate",
+    "fix": "ultracite fix",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
+    "verify:local": "vp run -r verify:local",
+    "verify:pure": "vp run -r verify:pure",
+    "verify:vm": "vp run -r verify:vm"
+  },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
     "@noddle/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "oxlint-plugin-react-doctor": "^0.7.1",
     "typescript": "catalog:",
-    "ultracite": "catalog:"
+    "ultracite": "7.9.4",
+    "vite-plus": "^0.2.9"
   },
   "devEngines": {
     "packageManager": {

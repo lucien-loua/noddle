@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/git-provider/src/verify-github.ts
 //
 // Pure: no network, no GitHub App. `fetch` is injected. What matters here

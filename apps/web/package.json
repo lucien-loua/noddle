@@ -6,9 +6,12 @@
     "#start-handler": "./dist/server/server.js"
   },
   "scripts": {
-    "dev": "bun run scripts/dev-web.ts",
     "build": "vite build",
-    "start": "bun run server.ts"
+    "dev": "bun run scripts/dev-web.ts",
+    "start": "bun run server.ts",
+    "verify:local": "noddle-verify local",
+    "verify:pure": "noddle-verify pure",
+    "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -55,8 +58,8 @@
   "devDependencies": {
     "@noddle/testing": "workspace:*",
     "@noddle/tsconfig": "workspace:*",
-    "@types/d3-scale": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@types/d3-scale": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

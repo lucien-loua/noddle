@@ -1,3 +1,4 @@
+// tier: vm
 // Restore, against REAL infrastructure — this is the test that decides
 // whether backups are good for anything.
 //

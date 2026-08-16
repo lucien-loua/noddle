@@ -1,3 +1,4 @@
+// tier: vm
 // Prerequisites: the Multipass VM, Postgres, Redis, migrations applied, and
 // `bun run build` already run.
 //

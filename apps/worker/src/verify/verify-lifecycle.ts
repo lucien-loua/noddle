@@ -1,3 +1,4 @@
+// tier: vm
 // TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-lifecycle.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";

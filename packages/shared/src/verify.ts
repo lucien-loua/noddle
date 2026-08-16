@@ -1,3 +1,4 @@
+// tier: pure
 //   bun  run packages/shared/src/verify.ts
 //   node packages/shared/src/verify.ts
 import { ko, ok, runVerify, suite } from "@noddle/testing";

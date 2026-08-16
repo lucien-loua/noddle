@@ -1,3 +1,4 @@
+// tier: vm
 // The registry, against TWO real VMs.
 //
 // What this test poses, and that no other one can pose: does an image built

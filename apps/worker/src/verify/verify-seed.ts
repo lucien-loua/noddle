@@ -1,3 +1,4 @@
+// tier: fixture
 // Common fixture setup for the benches: registering a key in the vault.
 //
 // Shared between VERIFICATIONS only, never with the product. The distinction

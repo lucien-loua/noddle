@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/worker/src/verify/verify-dispatch.ts
 import type {
   DeployJobData,

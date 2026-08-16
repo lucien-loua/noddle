@@ -47,3 +47,6 @@ plans/
 
 # Local issue tracker / agent scratch
 .scratch/
+
+# Sauvegardes locales avant reset du stack de dev
+.env.before-reset

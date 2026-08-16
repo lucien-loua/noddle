@@ -1,3 +1,4 @@
+// tier: local
 // node apps/worker/src/verify/verify-notify.ts
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";

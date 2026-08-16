@@ -36,7 +36,10 @@
   },
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.ts",
-    "start": "node --env-file=.env src/index.ts"
+    "start": "node --env-file=.env src/index.ts",
+    "verify:local": "noddle-verify local",
+    "verify:pure": "noddle-verify pure",
+    "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
     "@noddle/backup": "workspace:*",
@@ -47,6 +50,8 @@
     "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
     "@noddle/deploy-contract": "workspace:*",
+    "@noddle/git-provider": "workspace:*",
+    "@noddle/git-provider-credentials": "workspace:*",
     "@noddle/notifier": "workspace:*",
     "@noddle/proxy-config": "workspace:*",
     "@noddle/registry": "workspace:*",
@@ -56,11 +61,9 @@
     "@noddle/swarm-ops": "workspace:*",
     "bullmq": "catalog:",
     "croner": "^10.0.1",
-    "ioredis": "catalog:",
     "drizzle-orm": "catalog:",
-    "yaml": "catalog:",
-    "@noddle/git-provider": "workspace:*",
-    "@noddle/git-provider-credentials": "workspace:*"
+    "ioredis": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@noddle/testing": "workspace:*",

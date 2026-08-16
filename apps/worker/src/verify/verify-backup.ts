@@ -1,3 +1,4 @@
+// tier: vm
 // STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-backup.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/worker/src/verify/verify-installer-paths.ts
 //
 // The installer invokes worker scripts by PATH, inside a shell string. Nothing

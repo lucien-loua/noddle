@@ -8,6 +8,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "verify:local": "noddle-verify local"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",
     "@aws-sdk/lib-storage": "catalog:"

@@ -12,6 +12,9 @@
     "./schedule": "./src/schedule.ts",
     "./uploaded-size": "./src/uploaded-size.ts"
   },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
   "dependencies": {
     "@noddle/backup-store": "workspace:*",
     "@noddle/crypto": "workspace:*",

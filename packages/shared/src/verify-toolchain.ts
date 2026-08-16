@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-toolchain.ts
 //
 // The pinned version lives in TWO places — TypeScript for a server Noddle

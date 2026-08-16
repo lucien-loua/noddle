@@ -1,3 +1,4 @@
+// tier: vm
 // Verifies post-deployment monitoring against a REAL service that crash loops.
 //
 // The scenario is the one measured in Phase 0, the one Swarm doesn't catch:

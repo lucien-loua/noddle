@@ -1,3 +1,4 @@
+// tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-e2e.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";

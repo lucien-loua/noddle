@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/proxy-config/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
 import {

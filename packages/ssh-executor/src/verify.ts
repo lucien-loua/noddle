@@ -1,3 +1,4 @@
+// tier: vm
 //   bun  run packages/ssh-executor/src/verify.ts
 //   node --experimental-strip-types packages/ssh-executor/src/verify.ts
 //

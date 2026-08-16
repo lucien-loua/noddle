@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/build-engine/src/verify-build-dir.ts
 //
 // Pure: no VM. `resolveBuildDir` turns a user-supplied string into a `cd`

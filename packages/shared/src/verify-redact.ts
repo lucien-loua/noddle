@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-redact.ts
 //
 // A deployment log is written to disk AND streamed to the dashboard. If a

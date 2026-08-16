@@ -1,4 +1,8 @@
-# VM-free verify suites — the risk net's fast layer.
+# The `pure` verify tier — the risk net's fast layer.
+#
+# The tier a suite belongs to is declared on its first line (`// tier:`) and
+# `vp run -r` collects them across the workspace. Nothing here enumerates
+# files: the previous hand-typed chain was 32 suites out of date.
 #
 # Runs on every push/PR that touches application code. Spike (real VM/host
 # chain) stays separate and still owns infrastructure regressions.
@@ -36,4 +40,4 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run check
-      - run: bun run verify:unit
+      - run: bun run verify:pure

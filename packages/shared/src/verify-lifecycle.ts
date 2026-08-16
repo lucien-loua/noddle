@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-lifecycle.ts
 
 import { check, expectThrows, runVerify } from "@noddle/testing";

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/web/src/verify-webhook-payloads.ts
 //
 // Pure: no database, no VM. What matters here isn't that an open PR gets

@@ -1,3 +1,4 @@
+// tier: vm
 // Deleting a stack, a database, a server — against a REAL VM.
 //
 //   TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-teardown.ts

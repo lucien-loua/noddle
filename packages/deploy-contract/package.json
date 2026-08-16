@@ -10,6 +10,9 @@
     "./queue": "./src/queue.ts",
     "./schedule": "./src/schedule.ts"
   },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
   "dependencies": {
     "bullmq": "catalog:",
     "zod": "catalog:"

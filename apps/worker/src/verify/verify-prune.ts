@@ -1,3 +1,4 @@
+// tier: vm
 // Docker pruning, against a REAL VM and a real Postgres.
 //
 //   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune.ts

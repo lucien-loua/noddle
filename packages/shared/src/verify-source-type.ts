@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-source-type.ts
 //
 // These rules used to live inside a React mutation, where exercising them

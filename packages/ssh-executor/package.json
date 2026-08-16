@@ -10,15 +10,17 @@
     "./keys": "./src/keys.ts"
   },
   "scripts": {
-    "verify": "bun run src/verify.ts"
+    "verify": "bun run src/verify.ts",
+    "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
     "dockerode": "catalog:",
     "ssh2": "catalog:"
   },
   "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*",
     "@types/dockerode": "catalog:",
-    "@types/ssh2": "catalog:",
-    "@noddle/tsconfig": "workspace:*"
+    "@types/ssh2": "catalog:"
   }
 }

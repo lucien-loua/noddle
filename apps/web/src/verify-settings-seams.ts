@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/web/src/verify-settings-seams.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

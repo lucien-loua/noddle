@@ -1,3 +1,4 @@
+// tier: local
 // bun run packages/backup-store/src/verify.ts
 // node packages/backup-store/src/verify.ts
 import { createHash, randomBytes } from "node:crypto";

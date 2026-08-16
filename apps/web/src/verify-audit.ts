@@ -1,3 +1,4 @@
+// tier: local
 //   bun run build && APP_KEY=… DATABASE_URL=… REDIS_URL=… bun run src/verify-audit.ts
 
 import { setTimeout as sleep } from "node:timers/promises";

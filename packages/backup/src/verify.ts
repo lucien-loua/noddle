@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/backup/src/verify.ts
 // node packages/backup/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";

@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-watch-paths.ts
 
 import { check, runVerify } from "@noddle/testing";

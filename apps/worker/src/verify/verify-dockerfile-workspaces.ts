@@ -1,3 +1,4 @@
+// tier: pure
 // bun run apps/worker/src/verify/verify-dockerfile-workspaces.ts
 //
 // Both images copy every workspace manifest before `bun install

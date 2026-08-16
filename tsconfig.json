@@ -11,5 +11,15 @@
   // package that sees the DOM and JSX. Mixing them would make `document`
   // typeable from the worker. The `typecheck` script runs both in sequence.
   "extends": "@noddle/tsconfig/base.json",
-  "include": ["packages/*/src/**/*.ts", "apps/worker/src/**/*.ts"]
+  // `scripts/` is repo-level tooling: it belongs to no package, so nothing
+  // else picks it up — an editor falls back to an inferred config with no
+  // `types` and every `node:` import goes unresolved.
+  "include": [
+    "packages/*/src/**/*.ts",
+    "apps/worker/src/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
 }

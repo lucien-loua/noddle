@@ -1,3 +1,4 @@
+// tier: pure
 //   bun  run packages/notifier/src/verify.ts
 //   node packages/notifier/src/verify.ts
 import { createServer, type Server } from "node:http";

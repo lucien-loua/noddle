@@ -1,3 +1,4 @@
+// tier: pure
 // bun run packages/shared/src/verify-workload.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

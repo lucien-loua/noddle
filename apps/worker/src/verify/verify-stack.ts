@@ -1,3 +1,4 @@
+// tier: vm
 // Compose deployment: a real VM, two services in the SAME file — one built
 // (`build:`), one taken as-is (`image:`) — to prove both of compose.ts's
 // paths against reality, not only against the typecheck. Multi-node
