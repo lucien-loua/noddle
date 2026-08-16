@@ -407,6 +407,13 @@
       "when": 1786853193129,
       "tag": "0057_lazy_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1786877201198,
+      "tag": "0058_short_red_shift",
+      "breakpoints": true
     }
   ]
 }

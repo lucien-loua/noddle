@@ -10,6 +10,7 @@ import {
   parseWebhookPullRequest,
   parseWebhookPush,
   repoSlug,
+  repositoryMatches,
 } from "@/lib/webhook.server";
 
 const gh = (action: string, sameRepo = true) =>
@@ -206,5 +207,57 @@ await runVerify("webhook payloads", () => {
       repoSlug("") === null &&
       repoSlug("https://github.com/") === null &&
       repoSlug("nonsense") === null
+  );
+
+  // ── matching a payload's repository to a service ─────────────────────
+  // The slug above is the FALLBACK. A service picked from a connection
+  // stores the forge's own name, and that is what the payload carries.
+  const picked = {
+    gitRepoFullName: "group/sub/app",
+    gitRepoUrl: "https://gitlab.com/group/sub/app.git",
+  };
+  const byUrl = {
+    gitRepoFullName: null,
+    gitRepoUrl: "https://gitlab.com/group/sub/app.git",
+  };
+
+  check(
+    "a GitLab subgroup matches its path_with_namespace",
+    repositoryMatches(picked, "group/sub/app"),
+    "this is the comparison that silently stopped deploying"
+  );
+  check(
+    "a subgroup service is NOT matched by the truncated slug",
+    !repositoryMatches(picked, "sub/app")
+  );
+  check(
+    "case and stray whitespace do not split one repository in two",
+    repositoryMatches(picked, "  Group/Sub/App  ")
+  );
+
+  check(
+    "a GitHub service matches its full_name",
+    repositoryMatches(
+      {
+        gitRepoFullName: "org/app",
+        gitRepoUrl: "https://github.com/Org/App.git",
+      },
+      "Org/App"
+    )
+  );
+
+  // Without a stored name both sides reduce to a slug — reducing the
+  // PAYLOAD too is what keeps the by-URL case symmetric.
+  check(
+    "a by-URL subgroup service still matches, via both sides reducing",
+    repositoryMatches(byUrl, "group/sub/app")
+  );
+  check(
+    "a by-URL service does not match a different repository",
+    !repositoryMatches(byUrl, "group/sub/other")
+  );
+  check(
+    "a service with neither name nor URL matches nothing",
+    !repositoryMatches({ gitRepoFullName: null, gitRepoUrl: null }, "org/app")
   );
 });

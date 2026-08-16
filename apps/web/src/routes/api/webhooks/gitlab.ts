@@ -10,7 +10,7 @@ import { destroyPreview, ensurePreview } from "@/lib/preview.server";
 import {
   parseWebhookPullRequest,
   parseWebhookPush,
-  repoSlug,
+  repositoryMatches,
 } from "@/lib/webhook.server";
 
 /**
@@ -48,8 +48,8 @@ export const Route = createFileRoute("/api/webhooks/gitlab")({
             isNotNull(services.gitRepoUrl)
           ),
         });
-        const matching = targets.filter(
-          (s) => repoSlug(s.gitRepoUrl) === repository
+        const matching = targets.filter((s) =>
+          repositoryMatches(s, repository)
         );
         if (matching.length === 0) {
           return Response.json({ ignored: `no service for ${repository}` });

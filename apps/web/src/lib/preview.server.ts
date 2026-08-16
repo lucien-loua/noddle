@@ -163,6 +163,7 @@ async function createPreview(
       environmentId,
       gitBranch: opts.headBranch,
       gitProviderId: parent.gitProviderId,
+      gitRepoFullName: parent.gitRepoFullName,
       gitRepoUrl: parent.gitRepoUrl,
       // A preview builds the same repository: without this, a parent with
       // submodules builds and its PR does not.

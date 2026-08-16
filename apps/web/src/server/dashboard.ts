@@ -68,6 +68,7 @@ export interface ServiceRow {
   gitBranch: string | null;
   /** Connected forge this service clones through. `null` = clone by URL. */
   gitProviderId: string | null;
+  gitRepoFullName: string | null;
   gitRepoUrl: string | null;
   gitSubmodules: boolean;
   id: string;
@@ -185,6 +186,7 @@ interface ServiceJoined {
   environmentId: string;
   gitBranch: string | null;
   gitProviderId: string | null;
+  gitRepoFullName: string | null;
   gitRepoUrl: string | null;
   gitSubmodules: boolean;
   id: string;
@@ -228,6 +230,7 @@ function toServiceRow(
     environmentId: service.environmentId,
     gitBranch: service.gitBranch,
     gitProviderId: service.gitProviderId,
+    gitRepoFullName: service.gitRepoFullName,
     gitRepoUrl: service.gitRepoUrl,
     gitSubmodules: service.gitSubmodules,
     id: service.id,

@@ -142,6 +142,12 @@ export const serviceGitProviderSchema = z.object({
   gitBranch: gitBranchSchema,
   /** `null` = clone by URL rather than through a connected forge. */
   gitProviderId: z.union([z.uuid(), z.null()]),
+  /**
+   * The forge's own `owner/name`, set only when the repository was picked
+   * from a connection. `null` when the URL was typed — nothing then knows
+   * the forge's spelling of it.
+   */
+  gitRepoFullName: z.union([z.string().max(512), z.null()]),
   gitRepoUrl: optionalGitRepoUrl,
   gitSubmodules: z.boolean(),
   watchPaths: watchPathsSchema,
@@ -295,6 +301,7 @@ export const updateServiceSettingsSchema = z.object({
   dockerImage: optionalDockerImage.optional(),
   gitBranch: gitBranchSchema.optional(),
   gitProviderId: z.union([z.uuid(), z.null()]).optional(),
+  gitRepoFullName: z.union([z.string().max(512), z.null()]).optional(),
   gitRepoUrl: optionalGitRepoUrl.optional(),
   gitSubmodules: z.boolean().optional(),
   publishDirectory: optionalPublishDirectory.optional(),

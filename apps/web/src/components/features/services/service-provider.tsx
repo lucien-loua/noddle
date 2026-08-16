@@ -387,7 +387,7 @@ function ProviderRepositoryField({
   /** The tab this field belongs to. Only its own forge is offered. */
   forge: "github" | "gitlab";
   onBranchChange: (next: string) => void;
-  onPick: (repoUrl: string, defaultBranch: string) => void;
+  onPick: (repo: ProviderRepo) => void;
   onProviderChange: (next: string | null) => void;
   providerId: string | null;
   repoUrl: string;
@@ -413,7 +413,7 @@ function ProviderRepositoryField({
   const handleRepo = useCallback(
     (next: ProviderRepo | null) => {
       if (next) {
-        onPick(next.url, next.defaultBranch);
+        onPick(next);
       }
     },
     [onPick]
@@ -547,6 +547,10 @@ function GitSourceForm({
           // the connection, otherwise a service keeps cloning through a
           // forge the screen no longer shows.
           gitProviderId: sourceType === "git" ? null : value.gitProviderId,
+          // Dropped along with the connection on the custom tab: a typed URL
+          // carries no forge name, and a stale one would match the wrong
+          // repository's pushes.
+          gitRepoFullName: sourceType === "git" ? null : value.gitRepoFullName,
           gitRepoUrl: value.gitRepoUrl,
           gitSubmodules: value.gitSubmodules,
           serviceId: service.id,
@@ -565,6 +569,7 @@ function GitSourceForm({
     deployKeyId: service.deployKeyId,
     gitBranch: service.gitBranch ?? "main",
     gitProviderId: service.gitProviderId,
+    gitRepoFullName: service.gitRepoFullName,
     gitRepoUrl: service.gitRepoUrl ?? "",
     gitSubmodules: service.gitSubmodules,
     watchPaths: service.watchPaths,
@@ -585,6 +590,7 @@ function GitSourceForm({
     service.deployKeyId,
     service.gitBranch,
     service.gitProviderId,
+    service.gitRepoFullName,
     service.gitRepoUrl,
     service.gitSubmodules,
     service.watchPaths,
@@ -596,9 +602,14 @@ function GitSourceForm({
   // far more often than whatever the previous repository used, and a stale
   // branch here fails the clone rather than the save.
   const handlePick = useCallback(
-    (url: string, defaultBranch: string) => {
-      form.setFieldValue("gitRepoUrl", url);
-      form.setFieldValue("gitBranch", defaultBranch);
+    (repo: ProviderRepo) => {
+      form.setFieldValue("gitRepoUrl", repo.url);
+      // The forge's own name for the repository, which is what its webhook
+      // payload carries. Recorded at the pick because it is the only moment
+      // Noddle is told it — deriving it from the URL afterwards cannot work
+      // across forges.
+      form.setFieldValue("gitRepoFullName", repo.fullName);
+      form.setFieldValue("gitBranch", repo.defaultBranch);
     },
     [form]
   );

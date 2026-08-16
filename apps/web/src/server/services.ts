@@ -23,6 +23,7 @@ interface ServiceSettingsPatch {
   dockerImage?: string | null;
   gitBranch?: string;
   gitProviderId?: string | null;
+  gitRepoFullName?: string | null;
   gitRepoUrl?: string | null;
   gitSubmodules?: boolean;
   publishDirectory?: string | null;
@@ -46,6 +47,7 @@ const DIRECT = [
   "deployKeyId",
   "gitBranch",
   "gitProviderId",
+  "gitRepoFullName",
   "gitSubmodules",
   "sourceType",
   "watchPaths",

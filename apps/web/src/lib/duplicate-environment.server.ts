@@ -62,6 +62,11 @@ export async function copyEnvironment(
         dockerImage: s.dockerImage,
         environmentId: target.id,
         gitBranch: s.gitBranch,
+        // The connection travels with the repository. Without it the clone
+        // silently falls back to anonymous, which fails only for a private
+        // repository and only at the first deploy of the copy.
+        gitProviderId: s.gitProviderId,
+        gitRepoFullName: s.gitRepoFullName,
         gitRepoUrl: s.gitRepoUrl,
         name: s.name,
         port: s.port,

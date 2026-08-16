@@ -240,3 +240,31 @@ export function repoSlug(url: string | null | undefined): string | null {
   }
   return `${parts.at(-2)}/${parts.at(-1)}`.toLowerCase();
 }
+
+/**
+ * Does this service deploy the repository the payload names?
+ *
+ * Two ways, and which one applies is decided by what the service knows:
+ *
+ * A service picked from a connection stored `gitRepoFullName` — the forge's
+ * own name for the repository, the same string the payload carries. Those
+ * are compared directly, because both sides hold the identifier rather than
+ * a guess at it.
+ *
+ * A service that clones by URL has no such name, so both sides are reduced
+ * to a slug instead. Reducing the PAYLOAD too is what makes it symmetric:
+ * comparing `repoSlug(url)` against a raw `path_with_namespace` is how a
+ * GitLab subgroup silently stopped matching — `group/sub/app` is never
+ * equal to `sub/app`.
+ */
+export function repositoryMatches(
+  service: { gitRepoFullName: string | null; gitRepoUrl: string | null },
+  payloadRepository: string
+): boolean {
+  const full = service.gitRepoFullName?.trim().toLowerCase();
+  if (full) {
+    return full === payloadRepository.trim().toLowerCase();
+  }
+  const slug = repoSlug(service.gitRepoUrl);
+  return slug !== null && slug === repoSlug(payloadRepository);
+}

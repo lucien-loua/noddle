@@ -90,6 +90,20 @@ export const services = pgTable(
     gitProviderId: uuid("git_provider_id").references(() => gitProviders.id, {
       onDelete: "set null",
     }),
+    /**
+     * `owner/name` as the FORGE spells it, recorded when the repository is
+     * picked from a connection.
+     *
+     * A webhook payload names its repository this way, and deriving the same
+     * string from `git_repo_url` does not work across forges: GitHub's
+     * `full_name` is always two segments, a GitLab subgroup path is not, so
+     * one normalisation cannot serve both. Matching on the identifier both
+     * sides already hold removes the guess.
+     *
+     * `null` for a service that clones by URL — those still match on the
+     * slug derived from the URL, which is all either side has.
+     */
+    gitRepoFullName: text("git_repo_full_name"),
     gitRepoUrl: text("git_repo_url"),
 
     /** `--recurse-submodules` on clone. */
