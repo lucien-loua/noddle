@@ -180,7 +180,7 @@ export const testRegistry = createServerFn({ method: "POST" })
 
 export const saveRegistry = createServerFn({ method: "POST" })
   .validator(registrySchema)
-  .handler(async ({ data }): Promise<{ ok: true }> => {
+  .handler(async ({ data }): Promise<{ id: string; ok: true }> => {
     const guarded = await runGuarded({
       permission: { action: "create", resource: "registry" },
       run: async () => {
@@ -225,7 +225,10 @@ export const saveRegistry = createServerFn({ method: "POST" })
       // The registry, never its password.
       target: ({ result }) => ({ id: result.id, name: data.name }),
     });
-    return { ok: guarded.ok };
+    // The id goes back to the caller: the Docker provider tab creates a
+    // registry and links it to the service in one move, and it cannot look
+    // the row up by name without racing another rename.
+    return { id: guarded.id, ok: guarded.ok };
   });
 
 export const deleteRegistry = createServerFn({ method: "POST" })

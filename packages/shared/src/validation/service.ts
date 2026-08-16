@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BRANCH_FORBIDDEN_CHARS, GIT_SSH_URL, HTTPS_URL } from "./common.ts";
 import { environmentNameSchema, projectNameSchema } from "./project.ts";
+import { registrySchema } from "./registry.ts";
 
 /**
  * The name becomes a Swarm service name and a Traefik router name. Neither
@@ -146,9 +147,61 @@ export const serviceGitProviderSchema = z.object({
   watchPaths: watchPathsSchema,
 });
 
-export const serviceDockerProviderSchema = z.object({
-  dockerImage: optionalDockerImage,
-});
+/** `registryChoice` when the Docker tab is creating a registry inline. */
+export const NEW_REGISTRY = "new";
+/** `registryChoice` for the registry that came with the installation. */
+export const BUILT_IN_REGISTRY = "";
+
+/**
+ * The Docker tab, which is a registry choice as much as an image.
+ *
+ * The credentials are NOT stored on the service: they create a `registries`
+ * row, encrypted once and reusable, and the service keeps only its id. So
+ * these fields are a creation form, not columns — which is why they are
+ * validated only while `registryChoice` is NEW_REGISTRY.
+ *
+ * Flat rather than a nested object or a discriminated union: the form binds
+ * one path per field, and a field cannot bind through a branch that is null
+ * half the time.
+ */
+export const serviceDockerProviderSchema = z
+  .object({
+    dockerImage: optionalDockerImage,
+    /** "" = built-in, NEW_REGISTRY = create one here, otherwise a uuid. */
+    registryChoice: z.string(),
+    registryName: z.string(),
+    registryPassword: z.string(),
+    registryUrl: z.string(),
+    registryUsername: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.registryChoice !== NEW_REGISTRY) {
+      return;
+    }
+    // Borrowed from registrySchema rather than restated: the wording of
+    // these messages is deliberate, and two copies would drift.
+    const borrowed = [
+      ["registryName", registrySchema.shape.name],
+      ["registryUrl", registrySchema.shape.registryUrl],
+      ["registryUsername", registrySchema.shape.username],
+    ] as const;
+    for (const [path, schema] of borrowed) {
+      const parsed = schema.safeParse(value[path]);
+      const message = parsed.success ? null : parsed.error.issues[0]?.message;
+      if (message) {
+        ctx.addIssue({ code: "custom", message, path: [path] });
+      }
+    }
+    // registrySchema allows an empty password because an UPDATE means "keep
+    // the stored one". There is nothing stored yet here.
+    if (value.registryPassword.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "The registry needs a password or token.",
+        path: ["registryPassword"],
+      });
+    }
+  });
 
 export const serviceProviderSchema = serviceGitProviderSchema;
 

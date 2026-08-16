@@ -1,6 +1,8 @@
 import {
+  BUILT_IN_REGISTRY,
   type GitSourceType,
   isGitSourceType,
+  NEW_REGISTRY,
   type ServiceDockerProviderInput,
   type ServiceGitProviderInput,
   serviceDockerProviderSchema,
@@ -75,6 +77,7 @@ import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import type { ServiceRow } from "@/server/dashboard";
+import { saveRegistry, setServiceRegistry } from "@/server/registries";
 import { updateServiceSettings } from "@/server/services";
 
 type ProviderTab = GitSourceType | "docker";
@@ -99,6 +102,12 @@ function selectProviderId(state: {
   values: { gitProviderId: string | null };
 }): string | null {
   return state.values.gitProviderId;
+}
+
+function selectRegistryChoice(state: {
+  values: { registryChoice: string };
+}): string {
+  return state.values.registryChoice;
 }
 
 function isProviderTab(value: string): value is ProviderTab {
@@ -734,17 +743,46 @@ function DockerSourceForm({
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  const registries = useQuery({
+    ...queries.registryOptions(),
+    enabled: canEdit,
+  });
+
   const save = useMutation({
-    mutationFn: (value: ServiceDockerProviderInput) =>
-      updateServiceSettings({
+    mutationFn: async (value: ServiceDockerProviderInput) => {
+      // Creating the registry FIRST: the service must never end up pointing
+      // at a registry that failed to save, and `saveRegistry` hands back the
+      // id so there is no lookup by name to race.
+      let registryId: string | null = null;
+      if (value.registryChoice === NEW_REGISTRY) {
+        const created = await saveRegistry({
+          data: {
+            imagePrefix: "",
+            name: value.registryName,
+            password: value.registryPassword,
+            registryUrl: value.registryUrl,
+            username: value.registryUsername,
+          },
+        });
+        registryId = created.id;
+      } else if (value.registryChoice !== BUILT_IN_REGISTRY) {
+        registryId = value.registryChoice;
+      }
+
+      await updateServiceSettings({
         data: {
           buildMethod: "image",
           dockerImage: value.dockerImage,
           serviceId: service.id,
           sourceType: "docker_image",
         },
-      }),
+      });
+      await setServiceRegistry({
+        data: { registryId, serviceId: service.id },
+      });
+    },
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["registry-options"] });
       await cache.service(queryClient, service.id);
       await router.invalidate();
     },
@@ -752,6 +790,11 @@ function DockerSourceForm({
 
   const defaultValues: ServiceDockerProviderInput = {
     dockerImage: service.dockerImage ?? "",
+    registryChoice: service.registryId ?? BUILT_IN_REGISTRY,
+    registryName: "",
+    registryPassword: "",
+    registryUrl: "",
+    registryUsername: "",
   };
 
   const form = useAppForm({
@@ -767,19 +810,83 @@ function DockerSourceForm({
 
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
 
+  const registryItems = [
+    { label: "Built-in registry", value: BUILT_IN_REGISTRY },
+    ...(registries.data ?? []).map((r) => ({ label: r.name, value: r.id })),
+    { label: "Add a registry…", value: NEW_REGISTRY },
+  ];
+
   return (
     <>
       <FieldGroup>
         <form.AppField name="dockerImage">
           {(f) => (
             <f.FieldText
-              description="Image Swarm pulls on the next Deploy, for example nginx:alpine. A private registry is chosen under Advanced."
+              description="Image Swarm pulls on the next Deploy, for example nginx:alpine."
               disabled={!canEdit}
               label="Docker image"
               placeholder="nginx:alpine"
             />
           )}
         </form.AppField>
+
+        <form.AppField name="registryChoice">
+          {(f) => (
+            <f.FieldSelect
+              description="Where Swarm signs in to pull this image. The built-in one needs no credentials."
+              disabled={!canEdit}
+              label="Registry"
+              options={registryItems}
+            />
+          )}
+        </form.AppField>
+
+        {/* Only while creating. These are the fields of a `registries` row,
+            shown here so adding a private registry does not send the user to
+            another screen mid-task — the credentials still land encrypted in
+            that shared table, never on the service. */}
+        <form.Subscribe selector={selectRegistryChoice}>
+          {(choice) =>
+            choice === NEW_REGISTRY ? (
+              // A nested FieldGroup and not a bare <div>: the grid has to sit
+              // on something that still gives each field its own label spacing.
+              <FieldGroup className="grid gap-x-6 gap-y-7 sm:grid-cols-2">
+                <form.AppField name="registryName">
+                  {(f) => (
+                    <f.FieldText
+                      description="What you will pick from when deploying another service."
+                      disabled={!canEdit}
+                      label="Name"
+                      placeholder="ghcr"
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="registryUrl">
+                  {(f) => (
+                    <f.FieldText
+                      description="The hostname only — no https:// and no path. A port is allowed."
+                      disabled={!canEdit}
+                      label="Registry host"
+                      placeholder="ghcr.io"
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="registryUsername">
+                  {(f) => <f.FieldText disabled={!canEdit} label="Username" />}
+                </form.AppField>
+                <form.AppField name="registryPassword">
+                  {(f) => (
+                    <f.FieldPassword
+                      autoComplete="new-password"
+                      disabled={!canEdit}
+                      label="Password or token"
+                    />
+                  )}
+                </form.AppField>
+              </FieldGroup>
+            ) : null
+          }
+        </form.Subscribe>
       </FieldGroup>
 
       {save.isError ? (

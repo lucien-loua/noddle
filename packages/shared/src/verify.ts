@@ -167,13 +167,32 @@ function verifyNameSchemas(): void {
     ko("inconsistent serviceGitProviderSchema");
   }
 
+  const builtInRegistry = {
+    registryChoice: "",
+    registryName: "",
+    registryPassword: "",
+    registryUrl: "",
+    registryUsername: "",
+  };
   if (
     dockerImageSchema.safeParse("nginx:alpine").success &&
     dockerImageSchema.safeParse("ghcr.io/org/app:1.2.3").success &&
     !dockerImageSchema.safeParse("nginx alpine").success &&
-    serviceDockerProviderSchema.safeParse({ dockerImage: "" }).success &&
-    serviceDockerProviderSchema.safeParse({ dockerImage: "nginx:alpine" })
-      .success
+    serviceDockerProviderSchema.safeParse({
+      ...builtInRegistry,
+      dockerImage: "",
+    }).success &&
+    serviceDockerProviderSchema.safeParse({
+      ...builtInRegistry,
+      dockerImage: "nginx:alpine",
+    }).success &&
+    // The registry fields are only validated while creating one, so the
+    // built-in choice must not drag a half-filled credentials form with it.
+    !serviceDockerProviderSchema.safeParse({
+      ...builtInRegistry,
+      dockerImage: "nginx:alpine",
+      registryChoice: "new",
+    }).success
   ) {
     ok("serviceDockerProviderSchema accepts a published image or empty");
   } else {
