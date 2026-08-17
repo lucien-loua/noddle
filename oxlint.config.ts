@@ -140,7 +140,7 @@ export default defineConfig({
     "promise/prefer-await-to-then": "off",
     // `== null` is ONE check for null-or-undefined, used deliberately here.
     // `eqeqeq` and `no-eq-null` together forbid exactly that idiom.
-    "eqeqeq": "off",
+    eqeqeq: "off",
     "no-eq-null": "off",
     // The comments this flags are the ones CLAUDE.md asks for — the "why"
     // next to the line it explains.
