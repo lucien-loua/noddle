@@ -46,7 +46,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = TARGET.privateKey;
+const {privateKey} = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-e2e", privateKey);
 const domain = `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
 
@@ -59,7 +59,7 @@ try {
   // allowlist; `ext::` is not — and that is the point.
   await exec(
     ssh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$TARGET.user" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' '{"name":"e2e","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("e2e "+(process.env.GREETING||"?"))).listen(p)' > s.js && ` +

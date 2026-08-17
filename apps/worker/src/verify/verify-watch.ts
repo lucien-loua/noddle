@@ -67,7 +67,7 @@ const step = (m: string) => console.log(`    ${m}`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = TARGET.privateKey;
+const {privateKey} = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-watch", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -93,7 +93,7 @@ try {
 
   await exec(
     ssh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$TARGET.user" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && printf '%s' '{"name":"w","scripts":{"start":"node s.js"}}' > package.json && ` +
       "git init -q -b main . && git config user.email w@x && git config user.name w"
   );

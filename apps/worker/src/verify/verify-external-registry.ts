@@ -62,7 +62,7 @@ const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = MANAGER.privateKey;
+const {privateKey} = MANAGER;
 const sshKeyId = await seedSshKey(db, appKey, "verify-external", privateKey);
 const extPassword = randomBytes(16).toString("hex");
 const extHost = `${MANAGER.host}:${EXT_PORT}`;
@@ -237,7 +237,7 @@ try {
   step("Deploy to the external registry");
   await exec(
     workerSsh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' '{"name":"ext","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("external hello")).listen(p)' > s.js && ` +

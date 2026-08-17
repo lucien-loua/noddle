@@ -59,7 +59,7 @@ const ko = (m: string) => {
 
 const appKey = loadAppKey(process.env.APP_KEY);
 const db = createDatabase({ url: DB_URL });
-const privateKey = TARGET.privateKey;
+const {privateKey} = TARGET;
 
 async function docker(
   client: SshClient,

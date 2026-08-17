@@ -212,7 +212,7 @@ try {
   const remoteScript = [
     `sudo rm -rf '${ORIGIN}'`,
     `sudo mkdir -p '${ORIGIN}'`,
-    `sudo chown -R "$TARGET.user" '${ORIGIN}'`,
+    `sudo chown -R "$USER" '${ORIGIN}'`,
     `cd '${ORIGIN}'`,
     `printf '%s' '{"name":"webhook","scripts":{"start":"node s.js"}}' > package.json`,
     `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("webhook hello")).listen(p)' > s.js`,

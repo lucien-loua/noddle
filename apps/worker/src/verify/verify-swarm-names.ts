@@ -56,7 +56,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = TARGET.privateKey;
+const {privateKey} = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-swarm-names", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;

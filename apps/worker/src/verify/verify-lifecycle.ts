@@ -44,7 +44,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = TARGET.privateKey;
+const {privateKey} = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-lifecycle", privateKey);
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -98,7 +98,7 @@ try {
   // Staging: a minimal HTTP-served repo, like verify-e2e.
   await exec(
     ssh,
-    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$TARGET.user" ${ORIGIN} && ` +
+    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN} && ` +
       // A NODE server, not `python3 -m http.server`: a railpack image for a
       // Node project does not ship python3, and the task exited 127
       // (command not found) — faulty staging that blamed the code.

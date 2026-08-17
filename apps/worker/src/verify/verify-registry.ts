@@ -88,7 +88,7 @@ const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = MANAGER.privateKey;
+const {privateKey} = MANAGER;
 const sshKeyId = await seedSshKey(db, appKey, "verify-registry", privateKey);
 const registryPassword = randomBytes(16).toString("hex");
 const domain = `${SERVICE_NAME}.${MANAGER.host.replaceAll(".", "-")}.sslip.io`;
@@ -324,7 +324,7 @@ try {
   step("Deployment: built on the worker, pushed, not pinned");
   await exec(
     workerSsh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' '{"name":"reg","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
@@ -649,7 +649,7 @@ try {
 
   await exec(
     managerSsh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
       'printf \'FROM node:24-slim\\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\\nWORKDIR /app\\nCOPY . .\\nCMD ["node","s.js"]\\n\' > Dockerfile && ' +

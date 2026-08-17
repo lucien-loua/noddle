@@ -150,7 +150,7 @@ try {
   const origin = `${WORK}/origin`;
   await exec(
     client,
-    `sudo rm -rf ${quoteArg(WORK)} && sudo mkdir -p ${quoteArg(origin)} && sudo chown -R "$TARGET.user" ${quoteArg(WORK)} && ` +
+    `sudo rm -rf ${quoteArg(WORK)} && sudo mkdir -p ${quoteArg(origin)} && sudo chown -R "$USER" ${quoteArg(WORK)} && ` +
       `cd ${quoteArg(origin)} && ` +
       `printf '{"name":"v","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf 'require("http").createServer((q,r)=>r.end("ok")).listen(3000)' > s.js && ` +

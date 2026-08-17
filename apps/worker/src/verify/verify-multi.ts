@@ -57,7 +57,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = MANAGER.privateKey;
+const {privateKey} = MANAGER;
 const sshKeyId = await seedSshKey(db, appKey, "verify-multi", privateKey);
 const domain = `${SERVICE_NAME}.${WORKER.host.replaceAll(".", "-")}.sslip.io`;
 
@@ -164,7 +164,7 @@ try {
   try {
     await exec(
       workerSsh,
-      `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
+      `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
         `cd ${quoteArg(ORIGIN)} && ` +
         `printf '%s' '{"name":"multi","scripts":{"start":"node s.js"}}' > package.json && ` +
         `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("multi hello")).listen(p)' > s.js && ` +
