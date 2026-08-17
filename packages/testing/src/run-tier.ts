@@ -48,6 +48,23 @@ const RED = "\u001B[31m";
 const GREEN = "\u001B[32m";
 const BOLD = "\u001B[1m";
 const DIM = "\u001B[2m";
+
+/**
+ * One value for every suite, deliberately not declarable per file.
+ *
+ * A suite CAN hang: verify-volume-restore sat for 30 minutes at 0% CPU with
+ * the VM idle and S3 answering — it holds no timeout of its own, and neither
+ * does any of the other 23. One hang stalls the whole tier, and in CI it
+ * would spend the job's entire budget without producing a single diagnostic.
+ * Killing it by hand is what destroyed the results of five suites that had
+ * already run.
+ *
+ * 15 minutes is far above anything measured — the longest legitimate suite,
+ * verify-lifecycle, does a full Railpack build in a few. If one ever needs
+ * more for a good reason, that day there will be two cases and the seam will
+ * be real. Not before.
+ */
+const SUITE_TIMEOUT_MS = 15 * 60 * 1000;
 const OFF = "\u001B[0m";
 
 function walk(dir: string, found: string[] = []): string[] {
@@ -99,13 +116,29 @@ if (suites.length === 0) {
 }
 
 const failures: string[] = [];
+const timedOut: string[] = [];
 for (const path of suites) {
   const name = relative(cwd, path);
   const runtime =
     readFileSync(path, "utf-8").match(RUNTIME_HEADER)?.[1] ?? RUNTIME[tier];
   process.stdout.write(`\n${BOLD}${name}${OFF} ${DIM}(${runtime})${OFF}\n`);
-  const { status } = spawnSync(runtime, [path], { stdio: "inherit" });
-  if (status !== 0) {
+  const started = Date.now();
+  const { signal, status } = spawnSync(runtime, [path], {
+    killSignal: "SIGKILL",
+    stdio: "inherit",
+    timeout: SUITE_TIMEOUT_MS,
+  });
+  // A timeout kills the child, so there is no exit code — only a signal.
+  // Named as such rather than reported as a plain failure: "it hung" and
+  // "it asserted false" call for entirely different next steps.
+  if (signal) {
+    const minutes = Math.round((Date.now() - started) / 60_000);
+    process.stdout.write(
+      `\n  ${RED}✗ timed out after ${minutes}m${OFF} — killed, the tier continues\n`
+    );
+    timedOut.push(name);
+    failures.push(name);
+  } else if (status !== 0) {
     failures.push(name);
   }
 }
@@ -120,6 +153,7 @@ process.stdout.write(
   `\n${RED}${BOLD}${tier}: ${failures.length} of ${suites.length} suites failed${OFF}\n`
 );
 for (const name of failures) {
-  process.stdout.write(`  ${RED}✗${OFF} ${name}\n`);
+  const why = timedOut.includes(name) ? ` ${DIM}(timed out)${OFF}` : "";
+  process.stdout.write(`  ${RED}✗${OFF} ${name}${why}\n`);
 }
 process.exit(1);
