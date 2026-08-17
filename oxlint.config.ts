@@ -58,5 +58,33 @@ export default defineConfig({
     // dressed as a cleanup. Turn them back on the day the compiler lands.
     "react-doctor/react-compiler-no-manual-memoization": "off",
     "react/react-compiler": "off",
+
+    // The ssh2 / dockerode seam is built ON these. `connect()` bridges an
+    // EventEmitter to a promise, which is what `new Promise` is for and the
+    // only thing that does it; the executor also wraps callback APIs by
+    // necessity, not by preference. See ADR-0015 and ssh-executor/index.ts.
+    "promise/avoid-new": "off",
+    "promise/param-names": "off",
+    "promise/prefer-await-to-callbacks": "off",
+
+    // Off: the `async` is a SIGNATURE, not an intention. TanStack Start's
+    // `createServerFn().handler()` types its argument as async, so every
+    // handler that delegates without awaiting trips this.
+    "require-await": "off",
+
+    // Off, and this is the rule the repo had already answered: 144
+    // `biome-ignore` comments across 79 files document sequential awaits as
+    // deliberate — polling a server's startup, running cleanups in order,
+    // deploy steps that must not race. In infrastructure code the sequence
+    // IS the logic. Those comments went inert with the switch; this keeps
+    // their decision in force from one place.
+    "no-await-in-loop": "off",
+    "react-doctor/async-await-in-loop": "off",
+
+    // Off: every regex here reads ASCII the tooling produced — docker
+    // output, YAML keys, install.sh text. The `u` flag buys nothing against
+    // that and turns some existing escapes into syntax errors.
+    "require-unicode-regexp": "off",
+    "prefer-named-capture-group": "off",
   },
 });
