@@ -138,7 +138,7 @@ Scope of the constraint: **only `dockerode` is affected.** `postgres.js` and Dri
 
 Two constraints that follow, both already cost time:
 
-- **No TypeScript parameter properties** (`constructor(private readonly x: T)`) in code the worker loads. Node's strip-only type stripping refuses them — it removes types, it does not transform. Biome flags them too.
+- **No TypeScript parameter properties** (`constructor(private readonly x: T)`) in code the worker loads. Node's strip-only type stripping refuses them — it removes types, it does not transform. Oxlint flags them too.
 - **An ssh2 `Channel` is a `Duplex`, not a `net.Socket`.** Node's HTTP agent calls `setKeepAlive`/`setNoDelay`/`ref` on whatever `createConnection` returns, and the failure surfaces as an unreadable `TypeError` from inside `node:_http_agent`. The executor stubs the missing methods and disables agent keep-alive.
 
 **The worker loads its code once, at startup.** It is a separate process from `web`, so a change to `build-engine`, `ssh-executor` or `deploy.ts` does nothing until it is restarted — the dashboard rebuild does not carry it. Three separate symptoms in one session traced back to this, each looking like the fix had failed rather than never having run. `bun run --cwd apps/worker dev` uses `node --watch`, which does reload.
@@ -250,7 +250,9 @@ The design system is deliberately constrained. Treat these as limits, not defaul
 
 ## Code standards
 
-Enforced mechanically by Biome via Ultracite — `bun run check` / `bun run fix`. The prose reference lives in `AGENTS.md` at the repo root; it is not repeated here. Domain decisions live in `CONTEXT.md` and `docs/adr/`, not in this file.
+Enforced mechanically by **oxlint** (rules) and **oxfmt** (formatting), both driven by Ultracite — `bun run check` / `bun run fix`.
+
+Task orchestration is Vite+ (`vp run -r <task>`), which is a separate concern: it schedules the per-package scripts and does NOT read `oxlint.config.ts`. Measured — turning a rule back on there produced nothing under `vp lint`. Lint config belongs to Ultracite, task config to Vite+. The prose reference lives in `AGENTS.md` at the repo root; it is not repeated here. Domain decisions live in `CONTEXT.md` and `docs/adr/`, not in this file.
 
 # Ultracite Code Standards
 

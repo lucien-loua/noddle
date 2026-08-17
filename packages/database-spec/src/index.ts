@@ -461,5 +461,5 @@ export function reservedEnvKeys(
       secretPath: secretPathFor(engine),
     })
     .map((entry) => entry.slice(0, entry.indexOf("=")))
-    .sort();
+    .toSorted();
 }

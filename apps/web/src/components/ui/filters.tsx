@@ -730,9 +730,14 @@ const createOperatorsFromI18n = (i18n: FilterI18nConfig): OperatorSets => ({
   ],
 });
 
-// Default operators for different field types (using default i18n)
-export const DEFAULT_OPERATORS: Record<string, FilterOperator[]> =
-  createOperatorsFromI18n(DEFAULT_I18N);
+// Default operators for different field types (using default i18n).
+//
+// Typed as `OperatorSets`, not `Record<string, FilterOperator[]>`: an
+// interface has no implicit index signature, so the wider annotation stops
+// compiling the moment the linter turns the type alias into an interface —
+// which it does. The narrow type is the accurate one anyway; nothing indexes
+// this with a string that is not one of the four field kinds.
+export const DEFAULT_OPERATORS: OperatorSets = createOperatorsFromI18n(DEFAULT_I18N);
 
 // Helper function to get operators for a field
 const getOperatorsForField = <T = unknown,>(
