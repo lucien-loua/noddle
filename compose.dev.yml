@@ -89,6 +89,23 @@ services:
       - "127.0.0.1:59001:9001"
     volumes:
       - rustfs-data:/data
+    healthcheck:
+      # `--wait` only waits for services that DECLARE a healthcheck. Without
+      # one, the bucket seeding ran against a port nothing was listening on.
+      #
+      # Command substitution, never `wget … | grep -q`: under pipefail the
+      # grep exits at the first match, the producer takes SIGPIPE, and the
+      # pipeline fails intermittently — a race this project already paid for
+      # in Phase 0. And 403 is the HEALTHY answer here: S3 wants a signature,
+      # so what is checked is that something HTTP replies at all.
+      test:
+        [
+          "CMD-SHELL",
+          'case "$$(wget -S -O /dev/null http://127.0.0.1:9000/ 2>&1)" in *HTTP*) exit 0 ;; *) exit 1 ;; esac',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   postgres-data:
