@@ -40,5 +40,23 @@ export default defineConfig({
     // test. Dropping it does not simplify anything: it produces
     // "Expected 2 arguments, but got 1", silently, on every save.
     "unicorn/no-useless-undefined": "off",
+
+    // Off: contradicts AGENTS.md ("arrow functions for CALLBACKS and short
+    // functions") and 89% of the codebase — 952 declarations against 122
+    // expressions. 1226 findings, all of them style, none of them a defect.
+    "func-style": "off",
+
+    // Follows from the above: function declarations are hoisted, so using one
+    // above its definition is not a hazard. 135 findings, all downstream of a
+    // rule already turned off.
+    "no-use-before-define": "off",
+
+    // Off because the premise is absent: React Compiler is NOT enabled here
+    // (nothing in apps/web/vite.config.ts or its dependencies). These rules
+    // ask for manual memoization to be REMOVED on the grounds the compiler
+    // will redo it — with no compiler, that is a performance regression
+    // dressed as a cleanup. Turn them back on the day the compiler lands.
+    "react-doctor/react-compiler-no-manual-memoization": "off",
+    "react/react-compiler": "off",
   },
 });
