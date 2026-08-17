@@ -70,11 +70,18 @@ function SettingsListBody({ children }: { children: ReactNode }) {
 function SettingsListFrame({
   children,
   description,
+  /**
+   * `false` when the children are ALREADY panels — a list of ResourceCards,
+   * for instance. Wrapping a panel in a panel draws its border twice, which
+   * is what the servers list showed.
+   */
+  panel = true,
   panelClassName,
   title,
 }: {
   children: ReactNode;
   description: ReactNode;
+  panel?: boolean;
   panelClassName?: string;
   title: ReactNode;
 }) {
@@ -88,7 +95,13 @@ function SettingsListFrame({
         <FrameTitle>{title}</FrameTitle>
         <FrameDescription>{description}</FrameDescription>
       </FrameHeader>
-      <FramePanel className={cn("p-0", panelClassName)}>{children}</FramePanel>
+      {panel ? (
+        <FramePanel className={cn("p-0", panelClassName)}>
+          {children}
+        </FramePanel>
+      ) : (
+        children
+      )}
     </Frame>
   );
 }

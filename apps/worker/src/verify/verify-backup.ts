@@ -1,9 +1,6 @@
 // tier: vm
 // node apps/worker/src/verify/verify-backup.ts
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import {
   backupObjectKey,

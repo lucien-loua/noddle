@@ -4,9 +4,6 @@
 //
 // Targets a real VM, not a mock. The default target is the spike's.
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { devTarget } from "@noddle/testing/dev-target";
 

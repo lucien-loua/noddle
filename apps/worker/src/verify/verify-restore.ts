@@ -15,9 +15,6 @@
 // `--appendonly yes`, so dropping an RDB and restarting restores NOTHING
 // (measured). This file verifies it against a real instance.
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { backupObjectKey, deleteObject } from "@noddle/backup-store";
 import type { BackupDestination } from "@noddle/backup-store";

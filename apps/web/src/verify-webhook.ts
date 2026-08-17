@@ -18,8 +18,7 @@
 //
 // Expect a few minutes: the build is real.
 import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 

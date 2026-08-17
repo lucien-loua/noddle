@@ -1,9 +1,6 @@
 // tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-database-password.ts
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import {

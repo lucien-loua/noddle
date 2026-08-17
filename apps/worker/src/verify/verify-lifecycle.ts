@@ -1,9 +1,6 @@
 // tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-lifecycle.ts
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabase } from "@noddle/db";

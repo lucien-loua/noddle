@@ -6,8 +6,6 @@
 //   bun run src/verify-live.ts
 //
 // Expect a few minutes: the build is real.
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 

@@ -45,9 +45,6 @@
 // its "before" measurement. (This immediate trigger is the right behavior
 // for the product: a fresh install shouldn't have to wait a day.)
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { createDatabase } from "@noddle/db";
 import {

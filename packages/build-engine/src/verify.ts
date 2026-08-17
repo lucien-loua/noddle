@@ -1,8 +1,5 @@
 // tier: vm
 // node packages/build-engine/src/verify.ts
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";

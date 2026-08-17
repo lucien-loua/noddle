@@ -1,9 +1,8 @@
 // tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-e2e.ts
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";

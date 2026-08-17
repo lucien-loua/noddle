@@ -7,9 +7,6 @@
 // version is still serving. This test fails if we fall back into that trap.
 //
 //   node apps/worker/src/verify/verify-swarm.ts
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { routeLabels } from "@noddle/proxy-config";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";

@@ -1,7 +1,6 @@
 // tier: vm
 // node apps/worker/src/verify/verify-backup-schedule.ts
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 

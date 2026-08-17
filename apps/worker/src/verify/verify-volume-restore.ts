@@ -6,9 +6,6 @@
 // Same question as verify-restore: is the data from before back, and is
 // the data from after gone? Markers live in a Docker volume, not a database.
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { buildVolumeBackupInsert } from "@noddle/backup";
 import { deleteObject } from "@noddle/backup-store";

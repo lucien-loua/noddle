@@ -21,9 +21,6 @@
 //     "still hosts something" are two different refusals, and a typo in a
 //     name would also throw. We assert the REASON.
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";

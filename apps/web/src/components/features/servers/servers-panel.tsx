@@ -190,6 +190,7 @@ export const ServersList = ({
       </SettingsList.Empty>
 
       <SettingsList.Frame
+        panel={false}
         description="Machines Noddle deploys onto. Open one to see its resources, disk and toolchain."
         title="Servers"
       >
