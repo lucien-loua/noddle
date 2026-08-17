@@ -137,9 +137,9 @@ const ServerRow = ({
         />
       </ResourceCardMeta>
       {secondaryError ? (
-        <p className="mt-2 text-destructive text-xs" role="status">
+        <output className="mt-2 text-destructive text-xs">
           {secondaryError}
-        </p>
+        </output>
       ) : null}
     </ResourceCard>
   );
