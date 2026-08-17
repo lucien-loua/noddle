@@ -288,6 +288,7 @@
         "noddle-verify": "./src/run-tier.ts",
       },
       "devDependencies": {
+        "@aws-sdk/client-s3": "catalog:",
         "@noddle/tsconfig": "workspace:*",
       },
     },

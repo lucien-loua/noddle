@@ -8,9 +8,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./dev-stack": "./src/dev-stack.ts",
-    "./dev-target": "./src/dev-target.ts"
+    "./dev-target": "./src/dev-target.ts",
+    "./seed-stack": "./src/seed-stack.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "catalog:",
     "@noddle/tsconfig": "workspace:*"
+  },
+  "imports": {
+    "#dev-stack": "./src/dev-stack.ts"
   }
 }
