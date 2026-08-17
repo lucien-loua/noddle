@@ -1,4 +1,5 @@
 // tier: vm
+// runtime: bun
 // Prerequisites: the Multipass VM, Postgres, Redis, migrations applied.
 //
 //   DATABASE_URL=postgres://noddle:noddle@localhost:55432/noddle_verify \

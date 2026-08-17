@@ -23,10 +23,19 @@ type Tier = (typeof TIERS)[number];
 
 const VERIFY_FILE = /^verify.*\.ts$/;
 const TIER_HEADER = /^\/\/ tier: (local|pure|vm|fixture)\n/;
+/** Optional second line. Overrides the tier default when a suite needs the other runtime. */
+const RUNTIME_HEADER = /^\/\/ runtime: (bun|node)$/m;
 
 /**
- * `vm` runs on Node: `dockerode` over the SSH tunnel does not work on Bun
- * (ADR-0015). Re-checking that on both runtimes stays a deliberate manual act.
+ * The tier's DEFAULT runtime — `vm` on Node because `dockerode` over the SSH
+ * tunnel does not work on Bun (ADR-0015).
+ *
+ * A default, not a rule: the runtime is a property of the SUITE, not of the
+ * tier. Measured — verify-live and verify-webhook are `vm` suites that
+ * orchestrate processes with `Bun.spawn` and die on Node with
+ * `Bun is not defined`, while ssh-executor's suite only *detects* the runtime
+ * and genuinely needs Node for dockerode. A suite says so with a second
+ * header line: `// runtime: bun`.
  */
 type Runnable = (typeof RUNNABLE)[number];
 const RUNTIME: Record<Runnable, string> = {
@@ -38,6 +47,7 @@ const RUNTIME: Record<Runnable, string> = {
 const RED = "\u001B[31m";
 const GREEN = "\u001B[32m";
 const BOLD = "\u001B[1m";
+const DIM = "\u001B[2m";
 const OFF = "\u001B[0m";
 
 function walk(dir: string, found: string[] = []): string[] {
@@ -91,8 +101,10 @@ if (suites.length === 0) {
 const failures: string[] = [];
 for (const path of suites) {
   const name = relative(cwd, path);
-  process.stdout.write(`\n${BOLD}${name}${OFF}\n`);
-  const { status } = spawnSync(RUNTIME[tier], [path], { stdio: "inherit" });
+  const runtime =
+    readFileSync(path, "utf-8").match(RUNTIME_HEADER)?.[1] ?? RUNTIME[tier];
+  process.stdout.write(`\n${BOLD}${name}${OFF} ${DIM}(${runtime})${OFF}\n`);
+  const { status } = spawnSync(runtime, [path], { stdio: "inherit" });
   if (status !== 0) {
     failures.push(name);
   }
