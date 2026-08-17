@@ -189,6 +189,11 @@ try {
     .values({
       host: TARGET.host,
       name: "live-target",
+      // Without this the row defaults to `worker`, no manager exists, and the
+      // deploy fails with "no Swarm manager registered" — which reads as a
+      // broken installation rather than an incomplete fixture. Every sibling
+      // bench that deploys declares it; this one did not.
+      role: "manager",
       sshKeyId,
       sshUser: TARGET.user,
       totalMemoryMb: 2048,
