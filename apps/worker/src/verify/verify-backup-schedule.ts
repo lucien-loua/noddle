@@ -165,6 +165,11 @@ try {
   const [database] = await db
     .insert(databases)
     .values({
+      // BEFORE provisioning: POSTGRES_DB is read from this column at
+      // container creation. Setting it afterwards leaves the engine hosting
+      // `noddle` — the rootUser fallback — while every backup asks for the
+      // name below, and pg_dump answers that the database does not exist.
+      databaseName: NAME,
       engine: "postgres",
       environmentId: env?.id ?? "",
       name: NAME,
