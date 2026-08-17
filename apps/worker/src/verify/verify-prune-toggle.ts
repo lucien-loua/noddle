@@ -99,11 +99,11 @@ try {
       host: TARGET.host,
       name: "prune-toggle-probe",
       role: "manager",
+      sshKeyId,
+      sshUser: TARGET.user,
       // The bench flips a node that Noddle considers reachable; anything else
       // is excluded from the pass before the toggle even matters.
       status: "connected",
-      sshKeyId,
-      sshUser: TARGET.user,
     })
     .returning();
   if (!server) {

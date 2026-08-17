@@ -121,6 +121,15 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Off, and this time measured rather than assumed. Neither setting fits:
+    // the default compares by code point (4 findings — `banReason` must
+    // precede `banned` because "R" < "n"), case-insensitive gives 10. The
+    // repository is ordered the way a person reads, which is neither. And the
+    // objects it flags are grouped WITH their rationale — the Drizzle column
+    // blocks, this rules map — where alphabetical order would scatter each
+    // explanation away from what it explains.
+    "sort-keys": "off",
+
     // ── Style opinions this codebase does not share ──────────────────────
     //
     // `(await import("@wterm/react")).Terminal` is how a dynamic import reads;
@@ -136,8 +145,6 @@ export default defineConfig({
     // The comments this flags are the ones CLAUDE.md asks for — the "why"
     // next to the line it explains.
     "no-inline-comments": "off",
-    // Key order is a formatter's business, and oxfmt does not reorder.
-    "sort-keys": "off",
     // Naming a handler `onOpen` rather than `handleOpen` is a convention this
     // repo did not adopt, and the rule cannot tell the two apart.
     "react/jsx-handler-names": "off",

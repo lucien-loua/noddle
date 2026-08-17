@@ -163,8 +163,8 @@ async function createPreview(
       // preview genuinely builds differently.
       gitBranch: opts.headBranch,
       name: previewServiceName(parent.name, opts.prNumber),
-      previewOfServiceId: parent.id,
       prNumber: opts.prNumber,
+      previewOfServiceId: parent.id,
       serverId: parent.serverId,
     })
     .returning();
