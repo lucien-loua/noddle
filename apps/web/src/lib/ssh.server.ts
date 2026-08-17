@@ -38,7 +38,7 @@ export async function connectToManager(): Promise<SshClient> {
 /** Open one SSH session, run `fn`, always disconnect — web-side twin of worker `withDeployClients`. */
 export async function withServerSession<T>(
   server: ServerRow,
-  fn: (client: SshClient) => Promise<T>
+  fn: (client: SshClient) => Promise<T>,
 ): Promise<T> {
   const client = await connectToServer(server);
   try {
@@ -49,9 +49,7 @@ export async function withServerSession<T>(
 }
 
 /** Manager session with the same teardown guarantee as `withServerSession`. */
-export async function withManagerSession<T>(
-  fn: (client: SshClient) => Promise<T>
-): Promise<T> {
+export async function withManagerSession<T>(fn: (client: SshClient) => Promise<T>): Promise<T> {
   const client = await connectToManager();
   try {
     return await fn(client);
@@ -63,7 +61,7 @@ export async function withManagerSession<T>(
 /** Open a session by row id — for handlers that only know `serverId`. */
 export async function withServerSessionById<T>(
   serverId: string,
-  fn: (client: SshClient) => Promise<T>
+  fn: (client: SshClient) => Promise<T>,
 ): Promise<T> {
   const server = await db.query.servers.findFirst({
     where: eq(servers.id, serverId),

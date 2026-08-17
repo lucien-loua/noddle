@@ -53,13 +53,7 @@ export const Route = createFileRoute("/api/service-logs/$serviceId")({
 
           try {
             client = await connectToServer(server);
-            return followContainerLogs(
-              channel,
-              client,
-              swarmServiceName(service),
-              tail,
-              since
-            );
+            return followContainerLogs(channel, client, swarmServiceName(service), tail, since);
           } catch (error) {
             sendLogError(send, error);
             client?.end();

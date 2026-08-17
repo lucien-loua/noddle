@@ -24,12 +24,7 @@ import {
   volumeBackups,
 } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -61,22 +56,17 @@ const ko = (m: string) => {
   console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
-async function must(
-  client: Awaited<ReturnType<typeof connect>>,
-  argv: string[]
-): Promise<string> {
+async function must(client: Awaited<ReturnType<typeof connect>>, argv: string[]): Promise<string> {
   const r = await execArgv(client, argv);
   if (r.code !== 0) {
     throw new Error(
-      `setup failed (code ${r.code}): ${argv.slice(0, 5).join(" ")} — ${r.stderr.slice(0, 300)}`
+      `setup failed (code ${r.code}): ${argv.slice(0, 5).join(" ")} — ${r.stderr.slice(0, 300)}`,
     );
   }
   return r.stdout;
 }
 
-async function readMarker(
-  client: Awaited<ReturnType<typeof connect>>
-): Promise<string> {
+async function readMarker(client: Awaited<ReturnType<typeof connect>>): Promise<string> {
   return (
     await must(client, [
       "docker",
@@ -93,7 +83,7 @@ async function readMarker(
 
 async function writeMarker(
   client: Awaited<ReturnType<typeof connect>>,
-  value: string
+  value: string,
 ): Promise<void> {
   await must(client, [
     "docker",
@@ -110,13 +100,8 @@ async function writeMarker(
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
-const sshKeyId = await seedSshKey(
-  db,
-  appKey,
-  "verify-volume-restore",
-  privateKey
-);
+const { privateKey } = TARGET;
+const sshKeyId = await seedSshKey(db, appKey, "verify-volume-restore", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 let swarmNameForCleanup: string | undefined;
@@ -128,9 +113,7 @@ await db.delete(environments);
 await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(
-  `\n\u001B[1mVolume restore — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`
-);
+console.log(`\n\u001B[1mVolume restore — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`);
 
 const destination: BackupDestination = {
   accessKeyId: S3_KEY,
@@ -180,7 +163,7 @@ try {
       secretAccessKeyEncrypted: encryptSecret(
         S3_SECRET,
         appKey,
-        secretContext.backupDestination(dest.id)
+        secretContext.backupDestination(dest.id),
       ),
     })
     .where(eq(s3Destinations.id, dest.id));
@@ -190,10 +173,7 @@ try {
   ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   const docker = dockerClient(ssh);
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "volume-restore-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "volume-restore-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -315,9 +295,7 @@ try {
   if (ssh && swarmNameForCleanup) {
     const docker = dockerClient(ssh);
     await removeService(docker, swarmNameForCleanup).catch(() => {});
-    await execArgv(ssh, ["docker", "volume", "rm", "-f", VOLUME_NAME]).catch(
-      () => {}
-    );
+    await execArgv(ssh, ["docker", "volume", "rm", "-f", VOLUME_NAME]).catch(() => {});
     disconnect(ssh);
   }
 }

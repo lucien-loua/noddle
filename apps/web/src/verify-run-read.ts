@@ -34,34 +34,29 @@ function listServerTs(dir: string, prefix = ""): string[] {
 
 await runVerify("runRead adoption", () => {
   const sources = listServerTs(SERVER_DIR).map((file) =>
-    readFileSync(join(SERVER_DIR, file), "utf-8")
+    readFileSync(join(SERVER_DIR, file), "utf-8"),
   );
   const combined = sources.join("\n");
-  const perm = readFileSync(
-    join(import.meta.dirname, "lib/permission.server.ts"),
-    "utf-8"
-  );
+  const perm = readFileSync(join(import.meta.dirname, "lib/permission.server.ts"), "utf-8");
 
   check(
     "runRead is exported from permission.server",
-    perm.includes("export async function runRead")
+    perm.includes("export async function runRead"),
   );
 
   for (const name of RESTRICTED_GETS) {
     check(
       `${name} uses runRead`,
-      new RegExp(`export const ${name}[\\s\\S]*?runRead\\(`).test(combined)
+      new RegExp(`export const ${name}[\\s\\S]*?runRead\\(`).test(combined),
     );
   }
 
   const stillDirect = RESTRICTED_GETS.filter((name) =>
-    new RegExp(`export const ${name}[\\s\\S]*?requirePermission\\(`).test(
-      combined
-    )
+    new RegExp(`export const ${name}[\\s\\S]*?requirePermission\\(`).test(combined),
   );
   check(
     "no restricted GET still calls requirePermission directly",
     stillDirect.length === 0,
-    stillDirect.join(", ")
+    stillDirect.join(", "),
   );
 });

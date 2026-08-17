@@ -8,13 +8,7 @@ import { join } from "node:path";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, exec, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -90,13 +84,7 @@ try {
   for (const name of ["noddle-db-probe-postgres", "noddle-db-probe-redis"]) {
     for (let i = 0; i < 10; i += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: intentional retry
-      const res = await execArgv(managerSsh, [
-        "sudo",
-        "docker",
-        "volume",
-        "rm",
-        name,
-      ]);
+      const res = await execArgv(managerSsh, ["sudo", "docker", "volume", "rm", name]);
       if (res.code === 0 || res.stderr.includes("no such volume")) {
         break;
       }
@@ -104,10 +92,7 @@ try {
     }
   }
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "database-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "database-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -115,7 +100,7 @@ try {
 
   const httpRun = async (
     image: string,
-    args: string[]
+    args: string[],
   ): Promise<{ code: number | null; stdout: string; stderr: string }> => {
     if (!managerSsh) {
       throw new Error("no manager connection");
@@ -159,7 +144,7 @@ try {
         rootPasswordEncrypted: encryptSecret(
           password,
           appKey,
-          secretContext.databasePassword(database.id)
+          secretContext.databasePassword(database.id),
         ),
       })
       .where(eq(databases.id, database.id));
@@ -177,18 +162,11 @@ try {
     }
 
     const url = `postgresql://noddle:${password}@noddle-db-probe-postgres:5432/noddle`;
-    const result = await httpRun("postgres:17-alpine", [
-      "psql",
-      url,
-      "-c",
-      "select 1",
-    ]);
+    const result = await httpRun("postgres:17-alpine", ["psql", url, "-c", "select 1"]);
     if (result.code === 0 && result.stdout.includes("1")) {
       ok("ANOTHER container authenticated and queried postgres");
     } else {
-      ko(
-        `postgres connection failed (code ${result.code}): ${result.stderr.slice(0, 200)}`
-      );
+      ko(`postgres connection failed (code ${result.code}): ${result.stderr.slice(0, 200)}`);
     }
 
     // The real question of this effort: not "it connects" (already proven
@@ -198,10 +176,7 @@ try {
     if (!managerSsh) {
       throw new Error("no manager connection");
     }
-    const inspect = await exec(
-      managerSsh,
-      "sudo docker service inspect noddle-db-probe-postgres"
-    );
+    const inspect = await exec(managerSsh, "sudo docker service inspect noddle-db-probe-postgres");
     if (inspect.stdout.includes(password)) {
       ko("postgres password is visible in plaintext in service inspect");
     } else {
@@ -224,7 +199,7 @@ try {
     const readResources = async () => {
       const raw = await exec(
         manager,
-        "sudo docker service inspect noddle-db-probe-postgres --format '{{json .Spec.TaskTemplate.Resources}}'"
+        "sudo docker service inspect noddle-db-probe-postgres --format '{{json .Spec.TaskTemplate.Resources}}'",
       );
       return JSON.parse(raw.stdout.trim()) as {
         Limits?: { MemoryBytes?: number; NanoCPUs?: number };
@@ -298,7 +273,7 @@ try {
         rootPasswordEncrypted: encryptSecret(
           password,
           appKey,
-          secretContext.databasePassword(database.id)
+          secretContext.databasePassword(database.id),
         ),
       })
       .where(eq(databases.id, database.id));
@@ -320,18 +295,11 @@ try {
     // password — measured, "AUTH failed" otherwise even though the SAME
     // password passed via `-a` works.
     const url = `redis://default:${password}@noddle-db-probe-redis:6379`;
-    const result = await httpRun("redis:7-alpine", [
-      "redis-cli",
-      "-u",
-      url,
-      "ping",
-    ]);
+    const result = await httpRun("redis:7-alpine", ["redis-cli", "-u", url, "ping"]);
     if (result.code === 0 && result.stdout.includes("PONG")) {
       ok("ANOTHER container authenticated and queried redis");
     } else {
-      ko(
-        `redis connection failed (code ${result.code}): ${result.stderr.slice(0, 200)}`
-      );
+      ko(`redis connection failed (code ${result.code}): ${result.stderr.slice(0, 200)}`);
     }
 
     // Same measurement as for postgres, against `service inspect`.
@@ -340,7 +308,7 @@ try {
     }
     const redisInspect = await exec(
       managerSsh,
-      "sudo docker service inspect noddle-db-probe-redis"
+      "sudo docker service inspect noddle-db-probe-redis",
     );
     if (redisInspect.stdout.includes(password)) {
       ko("redis password is visible in plaintext in service inspect");
@@ -354,13 +322,13 @@ try {
     const taskId = (
       await exec(
         managerSsh,
-        "sudo docker service ps -q --filter desired-state=running noddle-db-probe-redis"
+        "sudo docker service ps -q --filter desired-state=running noddle-db-probe-redis",
       )
     ).stdout.trim();
     const containerId = (
       await exec(
         managerSsh,
-        `sudo docker inspect --format '{{.Status.ContainerStatus.ContainerID}}' ${taskId}`
+        `sudo docker inspect --format '{{.Status.ContainerStatus.ContainerID}}' ${taskId}`,
       )
     ).stdout.trim();
     const top = containerId
@@ -412,7 +380,7 @@ try {
       ok(`${name} is pinned to its node — its volume does not travel`);
     } else {
       ko(
-        `${name} without constraint: [${constraints.join(", ")}] — Swarm could move it onto an empty volume`
+        `${name} without constraint: [${constraints.join(", ")}] — Swarm could move it onto an empty volume`,
       );
     }
   }

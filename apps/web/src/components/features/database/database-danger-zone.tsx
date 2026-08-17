@@ -6,13 +6,7 @@ import { useCallback, useState } from "react";
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Frame,
-  FrameFooter,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
 import { errorMessage } from "@/lib/format";
 import { rebuildDatabase } from "@/server/databases";
 
@@ -29,8 +23,7 @@ export function DatabaseDangerZone({
   const [error, setError] = useState<string | null>(null);
 
   const rebuild = useMutation({
-    mutationFn: (confirmName: string) =>
-      rebuildDatabase({ data: { confirmName, databaseId } }),
+    mutationFn: (confirmName: string) => rebuildDatabase({ data: { confirmName, databaseId } }),
     onError: (e: Error) => {
       setOpen(false);
       setError(errorMessage(e, "rebuild failed"));
@@ -44,10 +37,7 @@ export function DatabaseDangerZone({
   });
 
   const handleOpen = useCallback(() => setOpen(true), []);
-  const handleConfirm = useCallback(
-    (typed: string) => rebuild.mutate(typed),
-    [rebuild]
-  );
+  const handleConfirm = useCallback((typed: string) => rebuild.mutate(typed), [rebuild]);
 
   return (
     <Frame>
@@ -58,8 +48,8 @@ export function DatabaseDangerZone({
       <FramePanel>
         <h3 className="mb-1 font-semibold text-sm">Rebuild database</h3>
         <p className="text-muted-foreground text-sm">
-          This action completely resets {databaseName} to its initial state. All
-          data, tables and configuration are removed.
+          This action completely resets {databaseName} to its initial state. All data, tables and
+          configuration are removed.
         </p>
 
         {error ? (
@@ -80,9 +70,8 @@ export function DatabaseDangerZone({
         confirmLabel="Rebuild database"
         description={
           <>
-            The running container and its volume are removed, then recreated
-            empty — every table, every row, gone.{" "}
-            <strong>This cannot be undone.</strong> The database keeps its name,
+            The running container and its volume are removed, then recreated empty — every table,
+            every row, gone. <strong>This cannot be undone.</strong> The database keeps its name,
             engine and credentials; only its contents are wiped.
           </>
         }

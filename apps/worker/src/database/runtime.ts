@@ -10,7 +10,7 @@ const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 export function assertSafeIdentifier(value: string, label: string): void {
   if (!SAFE_IDENTIFIER.test(value)) {
     throw new Error(
-      `${label} is not a safe identifier: "${value}" — letters, digits and underscores only, not starting with a digit`
+      `${label} is not a safe identifier: "${value}" — letters, digits and underscores only, not starting with a digit`,
     );
   }
 }
@@ -28,7 +28,7 @@ export function legacyDatabaseServiceName(name: string): string {
  */
 export async function findDatabaseContainer(
   client: SshClient,
-  serviceName: string
+  serviceName: string,
 ): Promise<string> {
   const { code, stderr, value } = await execStream(
     client,
@@ -40,7 +40,7 @@ export async function findDatabaseContainer(
         out += chunk as string;
       }
       return out;
-    }
+    },
   );
   if (code !== 0) {
     throw new Error(`docker ps failed (code ${code}): ${stderr}`);
@@ -50,9 +50,7 @@ export async function findDatabaseContainer(
     .map((l) => l.trim())
     .find((l) => l !== "");
   if (!id) {
-    throw new Error(
-      `no running container for ${serviceName} — is the database up?`
-    );
+    throw new Error(`no running container for ${serviceName} — is the database up?`);
   }
   return id;
 }

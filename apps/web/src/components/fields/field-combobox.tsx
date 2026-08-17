@@ -21,9 +21,7 @@ export interface FieldComboboxGroup<T> {
   label: string;
 }
 
-function isComboboxGroup<T>(
-  entry: T | FieldComboboxGroup<T>
-): entry is FieldComboboxGroup<T> {
+function isComboboxGroup<T>(entry: T | FieldComboboxGroup<T>): entry is FieldComboboxGroup<T> {
   return (
     typeof entry === "object" &&
     entry !== null &&
@@ -87,22 +85,20 @@ export function FieldCombobox<T>({
   const { errors, invalid } = fieldDisplayState(field.state.meta);
 
   const flatItems = useMemo(
-    () =>
-      items.flatMap((entry) => (isComboboxGroup(entry) ? entry.items : entry)),
-    [items]
+    () => items.flatMap((entry) => (isComboboxGroup(entry) ? entry.items : entry)),
+    [items],
   );
 
   const selected = useMemo(
-    () =>
-      flatItems.find((item) => itemToId(item) === field.state.value) ?? null,
-    [flatItems, itemToId, field.state.value]
+    () => flatItems.find((item) => itemToId(item) === field.state.value) ?? null,
+    [flatItems, itemToId, field.state.value],
   );
 
   const handleChange = useCallback(
     (next: T | null) => {
       field.handleChange(next ? itemToId(next) : "");
     },
-    [field, itemToId]
+    [field, itemToId],
   );
 
   const renderComboboxItem = useCallback(
@@ -111,7 +107,7 @@ export function FieldCombobox<T>({
         {renderItem(item)}
       </ComboboxItem>
     ),
-    [itemToId, renderItem]
+    [itemToId, renderItem],
   );
 
   return (
@@ -148,9 +144,7 @@ export function FieldCombobox<T>({
                 <Fragment key={entry.label}>
                   <ComboboxGroup items={entry.items}>
                     <ComboboxLabel>{entry.label}</ComboboxLabel>
-                    <ComboboxCollection>
-                      {renderComboboxItem}
-                    </ComboboxCollection>
+                    <ComboboxCollection>{renderComboboxItem}</ComboboxCollection>
                   </ComboboxGroup>
                   {index < items.length - 1 ? <ComboboxSeparator /> : null}
                 </Fragment>

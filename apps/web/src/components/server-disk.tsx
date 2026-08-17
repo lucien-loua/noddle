@@ -134,8 +134,7 @@ export function ServerDiskUsage({
             <EmptyHeader>
               <EmptyTitle>No reading yet</EmptyTitle>
               <EmptyDescription>
-                Docker's disk breakdown is read every ten minutes on every
-                connected server.
+                Docker's disk breakdown is read every ten minutes on every connected server.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -146,10 +145,7 @@ export function ServerDiskUsage({
   }
 
   const total = disk.categories.reduce((sum, c) => sum + c.bytes, 0);
-  const reclaimable = disk.categories.reduce(
-    (sum, c) => sum + c.reclaimableBytes,
-    0
-  );
+  const reclaimable = disk.categories.reduce((sum, c) => sum + c.reclaimableBytes, 0);
 
   return (
     <Frame stacked variant="ghost">
@@ -162,10 +158,7 @@ export function ServerDiskUsage({
       </FrameHeader>
 
       <FramePanel className="space-y-3">
-        <div
-          aria-hidden="true"
-          className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
-        >
+        <div aria-hidden="true" className="flex h-2 w-full overflow-hidden rounded-full bg-muted">
           {disk.categories.map((c) =>
             c.bytes > 0 ? (
               <Progress
@@ -176,7 +169,7 @@ export function ServerDiskUsage({
                 style={{ width: `${(c.bytes / Math.max(total, 1)) * 100}%` }}
                 value={100}
               />
-            ) : null
+            ) : null,
           )}
         </div>
 
@@ -185,33 +178,25 @@ export function ServerDiskUsage({
             <div className="flex items-center gap-3 text-xs" key={c.key}>
               <span
                 aria-hidden="true"
-                className={cn(
-                  "size-2 shrink-0 rounded-full bg-current",
-                  SHADES[c.key]
-                )}
+                className={cn("size-2 shrink-0 rounded-full bg-current", SHADES[c.key])}
               />
               <dt className="min-w-0 flex-1 truncate text-muted-foreground">
                 {LABELS[c.key]}
-                <span className="ms-1.5 text-muted-foreground/60">
-                  ({c.count})
-                </span>
+                <span className="ms-1.5 text-muted-foreground/60">({c.count})</span>
               </dt>
               <dd className="w-28 shrink-0 text-end text-muted-foreground tabular-nums">
                 {size(c.reclaimableBytes)} free
               </dd>
-              <dd className="w-20 shrink-0 text-end tabular-nums">
-                {size(c.bytes)}
-              </dd>
+              <dd className="w-20 shrink-0 text-end tabular-nums">{size(c.bytes)}</dd>
             </div>
           ))}
         </dl>
 
         <FrameDescription>
-          {size(reclaimable)} of {size(total)} could be reclaimed. Once a day,
-          Noddle prunes stopped containers, images no container uses, and build
-          cache untouched for a week; unreferenced registry layers go every
-          hour. Volumes are never pruned — a stopped database still owns its
-          data.
+          {size(reclaimable)} of {size(total)} could be reclaimed. Once a day, Noddle prunes stopped
+          containers, images no container uses, and build cache untouched for a week; unreferenced
+          registry layers go every hour. Volumes are never pruned — a stopped database still owns
+          its data.
         </FrameDescription>
       </FramePanel>
       {children}

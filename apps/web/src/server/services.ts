@@ -36,12 +36,7 @@ interface ServiceSettingsPatch {
 }
 
 /** Fields where an empty string from a form means "clear", not "invalid". */
-const CLEARABLE = [
-  "buildPath",
-  "dockerImage",
-  "gitRepoUrl",
-  "publishDirectory",
-] as const;
+const CLEARABLE = ["buildPath", "dockerImage", "gitRepoUrl", "publishDirectory"] as const;
 
 /** Fields copied across as-is when present. */
 const DIRECT = [
@@ -58,7 +53,7 @@ const DIRECT = [
 ] as const;
 
 function serviceSettingsPatch(
-  data: z.infer<typeof updateServiceSettingsSchema>
+  data: z.infer<typeof updateServiceSettingsSchema>,
 ): ServiceSettingsPatch {
   const patch: Record<string, unknown> = {};
   for (const key of DIRECT) {
@@ -111,7 +106,7 @@ export const connectRepo = createServerFn({ method: "POST" })
           let environment = await db.query.environments.findFirst({
             where: and(
               eq(environments.projectId, project.id),
-              eq(environments.name, data.environmentName)
+              eq(environments.name, data.environmentName),
             ),
           });
           if (!environment) {
@@ -152,7 +147,7 @@ export const connectRepo = createServerFn({ method: "POST" })
         projectId: guarded.projectId,
         serviceId: guarded.serviceId,
       };
-    }
+    },
   );
 
 /**
@@ -201,7 +196,7 @@ export const updateServiceSettings = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 /**
@@ -234,10 +229,7 @@ export const deleteService = createServerFn({ method: "POST" })
       notFoundMessage: "service not found",
       permission: { action: "delete", resource: "service" },
       run: async ({ row: service }) => {
-        await db
-          .update(services)
-          .set(markDeleting(null))
-          .where(eq(services.id, service.id));
+        await db.update(services).set(markDeleting(null)).where(eq(services.id, service.id));
 
         // Deliberately replayable: `removeService` and the registry purge are
         // idempotent, so an interrupted teardown resumes with another click.
@@ -248,7 +240,7 @@ export const deleteService = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 /**
@@ -287,13 +279,11 @@ export const moveService = createServerFn({ method: "POST" })
           where: and(
             eq(services.environmentId, target.id),
             eq(services.name, service.name),
-            ne(services.id, service.id)
+            ne(services.id, service.id),
           ),
         });
         if (collision) {
-          throw new Error(
-            `"${service.name}" already exists in the target environment`
-          );
+          throw new Error(`"${service.name}" already exists in the target environment`);
         }
 
         await db
@@ -303,5 +293,5 @@ export const moveService = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

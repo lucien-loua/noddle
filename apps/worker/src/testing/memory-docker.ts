@@ -13,9 +13,7 @@ export interface MemoryDockerState {
   services: MemoryDockerService[];
 }
 
-export function createMemoryDockerApi(
-  state: MemoryDockerState = { services: [] }
-): DockerApi {
+export function createMemoryDockerApi(state: MemoryDockerState = { services: [] }): DockerApi {
   return {
     createService: (spec: { Name?: string }) => {
       const service: MemoryDockerService = {
@@ -57,9 +55,7 @@ export function createMemoryDockerApi(
       if (!nameMatch) {
         return Promise.resolve(state.services);
       }
-      return Promise.resolve(
-        state.services.filter((s) => s.Spec?.Name === nameMatch)
-      );
+      return Promise.resolve(state.services.filter((s) => s.Spec?.Name === nameMatch));
     },
     version: () =>
       Promise.resolve({

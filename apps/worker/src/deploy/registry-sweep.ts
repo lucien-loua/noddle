@@ -78,7 +78,7 @@ export function tagsToPurge(opts: {
 /** Removes overly old images from the registry, service by service. */
 export async function sweepRegistry(
   ctx: DeployContext,
-  opts: { containerName?: string } = {}
+  opts: { containerName?: string } = {},
 ): Promise<RegistrySweepResult> {
   const result: RegistrySweepResult = { collected: false, purged: [] };
   const { registry } = ctx;
@@ -101,7 +101,7 @@ export async function sweepRegistry(
         currentImageTag: current?.imageTag ?? null,
         registry,
         rows,
-      })
+      }),
     );
   }
 

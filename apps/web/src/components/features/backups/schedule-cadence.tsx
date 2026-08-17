@@ -24,10 +24,7 @@ export function ScheduleCadence({
   return (
     <Field>
       <FieldLabel>Schedule</FieldLabel>
-      <Select
-        onValueChange={(v) => onModeChange(v as ScheduleMode)}
-        value={scheduleMode}
-      >
+      <Select onValueChange={(v) => onModeChange(v as ScheduleMode)} value={scheduleMode}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Choose a cadence" />
         </SelectTrigger>
@@ -44,8 +41,7 @@ export function ScheduleCadence({
       </Select>
       {scheduleMode === "custom" ? children : null}
       <FieldDescription>
-        Five-field cron in UTC. The worker checks due schedules every few
-        minutes.
+        Five-field cron in UTC. The worker checks due schedules every few minutes.
       </FieldDescription>
     </Field>
   );

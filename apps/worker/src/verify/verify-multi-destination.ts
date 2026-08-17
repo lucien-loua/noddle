@@ -16,12 +16,7 @@ import {
   s3Destinations,
   servers,
 } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -59,13 +54,8 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
-const sshKeyId = await seedSshKey(
-  db,
-  appKey,
-  "verify-multi-destination",
-  privateKey
-);
+const { privateKey } = TARGET;
+const sshKeyId = await seedSshKey(db, appKey, "verify-multi-destination", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -76,9 +66,7 @@ await db.delete(environments);
 await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(
-  `\n\u001B[1mMultiple destinations — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`
-);
+console.log(`\n\u001B[1mMultiple destinations — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`);
 
 async function makeDestination(name: string, prefix: string) {
   const [row] = await db
@@ -102,7 +90,7 @@ async function makeDestination(name: string, prefix: string) {
       secretAccessKeyEncrypted: encryptSecret(
         S3_SECRET,
         appKey,
-        secretContext.backupDestination(row.id)
+        secretContext.backupDestination(row.id),
       ),
     })
     .where(eq(s3Destinations.id, row.id));
@@ -179,10 +167,7 @@ try {
     `for i in $(seq 1 20); do docker volume rm ${legacyDatabaseServiceName(NAME)} >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0`,
   ]);
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "multi-dest-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "multi-dest-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -210,7 +195,7 @@ try {
       rootPasswordEncrypted: encryptSecret(
         password,
         appKey,
-        secretContext.databasePassword(database.id)
+        secretContext.databasePassword(database.id),
       ),
     })
     .where(eq(databases.id, database.id));
@@ -262,7 +247,7 @@ try {
       region: "us-east-1",
       secretAccessKey: S3_SECRET,
     },
-    done?.objectKey ?? ""
+    done?.objectKey ?? "",
   );
   if (inB) {
     ok("the object is REALLY under B's prefix, not only in the DB");

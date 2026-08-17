@@ -3,10 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import {
-  AddServerDialog,
-  ServersList,
-} from "@/components/features/servers/servers-panel";
+import { AddServerDialog, ServersList } from "@/components/features/servers/servers-panel";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
@@ -52,11 +49,7 @@ function ServersPage() {
       title="Servers"
     >
       {canAdd ? <AddServerDialog onOpenChange={setOpen} open={open} /> : null}
-      <ServersList
-        initial={servers}
-        onAdd={canAdd ? handleOpen : undefined}
-        role={known}
-      />
+      <ServersList initial={servers} onAdd={canAdd ? handleOpen : undefined} role={known} />
     </AppShell>
   );
 }

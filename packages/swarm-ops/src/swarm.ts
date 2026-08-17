@@ -1,8 +1,5 @@
 import type { TraefikLabels } from "@noddle/proxy-config";
-import {
-  MONITOR_SECONDS,
-  renderDockerodeHttpHealthcheck,
-} from "@noddle/shared/deploy-policy";
+import { MONITOR_SECONDS, renderDockerodeHttpHealthcheck } from "@noddle/shared/deploy-policy";
 import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
 import type { DockerApi } from "@noddle/ssh-executor";
 
@@ -103,7 +100,7 @@ function serviceSpec(s: DeploySpec) {
 export async function waitForRunningTask(
   docker: DockerApi,
   serviceName: string,
-  timeoutMs = 180_000
+  timeoutMs = 180_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastError = "";
@@ -121,7 +118,7 @@ export async function waitForRunningTask(
       return;
     }
     const dead = tasks.filter(
-      (t) => t.Status?.State === "failed" || t.Status?.State === "rejected"
+      (t) => t.Status?.State === "failed" || t.Status?.State === "rejected",
     );
     if (dead.length > 0) {
       lastError = dead.at(-1)?.Status?.Err ?? "";
@@ -132,7 +129,7 @@ export async function waitForRunningTask(
   }
 
   throw new Error(
-    `service ${serviceName} did not converge within ${timeoutMs / 1000}s${lastError ? ` — ${lastError}` : ""}`
+    `service ${serviceName} did not converge within ${timeoutMs / 1000}s${lastError ? ` — ${lastError}` : ""}`,
   );
 }
 
@@ -152,10 +149,7 @@ async function findService(docker: DockerApi, name: string) {
   return list.find((s) => s.Spec?.Name === name) ?? null;
 }
 
-export async function deployService(
-  docker: DockerApi,
-  spec: DeploySpec
-): Promise<DeployOutcome> {
+export async function deployService(docker: DockerApi, spec: DeploySpec): Promise<DeployOutcome> {
   const existing = await findService(docker, spec.serviceName);
 
   // Auth goes as the FIRST POSITIONAL ARGUMENT, never in the options.
@@ -226,7 +220,7 @@ export async function deployService(
  */
 export async function readRunningNodeId(
   docker: DockerApi,
-  serviceName: string
+  serviceName: string,
 ): Promise<string | null> {
   const tasks = (await docker.listTasks({
     filters: JSON.stringify({ service: [serviceName] }),
@@ -248,7 +242,7 @@ export async function readRunningNodeId(
 export async function readUpdateState(
   docker: DockerApi,
   serviceName: string,
-  opts: { timeoutMs?: number; pollMs?: number } = {}
+  opts: { timeoutMs?: number; pollMs?: number } = {},
 ): Promise<Omit<DeployOutcome, "created">> {
   const timeout = opts.timeoutMs ?? (MONITOR_SECONDS + 60) * 1000;
   const poll = opts.pollMs ?? 2000;
@@ -286,10 +280,7 @@ export async function readUpdateState(
     if (!last.updateState) {
       return last;
     }
-    if (
-      last.updateState !== "updating" &&
-      last.updateState !== "rollback_started"
-    ) {
+    if (last.updateState !== "updating" && last.updateState !== "rollback_started") {
       return last;
     }
 
@@ -308,10 +299,7 @@ export function isDeployAccepted(state: SwarmUpdateState | null): boolean {
   return state === null || state === "completed";
 }
 
-export async function removeService(
-  docker: DockerApi,
-  serviceName: string
-): Promise<void> {
+export async function removeService(docker: DockerApi, serviceName: string): Promise<void> {
   const found = await findService(docker, serviceName);
   if (found) {
     await docker.getService(found.ID).remove();
@@ -338,7 +326,7 @@ export async function removeService(
 export async function scaleService(
   docker: DockerApi,
   serviceName: string,
-  replicas: number
+  replicas: number,
 ): Promise<boolean> {
   const found = await findService(docker, serviceName);
   if (!found?.Spec) {
@@ -365,7 +353,7 @@ export async function scaleServiceAndWait(
   docker: DockerApi,
   serviceName: string,
   replicas: number,
-  timeoutMs = SCALE_DOWN_TIMEOUT_MS
+  timeoutMs = SCALE_DOWN_TIMEOUT_MS,
 ): Promise<void> {
   const scaled = await scaleService(docker, serviceName, replicas);
   if (!scaled) {
@@ -381,9 +369,7 @@ export async function scaleServiceAndWait(
       })) as unknown as { Status?: { State?: string } }[];
       const alive = tasks.filter((t) => {
         const state = t.Status?.State;
-        return (
-          state !== "shutdown" && state !== "failed" && state !== "complete"
-        );
+        return state !== "shutdown" && state !== "failed" && state !== "complete";
       });
       if (alive.length === 0) {
         return;
@@ -404,10 +390,7 @@ export async function scaleServiceAndWait(
  * containers" when the spec is otherwise identical. Without it, Swarm sees
  * that nothing moved and does NOTHING — a "restart" that doesn't restart.
  */
-export async function restartService(
-  docker: DockerApi,
-  serviceName: string
-): Promise<boolean> {
+export async function restartService(docker: DockerApi, serviceName: string): Promise<boolean> {
   const found = await findService(docker, serviceName);
   if (!found?.Spec) {
     return false;
@@ -428,10 +411,7 @@ export async function restartService(
 }
 
 /** The overlay network that Traefik and the services share. */
-export async function ensureOverlayNetwork(
-  docker: DockerApi,
-  name: string
-): Promise<void> {
+export async function ensureOverlayNetwork(docker: DockerApi, name: string): Promise<void> {
   const nets = await docker.listNetworks({
     filters: JSON.stringify({ name: [name] }),
   });

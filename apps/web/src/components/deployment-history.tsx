@@ -68,7 +68,7 @@ function RollbackCell({
       event.stopPropagation();
       onRollback(deployment.id);
     },
-    [deployment.id, onRollback]
+    [deployment.id, onRollback],
   );
 
   // Only a deployment that PRODUCED an image can be redeployed. A build
@@ -93,12 +93,7 @@ function RollbackCell({
     return null;
   }
   return (
-    <Button
-      disabled={pending}
-      onClick={handleClick}
-      size="xs"
-      variant="outline"
-    >
+    <Button disabled={pending} onClick={handleClick} size="xs" variant="outline">
       Redeploy
     </Button>
   );
@@ -113,16 +108,10 @@ function HistoryRow({
   row: Row<DeploymentSummary>;
   selected: boolean;
 }) {
-  const handleClick = useCallback(
-    () => onSelect(row.original.id),
-    [onSelect, row.original.id]
-  );
+  const handleClick = useCallback(() => onSelect(row.original.id), [onSelect, row.original.id]);
 
   return (
-    <TableRow
-      className={cn("cursor-pointer", selected && "bg-muted")}
-      onClick={handleClick}
-    >
+    <TableRow className={cn("cursor-pointer", selected && "bg-muted")} onClick={handleClick}>
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -155,16 +144,12 @@ export function DeploymentHistory(props: Props) {
         header: "Status",
       }),
       columnHelper.accessor("commitSha", {
-        cell: (info) => (
-          <span className="font-mono text-xs">{shortSha(info.getValue())}</span>
-        ),
+        cell: (info) => <span className="font-mono text-xs">{shortSha(info.getValue())}</span>,
         header: "Commit",
       }),
       columnHelper.accessor("trigger", {
         cell: (info) => (
-          <span className="text-muted-foreground">
-            {triggerLabel(info.getValue())}
-          </span>
+          <span className="text-muted-foreground">{triggerLabel(info.getValue())}</span>
         ),
         header: "Trigger",
       }),
@@ -179,10 +164,7 @@ export function DeploymentHistory(props: Props) {
       columnHelper.display({
         cell: (info) => (
           <span className="whitespace-nowrap text-muted-foreground">
-            {duration(
-              info.row.original.createdAt,
-              info.row.original.finishedAt
-            )}
+            {duration(info.row.original.createdAt, info.row.original.finishedAt)}
           </span>
         ),
         header: "Duration",
@@ -202,7 +184,7 @@ export function DeploymentHistory(props: Props) {
         id: "actions",
       }),
     ],
-    [canRollback, currentDeploymentId, onRollback, pending]
+    [canRollback, currentDeploymentId, onRollback, pending],
   );
 
   const table = useReactTable({
@@ -212,11 +194,7 @@ export function DeploymentHistory(props: Props) {
   });
 
   if (deployments.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        No deployments for this service yet.
-      </p>
-    );
+    return <p className="text-muted-foreground text-sm">No deployments for this service yet.</p>;
   }
 
   return (
@@ -226,10 +204,7 @@ export function DeploymentHistory(props: Props) {
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
               <TableHead key={header.id}>
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext()
-                )}
+                {flexRender(header.column.columnDef.header, header.getContext())}
               </TableHead>
             ))}
           </TableRow>

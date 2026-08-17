@@ -25,13 +25,7 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  quoteArg,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, exec, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -67,7 +61,7 @@ const step = (m: string) => console.log(`    ${m}`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-watch", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -75,14 +69,14 @@ let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 async function writeApp(
   client: Awaited<ReturnType<typeof connect>>,
   body: string,
-  message: string
+  message: string,
 ): Promise<void> {
   // printf '%s': without it, printf interprets escape sequences and cuts
   // JavaScript literals in half.
   await exec(
     client,
     `cd ${quoteArg(ORIGIN)} && printf '%s' ${quoteArg(body)} > s.js && ` +
-      `git add -A && git commit -q -m ${quoteArg(message)}`
+      `git add -A && git commit -q -m ${quoteArg(message)}`,
   );
 }
 
@@ -95,12 +89,12 @@ try {
     ssh,
     `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && printf '%s' '{"name":"w","scripts":{"start":"node s.js"}}' > package.json && ` +
-      "git init -q -b main . && git config user.email w@x && git config user.name w"
+      "git init -q -b main . && git config user.email w@x && git config user.name w",
   );
   await writeApp(
     ssh,
     'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("SAINE")).listen(p)',
-    "v1 saine"
+    "v1 saine",
   );
   ok("repo created, healthy version committed");
 
@@ -117,10 +111,7 @@ try {
     })
     .returning();
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "watch" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "watch" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -170,7 +161,7 @@ try {
   await writeApp(
     ssh,
     `const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("CASSEE")).listen(p);setTimeout(()=>process.exit(1),${CRASH_AFTER_S * 1000})`,
-    "v2 crash tardif"
+    "v2 crash tardif",
   );
   step(`deploying the version that dies at ${CRASH_AFTER_S}s…`);
 
@@ -232,10 +223,7 @@ try {
     orderBy: desc(deployments.createdAt),
     where: eq(deployments.serviceId, svc?.id ?? ""),
   });
-  if (
-    latest?.trigger === "watch_revert" &&
-    latest.imageTag === dep1?.imageTag
-  ) {
+  if (latest?.trigger === "watch_revert" && latest.imageTag === dep1?.imageTag) {
     ok(`v1's image replayed from history: ${latest.imageTag}`);
   } else {
     ko(`unexpected revert: ${latest?.trigger} / ${latest?.imageTag}`);

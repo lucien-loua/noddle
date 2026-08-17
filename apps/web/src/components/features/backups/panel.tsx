@@ -80,14 +80,7 @@ function defaultVolumeNameFor(subject: BackupSubject, rows: ScheduleRow[]) {
 }
 
 export function BackupPanel(props: BackupPanelProps) {
-  const {
-    canCreate,
-    canRestore,
-    destinations,
-    onRestore,
-    resourceName,
-    subject,
-  } = props;
+  const { canCreate, canRestore, destinations, onRestore, resourceName, subject } = props;
   const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
   const configs = useQuery(queries.backupConfigsFor(subject));
@@ -186,9 +179,7 @@ export function BackupPanel(props: BackupPanelProps) {
         ) : (
           <BackupConfigDialog
             destinations={destinations}
-            editing={
-              editor === "new" ? null : (editor as VolumeBackupConfigRow)
-            }
+            editing={editor === "new" ? null : (editor as VolumeBackupConfigRow)}
             onOpenChange={(open) => {
               if (!open) {
                 setEditor(null);

@@ -8,13 +8,7 @@ import {
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
-import {
-  badgeVariant,
-  deploymentLabel,
-  duration,
-  shortSha,
-  triggerLabel,
-} from "@/lib/format";
+import { badgeVariant, deploymentLabel, duration, shortSha, triggerLabel } from "@/lib/format";
 import type { DeploymentSummary } from "@/server/dashboard";
 
 export function BuildLogsDialog({
@@ -42,10 +36,7 @@ export function BuildLogsDialog({
     : "";
 
   return (
-    <FocusModal
-      onOpenChange={onOpenChange}
-      open={open && deploymentId !== null}
-    >
+    <FocusModal onOpenChange={onOpenChange} open={open && deploymentId !== null}>
       <FocusModalContent>
         {deploymentId ? (
           <LogStream.Session deploymentId={deploymentId} onEnd={onEnd}>
@@ -53,15 +44,9 @@ export function BuildLogsDialog({
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <FocusModalTitle>Build logs</FocusModalTitle>
-                  {meta ? (
-                    <FocusModalDescription>{meta}</FocusModalDescription>
-                  ) : null}
+                  {meta ? <FocusModalDescription>{meta}</FocusModalDescription> : null}
                 </div>
-                {status ? (
-                  <Badge variant={badgeVariant(status.tone)}>
-                    {status.label}
-                  </Badge>
-                ) : null}
+                {status ? <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge> : null}
                 <LogStream.Copy />
               </div>
             </FocusModalHeader>

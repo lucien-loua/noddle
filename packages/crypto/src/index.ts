@@ -32,14 +32,12 @@ export class CryptoError extends Error {
  */
 export function loadAppKey(raw: string | undefined): Buffer {
   if (!raw) {
-    throw new CryptoError(
-      "APP_KEY is missing. Generate one with: openssl rand -base64 32"
-    );
+    throw new CryptoError("APP_KEY is missing. Generate one with: openssl rand -base64 32");
   }
   const key = Buffer.from(raw, "base64");
   if (key.length !== KEY_BYTES) {
     throw new CryptoError(
-      `APP_KEY must be ${KEY_BYTES} bytes once base64-decoded, got ${key.length}. Generate one with: openssl rand -base64 32`
+      `APP_KEY must be ${KEY_BYTES} bytes once base64-decoded, got ${key.length}. Generate one with: openssl rand -base64 32`,
     );
   }
   return key;
@@ -57,19 +55,12 @@ export interface SecretContext {
   aad: string;
 }
 
-export function encryptSecret(
-  plaintext: string,
-  key: Buffer,
-  ctx: SecretContext
-): string {
+export function encryptSecret(plaintext: string, key: Buffer, ctx: SecretContext): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGORITHM, key, iv);
   cipher.setAAD(Buffer.from(ctx.aad, "utf-8"));
 
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf-8"),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
   const tag = cipher.getAuthTag();
 
   return [
@@ -80,21 +71,12 @@ export function encryptSecret(
   ].join(".");
 }
 
-export function decryptSecret(
-  payload: string,
-  key: Buffer,
-  ctx: SecretContext
-): string {
+export function decryptSecret(payload: string, key: Buffer, ctx: SecretContext): string {
   const parts = payload.split(".");
   if (parts.length !== 4) {
     throw new CryptoError("malformed ciphertext");
   }
-  const [version, ivB64, tagB64, ctB64] = parts as [
-    string,
-    string,
-    string,
-    string,
-  ];
+  const [version, ivB64, tagB64, ctB64] = parts as [string, string, string, string];
   if (version !== VERSION) {
     throw new CryptoError(`unknown encryption version: ${version}`);
   }
@@ -146,24 +128,20 @@ export function safeEqual(a: string, b: string): boolean {
  * It's `info` that separates the uses.
  */
 export function deriveSubkey(key: Buffer, info: string): Buffer {
-  return Buffer.from(
-    hkdfSync("sha256", key, new Uint8Array(0), info, KEY_BYTES)
-  );
+  return Buffer.from(hkdfSync("sha256", key, new Uint8Array(0), info, KEY_BYTES));
 }
 
 /** Incoming secret from a form: omitted or empty means "keep stored". */
 export type SecretInput = string | null | undefined;
 
-export function isRetainedSecret(
-  input: SecretInput
-): input is null | undefined | "" {
+export function isRetainedSecret(input: SecretInput): input is null | undefined | "" {
   return input === null || input === undefined || input === "";
 }
 
 export async function resolveRetainedSecret(
   input: SecretInput,
   loadExisting: () => Promise<string | null | undefined>,
-  requiredError: string
+  requiredError: string,
 ): Promise<string> {
   if (!isRetainedSecret(input)) {
     return input;

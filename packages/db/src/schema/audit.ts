@@ -58,5 +58,5 @@ export const auditLog = pgTable(
     // Reads are always "most recent first".
     index("audit_log_created_idx").on(t.createdAt),
     index("audit_log_actor_idx").on(t.actorUserId),
-  ]
+  ],
 );

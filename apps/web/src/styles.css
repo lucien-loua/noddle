@@ -181,8 +181,7 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
-    transition-property:
-      opacity, color, background-color, border-color, fill, stroke !important;
+    transition-property: opacity, color, background-color, border-color, fill, stroke !important;
     transition-duration: 150ms !important;
   }
 }

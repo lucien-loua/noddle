@@ -30,14 +30,11 @@ export interface DeployClients {
 export async function withDeployClients<T>(
   ctx: DeployContext,
   server: ServerRow,
-  fn: (clients: DeployClients) => Promise<T>
+  fn: (clients: DeployClients) => Promise<T>,
 ): Promise<T> {
-  const { buildClient, managerClient, sameConnection } =
-    await ctx.connectForDeploy(server);
+  const { buildClient, managerClient, sameConnection } = await ctx.connectForDeploy(server);
   const buildDocker = ctx.createDockerApi(buildClient);
-  const managerDocker = sameConnection
-    ? buildDocker
-    : ctx.createDockerApi(managerClient);
+  const managerDocker = sameConnection ? buildDocker : ctx.createDockerApi(managerClient);
 
   try {
     return await fn({

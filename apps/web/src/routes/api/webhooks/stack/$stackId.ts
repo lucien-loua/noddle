@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/webhooks/stack/$stackId")({
         const secret = decryptSecret(
           stack.webhookSecretEncrypted,
           env.appKey,
-          secretContext.webhookSecret(stackId)
+          secretContext.webhookSecret(stackId),
         );
 
         if (!verifyWebhookSignature(request.headers, rawBody, secret)) {

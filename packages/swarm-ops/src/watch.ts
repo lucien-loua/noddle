@@ -21,7 +21,7 @@ export const CRASH_LOOP_THRESHOLD = 2;
 export async function inspectServiceHealth(
   docker: DockerApi,
   serviceName: string,
-  since: Date
+  since: Date,
 ): Promise<WatchVerdict> {
   const tasks = await docker.listTasks({
     filters: JSON.stringify({ service: [serviceName] }),

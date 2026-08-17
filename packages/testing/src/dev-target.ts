@@ -41,7 +41,7 @@ function multipassAddress(name: string): string {
   if (listed.error || listed.status !== 0) {
     throw new Error(
       `multipass is not answering, so ${name}'s address cannot be resolved. ` +
-        "Install it (https://multipass.run) or set TARGET_HOST to a reachable host."
+        "Install it (https://multipass.run) or set TARGET_HOST to a reachable host.",
     );
   }
   const row = listed.stdout
@@ -49,19 +49,15 @@ function multipassAddress(name: string): string {
     .map((line) => line.split(","))
     .find((cells) => cells[0] === name);
   if (!row) {
-    throw new Error(
-      `no Multipass instance named ${name}. Create it with ./scripts/spike-local.sh`
-    );
+    throw new Error(`no Multipass instance named ${name}. Create it with ./scripts/spike-local.sh`);
   }
   const [, state, ipv4] = row;
   if (state !== "Running") {
-    throw new Error(
-      `${name} exists but is ${state}. Start it with: multipass start ${name}`
-    );
+    throw new Error(`${name} exists but is ${state}. Start it with: multipass start ${name}`);
   }
   if (!ipv4) {
     throw new Error(
-      `${name} is running but has no IPv4 lease yet. Give it a moment, or restart it.`
+      `${name} is running but has no IPv4 lease yet. Give it a moment, or restart it.`,
     );
   }
   return ipv4;

@@ -1,12 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import {
-  githubProviders,
-  gitlabProviders,
-  gitProviders,
-  services,
-} from "@noddle/db/schema";
+import { githubProviders, gitlabProviders, gitProviders, services } from "@noddle/db/schema";
 import { isConnected, providerFor } from "@noddle/git-provider-credentials";
 import {
   appManifest,
@@ -64,18 +59,15 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
           // GitHub only: a GitLab application is authorised in one step,
           // so there is nothing left to install.
           installUrl:
-            row.providerType === "github" &&
-            row.github?.appId &&
-            !row.github.installationId
+            row.providerType === "github" && row.github?.appId && !row.github.installationId
               ? installUrl(row.github.htmlUrl ?? "")
               : null,
           name: row.name,
           providerType: row.providerType,
-          serviceCount: connected.filter((s) => s.gitProviderId === row.id)
-            .length,
+          serviceCount: connected.filter((s) => s.gitProviderId === row.id).length,
         }));
       },
-    })
+    }),
 );
 
 const TRAILING_SLASHES = /\/+$/;
@@ -87,10 +79,7 @@ const startGithubSchema = z.object({
     .max(34)
     // GitHub App names are global and constrained; a rejected name must not
     // be discovered after the browser has already left for GitHub.
-    .regex(
-      /^[a-zA-Z0-9][a-zA-Z0-9-]*$/,
-      "letters, digits and dashes; cannot start with a dash"
-    ),
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]*$/, "letters, digits and dashes; cannot start with a dash"),
   /** `https://github.com` or a GitHub Enterprise host. */
   url: z.url().max(255).default("https://github.com"),
 });
@@ -104,61 +93,55 @@ const startGithubSchema = z.object({
  */
 export const startGithubApp = createServerFn({ method: "POST" })
   .validator(startGithubSchema)
-  .handler(
-    async ({
-      data,
-    }): Promise<{ action: string; manifest: string; state: string }> => {
-      const guarded = await runGuarded({
-        permission: { action: "create", resource: "gitProvider" },
-        run: async () => {
-          const origin = requestOrigin();
+  .handler(async ({ data }): Promise<{ action: string; manifest: string; state: string }> => {
+    const guarded = await runGuarded({
+      permission: { action: "create", resource: "gitProvider" },
+      run: async () => {
+        const origin = requestOrigin();
 
-          // Refused HERE, and BEFORE the insert. GitHub requires a hook it
-          // can reach and rejects the whole manifest otherwise, so failing
-          // late would both send the browser away for nothing and leave a
-          // pending row behind on every attempt.
-          if (!isPubliclyReachable(origin)) {
-            throw new Error(
-              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Open Noddle on a public address — a tunnel URL works — and connect from there.`
-            );
-          }
+        // Refused HERE, and BEFORE the insert. GitHub requires a hook it
+        // can reach and rejects the whole manifest otherwise, so failing
+        // late would both send the browser away for nothing and leave a
+        // pending row behind on every attempt.
+        if (!isPubliclyReachable(origin)) {
+          throw new Error(
+            `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Open Noddle on a public address — a tunnel URL works — and connect from there.`,
+          );
+        }
 
-          const id = crypto.randomUUID();
-          await db.insert(gitProviders).values({
-            id,
-            name: data.name,
-            providerType: "github",
-          });
-          await db
-            .insert(githubProviders)
-            .values({ gitProviderId: id, url: data.url });
+        const id = crypto.randomUUID();
+        await db.insert(gitProviders).values({
+          id,
+          name: data.name,
+          providerType: "github",
+        });
+        await db.insert(githubProviders).values({ gitProviderId: id, url: data.url });
 
-          return {
-            action: `${data.url.replace(TRAILING_SLASHES, "")}/settings/apps/new?state=${id}`,
-            id,
-            manifest: JSON.stringify(
-              appManifest({
-                name: data.name,
-                redirectUrl: `${origin}/api/git-providers/github/callback`,
-                url: origin,
-                // Per connection, so a delivery names its own App instead of
-                // being matched by trying every stored secret.
-                webhookUrl: `${origin}/api/webhooks/github/${id}`,
-              })
-            ),
-            name: data.name,
-          };
-        },
-        target: ({ result }) => ({ id: result.id, name: result.name }),
-      });
+        return {
+          action: `${data.url.replace(TRAILING_SLASHES, "")}/settings/apps/new?state=${id}`,
+          id,
+          manifest: JSON.stringify(
+            appManifest({
+              name: data.name,
+              redirectUrl: `${origin}/api/git-providers/github/callback`,
+              url: origin,
+              // Per connection, so a delivery names its own App instead of
+              // being matched by trying every stored secret.
+              webhookUrl: `${origin}/api/webhooks/github/${id}`,
+            }),
+          ),
+          name: data.name,
+        };
+      },
+      target: ({ result }) => ({ id: result.id, name: result.name }),
+    });
 
-      return {
-        action: guarded.action,
-        manifest: guarded.manifest,
-        state: guarded.id,
-      };
-    }
-  );
+    return {
+      action: guarded.action,
+      manifest: guarded.manifest,
+      state: guarded.id,
+    };
+  });
 
 const startGitlabSchema = z.object({
   applicationId: z.string().min(1).max(255),
@@ -203,13 +186,13 @@ export const startGitlabApp = createServerFn({ method: "POST" })
           secretEncrypted: encryptSecret(
             data.secret,
             env.appKey,
-            secretContext.gitProvider(id, "client_secret")
+            secretContext.gitProvider(id, "client_secret"),
           ),
           url: data.url.replace(TRAILING_SLASHES, ""),
           webhookSecretEncrypted: encryptSecret(
             webhookSecret,
             env.appKey,
-            secretContext.gitProvider(id, "webhook_secret")
+            secretContext.gitProvider(id, "webhook_secret"),
           ),
         });
 
@@ -221,7 +204,7 @@ export const startGitlabApp = createServerFn({ method: "POST" })
               secret: data.secret,
               url: data.url,
             },
-            id
+            id,
           ),
           id,
           name: data.name,
@@ -261,14 +244,14 @@ export const deleteGitProvider = createServerFn({ method: "POST" })
           throw new Error(
             `this connection still clones for ${used.length} service(s): ${used
               .map((s) => s.name)
-              .join(", ")} — change their provider first`
+              .join(", ")} — change their provider first`,
           );
         }
         await db.delete(gitProviders).where(eq(gitProviders.id, row.id));
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 const syncInstallationSchema = z.object({ gitProviderId: z.uuid() });
@@ -299,7 +282,7 @@ export const syncGithubInstallation = createServerFn({ method: "POST" })
           throw new Error(
             `this App is installed on ${installations.length} accounts (${installations
               .map((i) => i.account)
-              .join(", ")}) — connect one App per account`
+              .join(", ")}) — connect one App per account`,
           );
         }
         await db
@@ -309,28 +292,21 @@ export const syncGithubInstallation = createServerFn({ method: "POST" })
         return { account: found.account };
       },
       target: () => ({ id: data.gitProviderId, name: "github" }),
-    })
+    }),
   );
 
 const providerRepositoriesSchema = z.object({ gitProviderId: z.uuid() });
 
 export const getProviderRepositories = createServerFn({ method: "GET" })
   .validator(providerRepositoriesSchema)
-  .handler(
-    async ({
-      data,
-    }): Promise<{ defaultBranch: string; fullName: string; url: string }[]> =>
-      runRead({
-        permission: { action: "read", resource: "gitProvider" },
-        read: async () => {
-          const provider = await providerFor(
-            db,
-            env.appKey,
-            data.gitProviderId
-          );
-          return await provider.repositories();
-        },
-      })
+  .handler(async ({ data }): Promise<{ defaultBranch: string; fullName: string; url: string }[]> =>
+    runRead({
+      permission: { action: "read", resource: "gitProvider" },
+      read: async () => {
+        const provider = await providerFor(db, env.appKey, data.gitProviderId);
+        return await provider.repositories();
+      },
+    }),
   );
 
 const providerBranchesSchema = z.object({
@@ -347,5 +323,5 @@ export const getProviderBranches = createServerFn({ method: "GET" })
         const provider = await providerFor(db, env.appKey, data.gitProviderId);
         return await provider.branches(data.fullName);
       },
-    })
+    }),
   );

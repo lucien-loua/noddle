@@ -1,10 +1,5 @@
 import { BUILDKIT_IMAGE } from "@noddle/shared/toolchain";
-import {
-  exec,
-  execArgv,
-  quoteArg,
-  writeRemoteFile,
-} from "@noddle/ssh-executor";
+import { exec, execArgv, quoteArg, writeRemoteFile } from "@noddle/ssh-executor";
 import type { ExecOptions, ExecResult, SshClient } from "@noddle/ssh-executor";
 
 export class BuildError extends Error {
@@ -41,11 +36,7 @@ export function looksOutOfMemory(output: string): boolean {
 
 function check(stage: string, res: ExecResult): ExecResult {
   if (res.code !== 0) {
-    const tail = (res.stderr || res.stdout)
-      .trim()
-      .split("\n")
-      .slice(-8)
-      .join("\n");
+    const tail = (res.stderr || res.stdout).trim().split("\n").slice(-8).join("\n");
     const output = `${res.stderr}\n${res.stdout}`;
     // Said plainly, because the raw buildkit output names neither the cap
     // nor memory as the cause — it ends on an exit code and a stack of
@@ -137,12 +128,9 @@ export const BUILDX_BUILDER = "noddle-builder";
 export async function ensureCappedBuilder(
   client: SshClient,
   cap: BuildCap,
-  opts: ExecOptions = {}
+  opts: ExecOptions = {},
 ): Promise<void> {
-  const running = await exec(
-    client,
-    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)}`
-  );
+  const running = await exec(client, `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)}`);
   if (running.code !== 0) {
     check(
       "buildkit daemon",
@@ -163,8 +151,8 @@ export async function ensureCappedBuilder(
           `--cpu-period=${cap.cpuPeriod}`,
           BUILDKIT_IMAGE,
         ],
-        opts
-      )
+        opts,
+      ),
     );
   }
 
@@ -178,19 +166,12 @@ export async function ensureCappedBuilder(
   // `buildx inspect` has no --format on the pinned version; the driver comes off
   // its `Driver:` line. Read into a variable rather than piped to grep: these
   // run under pipefail, where an early-exiting reader kills the producer.
-  const builder = await exec(
-    client,
-    `sudo docker buildx inspect ${quoteArg(BUILDX_BUILDER)}`
-  );
+  const builder = await exec(client, `sudo docker buildx inspect ${quoteArg(BUILDX_BUILDER)}`);
   const onRemoteDriver = REMOTE_DRIVER.test(builder.stdout);
   if (builder.code === 0 && !onRemoteDriver) {
     check(
       "stale builder removal",
-      await execArgv(
-        client,
-        ["sudo", "docker", "buildx", "rm", BUILDX_BUILDER],
-        opts
-      )
+      await execArgv(client, ["sudo", "docker", "buildx", "rm", BUILDX_BUILDER], opts),
     );
   }
   if (builder.code !== 0 || !onRemoteDriver) {
@@ -209,8 +190,8 @@ export async function ensureCappedBuilder(
           "remote",
           `docker-container://${BUILDKIT_CONTAINER}`,
         ],
-        opts
-      )
+        opts,
+      ),
     );
   }
 }
@@ -240,7 +221,7 @@ function assertNotFlag(value: string, label: string): void {
     throw new BuildError(
       "validation",
       `${label} cannot start with "-": git would read it as a flag`,
-      null
+      null,
     );
   }
 }
@@ -283,7 +264,7 @@ function assertWipableDir(dir: string): void {
     throw new BuildError(
       "validation",
       `working directory refused: "${dir}" — too close to the root or malformed, and it would be erased`,
-      null
+      null,
     );
   }
 }
@@ -297,10 +278,7 @@ const SURROUNDING_SLASHES = /^\/+|\/+$/g;
  * refused here even though @noddle/shared already validated it — same
  * philosophy as `assertNotFlag`: the engine does not trust its callers.
  */
-export function resolveBuildDir(
-  cloneDir: string,
-  buildPath: string | null | undefined
-): string {
+export function resolveBuildDir(cloneDir: string, buildPath: string | null | undefined): string {
   const rel = buildPath?.trim().replace(SURROUNDING_SLASHES, "") ?? "";
   if (rel === "") {
     return cloneDir;
@@ -310,7 +288,7 @@ export function resolveBuildDir(
     throw new BuildError(
       "validation",
       `build path refused: "${buildPath}" — it would leave the repository`,
-      null
+      null,
     );
   }
   return `${cloneDir}/${rel}`;
@@ -359,7 +337,7 @@ function keyDirFor(scope: string): string {
 async function installDeployKey(
   client: SshClient,
   scope: string,
-  deployKey: string
+  deployKey: string,
 ): Promise<string> {
   const dir = keyDirFor(scope);
   const keyPath = `${dir}/id`;
@@ -368,14 +346,11 @@ async function installDeployKey(
   // directory is what actually keeps the key private, not the file mode.
   check(
     "deploy key directory",
-    await exec(client, `sudo install -d -m 700 -o "$USER" ${quoteArg(dir)}`)
+    await exec(client, `sudo install -d -m 700 -o "$USER" ${quoteArg(dir)}`),
   );
   await writeRemoteFile(client, keyPath, ensureTrailingNewline(deployKey));
   // ssh refuses a key readable by anyone else, and says so obscurely.
-  check(
-    "deploy key mode",
-    await exec(client, `chmod 600 ${quoteArg(keyPath)}`)
-  );
+  check("deploy key mode", await exec(client, `chmod 600 ${quoteArg(keyPath)}`));
 
   // IdentitiesOnly: without it ssh offers every agent key first and the
   // server closes the connection on MaxAuthTries before reaching ours.
@@ -407,30 +382,18 @@ function ensureTrailingNewline(key: string): string {
   return key.endsWith("\n") ? key : `${key}\n`;
 }
 
-type GitRunner = (
-  label: string,
-  argv: readonly string[]
-) => Promise<{ stdout: string }>;
+type GitRunner = (label: string, argv: readonly string[]) => Promise<{ stdout: string }>;
 
 /** Move onto an explicit commit, submodules included. */
 async function checkoutCommit(
   git: GitRunner,
-  o: CloneOptions & { commitSha?: string }
+  o: CloneOptions & { commitSha?: string },
 ): Promise<void> {
   const sha = o.commitSha;
   if (!sha) {
     return;
   }
-  await git("git checkout", [
-    "git",
-    "-C",
-    o.dir,
-    "fetch",
-    "--depth",
-    "1",
-    "origin",
-    sha,
-  ]);
+  await git("git checkout", ["git", "-C", o.dir, "fetch", "--depth", "1", "origin", sha]);
   // No `-- <sha>` here: in git, `checkout -- X` means "restore FILE X",
   // not "switch to commit X". `--detach` lifts the ambiguity, and the SHA
   // validation rules out a flag.
@@ -453,10 +416,7 @@ async function checkoutCommit(
 }
 
 /** Returns the SHA actually built — never "the branch". */
-export async function fetchSource(
-  client: SshClient,
-  o: CloneOptions
-): Promise<string> {
+export async function fetchSource(client: SshClient, o: CloneOptions): Promise<string> {
   // The engine re-validates what @noddle/shared already validated on the API
   // side. One day a caller will forget, and that day it is RCE on the client's
   // server.
@@ -477,14 +437,12 @@ export async function fetchSource(
     "directory preparation",
     await exec(
       client,
-      `sudo rm -rf ${quoteArg(o.dir)} && sudo mkdir -p ${quoteArg(o.dir)} && sudo chown -R "$USER" ${quoteArg(o.dir)}`
-    )
+      `sudo rm -rf ${quoteArg(o.dir)} && sudo mkdir -p ${quoteArg(o.dir)} && sudo chown -R "$USER" ${quoteArg(o.dir)}`,
+    ),
   );
 
   const scope = o.keyScope ?? "shared";
-  const sshCommand = o.deployKey
-    ? await installDeployKey(client, scope, o.deployKey)
-    : null;
+  const sshCommand = o.deployKey ? await installDeployKey(client, scope, o.deployKey) : null;
 
   // Every git call goes through here: a deploy key that authenticated the
   // clone but not the submodule fetch would fail halfway, with the repo
@@ -498,11 +456,9 @@ export async function fetchSource(
       label,
       await exec(
         client,
-        sshCommand
-          ? `GIT_SSH_COMMAND=${quoteArg(sshCommand)} ${command}`
-          : command,
-        o
-      )
+        sshCommand ? `GIT_SSH_COMMAND=${quoteArg(sshCommand)} ${command}` : command,
+        o,
+      ),
     );
   };
 
@@ -526,13 +482,7 @@ export async function fetchSource(
       await checkoutCommit(git, o);
     }
 
-    const rev = await git("git rev-parse", [
-      "git",
-      "-C",
-      o.dir,
-      "rev-parse",
-      "HEAD",
-    ]);
+    const rev = await git("git rev-parse", ["git", "-C", o.dir, "rev-parse", "HEAD"]);
     return rev.stdout.trim();
   } finally {
     if (sshCommand) {
@@ -596,10 +546,7 @@ export interface BuildOptions extends ExecOptions {
  * Config variables go through `--env` and nowhere else — the process
  * environment is not read for them.
  */
-export async function buildImage(
-  client: SshClient,
-  o: BuildOptions
-): Promise<void> {
+export async function buildImage(client: SshClient, o: BuildOptions): Promise<void> {
   assertNotFlag(o.dir, "build directory");
   assertNotFlag(o.imageTag, "image tag");
 
@@ -665,7 +612,7 @@ export interface DockerfileBuildOptions extends ExecOptions {
  */
 export async function buildImageFromDockerfile(
   client: SshClient,
-  o: DockerfileBuildOptions
+  o: DockerfileBuildOptions,
 ): Promise<void> {
   // `contextDir` and `dockerfilePath` come from a user-supplied compose file,
   // never from a code constant — same caution as at the entry of `fetchSource`.
@@ -683,7 +630,7 @@ export async function buildImageFromDockerfile(
           o.noCache ? " --no-cache" : ""
         } -f ${quoteArg(o.dockerfilePath)}` +
         ` -t ${quoteArg(o.imageTag)} .`,
-      o
-    )
+      o,
+    ),
   );
 }

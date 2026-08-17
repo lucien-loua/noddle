@@ -1,10 +1,7 @@
 import { deriveSubkey } from "@noddle/crypto";
 // biome-ignore lint/performance/noNamespaceImport: drizzleAdapter wants the schema object
 import * as schema from "@noddle/db/schema";
-import {
-  MAX_PASSWORD_LENGTH,
-  MIN_PASSWORD_LENGTH,
-} from "@noddle/shared/validation/account";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@noddle/shared/validation/account";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -23,8 +20,7 @@ import { ac, roles } from "@/lib/permissions";
  * operator reached their dashboard at is the one that has to work.
  */
 function forwardedOrigin(request: Request): string | null {
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   if (!host) {
     return null;
   }
@@ -132,11 +128,7 @@ export const auth = betterAuth({
    * reaches this branch.
    */
   trustedOrigins: (request) => {
-    if (
-      process.env.NODE_ENV === "production" ||
-      process.env.BETTER_AUTH_URL ||
-      !request
-    ) {
+    if (process.env.NODE_ENV === "production" || process.env.BETTER_AUTH_URL || !request) {
       return [];
     }
     const origin = forwardedOrigin(request);

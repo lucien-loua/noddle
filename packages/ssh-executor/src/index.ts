@@ -78,9 +78,7 @@ export function connect(creds: ServerCredentials): Promise<Client> {
     const client = new Client();
     const onError = (err: Error) => {
       client.removeAllListeners();
-      reject(
-        new SshError(`SSH connection failed: ${err.message}`, creds.host, err)
-      );
+      reject(new SshError(`SSH connection failed: ${err.message}`, creds.host, err));
     };
     client.once("ready", () => {
       client.removeListener("error", onError);
@@ -97,11 +95,7 @@ export interface ExecOptions {
   onStdout?: (chunk: string) => void;
 }
 
-export function exec(
-  client: Client,
-  command: string,
-  opts: ExecOptions = {}
-): Promise<ExecResult> {
+export function exec(client: Client, command: string, opts: ExecOptions = {}): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
     client.exec(command, (err, stream) => {
       if (err) {
@@ -185,7 +179,7 @@ export interface ExecStreamResult<T> {
 export function execStream<T>(
   client: Client,
   command: string,
-  consume: (io: ExecStreamIo) => Promise<T>
+  consume: (io: ExecStreamIo) => Promise<T>,
 ): Promise<ExecStreamResult<T>> {
   return new Promise((resolve, reject) => {
     client.exec(command, (err, stream) => {
@@ -271,7 +265,7 @@ export function quoteArg(arg: string): string {
 export function execArgv(
   client: Client,
   argv: readonly string[],
-  opts: ExecOptions = {}
+  opts: ExecOptions = {},
 ): Promise<ExecResult> {
   if (argv.length === 0) {
     throw new TypeError("argv vide");
@@ -287,7 +281,7 @@ export function execArgv(
 export function execStreamArgv<T>(
   client: Client,
   argv: readonly string[],
-  consume: (io: ExecStreamIo) => Promise<T>
+  consume: (io: ExecStreamIo) => Promise<T>,
 ): Promise<ExecStreamResult<T>> {
   if (argv.length === 0) {
     throw new TypeError("argv vide");
@@ -305,11 +299,7 @@ export function disconnect(client: Client): void {
  * and sending it through a remote shell would reopen exactly the class of
  * injection `quoteArg` exists to close on the argument side.
  */
-export function writeRemoteFile(
-  client: Client,
-  path: string,
-  content: string
-): Promise<void> {
+export function writeRemoteFile(client: Client, path: string, content: string): Promise<void> {
   return new Promise((resolve, reject) => {
     client.sftp((err, sftp) => {
       if (err) {
@@ -331,7 +321,7 @@ export function writeRemoteFile(
 /** Opens a connection, executes, closes it — even if `fn` throws. */
 export async function withServer<T>(
   creds: ServerCredentials,
-  fn: (client: Client) => Promise<T>
+  fn: (client: Client) => Promise<T>,
 ): Promise<T> {
   const client = await connect(creds);
   try {
@@ -367,34 +357,25 @@ class SshSocketAgent extends http.Agent {
   // — hence a TS2355 loop.
   override createConnection(
     _options: http.ClientRequestArgs,
-    callback?: (err: Error | null, stream: Duplex) => void
+    callback?: (err: Error | null, stream: Duplex) => void,
   ): undefined {
-    this.client.openssh_forwardOutStreamLocal(
-      this.socketPath,
-      (err, stream) => {
-        if (err) {
-          callback?.(err, null as unknown as Duplex);
-          return;
-        }
-        // An ssh2 Channel is a Duplex, not a net.Socket. Node's HTTP
-        // client nonetheless calls socket methods on it. We provide the
-        // missing no-ops rather than let a TypeError leak from the
-        // depths of node:_http_agent, unreadable in practice.
-        const sock = stream as unknown as Record<string, unknown>;
-        for (const m of [
-          "setKeepAlive",
-          "setNoDelay",
-          "setTimeout",
-          "ref",
-          "unref",
-        ]) {
-          if (typeof sock[m] !== "function") {
-            sock[m] = () => stream;
-          }
-        }
-        callback?.(null, stream as unknown as Duplex);
+    this.client.openssh_forwardOutStreamLocal(this.socketPath, (err, stream) => {
+      if (err) {
+        callback?.(err, null as unknown as Duplex);
+        return;
       }
-    );
+      // An ssh2 Channel is a Duplex, not a net.Socket. Node's HTTP
+      // client nonetheless calls socket methods on it. We provide the
+      // missing no-ops rather than let a TypeError leak from the
+      // depths of node:_http_agent, unreadable in practice.
+      const sock = stream as unknown as Record<string, unknown>;
+      for (const m of ["setKeepAlive", "setNoDelay", "setTimeout", "ref", "unref"]) {
+        if (typeof sock[m] !== "function") {
+          sock[m] = () => stream;
+        }
+      }
+      callback?.(null, stream as unknown as Duplex);
+    });
   }
 }
 
@@ -410,10 +391,7 @@ export interface DockerClientOptions {
  * both and always forwards to the socket. They only serve to let
  * dockerode build valid HTTP URLs.
  */
-export function dockerClient(
-  client: Client,
-  opts: DockerClientOptions = {}
-): Docker {
+export function dockerClient(client: Client, opts: DockerClientOptions = {}): Docker {
   const socketPath = opts.socketPath ?? "/var/run/docker.sock";
   return new Docker({
     agent: new SshSocketAgent(client, socketPath),
@@ -450,7 +428,7 @@ function wrapChannel(
   stream: import("ssh2").ClientChannel,
   client: Client,
   /** When true, ending the channel also ends the SSH client (one-shot). */
-  ownClient: boolean
+  ownClient: boolean,
 ): PtySession {
   let exitCode: number | null = null;
   stream.on("exit", (code: number | null) => {
@@ -500,10 +478,7 @@ function ptyDims(opts: PtyOptions): {
 }
 
 /** Interactive login shell on the target server. */
-export function openShell(
-  client: Client,
-  opts: PtyOptions = {}
-): Promise<PtySession> {
+export function openShell(client: Client, opts: PtyOptions = {}): Promise<PtySession> {
   const dims = ptyDims(opts);
   return new Promise((resolve, reject) => {
     client.shell(
@@ -518,7 +493,7 @@ export function openShell(
           return;
         }
         resolve(wrapChannel(stream, client, false));
-      }
+      },
     );
   });
 }
@@ -532,7 +507,7 @@ export function openShell(
 export function openExecPty(
   client: Client,
   command: string,
-  opts: PtyOptions = {}
+  opts: PtyOptions = {},
 ): Promise<PtySession> {
   const dims = ptyDims(opts);
   return new Promise((resolve, reject) => {
@@ -551,7 +526,7 @@ export function openExecPty(
           return;
         }
         resolve(wrapChannel(stream, client, false));
-      }
+      },
     );
   });
 }

@@ -1,7 +1,4 @@
-import type {
-  ServiceGitProviderInput,
-  ServiceSourceType,
-} from "./validation/service.ts";
+import type { ServiceGitProviderInput, ServiceSourceType } from "./validation/service.ts";
 
 /**
  * What choosing a source type IMPLIES about a Service's other fields.
@@ -37,7 +34,7 @@ export interface SourcePatch {
 export function gitSourcePatch(
   sourceType: "git" | "github" | "gitlab",
   value: ServiceGitProviderInput,
-  current: { buildMethod: "railpack" | "dockerfile" | "image" }
+  current: { buildMethod: "railpack" | "dockerfile" | "image" },
 ): SourcePatch {
   const byUrl = sourceType === "git";
   return {

@@ -1,10 +1,5 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react";
-import {
-  createFileRoute,
-  Link,
-  notFound,
-  redirect,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -63,9 +58,7 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
 
     // The group can legitimately be missing: it's only used to count what
     // sibling environments contain for the selector.
-    const group = dashboard.groups.find(
-      (g) => g.projectId === params.projectId
-    );
+    const group = dashboard.groups.find((g) => g.projectId === params.projectId);
 
     return {
       counts: Object.fromEntries(
@@ -73,11 +66,9 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
           const s = group?.scopes.find((sc) => sc.environmentId === e.id);
           return [
             e.id,
-            (s?.services.length ?? 0) +
-              (s?.stacks.length ?? 0) +
-              (s?.databases.length ?? 0),
+            (s?.services.length ?? 0) + (s?.stacks.length ?? 0) + (s?.databases.length ?? 0),
           ];
-        })
+        }),
       ),
       current,
       dashboard,
@@ -91,20 +82,11 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
 });
 
 function ProjectEnvironmentPage() {
-  const {
-    counts,
-    current,
-    dashboard,
-    email,
-    environments,
-    role,
-    scope,
-    servers,
-  } = Route.useLoaderData();
+  const { counts, current, dashboard, email, environments, role, scope, servers } =
+    Route.useLoaderData();
   const { projectId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
 
   const handleNavigate = useCallback(
     (environmentId: string) => {
@@ -117,7 +99,7 @@ function ProjectEnvironmentPage() {
         to: "/projects/$projectId/$environmentId",
       });
     },
-    [navigate, projectId]
+    [navigate, projectId],
   );
 
   return (

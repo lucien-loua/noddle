@@ -26,16 +26,12 @@ export interface Reachable {
 export function credentialsFromKey(
   appKey: Buffer,
   server: Reachable,
-  key: { id: string; privateKeyEncrypted: string }
+  key: { id: string; privateKeyEncrypted: string },
 ): ServerCredentials {
   return {
     host: server.host,
     port: server.sshPort,
-    privateKey: decryptSecret(
-      key.privateKeyEncrypted,
-      appKey,
-      secretContext.sshKey(key.id)
-    ),
+    privateKey: decryptSecret(key.privateKeyEncrypted, appKey, secretContext.sshKey(key.id)),
     user: server.sshUser,
   };
 }
@@ -50,7 +46,7 @@ export function credentialsFromKey(
 export async function credentialsFor(
   db: Database,
   appKey: Buffer,
-  server: Reachable
+  server: Reachable,
 ): Promise<ServerCredentials> {
   const key = await db.query.sshKeys.findFirst({
     where: eq(sshKeys.id, server.sshKeyId),

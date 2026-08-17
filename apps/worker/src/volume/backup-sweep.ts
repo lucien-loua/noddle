@@ -5,7 +5,7 @@ import type { DeployContext } from "#runtime-context";
 
 export async function sweepVolumeBackups(
   ctx: DeployContext,
-  enqueue: (volumeBackupId: string) => Promise<unknown>
+  enqueue: (volumeBackupId: string) => Promise<unknown>,
 ) {
   return await sweepVolumeBackupConfigs(ctx, enqueue);
 }

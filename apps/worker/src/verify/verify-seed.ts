@@ -30,7 +30,7 @@ export async function seedSshKey(
   db: Database,
   appKey: Buffer,
   name: string,
-  privateKey: string
+  privateKey: string,
 ): Promise<string> {
   // REPLAYABLE, and that's not a detail: the name is unique in the
   // database, and these scripts' `reset()` deletes servers without touching
@@ -48,11 +48,7 @@ export async function seedSshKey(
   const values = {
     id,
     name,
-    privateKeyEncrypted: encryptSecret(
-      privateKey,
-      appKey,
-      secretContext.sshKey(id)
-    ),
+    privateKeyEncrypted: encryptSecret(privateKey, appKey, secretContext.sshKey(id)),
   };
 
   if (existing) {

@@ -72,13 +72,13 @@ await runVerify("compose parity", () => {
     check(
       `${service} is declared on both sides`,
       Boolean(prod && dev),
-      `production=${prod ?? "absent"} development=${dev ?? "absent"}`
+      `production=${prod ?? "absent"} development=${dev ?? "absent"}`,
     );
 
     check(
       `${service} runs the same image in development as in production`,
       prod === dev,
-      `production=${prod} development=${dev}`
+      `production=${prod} development=${dev}`,
     );
   }
 
@@ -87,7 +87,7 @@ await runVerify("compose parity", () => {
   check(
     "rustfs stays out of the production stack",
     imageOf(PROD, "rustfs") === undefined,
-    "installer/docker-compose.yml now declares rustfs"
+    "installer/docker-compose.yml now declares rustfs",
   );
 
   // The two apps encrypt and decrypt each other's secrets. Different keys do
@@ -100,13 +100,13 @@ await runVerify("compose parity", () => {
     check(
       `${key} is present in both .env.example`,
       Boolean(web && worker),
-      `web=${web ?? "absent"} worker=${worker ?? "absent"}`
+      `web=${web ?? "absent"} worker=${worker ?? "absent"}`,
     );
 
     check(
       `${key} is identical in both .env.example`,
       web === worker,
-      `web=${web} worker=${worker}`
+      `web=${web} worker=${worker}`,
     );
   }
 
@@ -117,7 +117,7 @@ await runVerify("compose parity", () => {
   check(
     "the example APP_KEY decodes to the length loadAppKey requires",
     Buffer.from(appKey, "base64").length === APP_KEY_BYTES,
-    `got ${Buffer.from(appKey, "base64").length} bytes`
+    `got ${Buffer.from(appKey, "base64").length} bytes`,
   );
 
   // The dev DSN carries production's role. The postgres image only creates the
@@ -129,6 +129,6 @@ await runVerify("compose parity", () => {
   check(
     "development and production create the same Postgres role",
     devUser === prodUser,
-    `development=${devUser} production=${prodUser}`
+    `development=${devUser} production=${prodUser}`,
   );
 });

@@ -19,9 +19,7 @@ export default defineConfig({
   // the inlining explicit rather than accidental — the value can no longer
   // silently disappear.
   define: {
-    "process.env.NODDLE_COMMIT": JSON.stringify(
-      process.env.NODDLE_COMMIT ?? ""
-    ),
+    "process.env.NODDLE_COMMIT": JSON.stringify(process.env.NODDLE_COMMIT ?? ""),
   },
   // `ssh2` bundles NATIVE ADDONS (`sshcrypto.node`, and `cpufeatures.node`
   // via `cpu-features`). A `.node` file is a compiled binary: no bundler

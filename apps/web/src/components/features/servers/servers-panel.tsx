@@ -1,10 +1,5 @@
 import { serverInputSchema } from "@noddle/shared/validation/server";
-import {
-  GlobeIcon,
-  HardDrivesIcon,
-  TagIcon,
-  UserIcon,
-} from "@phosphor-icons/react";
+import { GlobeIcon, HardDrivesIcon, TagIcon, UserIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
@@ -17,11 +12,7 @@ import { SettingsList } from "@/components/features/settings-list/settings-list"
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
-import {
-  ResourceCard,
-  ResourceCardFact,
-  ResourceCardMeta,
-} from "@/components/resource-card";
+import { ResourceCard, ResourceCardFact, ResourceCardMeta } from "@/components/resource-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,9 +79,8 @@ const ServerRow = ({
   // The card leads to the detail view: a machine's resources are read on
   // ITS OWN page, which is what lets this stay a summary.
   const handleOpen = useCallback(
-    () =>
-      navigate({ params: { serverId: server.id }, to: "/servers/$serverId" }),
-    [navigate, server.id]
+    () => navigate({ params: { serverId: server.id }, to: "/servers/$serverId" }),
+    [navigate, server.id],
   );
 
   return (
@@ -113,14 +103,12 @@ const ServerRow = ({
               "size-2 shrink-0 rounded-full",
               tone === "ok" && "bg-success",
               tone === "danger" && "bg-destructive",
-              tone === "busy" && "bg-muted-foreground"
+              tone === "busy" && "bg-muted-foreground",
             )}
           />
           <h2 className="truncate font-semibold text-sm">{server.name}</h2>
           <Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>
-          {server.role === "manager" ? (
-            <Badge variant="secondary">manager</Badge>
-          ) : null}
+          {server.role === "manager" ? <Badge variant="secondary">manager</Badge> : null}
         </>
       }
     >
@@ -131,15 +119,10 @@ const ServerRow = ({
           label="Memory"
           value={server.totalMemoryMb ? `${server.totalMemoryMb} MB` : "—"}
         />
-        <ResourceCardFact
-          label="Added"
-          value={<RelativeTime iso={server.createdAt} />}
-        />
+        <ResourceCardFact label="Added" value={<RelativeTime iso={server.createdAt} />} />
       </ResourceCardMeta>
       {secondaryError ? (
-        <output className="mt-2 text-destructive text-xs">
-          {secondaryError}
-        </output>
+        <output className="mt-2 text-destructive text-xs">{secondaryError}</output>
       ) : null}
     </ResourceCard>
   );
@@ -162,10 +145,7 @@ export const ServersList = ({
       query.state.data?.some((s) => s.status === "pending") ? POLL_MS : false,
   });
 
-  const handleRemoved = useCallback(
-    () => cache.servers(queryClient),
-    [queryClient]
-  );
+  const handleRemoved = useCallback(() => cache.servers(queryClient), [queryClient]);
 
   return (
     <SettingsList isEmpty={isEmpty}>
@@ -178,8 +158,7 @@ export const ServersList = ({
         <SettingsList.EmptyHeader>
           <SettingsList.EmptyTitle>No servers yet</SettingsList.EmptyTitle>
           <SettingsList.EmptyDescription>
-            Noddle deploys onto machines you own. Add one before you can deploy
-            anything.
+            Noddle deploys onto machines you own. Add one before you can deploy anything.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
         {onAdd ? (
@@ -194,12 +173,7 @@ export const ServersList = ({
         title="Servers"
       >
         {servers.map((server) => (
-          <ServerRow
-            key={server.id}
-            onRemoved={handleRemoved}
-            role={role}
-            server={server}
-          />
+          <ServerRow key={server.id} onRemoved={handleRemoved} role={role} server={server} />
         ))}
       </SettingsList.Frame>
     </SettingsList>
@@ -270,7 +244,7 @@ export function AddServerDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
 
   return (
@@ -279,9 +253,9 @@ export function AddServerDialog({
         <DialogHeader>
           <DialogTitle>Add a server</DialogTitle>
           <DialogDescription>
-            A host and a key from your library are all it takes. Noddle installs
-            Docker if missing, joins its Swarm cluster as a worker, and installs
-            railpack — with nothing else to do by hand on that machine.
+            A host and a key from your library are all it takes. Noddle installs Docker if missing,
+            joins its Swarm cluster as a worker, and installs railpack — with nothing else to do by
+            hand on that machine.
           </DialogDescription>
         </DialogHeader>
 
@@ -312,13 +286,7 @@ export function AddServerDialog({
                 </form.AppField>
                 <div className="grid grid-cols-2 gap-3">
                   <form.AppField name="sshUser">
-                    {(f) => (
-                      <f.FieldText
-                        addonStart={<UserIcon />}
-                        label="SSH user"
-                        required
-                      />
-                    )}
+                    {(f) => <f.FieldText addonStart={<UserIcon />} label="SSH user" required />}
                   </form.AppField>
                   <form.AppField name="sshPort">
                     {(f) => <f.FieldNumber label="Port" min={1} required />}

@@ -18,10 +18,7 @@ import { WATCH_WINDOW_MS } from "@noddle/swarm-ops";
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 import { eq } from "drizzle-orm";
 
-import {
-  recordAcceptedService,
-  recordAcceptedStack,
-} from "#deploy/accepted-deployment";
+import { recordAcceptedService, recordAcceptedStack } from "#deploy/accepted-deployment";
 
 const WORKER_SRC = join(import.meta.dirname, "..");
 const NEXT_ASYNC_FUNCTION = /\n(?:export )?async function /;
@@ -46,8 +43,7 @@ function walkTs(dir: string): string[] {
 
 function functionBody(src: string, name: string): string {
   const exportedAt = src.indexOf(`export async function ${name}`);
-  const start =
-    exportedAt === -1 ? src.indexOf(`async function ${name}`) : exportedAt;
+  const start = exportedAt === -1 ? src.indexOf(`async function ${name}`) : exportedAt;
   if (start === -1) {
     return "";
   }
@@ -60,65 +56,46 @@ function armedWithinWindow(watchUntil: Date | null, finishedAt: Date): boolean {
   if (!watchUntil) {
     return false;
   }
-  return (
-    Math.abs(watchUntil.getTime() - (finishedAt.getTime() + WATCH_WINDOW_MS)) <
-    1000
-  );
+  return Math.abs(watchUntil.getTime() - (finishedAt.getTime() + WATCH_WINDOW_MS)) < 1000;
 }
 
 await runVerify("accepted deployment (Post-deploy watch)", async () => {
   await suite("arming lives in one module", () => {
-    const accepted = readFileSync(
-      join(WORKER_SRC, "deploy/accepted-deployment.ts"),
-      "utf-8"
-    );
+    const accepted = readFileSync(join(WORKER_SRC, "deploy/accepted-deployment.ts"), "utf-8");
     const deploy = readFileSync(join(WORKER_SRC, "deploy/deploy.ts"), "utf-8");
-    const compose = readFileSync(
-      join(WORKER_SRC, "deploy/compose.ts"),
-      "utf-8"
-    );
+    const compose = readFileSync(join(WORKER_SRC, "deploy/compose.ts"), "utf-8");
 
     check(
       "accepted-deployment imports watchUntilFor",
-      accepted.includes('import { watchUntilFor } from "@noddle/swarm-ops"')
+      accepted.includes('import { watchUntilFor } from "@noddle/swarm-ops"'),
     );
-    check(
-      "deploy.ts does not import watchUntilFor",
-      !deploy.includes("watchUntilFor")
-    );
-    check(
-      "compose.ts does not import watchUntilFor",
-      !compose.includes("watchUntilFor")
-    );
+    check("deploy.ts does not import watchUntilFor", !deploy.includes("watchUntilFor"));
+    check("compose.ts does not import watchUntilFor", !compose.includes("watchUntilFor"));
 
     const armingFiles = walkTs(WORKER_SRC).filter((path) =>
-      readFileSync(path, "utf-8").includes("watchUntilFor")
+      readFileSync(path, "utf-8").includes("watchUntilFor"),
     );
     const armingNames = armingFiles.map((path) => path.split("/").at(-1));
     check(
       "only accepted-deployment.ts arms watchUntilFor in the worker",
-      armingNames.length === 1 && armingNames[0] === "accepted-deployment.ts"
+      armingNames.length === 1 && armingNames[0] === "accepted-deployment.ts",
     );
 
     check(
       "ship Service records via recordAcceptedService",
-      functionBody(deploy, "buildAndDeployService").includes(
-        "recordAcceptedService"
-      )
+      functionBody(deploy, "buildAndDeployService").includes("recordAcceptedService"),
     );
     check(
       "Rollback / watch_revert Service records via recordAcceptedService",
-      functionBody(deploy, "redeployImage").includes("recordAcceptedService")
+      functionBody(deploy, "redeployImage").includes("recordAcceptedService"),
     );
     check(
       "ship Stack records via recordAcceptedStack",
-      functionBody(compose, "buildAndDeployStack").includes(
-        "recordAcceptedStack"
-      )
+      functionBody(compose, "buildAndDeployStack").includes("recordAcceptedStack"),
     );
     check(
       "Rollback / watch_revert Stack records via recordAcceptedStack",
-      functionBody(compose, "redeployStack").includes("recordAcceptedStack")
+      functionBody(compose, "redeployStack").includes("recordAcceptedStack"),
     );
   });
 
@@ -182,120 +159,105 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
     swarmName: `verify-accepted-${tag}`,
   });
 
-  await suite(
-    "recordAcceptedService arms watch and clears superseded",
-    async () => {
-      const previousUntil = new Date(Date.now() + WATCH_WINDOW_MS);
-      const [previous] = await db
-        .insert(deployments)
-        .values({
-          serviceId,
-          status: "succeeded",
-          watchUntil: previousUntil,
-        })
-        .returning();
-      const [current] = await db
-        .insert(deployments)
-        .values({ serviceId, status: "deploying" })
-        .returning();
-      if (!(previous && current)) {
-        check("seeded service deployments", false);
-        return;
-      }
-
-      const finishedAt = new Date();
-      await recordAcceptedService(db, {
-        deploymentId: current.id,
-        finishedAt,
-        nodeId: "node-abc",
+  await suite("recordAcceptedService arms watch and clears superseded", async () => {
+    const previousUntil = new Date(Date.now() + WATCH_WINDOW_MS);
+    const [previous] = await db
+      .insert(deployments)
+      .values({
         serviceId,
-        swarmUpdateState: "completed",
-      });
-
-      const currentRow = await db.query.deployments.findFirst({
-        where: eq(deployments.id, current.id),
-      });
-      const previousRow = await db.query.deployments.findFirst({
-        where: eq(deployments.id, previous.id),
-      });
-      const serviceRow = await db.query.services.findFirst({
-        where: eq(services.id, serviceId),
-      });
-
-      check(
-        "Service Deployment status succeeded",
-        currentRow?.status === "succeeded"
-      );
-      check(
-        "Service Post-deploy watch armed",
-        armedWithinWindow(currentRow?.watchUntil ?? null, finishedAt)
-      );
-      check("Service nodeId recorded", currentRow?.nodeId === "node-abc");
-      check(
-        "Service currentDeploymentId points at the accepted row",
-        serviceRow?.currentDeploymentId === current.id
-      );
-      check("Service status running", serviceRow?.status === "running");
-      check(
-        "superseded Service watch cleared",
-        previousRow?.watchUntil === null
-      );
+        status: "succeeded",
+        watchUntil: previousUntil,
+      })
+      .returning();
+    const [current] = await db
+      .insert(deployments)
+      .values({ serviceId, status: "deploying" })
+      .returning();
+    if (!(previous && current)) {
+      check("seeded service deployments", false);
+      return;
     }
-  );
 
-  await suite(
-    "recordAcceptedStack arms watch and clears superseded",
-    async () => {
-      const previousUntil = new Date(Date.now() + WATCH_WINDOW_MS);
-      const [previous] = await db
-        .insert(stackDeployments)
-        .values({
-          stackId,
-          status: "succeeded",
-          watchUntil: previousUntil,
-        })
-        .returning();
-      const [current] = await db
-        .insert(stackDeployments)
-        .values({ stackId, status: "deploying" })
-        .returning();
-      if (!(previous && current)) {
-        check("seeded stack deployments", false);
-        return;
-      }
+    const finishedAt = new Date();
+    await recordAcceptedService(db, {
+      deploymentId: current.id,
+      finishedAt,
+      nodeId: "node-abc",
+      serviceId,
+      swarmUpdateState: "completed",
+    });
 
-      const finishedAt = new Date();
-      await recordAcceptedStack(db, {
-        deploymentId: current.id,
-        finishedAt,
+    const currentRow = await db.query.deployments.findFirst({
+      where: eq(deployments.id, current.id),
+    });
+    const previousRow = await db.query.deployments.findFirst({
+      where: eq(deployments.id, previous.id),
+    });
+    const serviceRow = await db.query.services.findFirst({
+      where: eq(services.id, serviceId),
+    });
+
+    check("Service Deployment status succeeded", currentRow?.status === "succeeded");
+    check(
+      "Service Post-deploy watch armed",
+      armedWithinWindow(currentRow?.watchUntil ?? null, finishedAt),
+    );
+    check("Service nodeId recorded", currentRow?.nodeId === "node-abc");
+    check(
+      "Service currentDeploymentId points at the accepted row",
+      serviceRow?.currentDeploymentId === current.id,
+    );
+    check("Service status running", serviceRow?.status === "running");
+    check("superseded Service watch cleared", previousRow?.watchUntil === null);
+  });
+
+  await suite("recordAcceptedStack arms watch and clears superseded", async () => {
+    const previousUntil = new Date(Date.now() + WATCH_WINDOW_MS);
+    const [previous] = await db
+      .insert(stackDeployments)
+      .values({
         stackId,
-        swarmUpdateStates: { web: "completed" },
-      });
-
-      const currentRow = await db.query.stackDeployments.findFirst({
-        where: eq(stackDeployments.id, current.id),
-      });
-      const previousRow = await db.query.stackDeployments.findFirst({
-        where: eq(stackDeployments.id, previous.id),
-      });
-      const stackRow = await db.query.stacks.findFirst({
-        where: eq(stacks.id, stackId),
-      });
-
-      check(
-        "Stack Deployment status succeeded",
-        currentRow?.status === "succeeded"
-      );
-      check(
-        "Stack Post-deploy watch armed",
-        armedWithinWindow(currentRow?.watchUntil ?? null, finishedAt)
-      );
-      check(
-        "Stack currentDeploymentId points at the accepted row",
-        stackRow?.currentDeploymentId === current.id
-      );
-      check("Stack status running", stackRow?.status === "running");
-      check("superseded Stack watch cleared", previousRow?.watchUntil === null);
+        status: "succeeded",
+        watchUntil: previousUntil,
+      })
+      .returning();
+    const [current] = await db
+      .insert(stackDeployments)
+      .values({ stackId, status: "deploying" })
+      .returning();
+    if (!(previous && current)) {
+      check("seeded stack deployments", false);
+      return;
     }
-  );
+
+    const finishedAt = new Date();
+    await recordAcceptedStack(db, {
+      deploymentId: current.id,
+      finishedAt,
+      stackId,
+      swarmUpdateStates: { web: "completed" },
+    });
+
+    const currentRow = await db.query.stackDeployments.findFirst({
+      where: eq(stackDeployments.id, current.id),
+    });
+    const previousRow = await db.query.stackDeployments.findFirst({
+      where: eq(stackDeployments.id, previous.id),
+    });
+    const stackRow = await db.query.stacks.findFirst({
+      where: eq(stacks.id, stackId),
+    });
+
+    check("Stack Deployment status succeeded", currentRow?.status === "succeeded");
+    check(
+      "Stack Post-deploy watch armed",
+      armedWithinWindow(currentRow?.watchUntil ?? null, finishedAt),
+    );
+    check(
+      "Stack currentDeploymentId points at the accepted row",
+      stackRow?.currentDeploymentId === current.id,
+    );
+    check("Stack status running", stackRow?.status === "running");
+    check("superseded Stack watch cleared", previousRow?.watchUntil === null);
+  });
 });

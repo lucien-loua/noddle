@@ -1,7 +1,4 @@
-import {
-  s3DestinationCreateSchema,
-  s3DestinationSchema,
-} from "@noddle/shared/validation/backup";
+import { s3DestinationCreateSchema, s3DestinationSchema } from "@noddle/shared/validation/backup";
 import { useCallback, useMemo } from "react";
 import { z } from "zod";
 
@@ -25,14 +22,10 @@ export const providerSelectOptions = S3_PROVIDERS.map((p) => ({
 }));
 
 export function destinationFormSchema(editing: boolean) {
-  return (editing ? s3DestinationSchema : s3DestinationCreateSchema).and(
-    providerFields
-  );
+  return (editing ? s3DestinationSchema : s3DestinationCreateSchema).and(providerFields);
 }
 
-export function destinationDefaultValues(
-  initial: DestinationRow | null
-): DestinationFormValues {
+export function destinationDefaultValues(initial: DestinationRow | null): DestinationFormValues {
   if (initial) {
     return {
       accessKeyId: initial.accessKeyId,
@@ -59,10 +52,7 @@ export function destinationDefaultValues(
   };
 }
 
-export function toDestinationPayload(
-  value: DestinationFormValues,
-  id?: string
-) {
+export function toDestinationPayload(value: DestinationFormValues, id?: string) {
   return {
     accessKeyId: value.accessKeyId,
     bucket: value.bucket,
@@ -76,32 +66,24 @@ export function toDestinationPayload(
   };
 }
 
-export function selectProviderRegion(state: {
-  values: { providerId: string; region?: string };
-}) {
+export function selectProviderRegion(state: { values: { providerId: string; region?: string } }) {
   return {
     providerId: state.values.providerId,
     region: state.values.region ?? "",
   };
 }
 
-export function applyProvider(
-  providerId: string,
-  setFieldValue: SetFieldValue
-): void {
+export function applyProvider(providerId: string, setFieldValue: SetFieldValue): void {
   const picked = findProvider(providerId);
   setFieldValue("region", picked.region);
   setFieldValue("forcePathStyle", picked.forcePathStyle);
-  setFieldValue(
-    "endpoint",
-    picked.endpoint ? picked.endpoint(picked.region) : ""
-  );
+  setFieldValue("endpoint", picked.endpoint ? picked.endpoint(picked.region) : "");
 }
 
 export function applyRegion(
   region: string,
   providerId: string,
-  setFieldValue: SetFieldValue
+  setFieldValue: SetFieldValue,
 ): void {
   const picked = findProvider(providerId);
   if (picked.endpoint) {
@@ -109,26 +91,17 @@ export function applyRegion(
   }
 }
 
-export function endpointPlaceholder(
-  providerId: string,
-  region: string
-): string | undefined {
+export function endpointPlaceholder(providerId: string, region: string): string | undefined {
   const picked = findProvider(providerId);
   return picked.hint ?? picked.endpoint?.(region);
 }
 
 export function useS3DestinationForm(initial: DestinationRow | null) {
-  const formSchema = useMemo(
-    () => destinationFormSchema(initial !== null),
-    [initial]
-  );
-  const defaultValues = useMemo(
-    () => destinationDefaultValues(initial),
-    [initial]
-  );
+  const formSchema = useMemo(() => destinationFormSchema(initial !== null), [initial]);
+  const defaultValues = useMemo(() => destinationDefaultValues(initial), [initial]);
   const toPayload = useCallback(
     (value: DestinationFormValues) => toDestinationPayload(value, initial?.id),
-    [initial]
+    [initial],
   );
 
   return {

@@ -10,11 +10,7 @@ import { listVolumeBackupConfigs } from "@/server/backups/volume/configs";
 import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
 import { getVolumeBackups } from "@/server/backups/volume/runs";
 import { listServiceVolumes } from "@/server/backups/volume/volumes";
-import {
-  getDeployments,
-  getEnvironmentScope,
-  getService,
-} from "@/server/dashboard";
+import { getDeployments, getEnvironmentScope, getService } from "@/server/dashboard";
 import { getDatabase, getDatabaseCredentials } from "@/server/databases";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
@@ -82,8 +78,7 @@ function backupRunsForQuery(subject: BackupSubject, configId: string) {
 }
 
 export const queries = {
-  accounts: () =>
-    queryOptions({ queryFn: () => getAccounts(), queryKey: ["accounts"] }),
+  accounts: () => queryOptions({ queryFn: () => getAccounts(), queryKey: ["accounts"] }),
 
   backupConfigs: databaseBackupConfigsQuery,
 
@@ -99,8 +94,7 @@ export const queries = {
 
   backups: databaseBackupRunsQuery,
 
-  channels: () =>
-    queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
+  channels: () => queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
 
   database: (databaseId: string) =>
     queryOptions({
@@ -146,8 +140,7 @@ export const queries = {
 
   environmentScope: (projectId: string, environmentId: string) =>
     queryOptions({
-      queryFn: () =>
-        getEnvironmentScope({ data: { environmentId, projectId } }),
+      queryFn: () => getEnvironmentScope({ data: { environmentId, projectId } }),
       queryKey: ["environment-scope", projectId, environmentId],
     }),
 
@@ -158,10 +151,7 @@ export const queries = {
   envVars: (target: EnvVarTarget) =>
     queryOptions({
       queryFn: () => getEnvVars({ data: target }),
-      queryKey: [
-        "env-vars",
-        "serviceId" in target ? target.serviceId : target.databaseId,
-      ],
+      queryKey: ["env-vars", "serviceId" in target ? target.serviceId : target.databaseId],
     }),
 
   gitProviders: () =>
@@ -188,8 +178,7 @@ export const queries = {
       queryKey: ["provider-repositories", gitProviderId],
     }),
 
-  registries: () =>
-    queryOptions({ queryFn: () => getRegistries(), queryKey: ["registries"] }),
+  registries: () => queryOptions({ queryFn: () => getRegistries(), queryKey: ["registries"] }),
 
   registryOptions: () =>
     queryOptions({
@@ -197,8 +186,7 @@ export const queries = {
       queryKey: ["registry-options"],
     }),
 
-  servers: () =>
-    queryOptions({ queryFn: () => getServers(), queryKey: ["servers"] }),
+  servers: () => queryOptions({ queryFn: () => getServers(), queryKey: ["servers"] }),
 
   serverTools: (serverId: string) =>
     queryOptions({
@@ -234,8 +222,7 @@ export const queries = {
       queryKey: ["service-volumes", serviceId],
     }),
 
-  sshKeys: () =>
-    queryOptions({ queryFn: () => getSshKeys(), queryKey: ["ssh-keys"] }),
+  sshKeys: () => queryOptions({ queryFn: () => getSshKeys(), queryKey: ["ssh-keys"] }),
 
   stackDeployments: (stackId: string) =>
     queryOptions({

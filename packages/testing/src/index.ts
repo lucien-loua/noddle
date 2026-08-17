@@ -19,11 +19,7 @@ function prefix(): string {
 }
 
 /** Record a passing check. */
-export function check(
-  label: string,
-  condition: boolean,
-  detail?: string
-): void {
+export function check(label: string, condition: boolean, detail?: string): void {
   if (condition) {
     pass += 1;
     console.log(`  ${GREEN} ${prefix()}${label}`);
@@ -48,18 +44,14 @@ export function ko(label: string): void {
 export function expectThrows(
   label: string,
   fn: () => unknown,
-  match?: (err: unknown) => boolean
+  match?: (err: unknown) => boolean,
 ): void {
   try {
     fn();
     check(`${label} — SHOULD HAVE FAILED`, false);
   } catch (error) {
     if (match && !match(error)) {
-      check(
-        label,
-        false,
-        `wrong error: ${error instanceof Error ? error.message : String(error)}`
-      );
+      check(label, false, `wrong error: ${error instanceof Error ? error.message : String(error)}`);
       return;
     }
     check(label, true);
@@ -70,18 +62,14 @@ export function expectThrows(
 export async function expectThrowsAsync(
   label: string,
   fn: () => Promise<unknown>,
-  match?: (err: unknown) => boolean
+  match?: (err: unknown) => boolean,
 ): Promise<void> {
   try {
     await fn();
     check(`${label} — SHOULD HAVE FAILED`, false);
   } catch (error) {
     if (match && !match(error)) {
-      check(
-        label,
-        false,
-        `wrong error: ${error instanceof Error ? error.message : String(error)}`
-      );
+      check(label, false, `wrong error: ${error instanceof Error ? error.message : String(error)}`);
       return;
     }
     check(label, true);
@@ -92,10 +80,7 @@ export async function expectThrowsAsync(
  * Groups related checks under a printed heading. Failures inside still
  * count toward the process exit code.
  */
-export async function suite(
-  name: string,
-  fn: () => void | Promise<void>
-): Promise<void> {
+export async function suite(name: string, fn: () => void | Promise<void>): Promise<void> {
   const previous = currentSuite;
   currentSuite = name;
   console.log(`\n\u001B[1m${name}\u001B[0m`);
@@ -130,7 +115,7 @@ export async function finish(): Promise<never> {
     } catch (error) {
       fail += 1;
       console.log(
-        `  ${RED} cleanup failed: ${error instanceof Error ? error.message : String(error)}`
+        `  ${RED} cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -141,10 +126,7 @@ export async function finish(): Promise<never> {
 /**
  * Entry helper: print a runtime banner, run the body, then `finish`.
  */
-export async function runVerify(
-  title: string,
-  body: () => void | Promise<void>
-): Promise<never> {
+export async function runVerify(title: string, body: () => void | Promise<void>): Promise<never> {
   const runtime =
     (globalThis as { Bun?: unknown }).Bun === undefined
       ? `Node ${process.version}`
@@ -155,7 +137,7 @@ export async function runVerify(
   } catch (error) {
     fail += 1;
     console.log(
-      `  ${RED} suite crashed: ${error instanceof Error ? error.message : String(error)}`
+      `  ${RED} suite crashed: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   return await finish();

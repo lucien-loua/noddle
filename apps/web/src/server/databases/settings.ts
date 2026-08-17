@@ -30,7 +30,7 @@ function loadDatabase(databaseId: string) {
 function assertMountTargetAllowed(
   target: string,
   primaryVolumePath: string | null,
-  otherTargets: string[]
+  otherTargets: string[],
 ): void {
   if (target.startsWith("/run/secrets")) {
     throw new Error("that mount path is reserved for secrets");
@@ -60,7 +60,7 @@ export const setDatabaseExternalPort = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const setDatabaseResources = createServerFn({ method: "POST" })
@@ -76,9 +76,7 @@ export const setDatabaseResources = createServerFn({ method: "POST" })
           data.memoryLimitBytes !== null &&
           data.memoryReservationBytes > data.memoryLimitBytes
         ) {
-          throw new Error(
-            "the memory reservation cannot exceed the memory limit"
-          );
+          throw new Error("the memory reservation cannot exceed the memory limit");
         }
 
         if (
@@ -103,7 +101,7 @@ export const setDatabaseResources = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const setDatabaseConfiguration = createServerFn({ method: "POST" })
@@ -114,16 +112,13 @@ export const setDatabaseConfiguration = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "create", resource: "database" },
       run: async ({ row: database }) => {
-        await db
-          .update(databases)
-          .set({ image: data.image })
-          .where(eq(databases.id, database.id));
+        await db.update(databases).set({ image: data.image }).where(eq(databases.id, database.id));
 
         await queueDatabaseProvision(database.id);
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const setDatabaseReplicas = createServerFn({ method: "POST" })
@@ -143,7 +138,7 @@ export const setDatabaseReplicas = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const setDatabaseSwarmSettings = createServerFn({ method: "POST" })
@@ -177,7 +172,7 @@ export const setDatabaseSwarmSettings = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const setDatabaseVolumePath = createServerFn({ method: "POST" })
@@ -192,7 +187,7 @@ export const setDatabaseVolumePath = createServerFn({ method: "POST" })
           assertMountTargetAllowed(
             data.volumePath,
             null,
-            database.extraMounts.map((m) => m.target)
+            database.extraMounts.map((m) => m.target),
           );
         }
 
@@ -205,7 +200,7 @@ export const setDatabaseVolumePath = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const addDatabaseMount = createServerFn({ method: "POST" })
@@ -216,12 +211,11 @@ export const addDatabaseMount = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "create", resource: "database" },
       run: async ({ row: database }) => {
-        const primaryPath =
-          database.volumePath ?? DEFAULT_DATABASE_VOLUME_PATH[database.engine];
+        const primaryPath = database.volumePath ?? DEFAULT_DATABASE_VOLUME_PATH[database.engine];
         assertMountTargetAllowed(
           data.target,
           primaryPath,
-          database.extraMounts.map((m) => m.target)
+          database.extraMounts.map((m) => m.target),
         );
 
         const mount = {
@@ -240,7 +234,7 @@ export const addDatabaseMount = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const updateDatabaseMount = createServerFn({ method: "POST" })
@@ -251,21 +245,16 @@ export const updateDatabaseMount = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "create", resource: "database" },
       run: async ({ row: database }) => {
-        const existing = database.extraMounts.find(
-          (m) => m.id === data.mountId
-        );
+        const existing = database.extraMounts.find((m) => m.id === data.mountId);
         if (!existing) {
           throw new Error("mount not found");
         }
 
-        const primaryPath =
-          database.volumePath ?? DEFAULT_DATABASE_VOLUME_PATH[database.engine];
+        const primaryPath = database.volumePath ?? DEFAULT_DATABASE_VOLUME_PATH[database.engine];
         assertMountTargetAllowed(
           data.target,
           primaryPath,
-          database.extraMounts
-            .filter((m) => m.id !== data.mountId)
-            .map((m) => m.target)
+          database.extraMounts.filter((m) => m.id !== data.mountId).map((m) => m.target),
         );
 
         const next = database.extraMounts.map((m) =>
@@ -276,19 +265,16 @@ export const updateDatabaseMount = createServerFn({ method: "POST" })
                 target: data.target,
                 type: data.type,
               }
-            : m
+            : m,
         );
 
-        await db
-          .update(databases)
-          .set({ extraMounts: next })
-          .where(eq(databases.id, database.id));
+        await db.update(databases).set({ extraMounts: next }).where(eq(databases.id, database.id));
 
         await queueDatabaseProvision(database.id);
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const deleteDatabaseMount = createServerFn({ method: "POST" })
@@ -304,16 +290,13 @@ export const deleteDatabaseMount = createServerFn({ method: "POST" })
           throw new Error("mount not found");
         }
 
-        await db
-          .update(databases)
-          .set({ extraMounts: next })
-          .where(eq(databases.id, database.id));
+        await db.update(databases).set({ extraMounts: next }).where(eq(databases.id, database.id));
 
         await queueDatabaseProvision(database.id);
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const changeDatabasePassword = createServerFn({ method: "POST" })
@@ -325,9 +308,7 @@ export const changeDatabasePassword = createServerFn({ method: "POST" })
       permission: { action: "create", resource: "database" },
       run: async ({ row: database }) => {
         if (database.status !== "running") {
-          throw new Error(
-            "the database must be running to change its password"
-          );
+          throw new Error("the database must be running to change its password");
         }
 
         await enqueueDeploy({
@@ -338,5 +319,5 @@ export const changeDatabasePassword = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

@@ -29,11 +29,7 @@ const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
  *    below waits for a *different* id — re-following the same stopped
  *    container would dump the same tail in a tight loop.
  */
-function followCommand(
-  containerId: string,
-  tail: number,
-  since: string
-): string {
+function followCommand(containerId: string, tail: number, since: string): string {
   const sinceFlag = since === "all" ? "" : ` --since ${quoteArg(since)}`;
   return `exec docker logs --tail ${tail}${sinceFlag} --follow ${quoteArg(containerId)} 2>&1`;
 }
@@ -63,9 +59,7 @@ export function parseSince(raw: string | null): string {
 
 export function sendLogError(send: SseChannel["send"], error: unknown): void {
   send({
-    data: `Could not read logs: ${
-      error instanceof Error ? error.message : String(error)
-    }\n`,
+    data: `Could not read logs: ${error instanceof Error ? error.message : String(error)}\n`,
     type: "chunk",
   });
   send({ status: "error", type: "end" });
@@ -74,7 +68,7 @@ export function sendLogError(send: SseChannel["send"], error: unknown): void {
 function pipePty(
   channel: SseChannel,
   pty: Awaited<ReturnType<typeof openExecPty>>,
-  onClose: () => void
+  onClose: () => void,
 ): void {
   pty.onData((chunk) => {
     channel.send({
@@ -96,7 +90,7 @@ export function followContainerLogs(
   client: SshClient,
   swarmName: string,
   tail: number,
-  since: string
+  since: string,
 ): () => void {
   const { finish } = channel;
   let aborted = false;

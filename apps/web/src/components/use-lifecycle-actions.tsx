@@ -31,10 +31,7 @@ function lifecyclePermission(target: LifecycleTarget): {
     : { action: "deploy", resource: "service" };
 }
 
-function runLifecycle(
-  target: LifecycleTarget,
-  action: LifecycleAction
-): Promise<unknown> {
+function runLifecycle(target: LifecycleTarget, action: LifecycleAction): Promise<unknown> {
   return target.resource === "database"
     ? triggerDatabaseLifecycle({
         data: { action, databaseId: target.databaseId },
@@ -72,10 +69,7 @@ export function useLifecycleActions({
   // `created` = never provisioned, `deploying` = Swarm still applying,
   // `deleting` = teardown: no stable service to operate.
   const available =
-    canRun &&
-    status !== "created" &&
-    status !== "deploying" &&
-    status !== "deleting";
+    canRun && status !== "created" && status !== "deploying" && status !== "deleting";
 
   return {
     available,

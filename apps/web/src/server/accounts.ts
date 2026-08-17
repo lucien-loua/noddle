@@ -36,7 +36,7 @@ export const getAccounts = createServerFn({ method: "GET" }).handler(
       name: u.name,
       role: u.role ?? "viewer",
     }));
-  }
+  },
 );
 
 /**
@@ -94,7 +94,7 @@ export const setAccountRole = createServerFn({ method: "POST" })
         return { saved: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.email }),
-    })
+    }),
   );
 
 export const removeAccount = createServerFn({ method: "POST" })
@@ -126,7 +126,7 @@ export const removeAccount = createServerFn({ method: "POST" })
         return { removed: true };
       },
       target: ({ row }) => ({ id: row.id, name: row.email }),
-    })
+    }),
   );
 
 /**
@@ -137,10 +137,7 @@ export const removeAccount = createServerFn({ method: "POST" })
  * machine where nobody can create an account anymore. No permission states
  * this — it's a property of the whole set, not of a single action.
  */
-async function assertNotLastOwner(
-  targetId: string,
-  nextRole: string
-): Promise<void> {
+async function assertNotLastOwner(targetId: string, nextRole: string): Promise<void> {
   const target = await db.query.user.findFirst({
     where: eq(user.id, targetId),
   });
@@ -152,7 +149,7 @@ async function assertNotLastOwner(
   });
   if (owners.length <= 1) {
     throw new Error(
-      "This account is the last owner — removing it would leave the installation with nobody able to grant access."
+      "This account is the last owner — removing it would leave the installation with nobody able to grant access.",
     );
   }
 }

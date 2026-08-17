@@ -25,9 +25,7 @@ export interface ScheduleSpec<TDeps> {
   run: (deps: TDeps) => Promise<unknown>;
 }
 
-export function defineSchedule<TDeps>(
-  spec: ScheduleSpec<TDeps>
-): ScheduleSpec<TDeps> {
+export function defineSchedule<TDeps>(spec: ScheduleSpec<TDeps>): ScheduleSpec<TDeps> {
   return spec;
 }
 
@@ -51,7 +49,7 @@ export async function startSchedule<TDeps>(
     connection: ConnectionOptions;
     deps: TDeps;
     onFailed: (queue: string, message: string) => void;
-  }
+  },
 ): Promise<RunningSchedule> {
   const queue = new Queue(spec.queue, { connection: opts.connection });
   const worker = new Worker(spec.queue, () => spec.run(opts.deps), {
@@ -63,11 +61,7 @@ export async function startSchedule<TDeps>(
     opts.onFailed(spec.queue, `job ${job?.id} failed: ${err.message}`);
   });
 
-  await queue.upsertJobScheduler(
-    spec.id,
-    { every: spec.every },
-    { name: spec.id }
-  );
+  await queue.upsertJobScheduler(spec.id, { every: spec.every }, { name: spec.id });
 
   return { close: () => worker.close(), queue: spec.queue };
 }

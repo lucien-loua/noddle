@@ -11,11 +11,7 @@ import { SettingsList } from "@/components/features/settings-list/settings-list"
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
-import {
-  ResourceCard,
-  ResourceCardFact,
-  ResourceCardMeta,
-} from "@/components/resource-card";
+import { ResourceCard, ResourceCardFact, ResourceCardMeta } from "@/components/resource-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,12 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameDescription, FrameHeader, FrameTitle } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
@@ -78,12 +69,11 @@ const sshKeyFormSchema = z
   .refine(
     (v) =>
       v.mode !== "import" ||
-      (v.privateKey.includes("-----BEGIN") &&
-        v.privateKey.includes("PRIVATE KEY")),
+      (v.privateKey.includes("-----BEGIN") && v.privateKey.includes("PRIVATE KEY")),
     {
       message: "Paste a PEM private key — not the .pub public key.",
       path: ["privateKey"],
-    }
+    },
   );
 
 interface SshKeyFormValues {
@@ -129,11 +119,7 @@ function KeyRow({
             disabled={isPending || used}
             onClick={handleRemove}
             size="sm"
-            title={
-              used
-                ? "This key still opens a server — remove it first"
-                : undefined
-            }
+            title={used ? "This key still opens a server — remove it first" : undefined}
             variant="ghost"
           >
             {isPending ? <Spinner data-icon="inline-start" /> : null}
@@ -154,10 +140,7 @@ function KeyRow({
     >
       <ResourceCardMeta>
         <ResourceCardFact label="Algorithm" value={algorithm ?? "—"} />
-        <ResourceCardFact
-          label="Added"
-          value={<RelativeTime iso={sshKey.createdAt} />}
-        />
+        <ResourceCardFact label="Added" value={<RelativeTime iso={sshKey.createdAt} />} />
       </ResourceCardMeta>
       {error ? (
         <p className="mt-2 text-destructive text-xs" role="status">
@@ -177,11 +160,7 @@ export function SshKeysList({
   onAdd?: () => void;
   role: RoleName | null;
 }) {
-  const {
-    data: rows,
-    isEmpty,
-    refresh,
-  } = useResourceList(queries.sshKeys, initial);
+  const { data: rows, isEmpty, refresh } = useResourceList(queries.sshKeys, initial);
 
   return (
     <SettingsList isEmpty={isEmpty}>
@@ -194,8 +173,8 @@ export function SshKeysList({
         <SettingsList.EmptyHeader>
           <SettingsList.EmptyTitle>No SSH keys</SettingsList.EmptyTitle>
           <SettingsList.EmptyDescription>
-            A key is how Noddle reaches your machines. Generating one keeps the
-            private half here, encrypted — it never leaves this server.
+            A key is how Noddle reaches your machines. Generating one keeps the private half here,
+            encrypted — it never leaves this server.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
         {onAdd ? (
@@ -209,8 +188,8 @@ export function SshKeysList({
         <FrameHeader>
           <FrameTitle>SSH keys</FrameTitle>
           <FrameDescription>
-            A key is how Noddle reaches your machines, and can read a private
-            repository. It never leaves this server, encrypted at rest.
+            A key is how Noddle reaches your machines, and can read a private repository. It never
+            leaves this server, encrypted at rest.
           </FrameDescription>
         </FrameHeader>
         {rows.map((k) => (
@@ -233,8 +212,8 @@ function PublicKeyResult({ publicKey }: { publicKey: string }) {
   return (
     <RevealOnceAlert label="public key" value={publicKey}>
       <p className="mb-2">
-        Add this to <code>~/.ssh/authorized_keys</code> on the machines this key
-        should open. Noddle keeps the private half encrypted and never shows it.
+        Add this to <code>~/.ssh/authorized_keys</code> on the machines this key should open. Noddle
+        keeps the private half encrypted and never shows it.
       </p>
     </RevealOnceAlert>
   );
@@ -267,7 +246,7 @@ export function AddSshKeyDialog({
               mode: "import",
               name: value.name,
               privateKey: value.privateKey,
-            }
+            },
       );
       setCreated(result.publicKey);
     },
@@ -286,7 +265,7 @@ export function AddSshKeyDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
   const handleDone = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -296,9 +275,8 @@ export function AddSshKeyDialog({
         <DialogHeader>
           <DialogTitle>Add an SSH key</DialogTitle>
           <DialogDescription>
-            Noddle uses it to reach your servers, and can use it to read a
-            private repository. It is encrypted at rest and never leaves this
-            server.
+            Noddle uses it to reach your servers, and can use it to read a private repository. It is
+            encrypted at rest and never leaves this server.
           </DialogDescription>
         </DialogHeader>
 
@@ -332,14 +310,12 @@ export function AddSshKeyDialog({
                     <f.FieldRadio
                       options={[
                         {
-                          description:
-                            "The private half is created here and never shown.",
+                          description: "The private half is created here and never shown.",
                           label: "Generate a new key",
                           value: "generate",
                         },
                         {
-                          description:
-                            "For a machine that already has a key you must use.",
+                          description: "For a machine that already has a key you must use.",
                           label: "Paste an existing private key",
                           value: "import",
                         },
@@ -367,8 +343,7 @@ export function AddSshKeyDialog({
                                   value: "ed25519",
                                 },
                                 {
-                                  description:
-                                    "For a system that still refuses Ed25519.",
+                                  description: "For a system that still refuses Ed25519.",
                                   label: "RSA 4096",
                                   value: "rsa",
                                 },
@@ -409,9 +384,7 @@ export function AddSshKeyDialog({
               <form.Subscribe selector={selectMode}>
                 {(mode) => (
                   <Button disabled={add.isPending} type="submit">
-                    {add.isPending ? (
-                      <Spinner data-icon="inline-start" />
-                    ) : null}
+                    {add.isPending ? <Spinner data-icon="inline-start" /> : null}
                     {mode === "generate" ? "Generate key" : "Add key"}
                   </Button>
                 )}

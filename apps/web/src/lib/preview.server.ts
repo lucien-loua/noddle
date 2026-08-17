@@ -1,10 +1,5 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import {
-  environments,
-  envVars,
-  serviceDomains,
-  services,
-} from "@noddle/db/schema";
+import { environments, envVars, serviceDomains, services } from "@noddle/db/schema";
 import { buildSpecOf } from "@noddle/shared/build-spec";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
@@ -36,10 +31,7 @@ const PREVIEW_ENVIRONMENT = "preview";
  * The suffix is what must survive: two previews of the same parent are
  * only distinguished by it. So it's the PREFIX that gets cut.
  */
-export function previewServiceName(
-  parentName: string,
-  prNumber: number
-): string {
+export function previewServiceName(parentName: string, prNumber: number): string {
   const suffix = `-pr-${prNumber}`;
   return `${parentName.slice(0, 48 - suffix.length)}${suffix}`;
 }
@@ -77,16 +69,12 @@ export async function ensurePreview(opts: {
   // something unreachable.
   if (parent.domains.length === 0) {
     return {
-      ignored:
-        "the parent service has no domain, so a preview would have no URL",
+      ignored: "the parent service has no domain, so a preview would have no URL",
     };
   }
 
   const existing = await db.query.services.findFirst({
-    where: and(
-      eq(services.previewOfServiceId, parent.id),
-      eq(services.prNumber, opts.prNumber)
-    ),
+    where: and(eq(services.previewOfServiceId, parent.id), eq(services.prNumber, opts.prNumber)),
   });
 
   if (existing) {
@@ -102,10 +90,7 @@ export async function ensurePreview(opts: {
   // The ceiling only counts LIVE previews: one currently being torn down
   // has already freed its spot.
   const live = await db.query.services.findMany({
-    where: and(
-      isNotNull(services.previewOfServiceId),
-      ne(services.status, "deleting")
-    ),
+    where: and(isNotNull(services.previewOfServiceId), ne(services.status, "deleting")),
   });
   if (live.length >= PREVIEW_LIMIT) {
     return {
@@ -126,10 +111,7 @@ export async function ensurePreview(opts: {
 /** Finds-or-creates the project's `preview` environment. */
 async function previewEnvironment(projectId: string) {
   const found = await db.query.environments.findFirst({
-    where: and(
-      eq(environments.projectId, projectId),
-      eq(environments.name, PREVIEW_ENVIRONMENT)
-    ),
+    where: and(eq(environments.projectId, projectId), eq(environments.name, PREVIEW_ENVIRONMENT)),
   });
   if (found) {
     return found;
@@ -152,7 +134,7 @@ type ParentService = typeof services.$inferSelect & {
 async function createPreview(
   parent: ParentService,
   environmentId: string,
-  opts: { commitSha: string; headBranch: string; prNumber: number }
+  opts: { commitSha: string; headBranch: string; prNumber: number },
 ): Promise<string> {
   const [preview] = await db
     .insert(services)
@@ -197,20 +179,13 @@ async function createPreview(
  * row. An intended consequence — a variable can be fixed on a preview
  * without touching production.
  */
-async function copyEnvVars(
-  parent: ParentService,
-  previewServiceId: string
-): Promise<void> {
+async function copyEnvVars(parent: ParentService, previewServiceId: string): Promise<void> {
   if (parent.envVars.length === 0) {
     return;
   }
   await db.transaction(async (tx) => {
     for (const v of parent.envVars) {
-      const value = decryptSecret(
-        v.valueEncrypted,
-        env.appKey,
-        secretContext.envVar(v.id)
-      );
+      const value = decryptSecret(v.valueEncrypted, env.appKey, secretContext.envVar(v.id));
       // Insert in TWO steps: the AAD needs the new row's identifier, which
       // doesn't exist before the insert. Same shape as the host adoption
       // for the SSH key.
@@ -230,11 +205,7 @@ async function copyEnvVars(
       await tx
         .update(envVars)
         .set({
-          valueEncrypted: encryptSecret(
-            value,
-            env.appKey,
-            secretContext.envVar(row.id)
-          ),
+          valueEncrypted: encryptSecret(value, env.appKey, secretContext.envVar(row.id)),
         })
         .where(eq(envVars.id, row.id));
     }
@@ -255,7 +226,7 @@ export async function destroyPreview(opts: {
   const preview = await db.query.services.findFirst({
     where: and(
       eq(services.previewOfServiceId, opts.parentServiceId),
-      eq(services.prNumber, opts.prNumber)
+      eq(services.prNumber, opts.prNumber),
     ),
   });
   if (!preview) {
@@ -265,10 +236,7 @@ export async function destroyPreview(opts: {
     return { ignored: "no preview for this pull request" };
   }
 
-  await db
-    .update(services)
-    .set(markDeleting(null))
-    .where(eq(services.id, preview.id));
+  await db.update(services).set(markDeleting(null)).where(eq(services.id, preview.id));
   await enqueueDeploy({ kind: "delete-service", serviceId: preview.id });
   return { destroyed: preview.id };
 }

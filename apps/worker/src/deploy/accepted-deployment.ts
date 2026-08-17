@@ -1,10 +1,5 @@
 import type { Database } from "@noddle/db";
-import {
-  deployments,
-  services,
-  stackDeployments,
-  stacks,
-} from "@noddle/db/schema";
+import { deployments, services, stackDeployments, stacks } from "@noddle/db/schema";
 import { markRunning, settle } from "@noddle/shared/lifecycle";
 import { watchUntilFor } from "@noddle/swarm-ops";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
@@ -31,7 +26,7 @@ import { and, eq, isNotNull, ne } from "drizzle-orm";
 async function clearSupersededServiceWatch(
   db: Database,
   serviceId: string,
-  currentDeploymentId: string
+  currentDeploymentId: string,
 ): Promise<void> {
   await db
     .update(deployments)
@@ -40,8 +35,8 @@ async function clearSupersededServiceWatch(
       and(
         eq(deployments.serviceId, serviceId),
         ne(deployments.id, currentDeploymentId),
-        isNotNull(deployments.watchUntil)
-      )
+        isNotNull(deployments.watchUntil),
+      ),
     );
 }
 
@@ -49,7 +44,7 @@ async function clearSupersededServiceWatch(
 async function clearSupersededStackWatch(
   db: Database,
   stackId: string,
-  currentDeploymentId: string
+  currentDeploymentId: string,
 ): Promise<void> {
   await db
     .update(stackDeployments)
@@ -58,8 +53,8 @@ async function clearSupersededStackWatch(
       and(
         eq(stackDeployments.stackId, stackId),
         ne(stackDeployments.id, currentDeploymentId),
-        isNotNull(stackDeployments.watchUntil)
-      )
+        isNotNull(stackDeployments.watchUntil),
+      ),
     );
 }
 
@@ -76,7 +71,7 @@ export async function recordAcceptedService(
     nodeId: string | null | undefined;
     serviceId: string;
     swarmUpdateState: string | null | undefined;
-  }
+  },
 ): Promise<void> {
   await db
     .update(deployments)
@@ -104,7 +99,7 @@ export async function recordAcceptedStack(
     finishedAt: Date;
     stackId: string;
     swarmUpdateStates: Record<string, string | null>;
-  }
+  },
 ): Promise<void> {
   await db
     .update(stackDeployments)

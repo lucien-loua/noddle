@@ -1,10 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
-import {
-  RouteError,
-  RouteNotFound,
-  RoutePending,
-} from "@/components/route-states";
+import { RouteError, RouteNotFound, RoutePending } from "@/components/route-states";
 import { routeTree } from "@/routeTree.gen";
 
 export function getRouter() {

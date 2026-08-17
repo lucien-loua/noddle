@@ -55,15 +55,12 @@ export const Route = createFileRoute("/api/logs/$deploymentId")({
 
           // Subscribe BEFORE reading the catch-up buffer — a duplicate line
           // is cosmetic; a lost line from a failed build is not.
-          const unsubscribe = await logHub.subscribe(
-            deploymentId,
-            (message) => {
-              send(message);
-              if (message.type === "end") {
-                finish();
-              }
+          const unsubscribe = await logHub.subscribe(deploymentId, (message) => {
+            send(message);
+            if (message.type === "end") {
+              finish();
             }
-          );
+          });
 
           for (const message of await logHub.backlog(deploymentId)) {
             send(message);

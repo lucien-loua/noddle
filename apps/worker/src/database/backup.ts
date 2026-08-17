@@ -12,9 +12,6 @@ import type { DeployContext } from "#runtime-context";
  * tells a backup apart from half a backup, and a corrupted backup
  * presented as good is worse than no backup at all.
  */
-export async function runBackup(
-  ctx: DeployContext,
-  backupId: string
-): Promise<void> {
+export async function runBackup(ctx: DeployContext, backupId: string): Promise<void> {
   await runBackupPipeline(databaseBackupSubject, ctx, backupId);
 }

@@ -5,11 +5,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import {
-  backupObjectKey,
-  checkDestination,
-  objectExists,
-} from "@noddle/backup-store";
+import { backupObjectKey, checkDestination, objectExists } from "@noddle/backup-store";
 import type { BackupDestination } from "@noddle/backup-store";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
@@ -21,12 +17,7 @@ import {
   s3Destinations,
   servers,
 } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -34,10 +25,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { runBackup } from "#backup";
 import { provisionDatabase } from "#database";
-import {
-  findDatabaseContainer,
-  legacyDatabaseServiceName,
-} from "#database-runtime";
+import { findDatabaseContainer, legacyDatabaseServiceName } from "#database-runtime";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
@@ -73,14 +61,11 @@ const ko = (m: string) => {
  * A harness that ignores its own setup failures reports results that do not
  * cover what it claims.
  */
-async function must(
-  client: Awaited<ReturnType<typeof connect>>,
-  argv: string[]
-): Promise<string> {
+async function must(client: Awaited<ReturnType<typeof connect>>, argv: string[]): Promise<string> {
   const r = await execArgv(client, argv);
   if (r.code !== 0) {
     throw new Error(
-      `setup failed (code ${r.code}): ${argv.slice(0, 4).join(" ")} — ${r.stderr.slice(0, 300)}`
+      `setup failed (code ${r.code}): ${argv.slice(0, 4).join(" ")} — ${r.stderr.slice(0, 300)}`,
     );
   }
   return r.stdout;
@@ -100,9 +85,7 @@ await db.delete(environments);
 await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(
-  `\n\u001B[1mBackups — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`
-);
+console.log(`\n\u001B[1mBackups — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`);
 
 try {
   const [server] = await db
@@ -142,7 +125,7 @@ try {
       secretAccessKeyEncrypted: encryptSecret(
         S3_SECRET,
         appKey,
-        secretContext.backupDestination(dest.id)
+        secretContext.backupDestination(dest.id),
       ),
     })
     .where(eq(s3Destinations.id, dest.id));
@@ -176,10 +159,7 @@ try {
     `for i in $(seq 1 20); do docker volume rm ${legacyDatabaseServiceName(NAME)} >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0`,
   ]);
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "sauvegarde-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "sauvegarde-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -208,7 +188,7 @@ try {
       rootPasswordEncrypted: encryptSecret(
         password,
         appKey,
-        secretContext.databasePassword(database.id)
+        secretContext.databasePassword(database.id),
       ),
     })
     .where(eq(databases.id, database.id));
@@ -216,10 +196,7 @@ try {
   await provisionDatabase(ctx, route, database.id);
   ok("Postgres database provisioned on the VM");
 
-  const containerId = await findDatabaseContainer(
-    ssh,
-    legacyDatabaseServiceName(NAME)
-  );
+  const containerId = await findDatabaseContainer(ssh, legacyDatabaseServiceName(NAME));
   ok(`container found by Swarm label: ${containerId.slice(0, 12)}`);
 
   // ── A witness, so the backup has verifiable content ──────────────────────
@@ -350,9 +327,7 @@ try {
   if (threw && brokenRow?.status === "failed") {
     ok(`interrupted dump: status ${brokenRow.status}, job in error`);
   } else {
-    ko(
-      `interrupted dump mishandled: threw=${threw} status=${brokenRow?.status}`
-    );
+    ko(`interrupted dump mishandled: threw=${threw} status=${brokenRow?.status}`);
   }
   if (await objectExists(destination, keyKo)) {
     ko("DANGER: the half-dump remained in the bucket");
@@ -371,10 +346,7 @@ try {
   }
 } finally {
   if (ssh) {
-    await removeService(
-      dockerClient(ssh),
-      legacyDatabaseServiceName(NAME)
-    ).catch(() => {
+    await removeService(dockerClient(ssh), legacyDatabaseServiceName(NAME)).catch(() => {
       // nothing to do: cleanup must not mask a real failure
     });
     disconnect(ssh);

@@ -65,7 +65,7 @@ function RootDocument({ children }: { children: ReactNode }) {
             staleTime: 5000,
           },
         },
-      })
+      }),
   );
 
   return (

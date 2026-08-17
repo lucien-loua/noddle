@@ -1,8 +1,4 @@
-import type {
-  DeployJobData,
-  JobKind,
-  PayloadOf,
-} from "@noddle/deploy-contract";
+import type { DeployJobData, JobKind, PayloadOf } from "@noddle/deploy-contract";
 
 import type { WorkerDeps } from "#runtime-context";
 
@@ -61,8 +57,7 @@ export const handlers: Handlers = {
     await runBackup(ctx, data.backupId);
   },
   "change-database-password": async ({ ctx }, data) => {
-    const { changeDatabasePassword } =
-      await handlerModules["database-password"]();
+    const { changeDatabasePassword } = await handlerModules["database-password"]();
     await changeDatabasePassword(ctx, data.databaseId, data.password);
   },
   "database-lifecycle": async ({ ctx }, data) => {
@@ -168,12 +163,6 @@ export const handlers: Handlers = {
  * Narrowed lookup: TypeScript cannot correlate `data.kind` with the payload
  * across an indexed access, so the cast lives in this one line only.
  */
-export function dispatch(
-  table: Handlers,
-  deps: WorkerDeps,
-  data: DeployJobData
-): Promise<void> {
-  return (
-    table[data.kind] as (d: WorkerDeps, j: DeployJobData) => Promise<void>
-  )(deps, data);
+export function dispatch(table: Handlers, deps: WorkerDeps, data: DeployJobData): Promise<void> {
+  return (table[data.kind] as (d: WorkerDeps, j: DeployJobData) => Promise<void>)(deps, data);
 }

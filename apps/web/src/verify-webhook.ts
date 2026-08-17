@@ -23,12 +23,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import {
-  decryptSecret,
-  encryptSecret,
-  loadAppKey,
-  secretContext,
-} from "@noddle/crypto";
+import { decryptSecret, encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
   account,
@@ -95,7 +90,7 @@ function githubPr(
   number: number,
   sha: string,
   branch: string,
-  sameRepo = true
+  sameRepo = true,
 ): string {
   return JSON.stringify({
     action,
@@ -123,7 +118,7 @@ function gitlabMr(
   number: number,
   sha: string,
   branch: string,
-  sameProject = true
+  sameProject = true,
 ): string {
   return JSON.stringify({
     object_attributes: {
@@ -158,7 +153,7 @@ function authHeaders(forge: Forge, body: string): Record<string, string> {
 async function postWebhook(
   url: string,
   forge: Forge,
-  body: string
+  body: string,
 ): Promise<{ body: Record<string, unknown>; status: number }> {
   const r = await fetch(url, {
     body,
@@ -237,9 +232,7 @@ try {
   if (seed.exitCode === 0) {
     ok("source repository created on the VM");
   } else {
-    ko(
-      `creating the source repository: ${seed.stderr.toString().slice(0, 200)}`
-    );
+    ko(`creating the source repository: ${seed.stderr.toString().slice(0, 200)}`);
     throw new Error("aborting");
   }
 
@@ -267,11 +260,7 @@ try {
   const keyValues = {
     id: sshKeyId,
     name: "webhook-target",
-    privateKeyEncrypted: encryptSecret(
-      TARGET.privateKey,
-      appKey,
-      secretContext.sshKey(sshKeyId)
-    ),
+    privateKeyEncrypted: encryptSecret(TARGET.privateKey, appKey, secretContext.sshKey(sshKeyId)),
   };
   if (foundKey) {
     await db.update(sshKeys).set(keyValues).where(eq(sshKeys.id, sshKeyId));
@@ -290,10 +279,7 @@ try {
     })
     .returning();
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "webhook" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "webhook" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -327,7 +313,7 @@ try {
       webhookSecretEncrypted: encryptSecret(
         WEBHOOK_SECRET,
         appKey,
-        secretContext.webhookSecret(serviceId)
+        secretContext.webhookSecret(serviceId),
       ),
     })
     .where(eq(services.id, serviceId));
@@ -356,11 +342,7 @@ try {
     await db
       .update(envVars)
       .set({
-        valueEncrypted: encryptSecret(
-          v.value,
-          appKey,
-          secretContext.envVar(row?.id ?? "")
-        ),
+        valueEncrypted: encryptSecret(v.value, appKey, secretContext.envVar(row?.id ?? "")),
       })
       .where(eq(envVars.id, row?.id ?? ""));
   }
@@ -410,7 +392,7 @@ try {
       env: { ...workerEnv, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",
-    })
+    }),
   );
 
   if (await waitForWeb()) {
@@ -452,27 +434,18 @@ try {
     // Same push, authenticated each way. The push payload schema is shared
     // by both forges, so only the credential differs.
     for (const forge of ["github", "gitlab"] as const) {
-      const body = githubPush(
-        "some-other-branch",
-        "0000000000000000000000000000000000000b"
-      );
+      const body = githubPush("some-other-branch", "0000000000000000000000000000000000000b");
       // biome-ignore lint/performance/noAwaitInLoops: ordered, and the count below depends on this one having landed
       const res = await postWebhook(`${BASE}${path}`, forge, body);
       const after = await db.query.deployments.findMany({
         where: eq(deployments.serviceId, serviceId),
       });
-      const skipped = Array.isArray(res.body.skipped)
-        ? (res.body.skipped as string[])
-        : [];
-      if (
-        res.status === 200 &&
-        after.length === before.length &&
-        skipped.length === 1
-      ) {
+      const skipped = Array.isArray(res.body.skipped) ? (res.body.skipped as string[]) : [];
+      if (res.status === 200 && after.length === before.length && skipped.length === 1) {
         ok(`${forge}: different branch accepted, deployment ignored`);
       } else {
         ko(
-          `${forge} different branch: status ${res.status}, ${after.length} deployment(s) instead of ${before.length}, skipped ${JSON.stringify(skipped)}`
+          `${forge} different branch: status ${res.status}, ${after.length} deployment(s) instead of ${before.length}, skipped ${JSON.stringify(skipped)}`,
         );
       }
     }
@@ -481,9 +454,7 @@ try {
   // ── THE test: a signed push on the right branch really deploys ──────────
   const body = githubPush("main", headSha);
   const res = await postWebhook(`${BASE}${path}`, "github", body);
-  const queued = Array.isArray(res.body.queued)
-    ? (res.body.queued as string[])
-    : [];
+  const queued = Array.isArray(res.body.queued) ? (res.body.queued as string[]) : [];
   const [deploymentId] = queued;
   if (res.status === 200 && deploymentId) {
     ok(`webhook accepted, deployment ${deploymentId} queued`);
@@ -509,17 +480,14 @@ try {
   if (final?.trigger === "webhook" && final.status === "succeeded") {
     ok(`webhook-triggered deployment converged — image ${final.imageTag}`);
   } else {
-    ko(
-      `final status ${final?.status ?? "never finished"}, trigger ${final?.trigger ?? "—"}`
-    );
+    ko(`final status ${final?.status ?? "never finished"}, trigger ${final?.trigger ?? "—"}`);
   }
   // ── pull request previews ────────────────────────────────────────────────
   //
   // The SAME webhook, the other event. What matters here isn't that a PR
   // deploys — it's that a fork gets NOTHING, and that a `synchronize`
   // lands on the same row instead of creating a second one.
-  const postPr = (prPayload: string) =>
-    postWebhook(`${BASE}${path}`, "github", prPayload);
+  const postPr = (prPayload: string) => postWebhook(`${BASE}${path}`, "github", prPayload);
   const previews = async () =>
     await db.query.services.findMany({
       where: isNotNull(services.previewOfServiceId),
@@ -550,7 +518,7 @@ try {
       ok(`${forge}: fork ignored (${reason}) — nothing created`);
     } else {
       ko(
-        `${forge} fork: status ${r.status}, reason "${reason}", ${after} preview(s) instead of ${before}`
+        `${forge} fork: status ${r.status}, reason "${reason}", ${after} preview(s) instead of ${before}`,
       );
     }
   }
@@ -559,9 +527,7 @@ try {
   const opened = await postPr(githubPr("opened", 7, headSha, "feature/x"));
   const created = (await previews()).find((p) => p.prNumber === 7);
   if (opened.status === 200 && created) {
-    ok(
-      `PR 7 → preview ${created.name}, domain ${created.domains[0]?.host ?? "none"}`
-    );
+    ok(`PR 7 → preview ${created.name}, domain ${created.domains[0]?.host ?? "none"}`);
   } else {
     ko(`PR 7: status ${opened.status}, body ${JSON.stringify(opened.body)}`);
     throw new Error("aborting");
@@ -585,11 +551,7 @@ try {
     for (const row of copied) {
       const expected = seededVars.find((v) => v.key === row.key);
       try {
-        const value = decryptSecret(
-          row.valueEncrypted,
-          appKey,
-          secretContext.envVar(row.id)
-        );
+        const value = decryptSecret(row.valueEncrypted, appKey, secretContext.envVar(row.id));
         if (value !== expected?.value) {
           wrong.push(`${row.key} (different value)`);
         }

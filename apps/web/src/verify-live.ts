@@ -69,7 +69,7 @@ let cookie = "";
 
 async function call(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<{ body: string; response: Response }> {
   const response = await fetch(`${BASE}${path}`, {
     ...init,
@@ -159,9 +159,7 @@ try {
   if (seed.exitCode === 0) {
     ok("source repository created on the VM");
   } else {
-    ko(
-      `creating the source repository: ${seed.stderr.toString().slice(0, 200)}`
-    );
+    ko(`creating the source repository: ${seed.stderr.toString().slice(0, 200)}`);
     throw new Error("aborting");
   }
 
@@ -173,11 +171,7 @@ try {
   const keyValues = {
     id: sshKeyId,
     name: "live-target",
-    privateKeyEncrypted: encryptSecret(
-      TARGET.privateKey,
-      appKey,
-      secretContext.sshKey(sshKeyId)
-    ),
+    privateKeyEncrypted: encryptSecret(TARGET.privateKey, appKey, secretContext.sshKey(sshKeyId)),
   };
   if (foundKey) {
     await db.update(sshKeys).set(keyValues).where(eq(sshKeys.id, sshKeyId));
@@ -239,7 +233,7 @@ try {
       env: { ...process.env, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",
-    })
+    }),
   );
 
   if (await waitForWeb()) {
@@ -276,10 +270,7 @@ try {
     signal: controller.signal,
   });
 
-  await queue.add(
-    "deploy",
-    deployJobSchema.parse({ deploymentId, kind: "deploy" })
-  );
+  await queue.add("deploy", deployJobSchema.parse({ deploymentId, kind: "deploy" }));
   ok("job queued — real build in progress, a few minutes…");
 
   const response = await streamed;
@@ -335,9 +326,7 @@ try {
     }
   }
 
-  console.log(
-    `\n  (${received.length} bytes of SSE received by the web app)\n`
-  );
+  console.log(`\n  (${received.length} bytes of SSE received by the web app)\n`);
 
   // ── the state the dashboard displays ───────────────────────────────────────
   const row = await db.query.deployments.findFirst({
@@ -366,7 +355,7 @@ try {
         imageTag: row.imageTag,
         kind: "rollback",
         serviceId,
-      })
+      }),
     );
 
     const rollbackDeadline = Date.now() + 3 * 60 * 1000;

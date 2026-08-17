@@ -33,23 +33,18 @@ interface DatabaseRestoreLoaded {
 
 async function resolveRestoreSource(
   ctx: DeployContext,
-  req: RestoreRequest
+  req: RestoreRequest,
 ): Promise<{ destinationId: string | null; objectKey: string }> {
   if (req.backupId) {
     const backup = await ctx.db.query.backups.findFirst({
-      where: and(
-        eq(backups.id, req.backupId),
-        eq(backups.databaseId, req.databaseId)
-      ),
+      where: and(eq(backups.id, req.backupId), eq(backups.databaseId, req.databaseId)),
     });
     if (!backup) {
-      throw new Error(
-        "backup not found for this database — cross-database restore refused"
-      );
+      throw new Error("backup not found for this database — cross-database restore refused");
     }
     if (backup.status !== "completed") {
       throw new Error(
-        `backup is in status "${backup.status}": only a completed backup can be restored`
+        `backup is in status "${backup.status}": only a completed backup can be restored`,
       );
     }
     const { destinationId, objectKey } = backup;
@@ -67,50 +62,40 @@ async function resolveRestoreSource(
 async function applyDatabaseRestore(
   ctx: DeployContext,
   loaded: DatabaseRestoreLoaded,
-  body: NodeJS.ReadableStream
+  body: NodeJS.ReadableStream,
 ): Promise<void> {
   const { database, password } = loaded;
 
-  await withDeployClients(
-    ctx,
-    database.server,
-    async ({ buildClient, managerDocker }) => {
-      const containerId = await findDatabaseContainer(
-        buildClient,
-        database.swarmName
-      );
-      // `?? database.name` used to close this chain, and it was the only
-      // place in the repo that did: `name` names the RESOURCE in Noddle and
-      // is validated by serviceNameSchema, which allows dashes — while every
-      // consumer here needs an unquoted SQL identifier. connectionUrl() and
-      // the engine env builders all stop at `rootUser`; this now does too.
-      //
-      // Undefined is a legitimate answer: Redis has no database name, only
-      // numbers, so both columns are null by design and the spec ignores it.
-      const databaseName = database.databaseName ?? database.rootUser;
-      if (databaseName) {
-        assertSafeIdentifier(databaseName, "database name");
-      }
-      if (database.rootUser) {
-        assertSafeIdentifier(database.rootUser, "database user");
-      }
-
-      await restoreSpecFor(database.engine).apply({
-        body,
-        buildClient,
-        containerId,
-        database,
-        managerDocker,
-        password,
-      });
+  await withDeployClients(ctx, database.server, async ({ buildClient, managerDocker }) => {
+    const containerId = await findDatabaseContainer(buildClient, database.swarmName);
+    // `?? database.name` used to close this chain, and it was the only
+    // place in the repo that did: `name` names the RESOURCE in Noddle and
+    // is validated by serviceNameSchema, which allows dashes — while every
+    // consumer here needs an unquoted SQL identifier. connectionUrl() and
+    // the engine env builders all stop at `rootUser`; this now does too.
+    //
+    // Undefined is a legitimate answer: Redis has no database name, only
+    // numbers, so both columns are null by design and the spec ignores it.
+    const databaseName = database.databaseName ?? database.rootUser;
+    if (databaseName) {
+      assertSafeIdentifier(databaseName, "database name");
     }
-  );
+    if (database.rootUser) {
+      assertSafeIdentifier(database.rootUser, "database user");
+    }
+
+    await restoreSpecFor(database.engine).apply({
+      body,
+      buildClient,
+      containerId,
+      database,
+      managerDocker,
+      password,
+    });
+  });
 }
 
-const databaseRestoreSubject: RestoreSubject<
-  RestoreRequest,
-  DatabaseRestoreLoaded
-> = {
+const databaseRestoreSubject: RestoreSubject<RestoreRequest, DatabaseRestoreLoaded> = {
   apply: applyDatabaseRestore,
   load: async (ctx, request) => {
     const database = await ctx.db.query.databases.findFirst({
@@ -123,13 +108,12 @@ const databaseRestoreSubject: RestoreSubject<
     const password = decryptSecret(
       database.rootPasswordEncrypted,
       ctx.appKey,
-      secretContext.databasePassword(database.id)
+      secretContext.databasePassword(database.id),
     );
     return { database, password, request };
   },
   missingObjectTarget: "database",
-  resolveSource: async (ctx, request) =>
-    await resolveRestoreSource(ctx, request),
+  resolveSource: async (ctx, request) => await resolveRestoreSource(ctx, request),
   safetyBackup: async (ctx, loaded, resolved) => {
     const [safety] = await ctx.db
       .insert(backups)
@@ -141,7 +125,7 @@ const databaseRestoreSubject: RestoreSubject<
             id: resolved.id,
             prefix: resolved.destination.prefix,
           },
-        })
+        }),
       )
       .returning();
     if (!safety) {
@@ -151,9 +135,6 @@ const databaseRestoreSubject: RestoreSubject<
   },
 };
 
-export async function runRestore(
-  ctx: DeployContext,
-  req: RestoreRequest
-): Promise<void> {
+export async function runRestore(ctx: DeployContext, req: RestoreRequest): Promise<void> {
   await runRestorePipeline(databaseRestoreSubject, ctx, req);
 }

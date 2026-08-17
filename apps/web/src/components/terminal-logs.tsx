@@ -5,12 +5,7 @@ import { CopyButton } from "@/components/copyable-value";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type TerminalLogLevel =
-  | "debug"
-  | "error"
-  | "info"
-  | "success"
-  | "warning";
+export type TerminalLogLevel = "debug" | "error" | "info" | "success" | "warning";
 
 export interface TerminalLogLine {
   id: string;
@@ -28,8 +23,7 @@ interface LevelStyle {
 
 const LEVEL_STYLE: Record<TerminalLogLevel, LevelStyle> = {
   debug: {
-    badge:
-      "border-transparent bg-yellow-600/15 text-yellow-700 dark:text-yellow-400",
+    badge: "border-transparent bg-yellow-600/15 text-yellow-700 dark:text-yellow-400",
     bar: "bg-yellow-500/40",
     label: "debug",
     row: "bg-orange-500/10 hover:bg-orange-500/15",
@@ -47,15 +41,13 @@ const LEVEL_STYLE: Record<TerminalLogLevel, LevelStyle> = {
     row: "hover:bg-muted/50",
   },
   success: {
-    badge:
-      "border-transparent bg-emerald-600/15 text-emerald-700 dark:text-emerald-400",
+    badge: "border-transparent bg-emerald-600/15 text-emerald-700 dark:text-emerald-400",
     bar: "bg-emerald-500/40",
     label: "success",
     row: "hover:bg-muted/50",
   },
   warning: {
-    badge:
-      "border-transparent bg-orange-600/15 text-orange-700 dark:text-orange-400",
+    badge: "border-transparent bg-orange-600/15 text-orange-700 dark:text-orange-400",
     bar: "bg-orange-500/40",
     label: "warning",
     row: "bg-yellow-500/10 hover:bg-yellow-500/15",
@@ -80,8 +72,7 @@ const MONTHS = [
 
 const ERROR_RE = /❌|\bError:|\bfailed\b|\bfatal\b|\bexception\b|\bcrash\b/i;
 const WARNING_RE = /⚠|⚠️|\bwarn(?:ing)?\b|\bdeprecated\b/i;
-const SUCCESS_RE =
-  /✅|✓|√|\bsuccessfully\b|\bcompleted\b|\bBackup done\b|\bdone\b/i;
+const SUCCESS_RE = /✅|✓|√|\bsuccessfully\b|\bcompleted\b|\bBackup done\b|\bdone\b/i;
 const DEBUG_RE = /\[debug\]|(?:^|\s)debug:?\s/i;
 
 /** Matches `date` under UTC — e.g. `[Tue Aug 11 00:31:35 UTC 2026]`. */
@@ -132,9 +123,7 @@ interface TerminalLogsContextValue {
   plaintext: string;
 }
 
-const TerminalLogsContext = createContext<TerminalLogsContextValue | null>(
-  null
-);
+const TerminalLogsContext = createContext<TerminalLogsContextValue | null>(null);
 
 function useTerminalLogs(): TerminalLogsContextValue {
   const value = use(TerminalLogsContext);
@@ -148,17 +137,8 @@ function toPlaintext(lines: TerminalLogLine[]): string {
   return lines.map((line) => line.text).join("\n");
 }
 
-function TerminalLogsRoot({
-  children,
-  lines,
-}: {
-  children: ReactNode;
-  lines: TerminalLogLine[];
-}) {
-  const value = useMemo(
-    () => ({ lines, plaintext: toPlaintext(lines) }),
-    [lines]
-  );
+function TerminalLogsRoot({ children, lines }: { children: ReactNode; lines: TerminalLogLine[] }) {
+  const value = useMemo(() => ({ lines, plaintext: toPlaintext(lines) }), [lines]);
 
   return <TerminalLogsContext value={value}>{children}</TerminalLogsContext>;
 }
@@ -169,13 +149,7 @@ function TerminalLogsCount() {
   return <Badge variant="outline">{label}</Badge>;
 }
 
-function TerminalLogsCopy({
-  className,
-  label,
-}: {
-  className?: string;
-  label: string;
-}) {
+function TerminalLogsCopy({ className, label }: { className?: string; label: string }) {
   const { plaintext } = useTerminalLogs();
   return <CopyButton className={className} label={label} value={plaintext} />;
 }
@@ -185,29 +159,17 @@ function TerminalLogsLine({ line }: { line: TerminalLogLine }) {
   const style = LEVEL_STYLE[level];
 
   return (
-    <div
-      className={cn(
-        "flex flex-row gap-3 py-1.5 font-mono text-xs sm:py-0.5",
-        style.row
-      )}
-    >
+    <div className={cn("flex flex-row gap-3 py-1.5 font-mono text-xs sm:py-0.5", style.row)}>
       <div className="flex items-start gap-2">
-        <div
-          className={cn("w-1.5 shrink-0 self-stretch rounded-[3px]", style.bar)}
-        />
+        <div className={cn("w-1.5 shrink-0 self-stretch rounded-[3px]", style.bar)} />
         <Badge
-          className={cn(
-            "h-5 w-14 justify-center px-1 py-0 text-[10px]",
-            style.badge
-          )}
+          className={cn("h-5 w-14 justify-center px-1 py-0 text-[10px]", style.badge)}
           variant="outline"
         >
           {style.label}
         </Badge>
       </div>
-      <span className="wrap-break-word whitespace-pre-wrap text-foreground">
-        {line.text}
-      </span>
+      <span className="wrap-break-word whitespace-pre-wrap text-foreground">{line.text}</span>
     </div>
   );
 }
@@ -225,7 +187,7 @@ function TerminalLogsViewport({
     <div
       className={cn(
         "scroll-fade no-scrollbar max-h-[min(70vh,720px)] min-h-40 overflow-y-auto rounded-xl border bg-background p-3",
-        className
+        className,
       )}
     >
       {lines.length === 0 ? (

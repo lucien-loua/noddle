@@ -3,12 +3,7 @@
  * extracting every setState wrapper adds noise without shared children.
  */
 
-import {
-  ClipboardTextIcon,
-  PencilSimpleIcon,
-  PlayIcon,
-  TrashIcon,
-} from "@phosphor-icons/react";
+import { ClipboardTextIcon, PencilSimpleIcon, PlayIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -51,9 +46,7 @@ export function BackupConfigCard({
 }) {
   const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
-  const run = useMutation(
-    mutations.triggerBackupRun(queryClient, subject, config.id)
-  );
+  const run = useMutation(mutations.triggerBackupRun(queryClient, subject, config.id));
   const remove = useMutation({
     mutationFn: () =>
       subject.kind === "database"
@@ -71,10 +64,7 @@ export function BackupConfigCard({
     },
   });
 
-  const keepLatest =
-    config.keepLatestCount === null
-      ? "Keep all"
-      : String(config.keepLatestCount);
+  const keepLatest = config.keepLatestCount === null ? "Keep all" : String(config.keepLatestCount);
 
   const meta = [
     { label: "Destination", value: config.destinationName },
@@ -93,17 +83,15 @@ export function BackupConfigCard({
               aria-hidden="true"
               className={cn(
                 "size-2 shrink-0 rounded-full",
-                config.enabled ? "bg-success" : "bg-destructive"
+                config.enabled ? "bg-success" : "bg-destructive",
               )}
             />
-            <h2 className="font-semibold text-sm">
-              {config.enabled ? "Active" : "Inactive"}
-            </h2>
+            <h2 className="font-semibold text-sm">{config.enabled ? "Active" : "Inactive"}</h2>
           </div>
           <dl
             className={cn(
               "mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3",
-              config.extra.length > 1 ? "lg:grid-cols-6" : "lg:grid-cols-5"
+              config.extra.length > 1 ? "lg:grid-cols-6" : "lg:grid-cols-5",
             )}
           >
             {meta.map((item) => (
@@ -112,12 +100,7 @@ export function BackupConfigCard({
           </dl>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button
-            aria-label={copy.historyAria}
-            onClick={onHistory}
-            size="icon-sm"
-            variant="ghost"
-          >
+          <Button aria-label={copy.historyAria} onClick={onHistory} size="icon-sm" variant="ghost">
             <ClipboardTextIcon />
           </Button>
           {canCreate ? (
@@ -145,12 +128,7 @@ export function BackupConfigCard({
             </Button>
           ) : null}
           {canCreate ? (
-            <Button
-              aria-label="Edit schedule"
-              onClick={onEdit}
-              size="icon-sm"
-              variant="ghost"
-            >
+            <Button aria-label="Edit schedule" onClick={onEdit} size="icon-sm" variant="ghost">
               <PencilSimpleIcon />
             </Button>
           ) : null}

@@ -1,9 +1,6 @@
 import handler from "#start-handler";
 
-import {
-  terminalWebsocket,
-  tryUpgradeTerminal,
-} from "./src/lib/terminal-ws.ts";
+import { terminalWebsocket, tryUpgradeTerminal } from "./src/lib/terminal-ws.ts";
 import { isTerminalPath } from "./src/lib/terminal.server.ts";
 import type { TerminalSocketData } from "./src/lib/terminal.server.ts";
 
@@ -59,9 +56,7 @@ Bun.serve<TerminalSocketData>({
       const file = Bun.file(CLIENT_DIR + pathname);
       if (await file.exists()) {
         return new Response(file, {
-          headers: pathname.startsWith("/assets/")
-            ? { "Cache-Control": IMMUTABLE }
-            : {},
+          headers: pathname.startsWith("/assets/") ? { "Cache-Control": IMMUTABLE } : {},
         });
       }
     }

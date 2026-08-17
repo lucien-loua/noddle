@@ -14,14 +14,11 @@ export interface BackupSweepSubject<TConfig> {
   configId: (config: TConfig) => string;
   configSchedule: (config: TConfig) => string;
   findInFlight: (ctx: DeployContext, configId: string) => Promise<boolean>;
-  findLastCompletedAt: (
-    ctx: DeployContext,
-    configId: string
-  ) => Promise<Date | null>;
+  findLastCompletedAt: (ctx: DeployContext, configId: string) => Promise<Date | null>;
   insertScheduled: (
     ctx: DeployContext,
     config: TConfig,
-    resolved: Awaited<ReturnType<typeof resolveDestinationRow>>
+    resolved: Awaited<ReturnType<typeof resolveDestinationRow>>,
   ) => Promise<{ id: string } | null>;
   isParentActive: (config: TConfig) => boolean;
   loadEnabledConfigs: (ctx: DeployContext) => Promise<TConfig[]>;
@@ -30,7 +27,7 @@ export interface BackupSweepSubject<TConfig> {
 export async function sweepBackupConfigs<TConfig>(
   subject: BackupSweepSubject<TConfig>,
   ctx: DeployContext,
-  enqueue: (runId: string) => Promise<unknown>
+  enqueue: (runId: string) => Promise<unknown>,
 ): Promise<BackupSweepResult> {
   const result: BackupSweepResult = { pruned: [], queued: [] };
   const now = new Date();
@@ -55,10 +52,7 @@ export async function sweepBackupConfigs<TConfig>(
 
     let resolved: Awaited<ReturnType<typeof resolveDestinationRow>>;
     try {
-      resolved = await resolveDestinationRow(
-        ctx.db,
-        subject.configDestinationId(config)
-      );
+      resolved = await resolveDestinationRow(ctx.db, subject.configDestinationId(config));
     } catch {
       continue;
     }
@@ -78,20 +72,15 @@ export interface BackupPruneSubject {
   findExcessRuns: (
     ctx: DeployContext,
     configId: string,
-    keepLatestCount: number
-  ) => Promise<
-    { destinationId: string | null; id: string; objectKey: string }[]
-  >;
-  loadKeepLatestCount: (
-    ctx: DeployContext,
-    configId: string
-  ) => Promise<number | null | undefined>;
+    keepLatestCount: number,
+  ) => Promise<{ destinationId: string | null; id: string; objectKey: string }[]>;
+  loadKeepLatestCount: (ctx: DeployContext, configId: string) => Promise<number | null | undefined>;
 }
 
 export async function pruneBackupRuns(
   subject: BackupPruneSubject,
   ctx: DeployContext,
-  opts: { configId: string | null }
+  opts: { configId: string | null },
 ): Promise<string[]> {
   if (!opts.configId) {
     return [];
@@ -102,19 +91,12 @@ export async function pruneBackupRuns(
     return [];
   }
 
-  const excess = await subject.findExcessRuns(
-    ctx,
-    opts.configId,
-    keepLatestCount
-  );
+  const excess = await subject.findExcessRuns(ctx, opts.configId, keepLatestCount);
   if (excess.length === 0) {
     return [];
   }
 
-  const cache = new Map<
-    string,
-    Awaited<ReturnType<typeof resolveDestination>>
-  >();
+  const cache = new Map<string, Awaited<ReturnType<typeof resolveDestination>>>();
   const removed: string[] = [];
 
   for (const backup of excess) {
@@ -123,11 +105,7 @@ export async function pruneBackupRuns(
       let resolved = cache.get(key);
       if (!resolved) {
         // biome-ignore lint/performance/noAwaitInLoops: cached resolution
-        resolved = await resolveDestination(
-          ctx.db,
-          ctx.appKey,
-          backup.destinationId
-        );
+        resolved = await resolveDestination(ctx.db, ctx.appKey, backup.destinationId);
         cache.set(key, resolved);
       }
       await deleteObject(resolved.destination, backup.objectKey);

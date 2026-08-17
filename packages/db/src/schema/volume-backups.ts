@@ -36,7 +36,7 @@ export const volumeBackupConfigs = pgTable(
     /** Docker volume name on the service's server (for example `hello-data-abc123`). */
     volumeName: text("volume_name").notNull(),
   },
-  (t) => [index("volume_backup_configs_service_idx").on(t.serviceId)]
+  (t) => [index("volume_backup_configs_service_idx").on(t.serviceId)],
 );
 
 export const volumeBackups = pgTable(
@@ -66,5 +66,5 @@ export const volumeBackups = pgTable(
   (t) => [
     index("volume_backups_service_created_idx").on(t.serviceId, t.createdAt),
     index("volume_backups_config_created_idx").on(t.configId, t.createdAt),
-  ]
+  ],
 );

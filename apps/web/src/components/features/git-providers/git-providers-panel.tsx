@@ -3,10 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  GithubIcon,
-  GitlabIcon,
-} from "@/components/features/services/provider-icons";
+import { GithubIcon, GitlabIcon } from "@/components/features/services/provider-icons";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { SettingsList } from "@/components/features/settings-list/settings-list";
@@ -24,13 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
@@ -59,9 +50,7 @@ const TRAILING_SLASHES = /\/+$/;
 function httpUrlOrNull(candidate: string): string | null {
   try {
     const parsed = new URL(candidate);
-    return parsed.protocol === "https:" || parsed.protocol === "http:"
-      ? parsed.toString()
-      : null;
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
   } catch {
     return null;
   }
@@ -92,8 +81,7 @@ function ProviderRow({
   // `setup_url`, and an App created before that did not. Asking the App
   // what it is installed on recovers the fact either way.
   const sync = useMutation({
-    mutationFn: () =>
-      syncGithubInstallation({ data: { gitProviderId: provider.id } }),
+    mutationFn: () => syncGithubInstallation({ data: { gitProviderId: provider.id } }),
     onError: (e: Error) =>
       toast.add({
         description: errorMessage(e, "could not check the installation"),
@@ -121,8 +109,7 @@ function ProviderRow({
   const handleSync = useCallback(() => sync.mutate(), [sync]);
 
   const { error, handleRemove, isPending } = useRowRemove({
-    mutationFn: () =>
-      deleteGitProvider({ data: { gitProviderId: provider.id } }),
+    mutationFn: () => deleteGitProvider({ data: { gitProviderId: provider.id } }),
     onRemoved,
   });
 
@@ -131,11 +118,7 @@ function ProviderRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            {provider.providerType === "gitlab" ? (
-              <GitlabIcon />
-            ) : (
-              <GithubIcon />
-            )}
+            {provider.providerType === "gitlab" ? <GitlabIcon /> : <GithubIcon />}
             <h2 className="truncate font-semibold text-sm">{provider.name}</h2>
             {provider.connected ? (
               <Badge variant="secondary">Connected</Badge>
@@ -145,10 +128,7 @@ function ProviderRow({
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
             <Meta label="Services" value={provider.serviceCount} />
-            <Meta
-              label="Added"
-              value={<RelativeTime iso={provider.createdAt} />}
-            />
+            <Meta label="Added" value={<RelativeTime iso={provider.createdAt} />} />
           </dl>
           {error ? (
             <p className="mt-2 text-destructive text-xs" role="status">
@@ -164,25 +144,15 @@ function ProviderRow({
             <>
               <Button
                 render={
-                  <a
-                    href={provider.installUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
+                  <a href={provider.installUrl} rel="noreferrer" target="_blank">
                     Install
                   </a>
                 }
                 size="sm"
                 variant="outline"
               />
-              <Button
-                disabled={sync.isPending}
-                onClick={handleSync}
-                size="sm"
-                variant="ghost"
-              >
-                {sync.isPending ? <Spinner data-icon="inline-start" /> : null}I
-                have installed it
+              <Button disabled={sync.isPending} onClick={handleSync} size="sm" variant="ghost">
+                {sync.isPending ? <Spinner data-icon="inline-start" /> : null}I have installed it
               </Button>
             </>
           ) : null}
@@ -224,8 +194,7 @@ function ConnectGithubDialog({
 
   const start = useMutation({
     mutationFn: () => startGithubApp({ data: { name } }),
-    onSuccess: (result) =>
-      setPosting({ action: result.action, manifest: result.manifest }),
+    onSuccess: (result) => setPosting({ action: result.action, manifest: result.manifest }),
   });
 
   // Submitted from an effect rather than inline: the form's fields only
@@ -238,7 +207,7 @@ function ConnectGithubDialog({
 
   const handleName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
-    []
+    [],
   );
   const handleStart = useCallback(() => start.mutate(), [start]);
 
@@ -248,9 +217,8 @@ function ConnectGithubDialog({
         <DialogHeader>
           <DialogTitle>Connect GitHub</DialogTitle>
           <DialogDescription>
-            Noddle creates a GitHub App in your own account. It never holds a
-            shared credential — you approve the permissions on GitHub, and can
-            revoke them there at any time.
+            Noddle creates a GitHub App in your own account. It never holds a shared credential —
+            you approve the permissions on GitHub, and can revoke them there at any time.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -269,9 +237,7 @@ function ConnectGithubDialog({
               />
             </Field>
             {start.isError ? (
-              <FieldError>
-                {errorMessage(start.error, "could not start the connection")}
-              </FieldError>
+              <FieldError>{errorMessage(start.error, "could not start the connection")}</FieldError>
             ) : null}
           </FieldGroup>
 
@@ -287,9 +253,7 @@ function ConnectGithubDialog({
             disabled={name.trim() === "" || start.isPending || posting !== null}
             onClick={handleStart}
           >
-            {start.isPending || posting ? (
-              <Spinner data-icon="inline-start" />
-            ) : null}
+            {start.isPending || posting ? <Spinner data-icon="inline-start" /> : null}
             Continue on GitHub
           </Button>
         </DialogFooter>
@@ -329,12 +293,11 @@ function ConnectGitlabDialog({
   // shape not worth shipping — and half-typed input stops rendering a
   // nonsensical link on the way.
   const applicationsUrl = httpUrlOrNull(
-    `${url.replace(TRAILING_SLASHES, "")}/-/user_settings/applications`
+    `${url.replace(TRAILING_SLASHES, "")}/-/user_settings/applications`,
   );
 
   const start = useMutation({
-    mutationFn: () =>
-      startGitlabApp({ data: { applicationId, name, secret, url } }),
+    mutationFn: () => startGitlabApp({ data: { applicationId, name, secret, url } }),
     onError: (e: Error) =>
       toast.add({
         description: errorMessage(e, "could not start the connection"),
@@ -348,25 +311,23 @@ function ConnectGitlabDialog({
 
   const handleName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
-    []
+    [],
   );
   const handleAppId = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setApplicationId(e.target.value),
-    []
+    (e: React.ChangeEvent<HTMLInputElement>) => setApplicationId(e.target.value),
+    [],
   );
   const handleSecret = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setSecret(e.target.value),
-    []
+    [],
   );
   const handleUrl = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value),
-    []
+    [],
   );
   const handleStart = useCallback(() => start.mutate(), [start]);
 
-  const ready =
-    name.trim() !== "" && applicationId.trim() !== "" && secret.trim() !== "";
+  const ready = name.trim() !== "" && applicationId.trim() !== "" && secret.trim() !== "";
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -374,8 +335,8 @@ function ConnectGitlabDialog({
         <DialogHeader>
           <DialogTitle>Connect GitLab</DialogTitle>
           <DialogDescription>
-            Create an application on GitLab with the redirect URI below and the
-            scopes api and read_repository, then paste its credentials here.
+            Create an application on GitLab with the redirect URI below and the scopes api and
+            read_repository, then paste its credentials here.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -390,23 +351,15 @@ function ConnectGitlabDialog({
               <FieldDescription>
                 Create the application at{" "}
                 {applicationsUrl ? (
-                  <a
-                    className="underline"
-                    href={applicationsUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
+                  <a className="underline" href={applicationsUrl} rel="noreferrer" target="_blank">
                     {applicationsUrl}
                   </a>
                 ) : (
-                  <span className="font-mono">
-                    {url}/-/user_settings/applications
-                  </span>
+                  <span className="font-mono">{url}/-/user_settings/applications</span>
                 )}{" "}
                 with scopes <code className="font-mono">api</code> and{" "}
-                <code className="font-mono">read_repository</code>, and register
-                this exact URI. A mismatch is only refused once GitLab has
-                already taken you there.
+                <code className="font-mono">read_repository</code>, and register this exact URI. A
+                mismatch is only refused once GitLab has already taken you there.
               </FieldDescription>
               <Input id="gitlab-redirect" readOnly value={redirectUri} />
             </Field>
@@ -422,9 +375,7 @@ function ConnectGitlabDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="gitlab-url">GitLab URL</FieldLabel>
-              <FieldDescription>
-                Change it for a self-hosted instance.
-              </FieldDescription>
+              <FieldDescription>Change it for a self-hosted instance.</FieldDescription>
               <Input id="gitlab-url" onChange={handleUrl} value={url} />
             </Field>
             <Field>
@@ -447,9 +398,7 @@ function ConnectGitlabDialog({
               />
             </Field>
             {start.isError ? (
-              <FieldError>
-                {errorMessage(start.error, "could not start the connection")}
-              </FieldError>
+              <FieldError>{errorMessage(start.error, "could not start the connection")}</FieldError>
             ) : null}
           </FieldGroup>
         </DialogBody>
@@ -476,11 +425,7 @@ export function GitProvidersList({
   onAddGitlab?: () => void;
   role: RoleName | null;
 }) {
-  const {
-    data: rows,
-    isEmpty,
-    refresh,
-  } = useResourceList(queries.gitProviders, initial);
+  const { data: rows, isEmpty, refresh } = useResourceList(queries.gitProviders, initial);
 
   return (
     <SettingsList isEmpty={isEmpty}>
@@ -493,9 +438,8 @@ export function GitProvidersList({
         <SettingsList.EmptyHeader>
           <SettingsList.EmptyTitle>No connected forges</SettingsList.EmptyTitle>
           <SettingsList.EmptyDescription>
-            Connect GitHub or GitLab to pick repositories from a list, deploy
-            private ones without managing a key, and get pushes delivered
-            automatically.
+            Connect GitHub or GitLab to pick repositories from a list, deploy private ones without
+            managing a key, and get pushes delivered automatically.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
         {onAddGithub && onAddGitlab ? (
@@ -520,18 +464,12 @@ export function GitProvidersList({
         <FrameHeader>
           <FrameTitle>Git providers</FrameTitle>
           <FrameDescription>
-            Forges Noddle can read repositories from. The credentials belong to
-            your account — they never leave this server, and revoking them on
-            the forge revokes them here.
+            Forges Noddle can read repositories from. The credentials belong to your account — they
+            never leave this server, and revoking them on the forge revokes them here.
           </FrameDescription>
         </FrameHeader>
         {rows.map((row) => (
-          <ProviderRow
-            key={row.id}
-            onRemoved={refresh}
-            provider={row}
-            role={role}
-          />
+          <ProviderRow key={row.id} onRemoved={refresh} provider={row} role={role} />
         ))}
       </Frame>
     </SettingsList>

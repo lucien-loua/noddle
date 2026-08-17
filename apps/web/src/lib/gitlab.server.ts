@@ -16,14 +16,14 @@ import { env } from "@/lib/env.server";
  */
 
 export function gitlabAppFor(
-  gitProviderId: string
+  gitProviderId: string,
 ): Promise<{ app: GitlabApp; row: GitlabProviderRow }> {
   return appFor(db, env.appKey, gitProviderId);
 }
 
 export function saveGitlabTokens(
   gitProviderId: string,
-  tokens: { accessToken: string; expiresAt: number; refreshToken: string }
+  tokens: { accessToken: string; expiresAt: number; refreshToken: string },
 ): Promise<void> {
   return saveTokens(db, env.appKey, gitProviderId, tokens);
 }

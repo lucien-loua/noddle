@@ -61,10 +61,7 @@ const appKey = loadAppKey(process.env.APP_KEY);
 const db = createDatabase({ url: DB_URL });
 const { privateKey } = TARGET;
 
-async function docker(
-  client: SshClient,
-  ...argv: string[]
-): Promise<{ code: number }> {
+async function docker(client: SshClient, ...argv: string[]): Promise<{ code: number }> {
   const res = await execArgv(client, ["sudo", "docker", ...argv]);
   return { code: res.code ?? 1 };
 }
@@ -89,12 +86,7 @@ try {
   // therefore scored 6/6 alone and 2/4 inside the tier, decided by whether a
   // neighbour had run first. The constancy of that failure is what made me
   // read it as a product defect for five runs.
-  const sshKeyId = await seedSshKey(
-    db,
-    appKey,
-    "verify-prune-toggle",
-    TARGET.privateKey
-  );
+  const sshKeyId = await seedSshKey(db, appKey, "verify-prune-toggle", TARGET.privateKey);
   await db.delete(servers).where(eq(servers.host, TARGET.host));
   const [server] = await db
     .insert(servers)
@@ -126,10 +118,7 @@ try {
   await docker(ssh, "tag", "alpine:3", ORPHAN);
   await docker(ssh, "run", "--name", DEAD_CONTAINER, ORPHAN, "true");
 
-  await db
-    .update(servers)
-    .set({ pruneEnabled: false })
-    .where(eq(servers.id, server.id));
+  await db.update(servers).set({ pruneEnabled: false }).where(eq(servers.id, server.id));
 
   const ctx = verifyCtx({ appKey, db });
 
@@ -157,7 +146,7 @@ try {
       "reconciliation stays blocked even though the only server responded" +
         (result.skipped.length > 0
           ? ` — skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
-          : " — nothing was skipped, so the count is off elsewhere")
+          : " — nothing was skipped, so the count is off elsewhere"),
     );
   }
 
@@ -171,10 +160,7 @@ try {
   }
 
   // ── The symmetric case: re-enabled, the SAME image goes away ─────────────
-  await db
-    .update(servers)
-    .set({ pruneEnabled: true })
-    .where(eq(servers.id, server.id));
+  await db.update(servers).set({ pruneEnabled: true }).where(eq(servers.id, server.id));
 
   const second = await pruneDocker(ctx);
 
@@ -186,9 +172,7 @@ try {
   if (second.nodes.length === 1) {
     ok("the re-enabled node does appear among the pruned nodes");
   } else {
-    ko(
-      `re-enabled node missing from pruned nodes: ${JSON.stringify(second.nodes)}`
-    );
+    ko(`re-enabled node missing from pruned nodes: ${JSON.stringify(second.nodes)}`);
   }
 } catch (error) {
   ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
@@ -202,10 +186,7 @@ try {
     disconnect(ssh);
   }
   if (restoreTo !== undefined) {
-    await db
-      .update(servers)
-      .set({ pruneEnabled: restoreTo })
-      .where(eq(servers.host, TARGET.host));
+    await db.update(servers).set({ pruneEnabled: restoreTo }).where(eq(servers.host, TARGET.host));
   }
 }
 

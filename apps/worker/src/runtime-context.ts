@@ -59,25 +59,20 @@ export interface DeployContext extends DeployConnectors {
 
 type DeployCore = Pick<DeployContext, "appKey" | "db" | "registry">;
 
-function defaultConnectTo(
-  core: Pick<DeployContext, "appKey" | "db">
-): DeployContext["connectTo"] {
-  return async (server) =>
-    connect(await credentialsFor(core.db, core.appKey, server));
+function defaultConnectTo(core: Pick<DeployContext, "appKey" | "db">): DeployContext["connectTo"] {
+  return async (server) => connect(await credentialsFor(core.db, core.appKey, server));
 }
 
 function defaultConnectForDeploy(
   core: Pick<DeployContext, "db">,
-  connectToFn: DeployContext["connectTo"]
+  connectToFn: DeployContext["connectTo"],
 ): DeployContext["connectForDeploy"] {
   return async (server) => {
     const manager = await core.db.query.servers.findFirst({
       where: eq(servers.role, "manager"),
     });
     if (!manager) {
-      throw new Error(
-        "no Swarm manager registered — the installer should have created one"
-      );
+      throw new Error("no Swarm manager registered — the installer should have created one");
     }
 
     const buildClient = await connectToFn(server);
@@ -98,13 +93,12 @@ export interface CreateDeployContextOverrides {
 /** Wires production SSH/dockerode adapters unless overrides are passed. */
 export function createDeployContext(
   core: DeployCore,
-  overrides?: CreateDeployContextOverrides
+  overrides?: CreateDeployContextOverrides,
 ): DeployContext {
   const connectToFn = overrides?.connectTo ?? defaultConnectTo(core);
   return {
     ...core,
-    connectForDeploy:
-      overrides?.connectForDeploy ?? defaultConnectForDeploy(core, connectToFn),
+    connectForDeploy: overrides?.connectForDeploy ?? defaultConnectForDeploy(core, connectToFn),
     connectTo: connectToFn,
     createDockerApi: overrides?.createDockerApi ?? dockerClient,
   };

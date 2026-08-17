@@ -25,17 +25,17 @@ import { triggerStackRollback } from "@/server/stacks";
 import { generateStackWebhook, getStackWebhook } from "@/server/webhooks";
 
 const LogStream = lazy(() =>
-  import("@/components/log-stream").then((m) => ({ default: m.LogStream }))
+  import("@/components/log-stream").then((m) => ({ default: m.LogStream })),
 );
 const StackHistoryPanel = lazy(() =>
   import("@/components/features/stacks/stack-history-panel").then((m) => ({
     default: m.StackHistoryPanel,
-  }))
+  })),
 );
 const WebhookPanel = lazy(() =>
   import("@/components/features/webhooks/panel").then((m) => ({
     default: m.WebhookPanel,
-  }))
+  })),
 );
 
 const STACK_TABS = ["logs", "history", "webhook"] as const;
@@ -52,9 +52,7 @@ function isStackTab(value: unknown): value is StackTab {
   return isDetailTab(value, STACK_TABS);
 }
 
-export const Route = createFileRoute(
-  "/projects_/$projectId_/$environmentId_/stacks/$stackId"
-)({
+export const Route = createFileRoute("/projects_/$projectId_/$environmentId_/stacks/$stackId")({
   beforeLoad: resourceDetailBeforeLoad,
   component: StackDetail,
   loader: async ({ context, params }) => {
@@ -66,8 +64,7 @@ export const Route = createFileRoute(
     return { email: context.email, role: context.role, stack };
   },
   validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
+    deployment: typeof search.deployment === "string" ? search.deployment : undefined,
     tab: isStackTab(search.tab) ? search.tab : undefined,
   }),
 });
@@ -79,8 +76,7 @@ function StackDetail() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
   const canRollback = useCan(known, "service", "rollback");
   const canManageWebhook = useCan(known, "service", "create");
 
@@ -116,7 +112,7 @@ function StackDetail() {
           tab: undefined,
         }),
       }),
-    [navigate]
+    [navigate],
   );
 
   const tab = search.tab ?? "logs";
@@ -126,16 +122,16 @@ function StackDetail() {
 
   const handleRollback = useCallback(
     (deploymentId: string) => rollback.mutate(deploymentId),
-    [rollback]
+    [rollback],
   );
 
   const handleGetWebhook = useCallback(
     () => getStackWebhook({ data: { stackId: stack.id } }),
-    [stack.id]
+    [stack.id],
   );
   const handleGenerateWebhook = useCallback(
     () => generateStackWebhook({ data: { stackId: stack.id } }),
-    [stack.id]
+    [stack.id],
   );
 
   const handleDeleted = useLeaveOnDelete({
@@ -146,9 +142,7 @@ function StackDetail() {
     resetSearch: true,
   });
 
-  const currentDeploymentId = stack.lastDeployment
-    ? stack.lastDeployment.id
-    : null;
+  const currentDeploymentId = stack.lastDeployment ? stack.lastDeployment.id : null;
   const shown = search.deployment ?? currentDeploymentId;
   const status = serviceLabel(stack.status);
 
@@ -201,11 +195,7 @@ function StackDetail() {
         }
         teardownError={stack.lastError}
       >
-        <Tabs
-          className="min-h-0 flex-1"
-          onValueChange={handleTabChange}
-          value={tab}
-        >
+        <Tabs className="min-h-0 flex-1" onValueChange={handleTabChange} value={tab}>
           <TabRail>
             <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>

@@ -27,8 +27,7 @@ export function useDeleteServiceAction({
   const [open, setOpen] = useState(false);
 
   const remove = useMutation({
-    mutationFn: (confirmName: string) =>
-      deleteService({ data: { confirmName, serviceId } }),
+    mutationFn: (confirmName: string) => deleteService({ data: { confirmName, serviceId } }),
     onError: (e: Error) => {
       setOpen(false);
       onError(errorMessage(e, "deletion failed"));
@@ -37,10 +36,7 @@ export function useDeleteServiceAction({
   });
 
   const handleOpen = useCallback(() => setOpen(true), []);
-  const handleConfirm = useCallback(
-    (typed: string) => remove.mutate(typed),
-    [remove]
-  );
+  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
 
   const dialog = (
     <ConfirmNameDialog
@@ -49,9 +45,8 @@ export function useDeleteServiceAction({
         // State what's being lost, not "are you sure". The history and the
         // images are what nobody can reconstruct.
         <>
-          The running container is stopped and removed, along with every
-          deployment in its history, its build logs, its environment variables
-          and its images in the registry.{" "}
+          The running container is stopped and removed, along with every deployment in its history,
+          its build logs, its environment variables and its images in the registry.{" "}
           <strong>This cannot be undone.</strong>
         </>
       }

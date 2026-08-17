@@ -64,9 +64,7 @@ export function ContainerActions({
 
   const swarm = row.kind === "swarm";
   const running = row.state === "running";
-  const usable = swarm
-    ? canOperate && row.serviceName
-    : canOperate || canDelete;
+  const usable = swarm ? canOperate && row.serviceName : canOperate || canDelete;
   if (!usable) {
     return null;
   }
@@ -87,9 +85,7 @@ export function ContainerActions({
       />
       <DropdownMenuContent align="end">
         {swarm ? (
-          <DropdownMenuItem onClick={handleService}>
-            Restart service
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleService}>Restart service</DropdownMenuItem>
         ) : (
           <>
             {canOperate ? (
@@ -98,9 +94,7 @@ export function ContainerActions({
               </DropdownMenuItem>
             ) : null}
             {canOperate ? (
-              <DropdownMenuItem onClick={handleRestart}>
-                Restart
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleRestart}>Restart</DropdownMenuItem>
             ) : null}
             {canDelete ? (
               <DropdownMenuItem disabled={running} onClick={handleRemove}>

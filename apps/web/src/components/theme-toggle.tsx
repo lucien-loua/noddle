@@ -21,10 +21,7 @@ const OPTIONS: { label: string; value: Theme }[] = [
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme();
 
-  const choose = useCallback(
-    (next: string) => setTheme(next as Theme),
-    [setTheme]
-  );
+  const choose = useCallback((next: string) => setTheme(next as Theme), [setTheme]);
 
   return (
     <DropdownMenu>

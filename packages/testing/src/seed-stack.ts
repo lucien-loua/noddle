@@ -38,7 +38,7 @@ try {
   } else {
     throw new Error(
       `could not create the ${s3.bucket} bucket on ${s3.endpoint}: ` +
-        (error instanceof Error ? error.message : String(error))
+        (error instanceof Error ? error.message : String(error)),
     );
   }
 }

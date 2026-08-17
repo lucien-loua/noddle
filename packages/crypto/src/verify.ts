@@ -16,8 +16,7 @@ import {
 } from "./index.ts";
 
 const isCrypto = (e: unknown) => e instanceof CryptoError;
-const mustThrow = (label: string, fn: () => unknown) =>
-  expectThrows(label, fn, isCrypto);
+const mustThrow = (label: string, fn: () => unknown) => expectThrows(label, fn, isCrypto);
 
 function verifyCrypto(): void {
   const KEY = randomBytes(32);
@@ -27,7 +26,7 @@ function verifyCrypto(): void {
 
   mustThrow("missing APP_KEY is rejected", () => loadAppKey(undefined));
   mustThrow("too-short APP_KEY is rejected", () =>
-    loadAppKey(Buffer.from("court").toString("base64"))
+    loadAppKey(Buffer.from("court").toString("base64")),
   );
   if (loadAppKey(KEY.toString("base64")).equals(KEY)) {
     ok("valid APP_KEY is accepted");
@@ -48,9 +47,7 @@ function verifyCrypto(): void {
   }
 
   // Reusing an IV in GCM is catastrophic — it breaks authentication.
-  const boxes = new Set(
-    Array.from({ length: 200 }, () => encryptSecret(SECRET, KEY, ctx))
-  );
+  const boxes = new Set(Array.from({ length: 200 }, () => encryptSecret(SECRET, KEY, ctx)));
   if (boxes.size === 200) {
     ok("200 encryptions of the same plaintext → 200 distinct results");
   } else {
@@ -59,10 +56,10 @@ function verifyCrypto(): void {
 
   mustThrow("wrong key → rejected", () => decryptSecret(box, OTHER_KEY, ctx));
   mustThrow("wrong context → rejected (AAD binding)", () =>
-    decryptSecret(box, KEY, secretContext.sshKey("srv-2"))
+    decryptSecret(box, KEY, secretContext.sshKey("srv-2")),
   );
   mustThrow("ciphertext moved to another field → rejected", () =>
-    decryptSecret(box, KEY, secretContext.envVar("srv-1"))
+    decryptSecret(box, KEY, secretContext.envVar("srv-1")),
   );
 
   const parts = box.split(".");
@@ -74,31 +71,17 @@ function verifyCrypto(): void {
     return b.toString("base64url");
   };
   mustThrow("altered ciphertext → rejected", () =>
-    decryptSecret(
-      [parts[0], parts[1], parts[2], flip(parts[3] ?? "")].join("."),
-      KEY,
-      ctx
-    )
+    decryptSecret([parts[0], parts[1], parts[2], flip(parts[3] ?? "")].join("."), KEY, ctx),
   );
   mustThrow("altered auth tag → rejected", () =>
-    decryptSecret(
-      [parts[0], parts[1], flip(parts[2] ?? ""), parts[3]].join("."),
-      KEY,
-      ctx
-    )
+    decryptSecret([parts[0], parts[1], flip(parts[2] ?? ""), parts[3]].join("."), KEY, ctx),
   );
   mustThrow("unknown version → rejected", () =>
-    decryptSecret(["v2", parts[1], parts[2], parts[3]].join("."), KEY, ctx)
+    decryptSecret(["v2", parts[1], parts[2], parts[3]].join("."), KEY, ctx),
   );
-  mustThrow("malformed format → rejected", () =>
-    decryptSecret("nawak", KEY, ctx)
-  );
+  mustThrow("malformed format → rejected", () => decryptSecret("nawak", KEY, ctx));
 
-  if (
-    safeEqual("token", "token") &&
-    !safeEqual("token", "tokeX") &&
-    !safeEqual("a", "ab")
-  ) {
+  if (safeEqual("token", "token") && !safeEqual("token", "tokeX") && !safeEqual("a", "ab")) {
     ok("safeEqual");
   } else {
     ko("incorrect safeEqual");
@@ -117,11 +100,7 @@ async function verifySecretRetention(): Promise<void> {
     ko("isRetainedSecret misclassified an input");
   }
 
-  const kept = await resolveRetainedSecret(
-    "",
-    async () => "stored-secret",
-    "a secret is required"
-  );
+  const kept = await resolveRetainedSecret("", async () => "stored-secret", "a secret is required");
   if (kept === "stored-secret") {
     ok("resolveRetainedSecret loads the stored secret when input is empty");
   } else {
@@ -131,7 +110,7 @@ async function verifySecretRetention(): Promise<void> {
   const fresh = await resolveRetainedSecret(
     "new-secret",
     async () => "stored-secret",
-    "a secret is required"
+    "a secret is required",
   );
   if (fresh === "new-secret") {
     ok("resolveRetainedSecret prefers a provided secret");

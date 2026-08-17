@@ -1,10 +1,7 @@
 /**
  * biome-ignore-all lint/performance/noBarrelFile: package public surface
  */
-export {
-  listServiceVolumeMounts,
-  type ServiceVolumeMount,
-} from "./service-volumes.ts";
+export { listServiceVolumeMounts, type ServiceVolumeMount } from "./service-volumes.ts";
 export {
   type DeployOutcome,
   type DeploySpec,

@@ -57,7 +57,7 @@ export const getDestinations = createServerFn({ method: "GET" }).handler(
       prefix: row.prefix,
       region: row.region,
     }));
-  }
+  },
 );
 
 /**
@@ -81,7 +81,7 @@ export const deleteDestination = createServerFn({ method: "POST" })
         });
         if (heldRun) {
           throw new Error(
-            "This destination still holds backups. Delete them first, or they could never be restored."
+            "This destination still holds backups. Delete them first, or they could never be restored.",
           );
         }
         const heldConfig = await db.query.backupConfigs.findFirst({
@@ -89,7 +89,7 @@ export const deleteDestination = createServerFn({ method: "POST" })
         });
         if (heldConfig) {
           throw new Error(
-            "This destination is still used by a backup config. Delete the config first."
+            "This destination is still used by a backup config. Delete the config first.",
           );
         }
 
@@ -97,7 +97,7 @@ export const deleteDestination = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const testDestination = createServerFn({ method: "POST" })
@@ -119,7 +119,7 @@ export const testDestination = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: () => ({ id: data.id ?? data.bucket, name: data.bucket }),
-    })
+    }),
   );
 
 export const saveDestination = createServerFn({ method: "POST" })
@@ -154,7 +154,7 @@ export const saveDestination = createServerFn({ method: "POST" })
               secretAccessKeyEncrypted: encryptSecret(
                 secret,
                 env.appKey,
-                secretContext.backupDestination(data.id)
+                secretContext.backupDestination(data.id),
               ),
               updatedAt: new Date(),
             })
@@ -184,7 +184,7 @@ export const saveDestination = createServerFn({ method: "POST" })
             secretAccessKeyEncrypted: encryptSecret(
               secret,
               env.appKey,
-              secretContext.backupDestination(created.id)
+              secretContext.backupDestination(created.id),
             ),
           })
           .where(eq(s3Destinations.id, created.id));

@@ -19,11 +19,7 @@ import { SettingsList } from "@/components/features/settings-list/settings-list"
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
-import {
-  ResourceCard,
-  ResourceCardFact,
-  ResourceCardMeta,
-} from "@/components/resource-card";
+import { ResourceCard, ResourceCardFact, ResourceCardMeta } from "@/components/resource-card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,21 +33,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameDescription, FrameHeader, FrameTitle } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  deleteRegistry,
-  saveRegistry,
-  testRegistry,
-} from "@/server/registries";
+import { deleteRegistry, saveRegistry, testRegistry } from "@/server/registries";
 import type { RegistryView } from "@/server/registries";
 
 function RegistryRow({
@@ -96,9 +83,7 @@ function RegistryRow({
           ) : null}
         </>
       }
-      title={
-        <h2 className="truncate font-semibold text-sm">{registry.name}</h2>
-      }
+      title={<h2 className="truncate font-semibold text-sm">{registry.name}</h2>}
     >
       <ResourceCardMeta>
         <ResourceCardFact
@@ -106,10 +91,7 @@ function RegistryRow({
           value={`${registry.registryUrl}${registry.imagePrefix ? `/${registry.imagePrefix}` : ""}`}
         />
         <ResourceCardFact label="Username" value={registry.username} />
-        <ResourceCardFact
-          label="Added"
-          value={<RelativeTime iso={registry.createdAt} />}
-        />
+        <ResourceCardFact label="Added" value={<RelativeTime iso={registry.createdAt} />} />
       </ResourceCardMeta>
       {error ? (
         <p className="mt-2 text-destructive text-xs" role="status">
@@ -132,11 +114,7 @@ export function RegistriesList({
   role: RoleName | null;
 }) {
   const canEdit = useCan(role, "registry", "create");
-  const {
-    data: rows,
-    isEmpty,
-    refresh,
-  } = useResourceList(queries.registries, initial);
+  const { data: rows, isEmpty, refresh } = useResourceList(queries.registries, initial);
 
   return (
     <SettingsList isEmpty={isEmpty}>
@@ -147,12 +125,10 @@ export function RegistriesList({
           </IconStack>
         </SettingsList.EmptyMedia>
         <SettingsList.EmptyHeader>
-          <SettingsList.EmptyTitle>
-            No external registries
-          </SettingsList.EmptyTitle>
+          <SettingsList.EmptyTitle>No external registries</SettingsList.EmptyTitle>
           <SettingsList.EmptyDescription>
-            Noddle pushes to its own registry by default. Add one here to push
-            somewhere else, such as ghcr.io or a private registry.
+            Noddle pushes to its own registry by default. Add one here to push somewhere else, such
+            as ghcr.io or a private registry.
           </SettingsList.EmptyDescription>
         </SettingsList.EmptyHeader>
         {onAdd ? (
@@ -166,9 +142,8 @@ export function RegistriesList({
         <FrameHeader>
           <FrameTitle>External registries</FrameTitle>
           <FrameDescription>
-            Where Noddle can push the images it builds. Its own registry stays
-            the default — these are alternatives, and the password never leaves
-            this server.
+            Where Noddle can push the images it builds. Its own registry stays the default — these
+            are alternatives, and the password never leaves this server.
           </FrameDescription>
         </FrameHeader>
         {rows.map((row) => (
@@ -224,7 +199,7 @@ export function RegistryDialog({
             message: "A password or token is required.",
             path: ["password"],
           }),
-    [target]
+    [target],
   );
 
   // Recomputed on every render, deliberately: `useForm` reapplies its
@@ -289,8 +264,7 @@ export function RegistryDialog({
    */
   const form = useAppForm({
     defaultValues,
-    onSubmit: ({ meta, value }) =>
-      meta.intent === "test" ? runTest(value) : runSave(value),
+    onSubmit: ({ meta, value }) => (meta.intent === "test" ? runTest(value) : runSave(value)),
     onSubmitMeta: { intent: "save" } as { intent: "save" | "test" },
     // `onDynamic` and not `onSubmit`: this is the one driven by the base
     // revalidation logic — silent until the first submit, reactive
@@ -331,19 +305,17 @@ export function RegistryDialog({
       event.preventDefault();
       form.handleSubmit({ intent: "save" });
     },
-    [form]
+    [form],
   );
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {target ? `Edit ${target.name}` : "Add an external registry"}
-          </DialogTitle>
+          <DialogTitle>{target ? `Edit ${target.name}` : "Add an external registry"}</DialogTitle>
           <DialogDescription>
-            Noddle signs in with these credentials to push the images it builds,
-            and hands them to Swarm so every node can pull.
+            Noddle signs in with these credentials to push the images it builds, and hands them to
+            Swarm so every node can pull.
           </DialogDescription>
         </DialogHeader>
 
@@ -373,9 +345,7 @@ export function RegistryDialog({
               </form.AppField>
 
               <form.AppField name="username">
-                {(f) => (
-                  <f.FieldText addonStart={<UserIcon />} label="Username" />
-                )}
+                {(f) => <f.FieldText addonStart={<UserIcon />} label="Username" />}
               </form.AppField>
 
               <form.AppField name="password">
@@ -383,9 +353,7 @@ export function RegistryDialog({
                   <f.FieldPassword
                     addonStart={<KeyIcon />}
                     autoComplete="new-password"
-                    description={
-                      target ? "Leave empty to keep the stored one." : undefined
-                    }
+                    description={target ? "Leave empty to keep the stored one." : undefined}
                     label="Password or token"
                     placeholder={target ? "••••••••" : undefined}
                   />
@@ -413,12 +381,7 @@ export function RegistryDialog({
                 </Button>
               }
             />
-            <Button
-              disabled={busy}
-              onClick={handleTest}
-              type="button"
-              variant="outline"
-            >
+            <Button disabled={busy} onClick={handleTest} type="button" variant="outline">
               {testPending ? <Spinner /> : null}
               Test connection
             </Button>

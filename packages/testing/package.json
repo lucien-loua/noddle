@@ -5,6 +5,9 @@
     "noddle-verify": "./src/run-tier.ts"
   },
   "type": "module",
+  "imports": {
+    "#dev-stack": "./src/dev-stack.ts"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./dev-stack": "./src/dev-stack.ts",
@@ -14,8 +17,5 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "catalog:",
     "@noddle/tsconfig": "workspace:*"
-  },
-  "imports": {
-    "#dev-stack": "./src/dev-stack.ts"
   }
 }

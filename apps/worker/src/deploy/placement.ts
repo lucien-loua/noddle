@@ -33,9 +33,7 @@ export async function placementFor(opts: {
 }
 
 /** What Swarm distributes to its agents so THEY can pull. */
-export function authFor(
-  registry: RegistryConfig | undefined
-): RegistryAuth | undefined {
+export function authFor(registry: RegistryConfig | undefined): RegistryAuth | undefined {
   if (!registry) {
     return;
   }

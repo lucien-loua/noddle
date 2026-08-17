@@ -82,9 +82,7 @@ export function volumeBackupObjectKey(opts: {
 }): string {
   const stamp = opts.takenAt.toISOString().replaceAll(/[:.]/g, "-");
   const name = `${stamp}-${opts.backupId}.tar.gz`;
-  const parts = [opts.prefix, opts.serviceName, opts.volumeName, name].filter(
-    (p) => p !== ""
-  );
+  const parts = [opts.prefix, opts.serviceName, opts.volumeName, name].filter((p) => p !== "");
   return parts.join("/");
 }
 
@@ -103,34 +101,28 @@ export function parseVolumeNameFromObjectKey(objectKey: string): string | null {
  * and the user would only find out on their first real backup — i.e. at the
  * worst moment, when they believe they are protected.
  */
-export async function checkDestination(
-  destination: BackupDestination
-): Promise<void> {
+export async function checkDestination(destination: BackupDestination): Promise<void> {
   const client = clientFor(destination);
-  const key = [destination.prefix, `.noddle-check-${Date.now()}`]
-    .filter((p) => p !== "")
-    .join("/");
+  const key = [destination.prefix, `.noddle-check-${Date.now()}`].filter((p) => p !== "").join("/");
 
   try {
     await client.send(new HeadBucketCommand({ Bucket: destination.bucket }));
   } catch (error) {
     const status = httpStatus(error);
     if (status === 403) {
-      throw new BackupStoreError(
-        "credentials rejected: check the access key and secret key",
-        { cause: error }
-      );
+      throw new BackupStoreError("credentials rejected: check the access key and secret key", {
+        cause: error,
+      });
     }
     if (status === 404) {
       throw new BackupStoreError(
         `bucket "${destination.bucket}" not found on ${destination.endpoint}`,
-        { cause: error }
+        { cause: error },
       );
     }
-    throw new BackupStoreError(
-      `bucket "${destination.bucket}" unreachable: ${describe(error)}`,
-      { cause: error }
-    );
+    throw new BackupStoreError(`bucket "${destination.bucket}" unreachable: ${describe(error)}`, {
+      cause: error,
+    });
   }
 
   try {
@@ -139,23 +131,20 @@ export async function checkDestination(
         Body: "noddle",
         Bucket: destination.bucket,
         Key: key,
-      })
+      }),
     );
   } catch (error) {
-    throw new BackupStoreError(
-      `write refused in "${destination.bucket}": ${describe(error)}`,
-      { cause: error }
-    );
+    throw new BackupStoreError(`write refused in "${destination.bucket}": ${describe(error)}`, {
+      cause: error,
+    });
   }
 
   try {
-    await client.send(
-      new DeleteObjectCommand({ Bucket: destination.bucket, Key: key })
-    );
+    await client.send(new DeleteObjectCommand({ Bucket: destination.bucket, Key: key }));
   } catch (error) {
     throw new BackupStoreError(
       `delete refused in "${destination.bucket}": ${describe(error)} — old backups cannot be purged`,
-      { cause: error }
+      { cause: error },
     );
   }
 }
@@ -176,7 +165,7 @@ export async function checkDestination(
 export async function uploadStream(
   destination: BackupDestination,
   key: string,
-  body: Readable
+  body: Readable,
 ): Promise<number> {
   const client = clientFor(destination);
   const upload = new Upload({
@@ -191,14 +180,9 @@ export async function uploadStream(
 }
 
 /** Object size, or `null` if it does not exist. */
-export async function objectSize(
-  destination: BackupDestination,
-  key: string
-): Promise<number> {
+export async function objectSize(destination: BackupDestination, key: string): Promise<number> {
   const client = clientFor(destination);
-  const head = await client.send(
-    new HeadObjectCommand({ Bucket: destination.bucket, Key: key })
-  );
+  const head = await client.send(new HeadObjectCommand({ Bucket: destination.bucket, Key: key }));
   return head.ContentLength ?? 0;
 }
 
@@ -210,10 +194,7 @@ export async function objectSize(
  * and discovering a missing object AFTER wiping the current database would be
  * the worst possible sequence.
  */
-export async function objectExists(
-  destination: BackupDestination,
-  key: string
-): Promise<boolean> {
+export async function objectExists(destination: BackupDestination, key: string): Promise<boolean> {
   try {
     await objectSize(destination, key);
     return true;
@@ -221,36 +202,28 @@ export async function objectExists(
     if (error instanceof NotFound || error instanceof NoSuchKey) {
       return false;
     }
-    throw new BackupStoreError(
-      `unable to verify object ${key}: ${describe(error)}`,
-      { cause: error }
-    );
+    throw new BackupStoreError(`unable to verify object ${key}: ${describe(error)}`, {
+      cause: error,
+    });
   }
 }
 
 /** Opens the object for reading. The body is a stream: never loaded into memory. */
 export async function downloadStream(
   destination: BackupDestination,
-  key: string
+  key: string,
 ): Promise<Readable> {
   const client = clientFor(destination);
-  const res = await client.send(
-    new GetObjectCommand({ Bucket: destination.bucket, Key: key })
-  );
+  const res = await client.send(new GetObjectCommand({ Bucket: destination.bucket, Key: key }));
   if (!res.Body) {
     throw new BackupStoreError(`empty or unreadable object: ${key}`);
   }
   return res.Body as Readable;
 }
 
-export async function deleteObject(
-  destination: BackupDestination,
-  key: string
-): Promise<void> {
+export async function deleteObject(destination: BackupDestination, key: string): Promise<void> {
   const client = clientFor(destination);
-  await client.send(
-    new DeleteObjectCommand({ Bucket: destination.bucket, Key: key })
-  );
+  await client.send(new DeleteObjectCommand({ Bucket: destination.bucket, Key: key }));
 }
 
 export interface ListedBackupObject {
@@ -274,12 +247,10 @@ function isKnownDumpKey(key: string): boolean {
  */
 export async function listObjects(
   destination: BackupDestination,
-  opts?: { maxKeys?: number; prefix?: string }
+  opts?: { maxKeys?: number; prefix?: string },
 ): Promise<ListedBackupObject[]> {
   const client = clientFor(destination);
-  const prefixParts = [destination.prefix, opts?.prefix ?? ""].filter(
-    (p) => p !== ""
-  );
+  const prefixParts = [destination.prefix, opts?.prefix ?? ""].filter((p) => p !== "");
   const prefix = prefixParts.join("/");
   const maxKeys = Math.min(Math.max(opts?.maxKeys ?? 200, 1), 500);
 
@@ -289,7 +260,7 @@ export async function listObjects(
         Bucket: destination.bucket,
         MaxKeys: maxKeys,
         Prefix: prefix === "" ? undefined : prefix,
-      })
+      }),
     );
     return (res.Contents ?? [])
       .filter((obj): obj is typeof obj & { Key: string } => Boolean(obj.Key))
@@ -302,7 +273,7 @@ export async function listObjects(
   } catch (error) {
     throw new BackupStoreError(
       `unable to list objects in "${destination.bucket}": ${describe(error)}`,
-      { cause: error }
+      { cause: error },
     );
   }
 }
@@ -315,8 +286,7 @@ export async function listObjects(
  * back to "UnknownError".
  */
 function httpStatus(err: unknown): number | undefined {
-  return (err as { $metadata?: { httpStatusCode?: number } }).$metadata
-    ?.httpStatusCode;
+  return (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
 }
 
 /**

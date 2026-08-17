@@ -33,9 +33,7 @@ const fixtureDir = import.meta.dirname;
 
 let raw = "healthy";
 try {
-  raw =
-    fs.readFileSync(path.join(fixtureDir, "mode.txt"), "utf-8").trim() ||
-    "healthy";
+  raw = fs.readFileSync(path.join(fixtureDir, "mode.txt"), "utf-8").trim() || "healthy";
 } catch {
   // pas de mode.txt → healthy
 }
@@ -50,9 +48,7 @@ const version = process.env.APP_VERSION || "dev";
 
 if (mode === "crash") {
   setTimeout(() => {
-    console.error(
-      `[spike] crash simulé après ${crashAfterMs / 1000}s (healthcheck réussi)`
-    );
+    console.error(`[spike] crash simulé après ${crashAfterMs / 1000}s (healthcheck réussi)`);
     process.exit(1);
   }, crashAfterMs);
 }
@@ -67,6 +63,4 @@ http
     res.writeHead(200, { "content-type": "text/plain" });
     res.end(`noddle-spike mode=${mode} version=${version}\n`);
   })
-  .listen(port, () =>
-    console.log(`[spike] listening on ${port} mode=${mode} version=${version}`)
-  );
+  .listen(port, () => console.log(`[spike] listening on ${port} mode=${mode} version=${version}`));

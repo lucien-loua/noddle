@@ -20,38 +20,28 @@ await runVerify("default environment (cannot delete)", () => {
   expectThrows(
     "default cannot be deleted",
     () => assertNotDefaultEnvironment({ isDefault: true }, "delete"),
-    (e) =>
-      e instanceof Error &&
-      e.message === "you cannot delete the default environment"
+    (e) => e instanceof Error && e.message === "you cannot delete the default environment",
   );
   expectThrows(
     "default cannot be renamed",
     () => assertNotDefaultEnvironment({ isDefault: true }, "rename"),
-    (e) =>
-      e instanceof Error &&
-      e.message === "you cannot rename the default environment"
+    (e) => e instanceof Error && e.message === "you cannot rename the default environment",
   );
 
-  const environments = readFileSync(
-    join(WEB_SRC, "server/environments.ts"),
-    "utf-8"
-  );
+  const environments = readFileSync(join(WEB_SRC, "server/environments.ts"), "utf-8");
   check(
     "deleteEnvironment calls the default guard",
-    environments.includes('assertNotDefaultEnvironment(environment, "delete")')
+    environments.includes('assertNotDefaultEnvironment(environment, "delete")'),
   );
   check(
     "renameEnvironment calls the default guard",
-    environments.includes('assertNotDefaultEnvironment(environment, "rename")')
+    environments.includes('assertNotDefaultEnvironment(environment, "rename")'),
   );
 
-  const selector = readFileSync(
-    join(WEB_SRC, "components/environment-selector.tsx"),
-    "utf-8"
-  );
+  const selector = readFileSync(join(WEB_SRC, "components/environment-selector.tsx"), "utf-8");
   check(
     "selector hides rename/delete on the default environment",
-    selector.includes("env.isDefault ? null")
+    selector.includes("env.isDefault ? null"),
   );
 
   const insertCallers = [
@@ -64,31 +54,22 @@ await runVerify("default environment (cannot delete)", () => {
   for (const file of insertCallers) {
     check(
       `${file} inserts via insertProjectEnvironment`,
-      readFileSync(join(WEB_SRC, file), "utf-8").includes(
-        "insertProjectEnvironment"
-      )
+      readFileSync(join(WEB_SRC, file), "utf-8").includes("insertProjectEnvironment"),
     );
   }
 
-  const migration = readFileSync(
-    join(DB, "migrations/0049_environment_is_default.sql"),
-    "utf-8"
-  );
+  const migration = readFileSync(join(DB, "migrations/0049_environment_is_default.sql"), "utf-8");
   check("0049 adds is_default", migration.includes('ADD COLUMN "is_default"'));
   check(
     "0049 backfills one default per project",
-    migration.includes("DISTINCT ON") && migration.includes("is_default")
+    migration.includes("DISTINCT ON") && migration.includes("is_default"),
   );
   check(
     "0049 recreates production for empty projects",
-    migration.includes('INSERT INTO "environments"') &&
-      migration.includes("'production'")
+    migration.includes('INSERT INTO "environments"') && migration.includes("'production'"),
   );
   check(
     "0049 snapshot exists",
-    readFileSync(
-      join(DB, "migrations/meta/0049_snapshot.json"),
-      "utf-8"
-    ).includes('"is_default"')
+    readFileSync(join(DB, "migrations/meta/0049_snapshot.json"), "utf-8").includes('"is_default"'),
   );
 });

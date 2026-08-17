@@ -22,10 +22,7 @@ import { queries } from "@/lib/queries";
 import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
 import { resourceDetailBeforeLoad } from "@/lib/resource-detail/auth-before-load";
 import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
-import {
-  isLifecycleSettled,
-  lifecyclePollInterval,
-} from "@/lib/resource-detail/lifecycle-poll";
+import { isLifecycleSettled, lifecyclePollInterval } from "@/lib/resource-detail/lifecycle-poll";
 import type { AwaitingLifecycle } from "@/lib/resource-detail/lifecycle-poll";
 import { isDetailTab } from "@/lib/resource-detail/parse-tab";
 import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
@@ -36,32 +33,25 @@ import { getDatabase } from "@/server/databases";
 const BackupTab = lazy(() =>
   import("@/components/features/backups/backup-tab").then((m) => ({
     default: m.BackupTab,
-  }))
+  })),
 );
 const DatabaseAdvanced = lazy(() =>
   import("@/components/features/database/database-advanced").then((m) => ({
     default: m.DatabaseAdvanced,
-  }))
+  })),
 );
 const DatabaseLogs = lazy(() =>
   import("@/components/features/database/database-logs").then((m) => ({
     default: m.DatabaseLogs,
-  }))
+  })),
 );
 const DatabaseResources = lazy(() =>
   import("@/components/features/database/database-resources").then((m) => ({
     default: m.DatabaseResources,
-  }))
+  })),
 );
 
-const DATABASE_TABS = [
-  "general",
-  "env",
-  "logs",
-  "monitoring",
-  "backups",
-  "advanced",
-] as const;
+const DATABASE_TABS = ["general", "env", "logs", "monitoring", "backups", "advanced"] as const;
 
 type DatabaseTab = (typeof DATABASE_TABS)[number];
 
@@ -75,7 +65,7 @@ function isDatabaseTab(value: unknown): value is DatabaseTab {
 }
 
 export const Route = createFileRoute(
-  "/projects_/$projectId_/$environmentId_/databases/$databaseId"
+  "/projects_/$projectId_/$environmentId_/databases/$databaseId",
 )({
   beforeLoad: resourceDetailBeforeLoad,
   component: DatabaseDetail,
@@ -126,8 +116,7 @@ function DatabaseDetail() {
     }
   }, [awaiting, database]);
 
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
   const canCreateBackup = useCan(known, "backup", "create");
   const canRestoreBackup = useCan(known, "backup", "restore");
   // `envVar: read` and not `database: read`: this is the "read production
@@ -141,8 +130,7 @@ function DatabaseDetail() {
 
   const requestedTab = search.tab ?? "general";
   const tab =
-    (requestedTab === "env" && !canReadSecrets) ||
-    (requestedTab === "advanced" && !canEditConfig)
+    (requestedTab === "env" && !canReadSecrets) || (requestedTab === "advanced" && !canEditConfig)
       ? "general"
       : requestedTab;
 
@@ -168,11 +156,7 @@ function DatabaseDetail() {
         updatedAt: database.updatedAt,
       });
       await cache.database(queryClient, database.id);
-      await cache.environmentScope(
-        queryClient,
-        database.projectId,
-        database.environmentId
-      );
+      await cache.environmentScope(queryClient, database.projectId, database.environmentId);
     },
     [
       database.environmentId,
@@ -181,7 +165,7 @@ function DatabaseDetail() {
       database.status,
       database.updatedAt,
       queryClient,
-    ]
+    ],
   );
 
   const handleEnvSaved = useCallback(() => handleDone("restart"), [handleDone]);
@@ -210,30 +194,19 @@ function DatabaseDetail() {
       <ResourceDetailFrame
         deleteError={deleteError}
         subtitle={
-          <DatabaseStatusLine
-            database={database}
-            pendingAction={awaiting?.action ?? null}
-          />
+          <DatabaseStatusLine database={database} pendingAction={awaiting?.action ?? null} />
         }
         teardownError={database.lastError}
       >
-        <Tabs
-          className="min-h-0 flex-1 gap-3"
-          onValueChange={handleTabChange}
-          value={tab}
-        >
+        <Tabs className="min-h-0 flex-1 gap-3" onValueChange={handleTabChange} value={tab}>
           <div className="flex shrink-0 flex-col gap-3">
             <TabRail>
               <TabsTrigger value="general">General</TabsTrigger>
-              {canReadSecrets ? (
-                <TabsTrigger value="env">Environment</TabsTrigger>
-              ) : null}
+              {canReadSecrets ? <TabsTrigger value="env">Environment</TabsTrigger> : null}
               <TabsTrigger value="logs">Logs</TabsTrigger>
               <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
-              {canEditConfig ? (
-                <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              ) : null}
+              {canEditConfig ? <TabsTrigger value="advanced">Advanced</TabsTrigger> : null}
             </TabRail>
 
             <DatabaseHeaderActions

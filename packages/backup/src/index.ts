@@ -1,10 +1,6 @@
 import type { BackupDestination } from "@noddle/backup-store";
 import { backupObjectKey, volumeBackupObjectKey } from "@noddle/backup-store";
-import {
-  decryptSecret,
-  resolveRetainedSecret,
-  secretContext,
-} from "@noddle/crypto";
+import { decryptSecret, resolveRetainedSecret, secretContext } from "@noddle/crypto";
 import type { DatabaseEngine } from "@noddle/database-spec";
 import type { Database } from "@noddle/db";
 import { s3Destinations } from "@noddle/db/schema";
@@ -38,10 +34,7 @@ export interface DestinationCandidate {
 /**
  * Joins the destination bucket prefix with an optional config-level prefix.
  */
-export function joinBackupPrefix(
-  destinationPrefix: string,
-  configPrefix = ""
-): string {
+export function joinBackupPrefix(destinationPrefix: string, configPrefix = ""): string {
   return [destinationPrefix, configPrefix]
     .map((p) => p.replaceAll(/^\/+|\/+$/g, ""))
     .filter((p) => p !== "")
@@ -67,13 +60,13 @@ export function joinBackupPrefix(
  */
 export function pickDestination<T extends DestinationCandidate>(
   candidates: T[],
-  requestedId?: string | null
+  requestedId?: string | null,
 ): T {
   if (requestedId) {
     const chosen = candidates.find((c) => c.id === requestedId);
     if (!chosen) {
       throw new Error(
-        "the S3 destination this backup used no longer exists — restore and retention cannot know where its object lives"
+        "the S3 destination this backup used no longer exists — restore and retention cannot know where its object lives",
       );
     }
     return chosen;
@@ -84,19 +77,14 @@ export function pickDestination<T extends DestinationCandidate>(
     throw new Error("no S3 destination configured — add one before backing up");
   }
   if (rest.length > 0) {
-    throw new Error(
-      "several S3 destinations exist — pick one for this database before backing up"
-    );
+    throw new Error("several S3 destinations exist — pick one for this database before backing up");
   }
   return only;
 }
 
 type DestinationRow = typeof s3Destinations.$inferSelect;
 
-async function candidateRows(
-  db: Database,
-  requestedId?: string | null
-): Promise<DestinationRow[]> {
+async function candidateRows(db: Database, requestedId?: string | null): Promise<DestinationRow[]> {
   return requestedId
     ? await db.query.s3Destinations.findMany({
         where: eq(s3Destinations.id, requestedId),
@@ -111,7 +99,7 @@ async function candidateRows(
  */
 export async function resolveDestinationRow(
   db: Database,
-  requestedId?: string | null
+  requestedId?: string | null,
 ): Promise<DestinationCandidate> {
   const rows = await candidateRows(db, requestedId);
   return pickDestination(rows, requestedId);
@@ -128,7 +116,7 @@ export async function resolveDestinationRow(
 export async function resolveDestination(
   db: Database,
   appKey: Buffer,
-  requestedId?: string | null
+  requestedId?: string | null,
 ): Promise<{ destination: BackupDestination; id: string }> {
   const rows = await candidateRows(db, requestedId);
   const row = pickDestination(rows, requestedId);
@@ -143,7 +131,7 @@ export async function resolveDestination(
       secretAccessKey: decryptSecret(
         row.secretAccessKeyEncrypted,
         appKey,
-        secretContext.backupDestination(row.id)
+        secretContext.backupDestination(row.id),
       ),
     },
     id: row.id,
@@ -153,7 +141,7 @@ export async function resolveDestination(
 export async function resolveDestinationSecret(
   db: Database,
   appKey: Buffer,
-  data: { id?: string; secretAccessKey: string }
+  data: { id?: string; secretAccessKey: string },
 ): Promise<string> {
   return await resolveRetainedSecret(
     data.secretAccessKey,
@@ -170,10 +158,10 @@ export async function resolveDestinationSecret(
       return decryptSecret(
         existing.secretAccessKeyEncrypted,
         appKey,
-        secretContext.backupDestination(existing.id)
+        secretContext.backupDestination(existing.id),
       );
     },
-    "A secret access key is required."
+    "A secret access key is required.",
   );
 }
 
@@ -204,10 +192,7 @@ export function buildBackupInsert(opts: {
   resolved: DestinationCandidate;
   takenAt?: Date;
 }): BackupInsertValues {
-  const prefix = joinBackupPrefix(
-    opts.resolved.prefix,
-    opts.configPrefix ?? ""
-  );
+  const prefix = joinBackupPrefix(opts.resolved.prefix, opts.configPrefix ?? "");
   return {
     configId: opts.configId ?? null,
     databaseId: opts.database.id,
@@ -241,10 +226,7 @@ export function buildVolumeBackupInsert(opts: {
   takenAt?: Date;
   volumeName: string;
 }): VolumeBackupInsertValues {
-  const prefix = joinBackupPrefix(
-    opts.resolved.prefix,
-    opts.configPrefix ?? ""
-  );
+  const prefix = joinBackupPrefix(opts.resolved.prefix, opts.configPrefix ?? "");
   return {
     configId: opts.configId ?? null,
     destinationId: opts.resolved.id,

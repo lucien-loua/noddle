@@ -36,23 +36,14 @@ import { deleteServiceDomain } from "@/server/service-domains";
 const DOMAIN_REDEPLOY_HINT =
   "Whenever you make changes to domains, remember to redeploy the application to apply the changes.";
 
-export function ServiceDomains({
-  canEdit,
-  service,
-}: {
-  canEdit: boolean;
-  service: ServiceRow;
-}) {
+export function ServiceDomains({ canEdit, service }: { canEdit: boolean; service: ServiceRow }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [editor, setEditor] = useState<ServiceDomainRow | "new" | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState<ServiceDomainRow | null>(
-    null
-  );
+  const [confirmRemove, setConfirmRemove] = useState<ServiceDomainRow | null>(null);
 
   const remove = useMutation({
-    mutationFn: (domainId: string) =>
-      deleteServiceDomain({ data: { domainId } }),
+    mutationFn: (domainId: string) => deleteServiceDomain({ data: { domainId } }),
     onSuccess: async () => {
       setConfirmRemove(null);
       await cache.service(queryClient, service.id);
@@ -80,9 +71,7 @@ export function ServiceDomains({
         <FrameHeader className="flex-row items-center justify-between gap-3">
           <div className="min-w-0">
             <FrameTitle>Domains</FrameTitle>
-            <FrameDescription>
-              Domains are used to access the application.
-            </FrameDescription>
+            <FrameDescription>Domains are used to access the application.</FrameDescription>
           </div>
           {canEdit && hasDomains ? (
             <Button onClick={handleOpenCreate} size="sm" variant="outline">
@@ -99,9 +88,7 @@ export function ServiceDomains({
                 canEdit={canEdit}
                 domain={domain}
                 key={domain.id}
-                lastDeploymentFinishedAt={
-                  service.lastDeployment?.finishedAt ?? null
-                }
+                lastDeploymentFinishedAt={service.lastDeployment?.finishedAt ?? null}
                 onEdit={() => setEditor(domain)}
                 onRemove={() => setConfirmRemove(domain)}
                 port={service.port}
@@ -113,9 +100,7 @@ export function ServiceDomains({
               </p>
             ) : null}
             <FrameFooter>
-              <p className="text-muted-foreground text-xs">
-                {DOMAIN_REDEPLOY_HINT}
-              </p>
+              <p className="text-muted-foreground text-xs">{DOMAIN_REDEPLOY_HINT}</p>
             </FrameFooter>
           </>
         ) : (
@@ -129,8 +114,7 @@ export function ServiceDomains({
               <EmptyHeader>
                 <EmptyTitle>No domain yet</EmptyTitle>
                 <EmptyDescription>
-                  To access the application it is required to set at least one
-                  domain.
+                  To access the application it is required to set at least one domain.
                 </EmptyDescription>
               </EmptyHeader>
               {canEdit ? (

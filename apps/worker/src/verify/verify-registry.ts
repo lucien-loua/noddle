@@ -41,14 +41,7 @@ import {
 } from "@noddle/registry";
 import type { RegistryConfig } from "@noddle/registry";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-  quoteArg,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, exec, execArgv, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -88,7 +81,7 @@ const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = MANAGER;
+const { privateKey } = MANAGER;
 const sshKeyId = await seedSshKey(db, appKey, "verify-registry", privateKey);
 const registryPassword = randomBytes(16).toString("hex");
 const domain = `${SERVICE_NAME}.${MANAGER.host.replaceAll(".", "-")}.sslip.io`;
@@ -97,13 +90,8 @@ let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
 let workerSsh: Awaited<ReturnType<typeof connect>> | undefined;
 
 /** The Docker daemon's startup timestamp — to prove it did NOT restart. */
-async function dockerStartedAt(
-  client: Awaited<ReturnType<typeof connect>>
-): Promise<string> {
-  const res = await exec(
-    client,
-    "systemctl show docker --property=ActiveEnterTimestamp --value"
-  );
+async function dockerStartedAt(client: Awaited<ReturnType<typeof connect>>): Promise<string> {
+  const res = await exec(client, "systemctl show docker --property=ActiveEnterTimestamp --value");
   return res.stdout.trim();
 }
 
@@ -111,9 +99,7 @@ await db.delete(deployments);
 await db.delete(services);
 await db.delete(environments);
 await db.delete(projects);
-await db
-  .delete(servers)
-  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
+await db.delete(servers).where(inArray(servers.host, [MANAGER.host, WORKER.host]));
 
 try {
   managerSsh = await connect({
@@ -144,11 +130,11 @@ try {
       `-out ${CERT_DIR}/registry.csr -subj '/CN=${MANAGER.host}' 2>/dev/null && ` +
       `sudo openssl x509 -req -in ${CERT_DIR}/registry.csr -CA ${CERT_DIR}/ca.crt ` +
       `-CAkey ${CERT_DIR}/ca.key -CAcreateserial -out ${CERT_DIR}/registry.crt ` +
-      `-days 3650 -sha256 -extfile ${CERT_DIR}/ext.cnf 2>/dev/null`
+      `-days 3650 -sha256 -extfile ${CERT_DIR}/ext.cnf 2>/dev/null`,
   );
   const htpasswd = await exec(
     managerSsh,
-    `printf '%s' ${quoteArg(registryPassword)} | sudo docker run --rm -i httpd:2-alpine htpasswd -Bin noddle 2>/dev/null | sudo tee ${CERT_DIR}/htpasswd`
+    `printf '%s' ${quoteArg(registryPassword)} | sudo docker run --rm -i httpd:2-alpine htpasswd -Bin noddle 2>/dev/null | sudo tee ${CERT_DIR}/htpasswd`,
   );
   if (htpasswd.stdout.includes("$2y$")) {
     ok("CA, certificate, and bcrypt htpasswd generated");
@@ -188,22 +174,17 @@ try {
   await sleep(4000);
   const alive = await exec(
     managerSsh,
-    `sudo docker inspect -f '{{.State.Running}}' ${REGISTRY_CONTAINER}`
+    `sudo docker inspect -f '{{.State.Running}}' ${REGISTRY_CONTAINER}`,
   );
   if (alive.stdout.trim() === "true") {
     ok("registry:3.1.1 started in TLS + auth");
   } else {
-    const why = await exec(
-      managerSsh,
-      `sudo docker logs --tail 5 ${REGISTRY_CONTAINER}`
-    );
+    const why = await exec(managerSsh, `sudo docker logs --tail 5 ${REGISTRY_CONTAINER}`);
     ko(`registry dead: ${why.stderr.trim() || why.stdout.trim()}`);
     throw new Error("registry unavailable, the rest makes no sense");
   }
 
-  const caCert = (
-    await exec(managerSsh, `sudo cat ${CERT_DIR}/ca.crt`)
-  ).stdout.trim();
+  const caCert = (await exec(managerSsh, `sudo cat ${CERT_DIR}/ca.crt`)).stdout.trim();
   const registry: RegistryConfig = {
     caCert,
     host: `${MANAGER.host}:5000`,
@@ -217,15 +198,12 @@ try {
 
   await exec(managerSsh, "sudo rm -rf /etc/docker/certs.d");
   await exec(managerSsh, "sudo docker pull -q alpine:3");
-  await exec(
-    managerSsh,
-    `sudo docker tag alpine:3 ${registry.host}/probe-nocert:v1`
-  );
+  await exec(managerSsh, `sudo docker tag alpine:3 ${registry.host}/probe-nocert:v1`);
   const beforeTrust = await pushImage(managerSsh, registry, {
     imageTag: `${registry.host}/probe-nocert:v1`,
   }).then(
     () => null,
-    (error: Error) => error.message
+    (error: Error) => error.message,
   );
   if (beforeTrust?.includes("x509") || beforeTrust?.includes("certificate")) {
     ok("without the CA: push refused, and the error NAMES the certificate");
@@ -293,12 +271,10 @@ try {
     where: eq(servers.id, workerRow.id),
   });
   if (provisioned?.status === "connected" && provisioned.swarmNodeId) {
-    ok(
-      `worker provisioned, Swarm node ${provisioned.swarmNodeId.slice(0, 12)}`
-    );
+    ok(`worker provisioned, Swarm node ${provisioned.swarmNodeId.slice(0, 12)}`);
   } else {
     ko(
-      `provisioning: ${provisioned?.status}, node ${provisioned?.swarmNodeId ?? "—"}, ${provisioned?.lastError ?? ""}`
+      `provisioning: ${provisioned?.status}, node ${provisioned?.swarmNodeId ?? "—"}, ${provisioned?.lastError ?? ""}`,
     );
   }
 
@@ -307,14 +283,8 @@ try {
     privateKey,
     user: MANAGER.user,
   });
-  const caOnWorker = await exec(
-    workerSsh,
-    `sudo cat /etc/docker/certs.d/${registry.host}/ca.crt`
-  );
-  if (
-    caOnWorker.code === 0 &&
-    caOnWorker.stdout.includes("BEGIN CERTIFICATE")
-  ) {
+  const caOnWorker = await exec(workerSsh, `sudo cat /etc/docker/certs.d/${registry.host}/ca.crt`);
+  if (caOnWorker.code === 0 && caOnWorker.stdout.includes("BEGIN CERTIFICATE")) {
     ok("the CA reached the worker, via provisioning");
   } else {
     ko("the CA isn't on the worker");
@@ -329,7 +299,7 @@ try {
       `printf '%s' '{"name":"reg","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
       "git init -q -b main . && git config user.email e@x && git config user.name e && " +
-      "git add -A && git commit -q -m init"
+      "git add -A && git commit -q -m init",
   );
 
   // By PREFIX, not exact name: the Swarm name now carries a suffix drawn
@@ -404,7 +374,7 @@ try {
   const catalog = await exec(
     managerSsh,
     `curl -sS --cacert /etc/docker/certs.d/${registry.host}/ca.crt ` +
-      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/_catalog`
+      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/_catalog`,
   );
   if (catalog.stdout.includes(swarmName)) {
     ok(`the registry exposes the repository: ${catalog.stdout.trim()}`);
@@ -419,10 +389,7 @@ try {
   // node and the daemon RE-PULLS it from the registry. So it's present on
   // arrival, for a reason that's the intended behavior. Measured — that's
   // what the first run of this file showed.
-  await exec(
-    managerSsh,
-    `sudo docker tag alpine:3 ${registry.host}/rm-probe:v1`
-  );
+  await exec(managerSsh, `sudo docker tag alpine:3 ${registry.host}/rm-probe:v1`);
   await pushImage(managerSsh, registry, {
     imageTag: `${registry.host}/rm-probe:v1`,
     removeLocal: true,
@@ -483,15 +450,8 @@ try {
       // biome-ignore lint/performance/noAwaitInLoops: intentional retry — Traefik's Swarm provider polls every 15s
       const res = await execFileAsync(
         "curl",
-        [
-          "-fsS",
-          "--max-time",
-          "10",
-          "-H",
-          `Host: ${domain}`,
-          `http://${MANAGER.host}/`,
-        ],
-        { timeout: 12_000 }
+        ["-fsS", "--max-time", "10", "-H", `Host: ${domain}`, `http://${MANAGER.host}/`],
+        { timeout: 12_000 },
       ).catch(() => null);
       if (res?.stdout.includes("registre")) {
         ok(`${label}: "${res.stdout.trim()}"`);
@@ -542,7 +502,7 @@ try {
 
   if (movedTo) {
     ok(
-      `the task was RESCHEDULED onto ${movedTo.slice(0, 12)} — a node that never built this image`
+      `the task was RESCHEDULED onto ${movedTo.slice(0, 12)} — a node that never built this image`,
     );
   } else {
     ko("the task wasn't rescheduled within 180s");
@@ -592,15 +552,9 @@ try {
     `cd ${quoteArg(ORIGIN)} && sudo docker build -q -t ${quoteArg(legacyTag)} ` +
       "-f - . <<'DOCKERFILE'\n" +
       "FROM node:24-slim\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\n" +
-      'WORKDIR /app\nCOPY . .\nCMD ["node","s.js"]\nDOCKERFILE'
+      'WORKDIR /app\nCOPY . .\nCMD ["node","s.js"]\nDOCKERFILE',
   );
-  const legacyBuilt = await execArgv(workerSsh, [
-    "sudo",
-    "docker",
-    "images",
-    "-q",
-    legacyTag,
-  ]);
+  const legacyBuilt = await execArgv(workerSsh, ["sudo", "docker", "images", "-q", legacyTag]);
   if (legacyBuilt.stdout.trim()) {
     ok('"legacy" image built locally on the worker, not pushed');
   } else {
@@ -615,12 +569,10 @@ try {
 
   const legacySpec = await specOf();
   if (legacySpec.constraints.some((c) => c === `node.id==${workerNodeId}`)) {
-    ok(
-      "an image that was NOT pushed stays pinned to its node — the migration breaks nothing"
-    );
+    ok("an image that was NOT pushed stays pinned to its node — the migration breaks nothing");
   } else {
     ko(
-      `legacy image without constraint: [${legacySpec.constraints.join(", ")}] — a rollback would head to a node without the image`
+      `legacy image without constraint: [${legacySpec.constraints.join(", ")}] — a rollback would head to a node without the image`,
     );
   }
 
@@ -653,12 +605,9 @@ try {
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
       'printf \'FROM node:24-slim\\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\\nWORKDIR /app\\nCOPY . .\\nCMD ["node","s.js"]\\n\' > Dockerfile && ' +
-      `sudo docker build -q -t ${quoteArg(`${SERVICE_NAME}:mgr-local`)} .`
+      `sudo docker build -q -t ${quoteArg(`${SERVICE_NAME}:mgr-local`)} .`,
   );
-  await db
-    .update(services)
-    .set({ serverId: managerRow.id })
-    .where(eq(services.id, svc.id));
+  await db.update(services).set({ serverId: managerRow.id }).where(eq(services.id, svc.id));
 
   await redeployImage(ctx, route, {
     imageTag: `${SERVICE_NAME}:mgr-local`,
@@ -671,23 +620,20 @@ try {
     ok("pinned to the manager, even though the cluster has two nodes");
   } else {
     ko(
-      `no constraint: [${mgrSpec.constraints.join(", ")}] — Swarm could place it on the worker, without the image`
+      `no constraint: [${mgrSpec.constraints.join(", ")}] — Swarm could place it on the worker, without the image`,
     );
   }
 
   // Put back on the worker: the retention pass that follows counts the
   // service's versions.
-  await db
-    .update(services)
-    .set({ serverId: workerRow.id })
-    .where(eq(services.id, svc.id));
+  await db.update(services).set({ serverId: workerRow.id }).where(eq(services.id, svc.id));
 
   // ── retention: delete the OBJECT, not just the row ────────────────────────
   step("Retention");
   const volumeMb = async (): Promise<number> => {
     const res = await exec(
       managerSsh as Awaited<ReturnType<typeof connect>>,
-      `sudo docker exec ${REGISTRY_CONTAINER} du -sm /var/lib/registry`
+      `sudo docker exec ${REGISTRY_CONTAINER} du -sm /var/lib/registry`,
     );
     return Number.parseInt(res.stdout.trim().split(FIRST_FIELD)[0] ?? "0", 10);
   };
@@ -702,7 +648,7 @@ try {
     "sudo rm -rf /tmp/fat && mkdir -p /tmp/fat && cd /tmp/fat && " +
       "head -c 120000000 /dev/urandom > gros.bin && " +
       `printf 'FROM alpine:3\\nCOPY gros.bin /gros.bin\\n' > Dockerfile && ` +
-      `sudo docker build -q -t ${quoteArg(fatTag)} .`
+      `sudo docker build -q -t ${quoteArg(fatTag)} .`,
   );
   await pushImage(managerSsh, registry, {
     imageTag: fatTag,
@@ -762,7 +708,7 @@ try {
     ok(`garbage-collect reclaimed ${before - after} MB (${before} → ${after})`);
   } else {
     ko(
-      `volume ${before} → ${after} MB, collected=${swept.collected} — the row is erased but the OBJECT stayed`
+      `volume ${before} → ${after} MB, collected=${swept.collected} — the row is erased but the OBJECT stayed`,
     );
   }
 
@@ -780,9 +726,7 @@ try {
   if (survivors.length > 0 && survivors.every((d) => !d.imagePurged)) {
     ok(`the ${survivors.length} versions within the window are spared`);
   } else {
-    ko(
-      `${survivors.filter((d) => d.imagePurged).length} version(s) within the window were purged`
-    );
+    ko(`${survivors.filter((d) => d.imagePurged).length} version(s) within the window were purged`);
   }
 
   // ── delete the service, for real ───────────────────────────────────────────
@@ -815,21 +759,18 @@ try {
     ok("la ligne et tout son historique sont partis (cascade)");
   } else {
     ko(
-      `still in the database: service=${rowAfter ? "yes" : "no"}, deployments=${depsAfter.length}`
+      `still in the database: service=${rowAfter ? "yes" : "no"}, deployments=${depsAfter.length}`,
     );
   }
 
   const catalogAfter = await exec(
     managerSsh,
     `curl -sS --cacert /etc/docker/certs.d/${registry.host}/ca.crt ` +
-      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/${swarmName}/tags/list`
+      `-u noddle:${quoteArg(registryPassword)} https://${registry.host}/v2/${swarmName}/tags/list`,
   );
   // An emptied repository responds `"tags":null` — the key exists, the list
   // is null.
-  if (
-    catalogAfter.stdout.includes('"tags":null') ||
-    catalogAfter.stdout.includes("NAME_UNKNOWN")
-  ) {
+  if (catalogAfter.stdout.includes('"tags":null') || catalogAfter.stdout.includes("NAME_UNKNOWN")) {
     ok("the registry repository is empty");
   } else {
     ko(`tags remain: ${catalogAfter.stdout.trim().slice(0, 120)}`);
@@ -837,7 +778,7 @@ try {
 
   const workdirAfter = await exec(
     workerSsh,
-    `test -d ${quoteArg(`/var/lib/noddle/builds/${svc.id}`)} && echo present || echo absent`
+    `test -d ${quoteArg(`/var/lib/noddle/builds/${svc.id}`)} && echo present || echo absent`,
   );
   if (workdirAfter.stdout.includes("absent")) {
     ok("the build directory was removed from the node");
@@ -872,7 +813,7 @@ try {
   console.log(
     `\n\u001B[1m${pass} passed, ${fail} failed\u001B[0m${
       fail === 0 ? " \u001B[32m✓\u001B[0m\n" : " \u001B[31m✗\u001B[0m\n"
-    }`
+    }`,
   );
   process.exit(fail === 0 ? 0 : 1);
 }

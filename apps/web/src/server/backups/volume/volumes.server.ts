@@ -9,9 +9,7 @@ import { withManagerSession } from "@/lib/ssh.server";
 
 import type { ServiceVolumeRow } from "./volumes";
 
-export async function loadServiceVolumeMounts(
-  serviceId: string
-): Promise<ServiceVolumeRow[]> {
+export async function loadServiceVolumeMounts(serviceId: string): Promise<ServiceVolumeRow[]> {
   const service = await db.query.services.findFirst({
     where: eq(services.id, serviceId),
   });
@@ -27,7 +25,7 @@ export async function loadServiceVolumeMounts(
 
 export async function assertVolumeAttachedToService(
   serviceId: string,
-  volumeName: string
+  volumeName: string,
 ): Promise<void> {
   const mounts = await loadServiceVolumeMounts(serviceId);
   if (mounts.some((m) => m.volumeName === volumeName)) {
@@ -35,10 +33,10 @@ export async function assertVolumeAttachedToService(
   }
   if (mounts.length === 0) {
     throw new Error(
-      "this service has no Docker volumes attached — add a named volume to the deployment, deploy, then try again"
+      "this service has no Docker volumes attached — add a named volume to the deployment, deploy, then try again",
     );
   }
   throw new Error(
-    `volume "${volumeName}" is not attached to this service — choose ${mounts.map((m) => m.volumeName).join(", ")}`
+    `volume "${volumeName}" is not attached to this service — choose ${mounts.map((m) => m.volumeName).join(", ")}`,
   );
 }

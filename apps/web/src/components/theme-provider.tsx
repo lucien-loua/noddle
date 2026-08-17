@@ -1,11 +1,4 @@
-import {
-  createContext,
-  use,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -89,7 +82,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ resolvedTheme: resolved, setTheme, theme }),
-    [resolved, setTheme, theme]
+    [resolved, setTheme, theme],
   );
 
   return <ThemeContext value={value}>{children}</ThemeContext>;

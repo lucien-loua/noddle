@@ -59,14 +59,14 @@ export const generateServiceWebhook = createServerFn({ method: "POST" })
             webhookSecretEncrypted: encryptSecret(
               secret,
               env.appKey,
-              secretContext.webhookSecret(row.id)
+              secretContext.webhookSecret(row.id),
             ),
           })
           .where(eq(services.id, row.id));
         return { path: `/api/webhooks/service/${row.id}`, secret };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const getStackWebhook = createServerFn({ method: "GET" })
@@ -86,8 +86,7 @@ export const generateStackWebhook = createServerFn({ method: "POST" })
   .validator(stackIdSchema)
   .handler(async ({ data }): Promise<{ path: string; secret: string }> =>
     runGuarded({
-      load: () =>
-        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+      load: () => db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
       notFoundMessage: "stack not found",
       permission: { action: "create", resource: "service" },
       run: async ({ row }) => {
@@ -98,12 +97,12 @@ export const generateStackWebhook = createServerFn({ method: "POST" })
             webhookSecretEncrypted: encryptSecret(
               secret,
               env.appKey,
-              secretContext.webhookSecret(row.id)
+              secretContext.webhookSecret(row.id),
             ),
           })
           .where(eq(stacks.id, row.id));
         return { path: `/api/webhooks/stack/${row.id}`, secret };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

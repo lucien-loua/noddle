@@ -45,16 +45,10 @@ export function ServiceDeploymentsPanel({
       <Frame variant="ghost">
         <FrameHeader>
           <FrameTitle>Deployments</FrameTitle>
-          <FrameDescription>
-            See the last 10 deployments for this application.
-          </FrameDescription>
+          <FrameDescription>See the last 10 deployments for this application.</FrameDescription>
         </FrameHeader>
         <FramePanel
-          className={
-            recentDeployments && recentDeployments.length > 0
-              ? "p-0"
-              : undefined
-          }
+          className={recentDeployments && recentDeployments.length > 0 ? "p-0" : undefined}
         >
           {recentDeployments ? (
             <DeploymentHistory

@@ -1,18 +1,9 @@
-import {
-  ArrowSquareOutIcon,
-  InfoIcon,
-  PencilSimpleIcon,
-  TrashIcon,
-} from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, InfoIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FramePanel } from "@/components/ui/frame";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ServiceDomainRow } from "@/server/dashboard";
 
@@ -37,10 +28,7 @@ function pathBadgeLabel(domain: ServiceDomainRow): string {
   return parts.join(" · ");
 }
 
-function routingLabel(
-  domain: ServiceDomainRow,
-  lastDeploymentFinishedAt: string | null
-): string {
+function routingLabel(domain: ServiceDomainRow, lastDeploymentFinishedAt: string | null): string {
   if (lastDeploymentFinishedAt === null) {
     return "Redeploy required";
   }
@@ -52,7 +40,7 @@ function routingLabel(
 
 function routingNeedsRedeploy(
   domain: ServiceDomainRow,
-  lastDeploymentFinishedAt: string | null
+  lastDeploymentFinishedAt: string | null,
 ): boolean {
   if (lastDeploymentFinishedAt === null) {
     return true;
@@ -93,10 +81,7 @@ export function ServiceDomainCard({
             >
               {domain.host}
               {publicPath ? publicPath : null}
-              <ArrowSquareOutIcon
-                className="size-3.5 shrink-0"
-                weight="regular"
-              />
+              <ArrowSquareOutIcon className="size-3.5 shrink-0" weight="regular" />
             </a>
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -104,28 +89,17 @@ export function ServiceDomainCard({
               label={`Path: ${pathBadgeLabel(domain)}`}
               tip="Public URL path prefix and forwarding rules"
             />
-            <DetailBadge
-              label={`Port: ${port}`}
-              tip="Container port Traefik forwards to"
-            />
+            <DetailBadge label={`Port: ${port}`} tip="Container port Traefik forwards to" />
             <DetailBadge
               label={domain.https ? "HTTPS" : "HTTP"}
-              tip={
-                domain.https
-                  ? "Secure HTTPS connection"
-                  : "Standard HTTP connection"
-              }
+              tip={domain.https ? "Secure HTTPS connection" : "Standard HTTP connection"}
             />
             {domain.https ? (
-              <DetailBadge
-                label={`Cert: ${certLabel(domain)}`}
-                tip="SSL certificate provider"
-              />
+              <DetailBadge label={`Cert: ${certLabel(domain)}`} tip="SSL certificate provider" />
             ) : null}
             <Badge
               className={cn(
-                pendingDeploy &&
-                  "border-amber-500/40 text-amber-700 dark:text-amber-400"
+                pendingDeploy && "border-amber-500/40 text-amber-700 dark:text-amber-400",
               )}
               variant="outline"
             >
@@ -135,20 +109,10 @@ export function ServiceDomainCard({
         </div>
         {canEdit ? (
           <div className="flex shrink-0 items-center gap-1">
-            <Button
-              aria-label="Edit domain"
-              onClick={onEdit}
-              size="icon-sm"
-              variant="ghost"
-            >
+            <Button aria-label="Edit domain" onClick={onEdit} size="icon-sm" variant="ghost">
               <PencilSimpleIcon />
             </Button>
-            <Button
-              aria-label="Remove domain"
-              onClick={onRemove}
-              size="icon-sm"
-              variant="ghost"
-            >
+            <Button aria-label="Remove domain" onClick={onRemove} size="icon-sm" variant="ghost">
               <TrashIcon />
             </Button>
           </div>

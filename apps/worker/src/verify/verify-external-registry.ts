@@ -17,14 +17,7 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-  quoteArg,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, exec, execArgv, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -62,7 +55,7 @@ const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = MANAGER;
+const { privateKey } = MANAGER;
 const sshKeyId = await seedSshKey(db, appKey, "verify-external", privateKey);
 const extPassword = randomBytes(16).toString("hex");
 const extHost = `${MANAGER.host}:${EXT_PORT}`;
@@ -76,9 +69,7 @@ await db.delete(services);
 await db.delete(environments);
 await db.delete(projects);
 await db.delete(registries);
-await db
-  .delete(servers)
-  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
+await db.delete(servers).where(inArray(servers.host, [MANAGER.host, WORKER.host]));
 
 try {
   managerSsh = await connect({
@@ -109,11 +100,11 @@ try {
       `-out ${EXT_DIR}/registry.csr -subj '/CN=${MANAGER.host}' 2>/dev/null && ` +
       `sudo openssl x509 -req -in ${EXT_DIR}/registry.csr -CA ${EXT_DIR}/ca.crt ` +
       `-CAkey ${EXT_DIR}/ca.key -CAcreateserial -out ${EXT_DIR}/registry.crt ` +
-      `-days 3650 -sha256 -extfile ${EXT_DIR}/ext.cnf 2>/dev/null`
+      `-days 3650 -sha256 -extfile ${EXT_DIR}/ext.cnf 2>/dev/null`,
   );
   const htpasswd = await exec(
     managerSsh,
-    `printf '%s' ${quoteArg(extPassword)} | sudo docker run --rm -i httpd:2-alpine htpasswd -Bin ${EXT_USER} 2>/dev/null | sudo tee ${EXT_DIR}/htpasswd`
+    `printf '%s' ${quoteArg(extPassword)} | sudo docker run --rm -i httpd:2-alpine htpasswd -Bin ${EXT_USER} 2>/dev/null | sudo tee ${EXT_DIR}/htpasswd`,
   );
   if (htpasswd.stdout.includes("$2y$")) {
     ok(`htpasswd bcrypt for "${EXT_USER}", a different account from ours`);
@@ -151,15 +142,12 @@ try {
   await sleep(4000);
   const alive = await exec(
     managerSsh,
-    `sudo docker inspect -f '{{.State.Running}}' ${EXT_CONTAINER}`
+    `sudo docker inspect -f '{{.State.Running}}' ${EXT_CONTAINER}`,
   );
   if (alive.stdout.trim() === "true") {
     ok(`external registry listening on ${extHost}`);
   } else {
-    const why = await exec(
-      managerSsh,
-      `sudo docker logs --tail 5 ${EXT_CONTAINER}`
-    );
+    const why = await exec(managerSsh, `sudo docker logs --tail 5 ${EXT_CONTAINER}`);
     ko(`external registry dead: ${why.stderr.trim() || why.stdout.trim()}`);
     throw new Error("external registry unavailable");
   }
@@ -168,15 +156,13 @@ try {
   // `caCert` is `undefined`, so Noddle deposits NOTHING. Correct for ghcr.io
   // (public CA); a self-hosted registry with a private cert needs the CA
   // already trusted on the nodes.
-  const caCert = (
-    await exec(managerSsh, `sudo cat ${EXT_DIR}/ca.crt`)
-  ).stdout.trim();
+  const caCert = (await exec(managerSsh, `sudo cat ${EXT_DIR}/ca.crt`)).stdout.trim();
   for (const client of [managerSsh, workerSsh]) {
     // biome-ignore lint/performance/noAwaitInLoops: two nodes, sequential by design
     await exec(
       client,
       `sudo mkdir -p /etc/docker/certs.d/${extHost} && ` +
-        `printf '%s' ${quoteArg(caCert)} | sudo tee /etc/docker/certs.d/${extHost}/ca.crt >/dev/null`
+        `printf '%s' ${quoteArg(caCert)} | sudo tee /etc/docker/certs.d/${extHost}/ca.crt >/dev/null`,
     );
   }
   ok("external registry CA deposited on both nodes, outside Noddle");
@@ -188,11 +174,7 @@ try {
     id: registryId,
     imagePrefix: EXT_PREFIX,
     name: "acme",
-    passwordEncrypted: encryptSecret(
-      extPassword,
-      appKey,
-      secretContext.registry(registryId)
-    ),
+    passwordEncrypted: encryptSecret(extPassword, appKey, secretContext.registry(registryId)),
     registryUrl: extHost,
     username: EXT_USER,
   });
@@ -242,7 +224,7 @@ try {
       `printf '%s' '{"name":"ext","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("external hello")).listen(p)' > s.js && ` +
       "git init -q -b main . && git config user.email e@x && git config user.name e && " +
-      "git add -A && git commit -q -m init"
+      "git add -A && git commit -q -m init",
   );
 
   const leftovers = await managerDocker.listServices({
@@ -312,7 +294,7 @@ try {
   // And the image is REALLY there: we query the external registry.
   const catalog = await exec(
     managerSsh,
-    `curl -s --cacert ${EXT_DIR}/ca.crt -u ${quoteArg(`${EXT_USER}:${extPassword}`)} https://${extHost}/v2/_catalog`
+    `curl -s --cacert ${EXT_DIR}/ca.crt -u ${quoteArg(`${EXT_USER}:${extPassword}`)} https://${extHost}/v2/_catalog`,
   );
   if (catalog.stdout.includes(`${EXT_PREFIX}/${SERVICE_NAME}`)) {
     ok(`external registry holds the repo: ${catalog.stdout.trim()}`);
@@ -338,10 +320,7 @@ try {
   const buildNode = (
     await exec(workerSsh, "sudo docker info -f '{{.Swarm.NodeID}}'")
   ).stdout.trim();
-  await exec(
-    managerSsh,
-    `sudo docker node update --availability drain ${buildNode}`
-  );
+  await exec(managerSsh, `sudo docker node update --availability drain ${buildNode}`);
   try {
     let landed = "";
     for (let i = 0; i < 30; i += 1) {
@@ -349,7 +328,7 @@ try {
       await sleep(3000);
       const ps = await exec(
         managerSsh,
-        `sudo docker service ps --filter desired-state=running --format '{{.Node}} {{.CurrentState}}' ${quoteArg(spec?.Spec?.Name ?? swarmName)}`
+        `sudo docker service ps --filter desired-state=running --format '{{.Node}} {{.CurrentState}}' ${quoteArg(spec?.Spec?.Name ?? swarmName)}`,
       );
       if (ps.stdout.includes("Running")) {
         landed = ps.stdout.trim();
@@ -366,7 +345,7 @@ try {
 
     const http = await exec(
       managerSsh,
-      `curl -s -m 10 -H ${quoteArg(`Host: ${domain}`)} http://127.0.0.1/`
+      `curl -s -m 10 -H ${quoteArg(`Host: ${domain}`)} http://127.0.0.1/`,
     );
     if (http.stdout.includes("external hello")) {
       ok("HTTP served from the node that PULLED the image from the external");
@@ -374,10 +353,7 @@ try {
       ko(`unexpected HTTP: ${http.stdout.slice(0, 80)}`);
     }
   } finally {
-    await exec(
-      managerSsh,
-      `sudo docker node update --availability active ${buildNode}`
-    );
+    await exec(managerSsh, `sudo docker node update --availability active ${buildNode}`);
   }
 } catch (error) {
   ko(`interrupted: ${error instanceof Error ? error.message : String(error)}`);
@@ -392,6 +368,6 @@ try {
 }
 
 console.log(
-  `\n\u001B[1m${pass} passed, ${fail} failed\u001B[0m ${fail === 0 ? "\u001B[32m✓\u001B[0m" : "\u001B[31m✗\u001B[0m"}`
+  `\n\u001B[1m${pass} passed, ${fail} failed\u001B[0m ${fail === 0 ? "\u001B[32m✓\u001B[0m" : "\u001B[31m✗\u001B[0m"}`,
 );
 process.exit(fail === 0 ? 0 : 1);

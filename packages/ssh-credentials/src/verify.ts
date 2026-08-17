@@ -7,8 +7,7 @@ import { credentialsFromKey } from "./index.ts";
 
 const KEY = loadAppKey(Buffer.alloc(32).toString("base64"));
 const KEY_ID = "key-verify-1";
-const PEM =
-  "-----BEGIN OPENSSH PRIVATE KEY-----\nfake\n-----END OPENSSH PRIVATE KEY-----";
+const PEM = "-----BEGIN OPENSSH PRIVATE KEY-----\nfake\n-----END OPENSSH PRIVATE KEY-----";
 
 await runVerify("ssh-credentials", () => {
   const server = {
@@ -26,7 +25,7 @@ await runVerify("ssh-credentials", () => {
 
   check(
     "maps host / port / user",
-    creds.host === "10.0.0.1" && creds.port === 2222 && creds.user === "deploy"
+    creds.host === "10.0.0.1" && creds.port === 2222 && creds.user === "deploy",
   );
   check("decrypts the library private key", creds.privateKey === PEM);
 
@@ -34,6 +33,6 @@ await runVerify("ssh-credentials", () => {
     credentialsFromKey(KEY, server, {
       id: "other-id",
       privateKeyEncrypted: box,
-    })
+    }),
   );
 });

@@ -1,8 +1,4 @@
-import {
-  buildBackupInsert,
-  resolveDestination,
-  resolveDestinationRow,
-} from "@noddle/backup";
+import { buildBackupInsert, resolveDestination, resolveDestinationRow } from "@noddle/backup";
 import { deleteObject, listObjects } from "@noddle/backup-store";
 import { backupConfigs, backups, databases } from "@noddle/db/schema";
 import {
@@ -47,10 +43,7 @@ export const getBackups = createServerFn({ method: "GET" })
       limit: 50,
       orderBy: desc(backups.createdAt),
       where: data.configId
-        ? and(
-            eq(backups.databaseId, data.databaseId),
-            eq(backups.configId, data.configId)
-          )
+        ? and(eq(backups.databaseId, data.databaseId), eq(backups.configId, data.configId))
         : eq(backups.databaseId, data.databaseId),
     });
     return rows.map((b) => ({
@@ -92,7 +85,7 @@ export const triggerBackup = createServerFn({ method: "POST" })
               databaseName: config.databaseName,
               kind: "manual",
               resolved,
-            })
+            }),
           )
           .returning();
         if (!created) {
@@ -113,20 +106,16 @@ export const listBackupObjects = createServerFn({ method: "GET" })
     runRead({
       permission: { action: "restore", resource: "backup" },
       read: async () => {
-        const { destination } = await resolveDestination(
-          db,
-          env.appKey,
-          data.destinationId
-        );
+        const { destination } = await resolveDestination(db, env.appKey, data.destinationId);
         // Destination prefix is already applied inside listObjects; pass only
         // the optional extra path from the picker.
         const listed = await listObjects(
           { ...destination, prefix: destination.prefix },
-          { prefix: data.prefix }
+          { prefix: data.prefix },
         );
         return listed;
       },
-    })
+    }),
   );
 
 /**
@@ -136,8 +125,7 @@ export const deleteBackup = createServerFn({ method: "POST" })
   .validator(deleteBackupRunSchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>
     runGuarded({
-      load: () =>
-        db.query.backups.findFirst({ where: eq(backups.id, data.backupId) }),
+      load: () => db.query.backups.findFirst({ where: eq(backups.id, data.backupId) }),
       notFoundMessage: "backup not found",
       permission: { action: "create", resource: "backup" },
       run: async ({ row: backup }) => {
@@ -147,11 +135,7 @@ export const deleteBackup = createServerFn({ method: "POST" })
 
         if (backup.destinationId) {
           try {
-            const { destination } = await resolveDestination(
-              db,
-              env.appKey,
-              backup.destinationId
-            );
+            const { destination } = await resolveDestination(db, env.appKey, backup.destinationId);
             await deleteObject(destination, backup.objectKey);
           } catch {
             // Object may already be gone; still drop the row.
@@ -162,7 +146,7 @@ export const deleteBackup = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.objectKey }),
-    })
+    }),
   );
 
 /**
@@ -188,9 +172,7 @@ export const triggerRestore = createServerFn({ method: "POST" })
             throw new Error("backup not found for this database");
           }
           if (backup.status !== "completed") {
-            throw new Error(
-              "only a completed backup can be restored — this one is not"
-            );
+            throw new Error("only a completed backup can be restored — this one is not");
           }
           await enqueueDeploy({
             backupId: backup.id,
@@ -213,5 +195,5 @@ export const triggerRestore = createServerFn({ method: "POST" })
         return { queued: true };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

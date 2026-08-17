@@ -69,7 +69,7 @@ export const backupConfigs = pgTable(
     schedule: text("schedule").notNull(),
     updatedAt,
   },
-  (t) => [index("backup_configs_database_idx").on(t.databaseId)]
+  (t) => [index("backup_configs_database_idx").on(t.databaseId)],
 );
 
 export const backups = pgTable(
@@ -117,5 +117,5 @@ export const backups = pgTable(
   (t) => [
     index("backups_database_created_idx").on(t.databaseId, t.createdAt),
     index("backups_config_created_idx").on(t.configId, t.createdAt),
-  ]
+  ],
 );

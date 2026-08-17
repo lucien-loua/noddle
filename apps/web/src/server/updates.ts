@@ -142,13 +142,7 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
     try {
       await withManagerSession(async (client) => {
         status.remoteCommit = await readRemoteCommit(client);
-        const log = await execArgv(client, [
-          "sudo",
-          "tail",
-          "-n",
-          String(LOG_LINES),
-          UPDATE_LOG,
-        ]);
+        const log = await execArgv(client, ["sudo", "tail", "-n", String(LOG_LINES), UPDATE_LOG]);
         status.log = log.code === 0 ? log.stdout.trimEnd() || null : null;
       });
     } catch (error) {
@@ -163,10 +157,9 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
     // installation from before `NODDLE_COMMIT` reports no version at all:
     // requiring proof that it's behind would leave "Up to date" on the
     // machine that most needs updating.
-    status.updatable =
-      Boolean(remote) && !(remote && running && remote === running);
+    status.updatable = Boolean(remote) && !(remote && running && remote === running);
     return status;
-  }
+  },
 );
 
 export const startUpdate = createServerFn({ method: "POST" }).handler(
@@ -184,10 +177,10 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
           ]);
           if (res.code !== 0) {
             throw new Error(
-              `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`
+              `could not start the update: ${res.stderr.trim() || res.stdout.trim()}`,
             );
           }
           return { started: true as const };
         }),
-    })
+    }),
 );

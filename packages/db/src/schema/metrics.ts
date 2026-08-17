@@ -1,14 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  check,
-  index,
-  pgTable,
-  real,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { bigint, check, index, pgTable, real, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { databases } from "#schema/databases";
 import { servers } from "#schema/servers";
@@ -47,16 +38,14 @@ export const serverMetrics = pgTable(
     memoryUsedBytes: bigint("memory_used_bytes", { mode: "number" }).notNull(),
     networkInBytes: bigint("network_in_bytes", { mode: "number" }).notNull(),
     networkOutBytes: bigint("network_out_bytes", { mode: "number" }).notNull(),
-    sampledAt: timestamp("sampled_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull().defaultNow(),
     serverId: uuid("server_id")
       .notNull()
       .references(() => servers.id, { onDelete: "cascade" }),
   },
   // The index is on (server, timestamp): every read is "the latest window
   // for THIS server", never a global scan.
-  (t) => [index("server_metrics_server_time_idx").on(t.serverId, t.sampledAt)]
+  (t) => [index("server_metrics_server_time_idx").on(t.serverId, t.sampledAt)],
 );
 
 /**
@@ -104,9 +93,7 @@ export const serviceMetrics = pgTable(
      */
     networkInBytes: bigint("network_in_bytes", { mode: "number" }).notNull(),
     networkOutBytes: bigint("network_out_bytes", { mode: "number" }).notNull(),
-    sampledAt: timestamp("sampled_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull().defaultNow(),
     serviceId: uuid("service_id").references(() => services.id, {
       onDelete: "cascade",
     }),
@@ -123,11 +110,8 @@ export const serviceMetrics = pgTable(
   (t) => [
     index("service_metrics_service_time_idx").on(t.serviceId, t.sampledAt),
     index("service_metrics_database_time_idx").on(t.databaseId, t.sampledAt),
-    check(
-      "service_metrics_one_owner",
-      sql`(${t.serviceId} is null) <> (${t.databaseId} is null)`
-    ),
-  ]
+    check("service_metrics_one_owner", sql`(${t.serviceId} is null) <> (${t.databaseId} is null)`),
+  ],
 );
 
 /**
@@ -170,9 +154,7 @@ export const serverDiskUsage = pgTable(
     imageReclaimableBytes: bigint("image_reclaimable_bytes", {
       mode: "number",
     }).notNull(),
-    sampledAt: timestamp("sampled_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    sampledAt: timestamp("sampled_at", { withTimezone: true }).notNull().defaultNow(),
     serverId: uuid("server_id")
       .notNull()
       .references(() => servers.id, { onDelete: "cascade" }),
@@ -182,7 +164,5 @@ export const serverDiskUsage = pgTable(
       mode: "number",
     }).notNull(),
   },
-  (t) => [
-    index("server_disk_usage_server_time_idx").on(t.serverId, t.sampledAt),
-  ]
+  (t) => [index("server_disk_usage_server_time_idx").on(t.serverId, t.sampledAt)],
 );

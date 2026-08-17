@@ -12,17 +12,8 @@ import { ServerToolchain } from "@/components/server-toolchain";
 import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Frame,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
@@ -77,13 +68,7 @@ export const Route = createFileRoute("/servers_/$serverId")({
 });
 
 /** A labeled fact, same shape as on a service's detail page. */
-function Fact({
-  children,
-  label,
-}: {
-  children: React.ReactNode;
-  label: string;
-}) {
+function Fact({ children, label }: { children: React.ReactNode; label: string }) {
   return (
     <div className="min-w-0">
       <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
@@ -125,10 +110,7 @@ function ServerDetail() {
         </div>
       }
       breadcrumb={
-        <DetailBreadcrumb
-          name={server.name}
-          parent={{ label: "Servers", to: "/servers" }}
-        />
+        <DetailBreadcrumb name={server.name} parent={{ label: "Servers", to: "/servers" }} />
       }
       email={email}
       role={role}

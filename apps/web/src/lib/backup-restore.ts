@@ -6,7 +6,7 @@ import { triggerVolumeRestore } from "@/server/backups/volume/runs";
 export function queueBackupRestore(
   subject: BackupSubject,
   confirmName: string,
-  target: BackupRestoreTarget
+  target: BackupRestoreTarget,
 ): Promise<{ queued: true }> {
   if (subject.kind === "database") {
     if (target.kind === "run") {
@@ -38,9 +38,7 @@ export function queueBackupRestore(
     });
   }
   if (!target.volumeName) {
-    return Promise.reject(
-      new Error("volumeName is required when restoring from an S3 object")
-    );
+    return Promise.reject(new Error("volumeName is required when restoring from an S3 object"));
   }
   return triggerVolumeRestore({
     data: {

@@ -1,10 +1,6 @@
 // tier: pure
 // bun run apps/worker/src/verify/verify-dispatch.ts
-import type {
-  DeployJobData,
-  JobKind,
-  PayloadOf,
-} from "@noddle/deploy-contract";
+import type { DeployJobData, JobKind, PayloadOf } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/testing";
 
 import { dispatch, handlerModules } from "#handlers";
@@ -77,16 +73,16 @@ await runVerify("worker dispatch", async () => {
               fired.push(k);
               return Promise.resolve();
             },
-          ])
+          ]),
         ) as never;
 
         await dispatch(spies, deps, sample);
         check(
           `${kind} dispatches to ${kind}`,
           fired.length === 1 && fired[0] === kind,
-          `fired=[${fired.join(",")}]`
+          `fired=[${fired.join(",")}]`,
         );
-      })
+      }),
     );
   });
 
@@ -97,28 +93,17 @@ await runVerify("worker dispatch", async () => {
   // load time surfaces on this line, not on someone's first restore.
   await suite("every handler module resolves", async () => {
     const entries = Object.entries(handlerModules);
-    check(
-      "the map covers every module",
-      entries.length === 16,
-      `${entries.length}`
-    );
+    check("the map covers every module", entries.length === 16, `${entries.length}`);
 
     await Promise.all(
       entries.map(async ([name, load]) => {
         try {
           const mod = await load();
-          check(
-            `#${name} loads and exports something`,
-            Object.keys(mod).length > 0
-          );
+          check(`#${name} loads and exports something`, Object.keys(mod).length > 0);
         } catch (error) {
-          check(
-            `#${name} loads`,
-            false,
-            error instanceof Error ? error.message : String(error)
-          );
+          check(`#${name} loads`, false, error instanceof Error ? error.message : String(error));
         }
-      })
+      }),
     );
   });
 });

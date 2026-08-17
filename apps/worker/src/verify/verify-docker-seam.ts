@@ -37,39 +37,24 @@ await runVerify("DockerApi seam (C4)", async () => {
   const jobRun = readFileSync(join(WORKER_SRC, "jobs/job-run.ts"), "utf-8");
 
   check("DeployContext exposes connectTo", CONNECT_TO_PATTERN.test(runtime));
-  check(
-    "DeployContext exposes connectForDeploy",
-    CONNECT_FOR_DEPLOY_PATTERN.test(runtime)
-  );
-  check(
-    "DeployContext exposes createDockerApi",
-    CREATE_DOCKER_API_PATTERN.test(runtime)
-  );
-  check(
-    "createDeployContext is exported",
-    runtime.includes("export function createDeployContext")
-  );
+  check("DeployContext exposes connectForDeploy", CONNECT_FOR_DEPLOY_PATTERN.test(runtime));
+  check("DeployContext exposes createDockerApi", CREATE_DOCKER_API_PATTERN.test(runtime));
+  check("createDeployContext is exported", runtime.includes("export function createDeployContext"));
   check(
     "withDeployClients uses ctx.connectForDeploy",
-    jobRun.includes("ctx.connectForDeploy(server)")
+    jobRun.includes("ctx.connectForDeploy(server)"),
   );
-  check(
-    "withDeployClients uses ctx.createDockerApi",
-    jobRun.includes("ctx.createDockerApi(")
-  );
+  check("withDeployClients uses ctx.createDockerApi", jobRun.includes("ctx.createDockerApi("));
   check(
     "withDeployClients does not import connectForDeploy statically",
-    !STATIC_CONNECT_FOR_DEPLOY_IMPORT.test(jobRun)
+    !STATIC_CONNECT_FOR_DEPLOY_IMPORT.test(jobRun),
   );
 
   for (const file of PRODUCTION_FILES) {
     const src = readFileSync(join(WORKER_SRC, file), "utf-8");
     check(`${file} avoids connectTo(ctx`, !src.includes(LEGACY_CONNECT));
     if (file === "jobs/job-run.ts") {
-      check(
-        `${file} avoids connectForDeploy(ctx`,
-        !src.includes(LEGACY_DEPLOY_CONNECT)
-      );
+      check(`${file} avoids connectForDeploy(ctx`, !src.includes(LEGACY_DEPLOY_CONNECT));
     }
   }
 
@@ -93,17 +78,11 @@ await runVerify("DockerApi seam (C4)", async () => {
         createDockerApiCalls += 1;
         return createMemoryDockerApi();
       },
-    }
+    },
   );
 
   await withDeployClients(ctx, server, async ({ managerDocker }) => {
-    check(
-      "in-memory adapter lists services",
-      Array.isArray(await managerDocker.listServices())
-    );
+    check("in-memory adapter lists services", Array.isArray(await managerDocker.listServices()));
   });
-  check(
-    "createDockerApi invoked for deploy clients",
-    createDockerApiCalls >= 1
-  );
+  check("createDockerApi invoked for deploy clients", createDockerApiCalls >= 1);
 });

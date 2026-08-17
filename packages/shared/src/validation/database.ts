@@ -31,7 +31,7 @@ const sqlIdentifierSchema = z
   .max(63)
   .regex(
     /^[a-z_][a-z0-9_]*$/,
-    "use lowercase letters, digits and underscores, starting with a letter"
+    "use lowercase letters, digits and underscores, starting with a letter",
   );
 
 /**
@@ -233,7 +233,7 @@ const networkSwarmSchema = z
     z.object({
       Aliases: z.array(z.string()).optional(),
       Target: z.string().min(1),
-    })
+    }),
   )
   .nullable();
 
@@ -256,9 +256,7 @@ export const databaseSwarmSettingsSchema = z.object({
   updateConfig: updateConfigSwarmSchema.optional(),
 });
 
-export type DatabaseSwarmSettingsInput = z.infer<
-  typeof databaseSwarmSettingsSchema
->;
+export type DatabaseSwarmSettingsInput = z.infer<typeof databaseSwarmSettingsSchema>;
 
 export const setDatabaseSwarmSettingsSchema = z.object({
   databaseId: z.uuid(),
@@ -328,9 +326,7 @@ export const databaseLifecycleRequestSchema = z.object({
   databaseId: z.uuid(),
 });
 
-export type DatabaseLifecycleRequest = z.infer<
-  typeof databaseLifecycleRequestSchema
->;
+export type DatabaseLifecycleRequest = z.infer<typeof databaseLifecycleRequestSchema>;
 
 /**
  * Deleting a stack, a database, a server.

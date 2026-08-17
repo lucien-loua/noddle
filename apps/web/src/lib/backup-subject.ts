@@ -12,19 +12,14 @@ export const backupSubjectSchema = z.discriminatedUnion("kind", [
 
 export type BackupSubject = z.infer<typeof backupSubjectSchema>;
 
-export type DatabaseBackupSubject = Extract<
-  BackupSubject,
-  { kind: "database" }
->;
+export type DatabaseBackupSubject = Extract<BackupSubject, { kind: "database" }>;
 export type VolumeBackupSubject = Extract<BackupSubject, { kind: "volume" }>;
 
 export function backupSubjectScopeId(subject: BackupSubject): string {
   return subject.kind === "database" ? subject.databaseId : subject.serviceId;
 }
 
-export function databaseBackupSubject(
-  databaseId: string
-): DatabaseBackupSubject {
+export function databaseBackupSubject(databaseId: string): DatabaseBackupSubject {
   return { databaseId, kind: "database" };
 }
 

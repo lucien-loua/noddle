@@ -7,11 +7,7 @@ import { Cron } from "croner";
  * Evaluated every 5 minutes by the worker repeatable job. "Successful", not
  * "attempted": a broken parent must keep retrying.
  */
-export function isConfigDue(
-  schedule: string,
-  lastCompletedAt: Date | null,
-  now: Date
-): boolean {
+export function isConfigDue(schedule: string, lastCompletedAt: Date | null, now: Date): boolean {
   let cron: Cron;
   try {
     cron = new Cron(schedule, { timezone: "UTC" });

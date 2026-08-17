@@ -5,11 +5,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { destroyPreview, ensurePreview } from "@/lib/preview.server";
-import {
-  parseWebhookPullRequest,
-  parseWebhookPush,
-  repositoryMatches,
-} from "@/lib/webhook.server";
+import { parseWebhookPullRequest, parseWebhookPush, repositoryMatches } from "@/lib/webhook.server";
 
 /**
  * Everything between a signed payload arriving and Jobs being enqueued.
@@ -30,10 +26,7 @@ export type Resolved =
   | { ignored: string }
   | { services: TargetService[] };
 
-export type ResolveTargets = (
-  request: Request,
-  rawBody: string
-) => Promise<Resolved>;
+export type ResolveTargets = (request: Request, rawBody: string) => Promise<Resolved>;
 
 /**
  * Why this push does not deploy this service, or `null` to deploy.
@@ -48,7 +41,7 @@ function skipReason(
     gitBranch: string | null;
     watchPaths: string[];
   },
-  push: { branch: string; files: string[] }
+  push: { branch: string; files: string[] },
 ): string | null {
   if (!service.autoDeploy) {
     return "autodeploy disabled";
@@ -64,7 +57,7 @@ function skipReason(
 
 async function handlePullRequest(
   targets: TargetService[],
-  rawBody: string
+  rawBody: string,
 ): Promise<Response | null> {
   const pr = parseWebhookPullRequest(rawBody);
   if (!pr) {
@@ -84,16 +77,13 @@ async function handlePullRequest(
             headBranch: pr.headBranch,
             parentServiceId: s.id,
             prNumber: pr.number,
-          })
-    )
+          }),
+    ),
   );
   return Response.json({ outcomes });
 }
 
-async function handlePush(
-  targets: TargetService[],
-  rawBody: string
-): Promise<Response> {
+async function handlePush(targets: TargetService[], rawBody: string): Promise<Response> {
   const push = parseWebhookPush(rawBody);
   if (!push) {
     // 200, not 4xx: an event other than a branch push is not an error.
@@ -116,16 +106,13 @@ async function handlePush(
       queueServiceDeploy(service.id, {
         commitSha: push.commitSha,
         trigger: "webhook",
-      }).then((r) => r.deploymentId)
-    )
+      }).then((r) => r.deploymentId),
+    ),
   );
   return Response.json({ queued, skipped });
 }
 
-export async function handleWebhook(
-  request: Request,
-  resolve: ResolveTargets
-): Promise<Response> {
+export async function handleWebhook(request: Request, resolve: ResolveTargets): Promise<Response> {
   // The EXACT bytes: reparsing before verifying breaks every signature
   // comparison downstream of here.
   const rawBody = await request.text();
@@ -160,13 +147,10 @@ export async function handleWebhook(
  */
 export async function servicesOfRepository(
   gitProviderId: string,
-  repository: string
+  repository: string,
 ): Promise<TargetService[]> {
   const targets = await db.query.services.findMany({
-    where: and(
-      eq(services.gitProviderId, gitProviderId),
-      isNotNull(services.gitRepoUrl)
-    ),
+    where: and(eq(services.gitProviderId, gitProviderId), isNotNull(services.gitRepoUrl)),
   });
   return targets.filter((s) => repositoryMatches(s, repository));
 }

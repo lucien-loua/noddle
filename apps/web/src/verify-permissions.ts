@@ -5,19 +5,17 @@ import { join } from "node:path";
 
 import { finish, ko, ok } from "@noddle/testing";
 
-import { can, isPermissionUniversal } from '@/lib/permissions';
-import type { PermissionResource } from '@/lib/permissions';
+import { can, isPermissionUniversal } from "@/lib/permissions";
+import type { PermissionResource } from "@/lib/permissions";
 
 const SERVER_DIR = join(import.meta.dirname, "server");
 
-const CREATE_SERVER_FN_RE =
-  /export const (\w+) = createServerFn\(\{ method: "(\w+)" \}\)/g;
+const CREATE_SERVER_FN_RE = /export const (\w+) = createServerFn\(\{ method: "(\w+)" \}\)/g;
 const REQUIRE_PERM_ACTION_FIRST =
   /requirePermission\(\{[\s\S]*?action:\s*(?:"([^"]+)"|[^,]+)\s*,[\s\S]*?resource:\s*"([^"]+)"[\s\S]*?\}\)/;
 const REQUIRE_PERM_RESOURCE_FIRST =
   /requirePermission\(\{[\s\S]*?resource:\s*"([^"]+)"\s*,[\s\S]*?action:\s*(?:"([^"]+)"|[^}]+)\s*[\s\S]*?\}\)/;
-const GUARDED_MUTATION_PERM =
-  /permission:\s*\{\s*action:\s*"([^"]+)"\s*,\s*resource:\s*"([^"]+)"/;
+const GUARDED_MUTATION_PERM = /permission:\s*\{\s*action:\s*"([^"]+)"\s*,\s*resource:\s*"([^"]+)"/;
 const EXPECT_FALSE_LABEL = /CANNOT|cannot|denies|NOTHING|^a viewer cannot/;
 
 /**
@@ -46,9 +44,7 @@ const RESTRICTED_SOURCE_MARKERS: {
 /** The body of an `export const <name> = createServerFn(...)` declaration,
  *  up to the next declaration. Good enough: these files never nest server
  *  functions. */
-function declarations(
-  source: string
-): { body: string; method: string; name: string }[] {
+function declarations(source: string): { body: string; method: string; name: string }[] {
   const out: { body: string; method: string; name: string }[] = [];
   CREATE_SERVER_FN_RE.lastIndex = 0;
   const found = [...source.matchAll(CREATE_SERVER_FN_RE)];
@@ -65,9 +61,7 @@ function declarations(
   return out;
 }
 
-function parseRequirePermission(
-  body: string
-): { action: string; resource: string } | null {
+function parseRequirePermission(body: string): { action: string; resource: string } | null {
   // Multiline + ternary actions (containerAction) must still count as a guard.
   // runGuarded always checks permission inside the helper.
   if (
@@ -149,9 +143,7 @@ for (const file of files) {
   const source = readFileSync(join(SERVER_DIR, file), "utf-8");
   for (const decl of declarations(source)) {
     const perm = parseRequirePermission(decl.body);
-    const hasSession =
-      decl.body.includes("requireSession(") ||
-      decl.body.includes("getSession(");
+    const hasSession = decl.body.includes("requireSession(") || decl.body.includes("getSession(");
 
     if (decl.method === "POST") {
       mutating += 1;
@@ -179,9 +171,7 @@ for (const file of files) {
         perm.action !== "dynamic" &&
         isPermissionUniversal(perm.resource as PermissionResource, perm.action)
       ) {
-        universalGuards.push(
-          `${file}:${decl.name} (${perm.resource}:${perm.action})`
-        );
+        universalGuards.push(`${file}:${decl.name} (${perm.resource}:${perm.action})`);
       }
     } else if (!hasSession) {
       unguardedGet.push(`${file}:${decl.name}`);
@@ -194,9 +184,7 @@ for (const file of files) {
           marker.marker.test(decl.body) &&
           !isPermissionUniversal(marker.resource, marker.action)
         ) {
-          restrictedWithoutGuard.push(
-            `${file}:${decl.name} (touches ${marker.resource})`
-          );
+          restrictedWithoutGuard.push(`${file}:${decl.name} (touches ${marker.resource})`);
         }
       }
     }
@@ -234,23 +222,15 @@ if (unguardedGet.length === 0) {
 }
 
 if (universalGuards.length === 0) {
-  ok(
-    "no GET uses requirePermission for a universal permission (no audit spam)"
-  );
+  ok("no GET uses requirePermission for a universal permission (no audit spam)");
 } else {
-  ko(
-    `GET should use requireSession only (universal perm): ${universalGuards.join(", ")}`
-  );
+  ko(`GET should use requireSession only (universal perm): ${universalGuards.join(", ")}`);
 }
 
 if (restrictedWithoutGuard.length === 0) {
-  ok(
-    "no session-only GET touches a restricted resource without requirePermission"
-  );
+  ok("no session-only GET touches a restricted resource without requirePermission");
 } else {
-  ko(
-    `RESTRICTED GET WITHOUT requirePermission: ${restrictedWithoutGuard.join(", ")}`
-  );
+  ko(`RESTRICTED GET WITHOUT requirePermission: ${restrictedWithoutGuard.join(", ")}`);
 }
 
 // ── The sensitive pairs, spelled out via `can` ─────────────────────────────
@@ -262,10 +242,7 @@ console.log("\n\x1B[1mRole matrix (via can)\x1B[0m");
 
 const cases: [string, boolean][] = [
   ["a viewer cannot deploy", can("viewer", "service", "deploy")],
-  [
-    "a viewer cannot read environment variables",
-    can("viewer", "envVar", "read"),
-  ],
+  ["a viewer cannot read environment variables", can("viewer", "envVar", "read")],
   ["a deployer can deploy", can("deployer", "service", "deploy")],
   ["a deployer CANNOT restore a backup", can("deployer", "backup", "restore")],
   ["a deployer CANNOT read secrets", can("deployer", "envVar", "read")],
@@ -279,10 +256,7 @@ const cases: [string, boolean][] = [
   // Updating restarts the control plane and applies migrations: that's
   // administration of the installation, not day-to-day operations.
   ["a viewer CANNOT update Noddle", can("viewer", "installation", "update")],
-  [
-    "a deployer CANNOT update Noddle",
-    can("deployer", "installation", "update"),
-  ],
+  ["a deployer CANNOT update Noddle", can("deployer", "installation", "update")],
   ["an admin can update Noddle", can("admin", "installation", "update")],
   // A registry carries a password that can publish images under the
   // installation's identity — the same boundary as `sshKey`.
@@ -295,52 +269,25 @@ const cases: [string, boolean][] = [
       can("admin", "registry", "delete"),
   ],
   // Restarting is operational; deleting a container can't be undone.
-  [
-    "a deployer can restart a container",
-    can("deployer", "container", "operate"),
-  ],
-  [
-    "a deployer CANNOT delete a container",
-    can("deployer", "container", "delete"),
-  ],
+  ["a deployer can restart a container", can("deployer", "container", "operate")],
+  ["a deployer CANNOT delete a container", can("deployer", "container", "delete")],
   [
     "a viewer can do NOTHING to a container",
     can("viewer", "container", "operate") ||
       can("viewer", "container", "shell") ||
       can("viewer", "container", "delete"),
   ],
-  [
-    "a deployer can shell into a container",
-    can("deployer", "container", "shell"),
-  ],
+  ["a deployer can shell into a container", can("deployer", "container", "shell")],
   ["a deployer CANNOT open a host shell", can("deployer", "server", "shell")],
   ["an admin can open a host shell", can("admin", "server", "shell")],
-  [
-    "a deployer can start or stop a database",
-    can("deployer", "database", "operate"),
-  ],
-  [
-    "a deployer CANNOT delete a database",
-    can("deployer", "database", "delete"),
-  ],
-  [
-    "a viewer CANNOT start or stop a database",
-    can("viewer", "database", "operate"),
-  ],
+  ["a deployer can start or stop a database", can("deployer", "database", "operate")],
+  ["a deployer CANNOT delete a database", can("deployer", "database", "delete")],
+  ["a viewer CANNOT start or stop a database", can("viewer", "database", "operate")],
   // The prune switch is an infrastructure setting, not an operational
   // action: a `deployer` ships, they don't configure machines.
-  [
-    "a deployer CANNOT set a server's prune switch",
-    can("deployer", "server", "update"),
-  ],
-  [
-    "a viewer CANNOT set a server's prune switch",
-    can("viewer", "server", "update"),
-  ],
-  [
-    "an admin can set a server's prune switch",
-    can("admin", "server", "update"),
-  ],
+  ["a deployer CANNOT set a server's prune switch", can("deployer", "server", "update")],
+  ["a viewer CANNOT set a server's prune switch", can("viewer", "server", "update")],
+  ["an admin can set a server's prune switch", can("admin", "server", "update")],
   ["unknown role denies", can("nope", "service", "read")],
   ["null role denies", can(null, "service", "read")],
 ];

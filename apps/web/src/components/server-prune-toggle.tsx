@@ -33,8 +33,7 @@ export function ServerPruneToggle({
   const id = useId();
 
   const save = useMutation({
-    mutationFn: (next: boolean) =>
-      setServerPruneEnabled({ data: { enabled: next, serverId } }),
+    mutationFn: (next: boolean) => setServerPruneEnabled({ data: { enabled: next, serverId } }),
     onError: (e: Error, _next, context: { previous: boolean } | undefined) => {
       if (context) {
         setValue(context.previous);
@@ -48,10 +47,7 @@ export function ServerPruneToggle({
     },
   });
 
-  const handleChange = useCallback(
-    (next: boolean) => save.mutate(next),
-    [save]
-  );
+  const handleChange = useCallback((next: boolean) => save.mutate(next), [save]);
 
   if (!canUpdate) {
     return (
@@ -79,9 +75,9 @@ export function ServerPruneToggle({
           <FieldContent>
             <FieldTitle>Daily prune</FieldTitle>
             <FieldDescription>
-              Removes stopped containers, unused images and stale build cache on
-              this node once a day. This server still counts toward
-              reconciliation and its disk usage keeps being read either way.
+              Removes stopped containers, unused images and stale build cache on this node once a
+              day. This server still counts toward reconciliation and its disk usage keeps being
+              read either way.
             </FieldDescription>
           </FieldContent>
           <Switch

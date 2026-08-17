@@ -34,12 +34,7 @@ import {
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -47,10 +42,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { runBackup } from "#backup";
 import { provisionDatabase } from "#database";
-import {
-  findDatabaseContainer,
-  legacyDatabaseServiceName,
-} from "#database-runtime";
+import { findDatabaseContainer, legacyDatabaseServiceName } from "#database-runtime";
 import { runRestore } from "#restore";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
@@ -76,14 +68,11 @@ const ko = (m: string) => {
   console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
-async function must(
-  client: Awaited<ReturnType<typeof connect>>,
-  argv: string[]
-): Promise<string> {
+async function must(client: Awaited<ReturnType<typeof connect>>, argv: string[]): Promise<string> {
   const r = await execArgv(client, argv);
   if (r.code !== 0) {
     throw new Error(
-      `setup failed (code ${r.code}): ${argv.slice(0, 5).join(" ")} — ${r.stderr.slice(0, 300)}`
+      `setup failed (code ${r.code}): ${argv.slice(0, 5).join(" ")} — ${r.stderr.slice(0, 300)}`,
     );
   }
   return r.stdout;
@@ -110,9 +99,7 @@ await db.delete(environments);
 await db.delete(projects);
 await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(
-  `\n\u001B[1mRestore — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`
-);
+console.log(`\n\u001B[1mRestore — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`);
 
 const destination: BackupDestination = {
   accessKeyId: S3_KEY,
@@ -162,7 +149,7 @@ try {
       secretAccessKeyEncrypted: encryptSecret(
         S3_SECRET,
         appKey,
-        secretContext.backupDestination(dest.id)
+        secretContext.backupDestination(dest.id),
       ),
     })
     .where(eq(s3Destinations.id, dest.id));
@@ -171,10 +158,7 @@ try {
   const route = { networkName: "noddle-public" };
 
   ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "restore-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "restore-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -213,7 +197,7 @@ try {
         rootPasswordEncrypted: encryptSecret(
           randomBytes(24).toString("hex"),
           appKey,
-          secretContext.databasePassword(row.id)
+          secretContext.databasePassword(row.id),
         ),
       })
       .where(eq(databases.id, row.id));
@@ -246,10 +230,7 @@ try {
   const pg = await provision(PG_NAME, "postgres");
   ok("Postgres database provisioned");
 
-  const pgContainer = await findDatabaseContainer(
-    ssh,
-    legacyDatabaseServiceName(PG_NAME)
-  );
+  const pgContainer = await findDatabaseContainer(ssh, legacyDatabaseServiceName(PG_NAME));
   const psql = (sql: string) => [
     "docker",
     "exec",
@@ -337,16 +318,13 @@ try {
   const rdRow = await db.query.databases.findFirst({
     where: eq(databases.id, rd.id),
   });
-  const redisContainer = await findDatabaseContainer(
-    ssh,
-    legacyDatabaseServiceName(REDIS_NAME)
-  );
+  const redisContainer = await findDatabaseContainer(ssh, legacyDatabaseServiceName(REDIS_NAME));
   // The password is the one Noddle generated: it's re-read through the same
   // path as the worker instead of inventing a new one.
   const redisPassword = decryptSecret(
     rdRow?.rootPasswordEncrypted ?? "",
     appKey,
-    secretContext.databasePassword(rd.id)
+    secretContext.databasePassword(rd.id),
   );
   const redis = (...args: string[]) => [
     "docker",
@@ -363,10 +341,7 @@ try {
   ok("Redis backup taken");
 
   await must(ssh, redis("SET", "apres", "oui"));
-  const rBefore = (await must(ssh, redis("KEYS", "*")))
-    .trim()
-    .split("\n")
-    .sort();
+  const rBefore = (await must(ssh, redis("KEYS", "*"))).trim().split("\n").sort();
   ok(`state before restore: ${rBefore.join(", ")}`);
 
   await runRestore(ctx, { backupId: rdBackup.id, databaseId: rd.id });
@@ -374,7 +349,7 @@ try {
   // The container changed: the service was torn down and relaunched.
   const redisAfterContainer = await findDatabaseContainer(
     ssh,
-    legacyDatabaseServiceName(REDIS_NAME)
+    legacyDatabaseServiceName(REDIS_NAME),
   );
   const redis2 = (...args: string[]) => [
     "docker",
@@ -394,9 +369,7 @@ try {
   if (rAfter.length === 1 && rAfter[0] === "avant") {
     ok('Redis restored: "avant" came back, "apres" is gone');
   } else {
-    ko(
-      `Redis poorly restored: ${JSON.stringify(rAfter)} — did the AOF win over the RDB?`
-    );
+    ko(`Redis poorly restored: ${JSON.stringify(rAfter)} — did the AOF win over the RDB?`);
   }
 } catch (error) {
   ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
@@ -407,10 +380,7 @@ try {
   if (ssh) {
     for (const n of [PG_NAME, REDIS_NAME]) {
       // biome-ignore lint/performance/noAwaitInLoops: intentional sequential cleanup
-      await removeService(
-        dockerClient(ssh),
-        legacyDatabaseServiceName(n)
-      ).catch(() => {
+      await removeService(dockerClient(ssh), legacyDatabaseServiceName(n)).catch(() => {
         // cleanup must not mask a real failure
       });
     }

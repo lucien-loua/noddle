@@ -144,10 +144,7 @@ export const databases = pgTable(
      * User-added mounts (bind / named volume). The primary data volume is
      * ALWAYS `swarmName` → `volumePath` and is never stored here.
      */
-    extraMounts: jsonb("extra_mounts")
-      .$type<DatabaseExtraMount[]>()
-      .notNull()
-      .default([]),
+    extraMounts: jsonb("extra_mounts").$type<DatabaseExtraMount[]>().notNull().default([]),
     id: uuid("id").primaryKey().defaultRandom(),
 
     /**
@@ -231,5 +228,5 @@ export const databases = pgTable(
      */
     volumePath: text("volume_path"),
   },
-  (t) => [uniqueIndex("databases_env_name_idx").on(t.environmentId, t.name)]
+  (t) => [uniqueIndex("databases_env_name_idx").on(t.environmentId, t.name)],
 );

@@ -39,7 +39,7 @@ await runVerify("Dockerfile workspace manifests", () => {
     for (const member of members) {
       check(
         `${dockerfile} copies ${member}/package.json`,
-        content.includes(`COPY ${member}/package.json ${member}/`)
+        content.includes(`COPY ${member}/package.json ${member}/`),
       );
     }
   }

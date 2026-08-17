@@ -24,10 +24,7 @@ const RSA_BITS = 4096;
  * reasoning as `http` tolerated for a generic webhook — forbidding it
  * wouldn't secure anyone, it would push people to bypass Noddle.
  */
-export function generateKeyPair(
-  type: KeyType = "ed25519",
-  comment = "noddle"
-): KeyPair {
+export function generateKeyPair(type: KeyType = "ed25519", comment = "noddle"): KeyPair {
   const pair =
     type === "rsa"
       ? ssh2.utils.generateKeyPairSync("rsa", { bits: RSA_BITS, comment })

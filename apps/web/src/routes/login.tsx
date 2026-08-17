@@ -91,7 +91,7 @@ function LoginPage() {
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
 
   return (
@@ -125,8 +125,8 @@ function LoginPage() {
             </h1>
             {needsSetup ? (
               <p className="text-muted-foreground text-sm">
-                This first account owns the installation. There is no password
-                reset, so keep it somewhere safe.
+                This first account owns the installation. There is no password reset, so keep it
+                somewhere safe.
               </p>
             ) : null}
           </div>
@@ -164,13 +164,9 @@ function LoginPage() {
               <form.AppField name="password">
                 {(f) => (
                   <f.FieldPassword
-                    autoComplete={
-                      needsSetup ? "new-password" : "current-password"
-                    }
+                    autoComplete={needsSetup ? "new-password" : "current-password"}
                     description={
-                      needsSetup
-                        ? `At least ${MIN_PASSWORD_LENGTH} characters.`
-                        : undefined
+                      needsSetup ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined
                     }
                     label="Password"
                     required
@@ -198,11 +194,7 @@ function LoginPage() {
 
               <form.Subscribe selector={selectSubmitting}>
                 {(submitting) => (
-                  <Button
-                    className="w-full"
-                    disabled={submitting}
-                    type="submit"
-                  >
+                  <Button className="w-full" disabled={submitting} type="submit">
                     {submitting ? <Spinner data-icon="inline-start" /> : null}
                     {needsSetup ? "Create account" : "Sign in"}
                   </Button>

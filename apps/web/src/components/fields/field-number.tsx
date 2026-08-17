@@ -41,10 +41,7 @@ export function FieldNumber({
   const errorId = `${id}-error`;
   const { errors, invalid } = fieldDisplayState(field.state.meta);
 
-  const handleChange = useCallback(
-    (value: number | null) => field.handleChange(value),
-    [field]
-  );
+  const handleChange = useCallback((value: number | null) => field.handleChange(value), [field]);
 
   return (
     <FieldShell
@@ -64,10 +61,7 @@ export function FieldNumber({
         step={step}
         value={field.state.value}
       >
-        <NumberFieldGroup
-          aria-invalid={invalid || undefined}
-          aria-required={required}
-        >
+        <NumberFieldGroup aria-invalid={invalid || undefined} aria-required={required}>
           <NumberFieldDecrement />
           <NumberFieldInput
             aria-describedby={invalid ? errorId : undefined}
@@ -77,9 +71,7 @@ export function FieldNumber({
             placeholder={placeholder}
           />
           {unit ? (
-            <span className="select-none pe-2 text-muted-foreground text-sm">
-              {unit}
-            </span>
+            <span className="select-none pe-2 text-muted-foreground text-sm">{unit}</span>
           ) : null}
           <NumberFieldIncrement />
         </NumberFieldGroup>

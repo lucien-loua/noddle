@@ -26,11 +26,7 @@ export const sourceType = pgEnum("source_type", [
   "compose",
 ]);
 
-export const buildMethod = pgEnum("build_method", [
-  "railpack",
-  "dockerfile",
-  "image",
-]);
+export const buildMethod = pgEnum("build_method", ["railpack", "dockerfile", "image"]);
 
 export const serviceStatus = pgEnum("service_status", [
   "created",
@@ -133,10 +129,9 @@ export const services = pgTable(
      * The cascade is intentional: deleting a service takes its previews
      * with it, which have no meaning without it.
      */
-    previewOfServiceId: uuid("preview_of_service_id").references(
-      (): AnyPgColumn => services.id,
-      { onDelete: "cascade" }
-    ),
+    previewOfServiceId: uuid("preview_of_service_id").references((): AnyPgColumn => services.id, {
+      onDelete: "cascade",
+    }),
     prNumber: integer("pr_number"),
 
     /**
@@ -188,5 +183,5 @@ export const services = pgTable(
     uniqueIndex("services_preview_pr_idx")
       .on(t.previewOfServiceId, t.prNumber)
       .where(sql`${t.previewOfServiceId} is not null`),
-  ]
+  ],
 );

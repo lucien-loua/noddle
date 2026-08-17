@@ -3,10 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import {
-  AddSshKeyDialog,
-  SshKeysList,
-} from "@/components/features/ssh-keys/ssh-keys-panel";
+import { AddSshKeyDialog, SshKeysList } from "@/components/features/ssh-keys/ssh-keys-panel";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
@@ -29,9 +26,7 @@ export const Route = createFileRoute("/ssh-keys")({
   // decision into `beforeLoad`, or the guard wouldn't run and the attempt
   // wouldn't be recorded in the audit log.
   errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
-      Your role does not allow reading SSH keys.
-    </p>
+    <p className="p-6 text-muted-foreground text-sm">Your role does not allow reading SSH keys.</p>
   ),
   loader: async ({ context }) => ({
     email: context.email,
@@ -42,8 +37,7 @@ export const Route = createFileRoute("/ssh-keys")({
 
 function SshKeysPage() {
   const { email, keys, role } = Route.useLoaderData();
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "sshKey", "create");
   const [open, setOpen] = useState(false);
   const handleOpen = useCallback(() => setOpen(true), []);
@@ -63,11 +57,7 @@ function SshKeysPage() {
       title="SSH keys"
     >
       {canAdd ? <AddSshKeyDialog onOpenChange={setOpen} open={open} /> : null}
-      <SshKeysList
-        initial={keys}
-        onAdd={canAdd ? handleOpen : undefined}
-        role={known}
-      />
+      <SshKeysList initial={keys} onAdd={canAdd ? handleOpen : undefined} role={known} />
     </AppShell>
   );
 }

@@ -16,10 +16,7 @@ export function useResourceList<TData extends readonly unknown[]>(
   // read queryKey / queryFn inside.
   createQuery: () => { queryKey: QueryKey; queryFn?: unknown },
   initialData: TData,
-  options?: Pick<
-    UseQueryOptions<TData, Error, TData, QueryKey>,
-    "refetchInterval"
-  >
+  options?: Pick<UseQueryOptions<TData, Error, TData, QueryKey>, "refetchInterval">,
 ): {
   data: TData;
   isEmpty: boolean;

@@ -52,13 +52,7 @@ export const Route = createFileRoute("/api/database-logs/$databaseId")({
 
           try {
             client = await connectToServer(server);
-            return followContainerLogs(
-              channel,
-              client,
-              database.swarmName,
-              tail,
-              since
-            );
+            return followContainerLogs(channel, client, database.swarmName, tail, since);
           } catch (error) {
             sendLogError(send, error);
             client?.end();

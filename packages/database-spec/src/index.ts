@@ -1,10 +1,4 @@
-export const DATABASE_ENGINES = [
-  "postgres",
-  "mysql",
-  "mariadb",
-  "mongo",
-  "redis",
-] as const;
+export const DATABASE_ENGINES = ["postgres", "mysql", "mariadb", "mongo", "redis"] as const;
 
 export type DatabaseEngine = (typeof DATABASE_ENGINES)[number];
 
@@ -174,25 +168,16 @@ function psqlSetLiteral(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
-function mysqlFamilyPasswordChange(
-  clientBinary: "mariadb" | "mysql"
-): PasswordChangeSpec {
+function mysqlFamilyPasswordChange(clientBinary: "mariadb" | "mysql"): PasswordChangeSpec {
   return {
     // THREE accounts, each with `IF EXISTS` — the official image creates
     // `root@localhost` IN ADDITION TO `root@%`. A password change that
     // leaves an account behind isn't a password change.
     input: ({ password, rootUser }) => {
       const literal = mysqlLiteral(password);
-      const accounts = [
-        `'${mysqlLiteral(rootUser)}'@'%'`,
-        "'root'@'%'",
-        "'root'@'localhost'",
-      ];
+      const accounts = [`'${mysqlLiteral(rootUser)}'@'%'`, "'root'@'%'", "'root'@'localhost'"];
       return `${accounts
-        .map(
-          (account) =>
-            `ALTER USER IF EXISTS ${account} IDENTIFIED BY '${literal}';`
-        )
+        .map((account) => `ALTER USER IF EXISTS ${account} IDENTIFIED BY '${literal}';`)
         .join("\n")}\nFLUSH PRIVILEGES;\n`;
     },
     // Current password from the mounted secret via a config file — never
@@ -228,13 +213,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
   // already don't ship the same binaries, and factoring them together would
   // give the false impression they'll move in lockstep.
   mariadb: {
-    connectionUrl: ({
-      databaseName,
-      host,
-      password,
-      portOverride,
-      rootUser,
-    }) => {
+    connectionUrl: ({ databaseName, host, password, portOverride, rootUser }) => {
       const port = portOverride ?? DATABASE_PORT.mariadb;
       const dbName = databaseName ?? rootUser;
       return `mysql://${rootUser}:${password}@${host}:${port}/${dbName}`;
@@ -283,13 +262,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mariadb,
   },
   mongo: {
-    connectionUrl: ({
-      databaseName,
-      host,
-      password,
-      portOverride,
-      rootUser,
-    }) => {
+    connectionUrl: ({ databaseName, host, password, portOverride, rootUser }) => {
       const port = portOverride ?? DATABASE_PORT.mongo;
       const dbName = databaseName ?? rootUser;
       return `mongodb://${rootUser}:${password}@${host}:${port}/${dbName}?authSource=admin`;
@@ -332,13 +305,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mongo,
   },
   mysql: {
-    connectionUrl: ({
-      databaseName,
-      host,
-      password,
-      portOverride,
-      rootUser,
-    }) => {
+    connectionUrl: ({ databaseName, host, password, portOverride, rootUser }) => {
       const port = portOverride ?? DATABASE_PORT.mysql;
       const dbName = databaseName ?? rootUser;
       return `mysql://${rootUser}:${password}@${host}:${port}/${dbName}`;
@@ -374,13 +341,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     volumePath: DEFAULT_DATABASE_VOLUME_PATH.mysql,
   },
   postgres: {
-    connectionUrl: ({
-      databaseName,
-      host,
-      password,
-      portOverride,
-      rootUser,
-    }) => {
+    connectionUrl: ({ databaseName, host, password, portOverride, rootUser }) => {
       const port = portOverride ?? DATABASE_PORT.postgres;
       const dbName = databaseName ?? rootUser;
       return `postgresql://${rootUser}:${password}@${host}:${port}/${dbName}`;
@@ -411,8 +372,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
       // `rootUser` is asserted safe by the caller (letters/digits/_ only).
       input: ({ password, rootUser }) =>
         `\\set pw '${psqlSetLiteral(password)}'\nALTER USER "${rootUser}" WITH PASSWORD :'pw';\n`,
-      script: ({ rootUser }) =>
-        `exec psql -v ON_ERROR_STOP=1 -U ${rootUser} -d postgres`,
+      script: ({ rootUser }) => `exec psql -v ON_ERROR_STOP=1 -U ${rootUser} -d postgres`,
     },
     port: DATABASE_PORT.postgres,
     secretFile: "postgres_password",
@@ -460,7 +420,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
  */
 export function passwordChangeFor(
   engine: DatabaseEngine,
-  params: { password: string; rootUser: string }
+  params: { password: string; rootUser: string },
 ): { input: string; script: string } {
   const secretPath = secretPathFor(engine);
   const change = ENGINE_SPECS[engine].passwordChange;
@@ -470,10 +430,7 @@ export function passwordChangeFor(
   };
 }
 
-export function connectionUrlFor(
-  engine: DatabaseEngine,
-  params: ConnectionUrlParams
-): string {
+export function connectionUrlFor(engine: DatabaseEngine, params: ConnectionUrlParams): string {
   return ENGINE_SPECS[engine].connectionUrl(params);
 }
 
@@ -494,7 +451,7 @@ export function secretPathFor(engine: DatabaseEngine): string {
  */
 export function reservedEnvKeys(
   engine: DatabaseEngine,
-  opts: { databaseName: string | null; rootUser: string | null }
+  opts: { databaseName: string | null; rootUser: string | null },
 ): string[] {
   const spec = ENGINE_SPECS[engine];
   return spec

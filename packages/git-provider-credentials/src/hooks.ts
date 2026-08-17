@@ -30,17 +30,14 @@ async function record(
   gitProviderId: string,
   repositoryFullName: string,
   hookUrl: string,
-  values: { hookId: string | null; lastError: string | null }
+  values: { hookId: string | null; lastError: string | null },
 ): Promise<void> {
   await db
     .insert(gitlabRepositoryHooks)
     .values({ gitProviderId, hookUrl, repositoryFullName, ...values })
     .onConflictDoUpdate({
       set: { ...values, hookUrl, updatedAt: new Date() },
-      target: [
-        gitlabRepositoryHooks.gitProviderId,
-        gitlabRepositoryHooks.repositoryFullName,
-      ],
+      target: [gitlabRepositoryHooks.gitProviderId, gitlabRepositoryHooks.repositoryFullName],
     });
 }
 
@@ -55,7 +52,7 @@ export async function ensureRepositoryHook(
     gitProviderId: string;
     hookUrl: string;
     repositoryFullName: string;
-  }
+  },
 ): Promise<HookOutcome> {
   const { gitProviderId, hookUrl, repositoryFullName } = target;
   try {
@@ -111,14 +108,10 @@ export async function ensureRepositoryHook(
 async function removeRepositoryHook(
   db: Database,
   appKey: Buffer,
-  row: typeof gitlabRepositoryHooks.$inferSelect
+  row: typeof gitlabRepositoryHooks.$inferSelect,
 ): Promise<void> {
   if (row.hookId) {
-    const { token, url } = await gitlabAccessToken(
-      db,
-      appKey,
-      row.gitProviderId
-    );
+    const { token, url } = await gitlabAccessToken(db, appKey, row.gitProviderId);
     await deleteProjectHook(url, token, row.repositoryFullName, row.hookId);
   }
   await db
@@ -126,8 +119,8 @@ async function removeRepositoryHook(
     .where(
       and(
         eq(gitlabRepositoryHooks.gitProviderId, row.gitProviderId),
-        eq(gitlabRepositoryHooks.repositoryFullName, row.repositoryFullName)
-      )
+        eq(gitlabRepositoryHooks.repositoryFullName, row.repositoryFullName),
+      ),
     );
 }
 
@@ -142,15 +135,12 @@ export interface ReconcileResult {
  * justifies one, and preview churn must not drive hook lifetime.
  */
 async function justified(
-  db: Database
+  db: Database,
 ): Promise<Map<string, { gitProviderId: string; repositoryFullName: string }>> {
   const rows = await db.query.services.findMany({
     with: { gitProvider: true },
   });
-  const wanted = new Map<
-    string,
-    { gitProviderId: string; repositoryFullName: string }
-  >();
+  const wanted = new Map<string, { gitProviderId: string; repositoryFullName: string }>();
   for (const s of rows) {
     if (
       s.previewOfServiceId === null &&
@@ -172,7 +162,7 @@ async function justified(
  */
 export async function reconcileRepositoryHooks(
   db: Database,
-  appKey: Buffer
+  appKey: Buffer,
 ): Promise<ReconcileResult> {
   const wanted = await justified(db);
   const rows = await db.query.gitlabRepositoryHooks.findMany();

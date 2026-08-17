@@ -4,12 +4,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabase } from "@noddle/db";
-import {
-  account,
-  auditLog,
-  session as sessionTable,
-  user,
-} from "@noddle/db/schema";
+import { account, auditLog, session as sessionTable, user } from "@noddle/db/schema";
 import { devStack } from "@noddle/testing/dev-stack";
 import { and, eq } from "drizzle-orm";
 
@@ -36,7 +31,7 @@ let cookie = "";
 
 async function call(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<{ body: string; response: Response }> {
   const response = await fetch(`${BASE}${path}`, {
     ...init,
@@ -70,7 +65,7 @@ const entriesFor = async (email: string, outcome: "allowed" | "denied") =>
       eq(auditLog.actorEmail, email),
       eq(auditLog.action, "read"),
       eq(auditLog.resource, "audit"),
-      eq(auditLog.outcome, outcome)
+      eq(auditLog.outcome, outcome),
     ),
   });
 
@@ -120,11 +115,7 @@ try {
     body: JSON.stringify({ email: OWNER, name: "owner", password: PASSWORD }),
     method: "POST",
   });
-  const [ownerRow] = await db
-    .select()
-    .from(user)
-    .where(eq(user.email, OWNER))
-    .limit(1);
+  const [ownerRow] = await db.select().from(user).where(eq(user.email, OWNER)).limit(1);
   if (!ownerRow) {
     throw new Error("owner account not found");
   }
@@ -153,9 +144,7 @@ try {
     if (first.response.status === 200 && after.length === before) {
       ok("two authorized views write no line at all");
     } else {
-      ko(
-        `viewing: status ${first.response.status}, ${after.length} line(s) instead of ${before}`
-      );
+      ko(`viewing: status ${first.response.status}, ${after.length} line(s) instead of ${before}`);
     }
   }
 
@@ -236,9 +225,7 @@ try {
     if (response.status !== 200 && polite) {
       ok("the refusal renders the intended screen, not a crash page");
     } else {
-      ko(
-        `refusal: status ${response.status}, expected screen ${polite ? "present" : "ABSENT"}`
-      );
+      ko(`refusal: status ${response.status}, expected screen ${polite ? "present" : "ABSENT"}`);
     }
     const allowedForReader = await entriesFor(READER, "allowed");
     if (allowedForReader.length === 0) {
@@ -273,18 +260,14 @@ try {
     if (survivors.length >= 1) {
       ok("the line survives the account's deletion");
     } else {
-      ko(
-        "the line vanished with the account — the log no longer proves anything"
-      );
+      ko("the line vanished with the account — the log no longer proves anything");
     }
     // Surviving isn't enough: it still has to say WHO.
     const orphan = survivors.at(-1);
     if (orphan?.actorEmail === READER && orphan.actorUserId === null) {
       ok("it still names its author, and the foreign key is unlinked");
     } else {
-      ko(
-        `after deletion: email "${orphan?.actorEmail}", userId "${orphan?.actorUserId}"`
-      );
+      ko(`after deletion: email "${orphan?.actorEmail}", userId "${orphan?.actorUserId}"`);
     }
   }
 } catch (error) {
@@ -295,11 +278,7 @@ try {
 }
 
 async function pickUser(email: string): Promise<string | undefined> {
-  const [row] = await db
-    .select()
-    .from(user)
-    .where(eq(user.email, email))
-    .limit(1);
+  const [row] = await db.select().from(user).where(eq(user.email, email)).limit(1);
   return row?.id;
 }
 

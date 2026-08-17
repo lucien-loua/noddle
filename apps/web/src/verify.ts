@@ -20,8 +20,14 @@ import {
   user,
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME, deployJobSchema } from "@noddle/deploy-contract";
-import { encodeLogMessage, LOG_BUFFER_MAX_ENTRIES, LOG_BUFFER_TTL_SECONDS, logBufferKey, logChannel } from '@noddle/shared/logs';
-import type { LogMessage } from '@noddle/shared/logs';
+import {
+  encodeLogMessage,
+  LOG_BUFFER_MAX_ENTRIES,
+  LOG_BUFFER_TTL_SECONDS,
+  logBufferKey,
+  logChannel,
+} from "@noddle/shared/logs";
+import type { LogMessage } from "@noddle/shared/logs";
 import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
@@ -61,10 +67,7 @@ let cookie = "";
  * the two sides together are the constants from `@noddle/shared/logs` —
  * and that's precisely the contract we want to see hold.
  */
-async function publishAsWorker(
-  deploymentId: string,
-  message: LogMessage
-): Promise<void> {
+async function publishAsWorker(deploymentId: string, message: LogMessage): Promise<void> {
   const payload = encodeLogMessage(message);
   await redis
     .multi()
@@ -77,7 +80,7 @@ async function publishAsWorker(
 
 async function call(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<{ body: string; response: Response }> {
   const response = await fetch(`${BASE}${path}`, {
     ...init,
@@ -160,9 +163,7 @@ try {
   {
     // A guarded server function must reject an anonymous caller. This is
     // THE property that matters: Noddle holds SSH keys.
-    const { response } = await call(
-      "/api/logs/00000000-0000-0000-0000-000000000000"
-    );
+    const { response } = await call("/api/logs/00000000-0000-0000-0000-000000000000");
     if (response.status === 401) {
       ok("the log stream refuses an anonymous caller (401)");
     } else {
@@ -236,10 +237,7 @@ try {
       sshUser: "noddle",
     })
     .returning();
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "verify" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "verify" }).returning();
   const [envRow] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -274,9 +272,7 @@ try {
   {
     const { body, response } = await call("/");
     if (response.status === 200 && body.includes("verify-app")) {
-      ok(
-        "the dashboard renders the service (getDashboard against the real database)"
-      );
+      ok("the dashboard renders the service (getDashboard against the real database)");
     } else {
       ko(`dashboard: status ${response.status}, service missing from the HTML`);
     }
@@ -311,10 +307,7 @@ try {
       .returning();
     deploymentId = created?.id ?? "";
 
-    await queue.add(
-      "deploy",
-      deployJobSchema.parse({ deploymentId, kind: "deploy" })
-    );
+    await queue.add("deploy", deployJobSchema.parse({ deploymentId, kind: "deploy" }));
     const counts = await queue.getJobCounts("waiting");
     if ((counts.waiting ?? 0) >= 1) {
       ok("a deployment job really reaches Redis");
@@ -332,7 +325,7 @@ try {
       ok("the job's shape matches the DeployJobData contract");
     } else {
       ko(
-        `unexpected shape: ${JSON.stringify(jobs[0]?.data)} ${parsed.success ? "" : parsed.error.message}`
+        `unexpected shape: ${JSON.stringify(jobs[0]?.data)} ${parsed.success ? "" : parsed.error.message}`,
       );
     }
   }
@@ -362,10 +355,7 @@ try {
       signal: controller.signal,
     });
 
-    if (
-      response.ok &&
-      response.headers.get("content-type")?.includes("text/event-stream")
-    ) {
+    if (response.ok && response.headers.get("content-type")?.includes("text/event-stream")) {
       ok("the stream responds with text/event-stream");
     } else {
       ko(`unexpected content-type: ${response.headers.get("content-type")}`);
@@ -404,7 +394,7 @@ try {
     // Live: the worker publishes now.
     await redis.publish(
       logChannel(deploymentId),
-      encodeLogMessage({ data: "▸ live line\n", type: "chunk" })
+      encodeLogMessage({ data: "▸ live line\n", type: "chunk" }),
     );
     await readFor(1500);
     if (received.includes("live line")) {
@@ -416,7 +406,7 @@ try {
     // End: the stream must close, otherwise the tab waits forever.
     await redis.publish(
       logChannel(deploymentId),
-      encodeLogMessage({ status: "succeeded", type: "end" })
+      encodeLogMessage({ status: "succeeded", type: "end" }),
     );
     await readFor(1500);
     if (received.includes("event: end")) {
@@ -460,9 +450,7 @@ try {
     if (ttl === -1) {
       ko("the log buffer has no TTL: it would stay in memory forever");
     } else {
-      ok(
-        `the log buffer expires (ttl ${ttl === -2 ? "already purged" : `${ttl}s`})`
-      );
+      ok(`the log buffer expires (ttl ${ttl === -2 ? "already purged" : `${ttl}s`})`);
     }
   }
 } catch (error) {

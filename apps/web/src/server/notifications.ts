@@ -50,7 +50,7 @@ export const getChannels = createServerFn({ method: "GET" }).handler(
       orderBy: notificationChannels.createdAt,
     });
     return rows.map(toRow);
-  }
+  },
 );
 
 export const addChannel = createServerFn({ method: "POST" })
@@ -79,7 +79,7 @@ export const addChannel = createServerFn({ method: "POST" })
             urlEncrypted: encryptSecret(
               data.url,
               env.appKey,
-              secretContext.notificationChannel(created.id)
+              secretContext.notificationChannel(created.id),
             ),
           })
           .where(eq(notificationChannels.id, created.id));
@@ -105,11 +105,7 @@ export const updateChannel = createServerFn({ method: "POST" })
         // Missing URL = "keep the previous one": the form can't redisplay it to
         // send it back, since it never comes out.
         const urlEncrypted = data.url
-          ? encryptSecret(
-              data.url,
-              env.appKey,
-              secretContext.notificationChannel(existing.id)
-            )
+          ? encryptSecret(data.url, env.appKey, secretContext.notificationChannel(existing.id))
           : existing.urlEncrypted;
 
         await db
@@ -125,7 +121,7 @@ export const updateChannel = createServerFn({ method: "POST" })
         return { saved: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 export const deleteChannel = createServerFn({ method: "POST" })
@@ -139,13 +135,11 @@ export const deleteChannel = createServerFn({ method: "POST" })
       notFoundMessage: "channel not found",
       permission: { action: "manage", resource: "notification" },
       run: async ({ row }) => {
-        await db
-          .delete(notificationChannels)
-          .where(eq(notificationChannels.id, row.id));
+        await db.delete(notificationChannels).where(eq(notificationChannels.id, row.id));
         return { deleted: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 /**
@@ -170,7 +164,7 @@ export const testChannel = createServerFn({ method: "POST" })
         const url = decryptSecret(
           channel.urlEncrypted,
           env.appKey,
-          secretContext.notificationChannel(channel.id)
+          secretContext.notificationChannel(channel.id),
         );
         const result = await deliver(
           { kind: channel.kind, url },
@@ -178,7 +172,7 @@ export const testChannel = createServerFn({ method: "POST" })
             detail: "If you are reading this, the channel works.",
             resource: "test",
             type: "deploy_succeeded",
-          }
+          },
         );
 
         await db
@@ -186,12 +180,12 @@ export const testChannel = createServerFn({ method: "POST" })
           .set(
             result.ok
               ? { lastError: null, lastSuccessAt: new Date() }
-              : { lastError: result.error ?? "unknown failure" }
+              : { lastError: result.error ?? "unknown failure" },
           )
           .where(eq(notificationChannels.id, channel.id));
 
         return { error: result.error, ok: result.ok };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

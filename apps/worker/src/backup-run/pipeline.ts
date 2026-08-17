@@ -26,25 +26,13 @@ export interface BackupSubject<T extends BackupRunRow> {
     ctx: DeployContext,
     client: SshClient,
     run: T,
-    destination: BackupDestination
+    destination: BackupDestination,
   ) => Promise<{ code: number; stderr: string }>;
   incompleteMessage: (code: number, stderr: string) => string;
   loadRun: (ctx: DeployContext, runId: string) => Promise<T | null>;
-  markCompleted: (
-    ctx: DeployContext,
-    runId: string,
-    sizeBytes: number
-  ) => Promise<void>;
-  markFailed: (
-    ctx: DeployContext,
-    runId: string,
-    message: string
-  ) => Promise<void>;
-  markRunning: (
-    ctx: DeployContext,
-    runId: string,
-    destinationId: string
-  ) => Promise<void>;
+  markCompleted: (ctx: DeployContext, runId: string, sizeBytes: number) => Promise<void>;
+  markFailed: (ctx: DeployContext, runId: string, message: string) => Promise<void>;
+  markRunning: (ctx: DeployContext, runId: string, destinationId: string) => Promise<void>;
   notFoundMessage: (runId: string) => string;
   notifyResource: (run: T) => string;
   prune: (ctx: DeployContext, run: T) => Promise<void>;
@@ -55,10 +43,10 @@ async function captureToS3(
   client: SshClient,
   command: string,
   destination: Awaited<ReturnType<typeof resolveDestination>>["destination"],
-  objectKey: string
+  objectKey: string,
 ): Promise<{ code: number; stderr: string }> {
   const result = await execStream(client, command, (io) =>
-    uploadStream(destination, objectKey, io.stdout as Readable)
+    uploadStream(destination, objectKey, io.stdout as Readable),
   );
   return { code: result.code ?? -1, stderr: result.stderr };
 }
@@ -66,7 +54,7 @@ async function captureToS3(
 export async function runBackupPipeline<T extends BackupRunRow>(
   subject: BackupSubject<T>,
   ctx: DeployContext,
-  runId: string
+  runId: string,
 ): Promise<void> {
   const run = await subject.loadRun(ctx, runId);
   if (!run) {
@@ -76,19 +64,14 @@ export async function runBackupPipeline<T extends BackupRunRow>(
   const { destination, id: destinationId } = await resolveDestination(
     ctx.db,
     ctx.appKey,
-    run.destinationId ?? run.configDestinationId
+    run.destinationId ?? run.configDestinationId,
   );
 
   await subject.markRunning(ctx, runId, destinationId);
   const client = await ctx.connectTo(subject.server(run));
 
   try {
-    const { code, stderr } = await subject.capture(
-      ctx,
-      client,
-      run,
-      destination
-    );
+    const { code, stderr } = await subject.capture(ctx, client, run, destination);
 
     if (code !== 0) {
       await deleteObject(destination, run.objectKey).catch(() => {

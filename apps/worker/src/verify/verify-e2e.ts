@@ -46,7 +46,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-e2e", privateKey);
 const domain = `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
 
@@ -64,7 +64,7 @@ try {
       `printf '%s' '{"name":"e2e","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("e2e "+(process.env.GREETING||"?"))).listen(p)' > s.js && ` +
       "git init -q -b main . && git config user.email e@x && git config user.name e && " +
-      "git add -A && git commit -q -m init"
+      "git add -A && git commit -q -m init",
   );
   ok("source repo created on the target");
 
@@ -128,19 +128,12 @@ try {
   await db
     .update(envVars)
     .set({
-      valueEncrypted: encryptSecret(
-        "hello",
-        appKey,
-        secretContext.envVar(ev?.id ?? "")
-      ),
+      valueEncrypted: encryptSecret("hello", appKey, secretContext.envVar(ev?.id ?? "")),
     })
     .where(eq(envVars.id, ev?.id ?? ""));
   ok("service and encrypted environment variable registered");
 
-  await removeService(
-    (await import("@noddle/ssh-executor")).dockerClient(ssh),
-    SERVICE_NAME
-  );
+  await removeService((await import("@noddle/ssh-executor")).dockerClient(ssh), SERVICE_NAME);
 
   // ── deploy ──────────────────────────────────────────────────────────────
   const [dep] = await db
@@ -153,9 +146,7 @@ try {
 
   const logDir = await mkdtemp(join(tmpdir(), "noddle-e2e-logs-"));
   let streamed = 0;
-  console.log(
-    "    (clone, capped build, and Swarm switchover — a few minutes…)"
-  );
+  console.log("    (clone, capped build, and Swarm switchover — a few minutes…)");
 
   await runDeploy(
     verifyCtx({ appKey, db }),
@@ -166,7 +157,7 @@ try {
         streamed += 1;
       },
     },
-    { deploymentId: dep.id }
+    { deploymentId: dep.id },
   );
 
   // ── assertions ──────────────────────────────────────────────────────────
@@ -213,10 +204,7 @@ try {
   const svcAfter = await db.query.services.findFirst({
     where: eq(services.id, svc.id),
   });
-  if (
-    svcAfter?.status === "running" &&
-    svcAfter.currentDeploymentId === dep.id
-  ) {
+  if (svcAfter?.status === "running" && svcAfter.currentDeploymentId === dep.id) {
     ok("service marked running and pointing at this deployment");
   } else {
     ko(`unexpected service state: ${svcAfter?.status}`);

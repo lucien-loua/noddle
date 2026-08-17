@@ -28,8 +28,7 @@ export const Route = createFileRoute("/accounts")({
 
 function AccountsPage() {
   const { accounts, email, role } = Route.useLoaderData();
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
   const canCreate = useCan(known, "user", "create");
 
   // The dialog's state lives HERE and not in the panel: its opening button
@@ -40,19 +39,12 @@ function AccountsPage() {
 
   return (
     <AppShell
-      actions={
-        canCreate ? <Button onClick={handleOpen}>New account</Button> : null
-      }
+      actions={canCreate ? <Button onClick={handleOpen}>New account</Button> : null}
       email={email}
       role={role}
       title="Accounts"
     >
-      <AccountsPanel
-        initial={accounts}
-        onOpenChange={setOpen}
-        open={open}
-        role={role}
-      />
+      <AccountsPanel initial={accounts} onOpenChange={setOpen} open={open} role={role} />
     </AppShell>
   );
 }

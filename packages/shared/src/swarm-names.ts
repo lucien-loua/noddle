@@ -48,9 +48,6 @@ export function newStackSwarmName(stack: { id: string; name: string }): string {
  * formula the worker has always written. Lives here so the web never
  * copies it (inventory, terminal, labels).
  */
-export function swarmServiceName(service: {
-  id: string;
-  name: string;
-}): string {
+export function swarmServiceName(service: { id: string; name: string }): string {
   return `${service.name}-${shortId(service.id)}`;
 }

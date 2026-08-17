@@ -47,9 +47,7 @@ export function ResourceCard({
         ) : (
           <div className="min-w-0 flex-1">{body}</div>
         )}
-        {actions ? (
-          <div className="flex shrink-0 items-center gap-1">{actions}</div>
-        ) : null}
+        {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
       </div>
     </FramePanel>
   );
@@ -64,25 +62,14 @@ export function ResourceCardMeta({
   className?: string;
 }) {
   return (
-    <dl
-      className={cn(
-        "mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4",
-        className
-      )}
-    >
+    <dl className={cn("mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4", className)}>
       {children}
     </dl>
   );
 }
 
 /** One fact. Truncates rather than widening the card. */
-export function ResourceCardFact({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+export function ResourceCardFact({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-muted-foreground text-xs">{label}</dt>

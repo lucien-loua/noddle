@@ -1,11 +1,5 @@
 import { listComposeServiceKeys } from "@noddle/compose-engine";
-import {
-  deployments,
-  servers,
-  services,
-  stackDeployments,
-  stacks,
-} from "@noddle/db/schema";
+import { deployments, servers, services, stackDeployments, stacks } from "@noddle/db/schema";
 import { markCrashed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
@@ -28,16 +22,13 @@ export interface SweepResult {
   strandedStacks: string[];
 }
 
-export async function sweepWatch(
-  ctx: DeployContext,
-  route: RouteOptions
-): Promise<SweepResult> {
+export async function sweepWatch(ctx: DeployContext, route: RouteOptions): Promise<SweepResult> {
   const now = new Date();
   const pending = await ctx.db.query.deployments.findMany({
     where: and(
       eq(deployments.status, "succeeded"),
       isNotNull(deployments.watchUntil),
-      gt(deployments.watchUntil, now)
+      gt(deployments.watchUntil, now),
     ),
     with: { service: { with: { server: true } } },
   });
@@ -45,7 +36,7 @@ export async function sweepWatch(
     where: and(
       eq(stackDeployments.status, "succeeded"),
       isNotNull(stackDeployments.watchUntil),
-      gt(stackDeployments.watchUntil, now)
+      gt(stackDeployments.watchUntil, now),
     ),
     with: { stack: true },
   });
@@ -77,7 +68,7 @@ export async function sweepWatch(
         const verdict = await inspectServiceHealth(
           docker,
           swarmServiceName(service),
-          dep.finishedAt ?? dep.createdAt
+          dep.finishedAt ?? dep.createdAt,
         );
         if (!verdict.crashLooping) {
           return;
@@ -92,7 +83,7 @@ export async function sweepWatch(
             eq(deployments.status, "succeeded"),
             ne(deployments.id, dep.id),
             isNotNull(deployments.imageTag),
-            lt(deployments.createdAt, dep.createdAt)
+            lt(deployments.createdAt, dep.createdAt),
           ),
         });
 
@@ -131,7 +122,7 @@ export async function sweepWatch(
           trigger: "watch_revert",
         });
         reverted.push(dep.id);
-      })
+      }),
     );
 
     await Promise.all(
@@ -150,9 +141,9 @@ export async function sweepWatch(
             inspectServiceHealth(
               docker,
               `${stack.swarmName}_${key}`,
-              dep.finishedAt ?? dep.createdAt
-            )
-          )
+              dep.finishedAt ?? dep.createdAt,
+            ),
+          ),
         );
         if (!verdicts.some((v) => v.crashLooping)) {
           return;
@@ -165,15 +156,14 @@ export async function sweepWatch(
             eq(stackDeployments.status, "succeeded"),
             ne(stackDeployments.id, dep.id),
             isNotNull(stackDeployments.composeSource),
-            lt(stackDeployments.createdAt, dep.createdAt)
+            lt(stackDeployments.createdAt, dep.createdAt),
           ),
         });
 
         await ctx.db
           .update(stackDeployments)
           .set({
-            errorMessage:
-              "crash loop after deployment: at least one stack service is looping",
+            errorMessage: "crash loop after deployment: at least one stack service is looping",
             status: "reverted_by_watch",
             watchUntil: null,
           })
@@ -200,7 +190,7 @@ export async function sweepWatch(
           trigger: "watch_revert",
         });
         reverted.push(dep.id);
-      })
+      }),
     );
   } finally {
     disconnect(managerClient);

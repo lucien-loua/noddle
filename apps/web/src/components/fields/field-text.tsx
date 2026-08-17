@@ -3,11 +3,7 @@ import { useCallback, useId } from "react";
 
 import { FieldShell, fieldDisplayState } from "@/components/fields/field-shell";
 import { useFieldContext } from "@/components/fields/lib/context";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 type TextFieldProps = Omit<
   ComponentProps<typeof InputGroupInput>,
@@ -40,7 +36,7 @@ export function FieldText({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value),
-    [field]
+    [field],
   );
 
   return (
@@ -54,9 +50,7 @@ export function FieldText({
       required={required}
     >
       <InputGroup>
-        {addonStart ? (
-          <InputGroupAddon align="inline-start">{addonStart}</InputGroupAddon>
-        ) : null}
+        {addonStart ? <InputGroupAddon align="inline-start">{addonStart}</InputGroupAddon> : null}
         <InputGroupInput
           aria-describedby={invalid ? errorId : undefined}
           aria-invalid={invalid}
@@ -68,9 +62,7 @@ export function FieldText({
           value={field.state.value}
           {...inputProps}
         />
-        {addonEnd ? (
-          <InputGroupAddon align="inline-end">{addonEnd}</InputGroupAddon>
-        ) : null}
+        {addonEnd ? <InputGroupAddon align="inline-end">{addonEnd}</InputGroupAddon> : null}
       </InputGroup>
     </FieldShell>
   );

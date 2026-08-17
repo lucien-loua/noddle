@@ -3,10 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import {
-  RegistriesList,
-  RegistryDialog,
-} from "@/components/features/registries/registries-panel";
+import { RegistriesList, RegistryDialog } from "@/components/features/registries/registries-panel";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
@@ -41,8 +38,7 @@ export const Route = createFileRoute("/registries")({
 
 function RegistriesPage() {
   const { email, registries, role } = Route.useLoaderData();
-  const known: RoleName | null =
-    role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "registry", "create");
 
   // "Open" and "on what" are only ONE state: separating them had let the
@@ -74,9 +70,7 @@ function RegistriesPage() {
       role={role}
       title="Registries"
     >
-      {canAdd ? (
-        <RegistryDialog onOpenChange={setOpen} open={open} target={target} />
-      ) : null}
+      {canAdd ? <RegistryDialog onOpenChange={setOpen} open={open} target={target} /> : null}
       <RegistriesList
         initial={registries}
         onAdd={canAdd ? handleAdd : undefined}

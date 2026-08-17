@@ -7,7 +7,7 @@ import type { DeployContext } from "#runtime-context";
 /** What blocks a removal, in plain language. `null` = nothing stands in the way. */
 export async function serverRemovalBlocker(
   ctx: DeployContext,
-  serverId: string
+  serverId: string,
 ): Promise<string | null> {
   const server = await ctx.db.query.servers.findFirst({
     where: eq(servers.id, serverId),
@@ -53,10 +53,7 @@ export async function serverRemovalBlocker(
  * dashboard forever — exactly the kind of screen that lies. The goal is
  * that the row goes; the cluster is just tidy-up.
  */
-export async function runServerTeardown(
-  ctx: DeployContext,
-  serverId: string
-): Promise<void> {
+export async function runServerTeardown(ctx: DeployContext, serverId: string): Promise<void> {
   const blocker = await serverRemovalBlocker(ctx, serverId);
   if (blocker) {
     throw new Error(blocker);
@@ -91,14 +88,7 @@ export async function runServerTeardown(
     try {
       const client = await ctx.connectTo(manager);
       try {
-        await execArgv(client, [
-          "sudo",
-          "docker",
-          "node",
-          "rm",
-          "--force",
-          server.swarmNodeId,
-        ]);
+        await execArgv(client, ["sudo", "docker", "node", "rm", "--force", server.swarmNodeId]);
       } finally {
         disconnect(client);
       }

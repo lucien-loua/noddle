@@ -39,7 +39,7 @@ export const getProjects = createServerFn({ method: "GET" }).handler(
       id: p.id,
       name: p.name,
     }));
-  }
+  },
 );
 
 /**
@@ -53,47 +53,46 @@ export const getProjects = createServerFn({ method: "GET" }).handler(
  */
 export const createProject = createServerFn({ method: "POST" })
   .validator(createProjectSchema)
-  .handler(
-    async ({ data }): Promise<{ environmentId: string; projectId: string }> =>
-      // The Project is the object, and it does not exist until `run` has
-      // made it — the target reads the result.
-      runGuarded({
-        permission: { action: "create", resource: "service" },
-        run: async () => {
-          // The name has been unique in the database since migration 0028, but
-          // we reject it here with a readable message rather than letting a
-          // constraint violation bubble up.
-          const existing = await db.query.projects.findFirst({
-            where: eq(projects.name, data.name),
-          });
-          if (existing) {
-            throw new Error(`a project called "${data.name}" already exists`);
-          }
+  .handler(async ({ data }): Promise<{ environmentId: string; projectId: string }> =>
+    // The Project is the object, and it does not exist until `run` has
+    // made it — the target reads the result.
+    runGuarded({
+      permission: { action: "create", resource: "service" },
+      run: async () => {
+        // The name has been unique in the database since migration 0028, but
+        // we reject it here with a readable message rather than letting a
+        // constraint violation bubble up.
+        const existing = await db.query.projects.findFirst({
+          where: eq(projects.name, data.name),
+        });
+        if (existing) {
+          throw new Error(`a project called "${data.name}" already exists`);
+        }
 
-          const [project] = await db
-            .insert(projects)
-            .values({ description: data.description, name: data.name })
-            .returning();
-          if (!project) {
-            throw new Error("could not create project");
-          }
+        const [project] = await db
+          .insert(projects)
+          .values({ description: data.description, name: data.name })
+          .returning();
+        if (!project) {
+          throw new Error("could not create project");
+        }
 
-          const environment = await insertProjectEnvironment({
-            name: data.environmentName,
-            projectId: project.id,
-          });
+        const environment = await insertProjectEnvironment({
+          name: data.environmentName,
+          projectId: project.id,
+        });
 
-          return {
-            environmentId: environment.id,
-            projectId: project.id,
-            projectName: project.name,
-          };
-        },
-        target: ({ result }) => ({
-          id: result.projectId,
-          name: result.projectName,
-        }),
-      })
+        return {
+          environmentId: environment.id,
+          projectId: project.id,
+          projectName: project.name,
+        };
+      },
+      target: ({ result }) => ({
+        id: result.projectId,
+        name: result.projectName,
+      }),
+    }),
   );
 
 export const renameProject = createServerFn({ method: "POST" })
@@ -123,7 +122,7 @@ export const renameProject = createServerFn({ method: "POST" })
       // The name recorded is the one BEFORE the rename: the audit line
       // says what was acted on, not what it became.
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 /**
@@ -167,7 +166,7 @@ export const deleteProject = createServerFn({ method: "POST" })
           ]);
           if (service || stack || database) {
             throw new Error(
-              "this project still has services, stacks or databases — remove them first"
+              "this project still has services, stacks or databases — remove them first",
             );
           }
         }
@@ -176,5 +175,5 @@ export const deleteProject = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

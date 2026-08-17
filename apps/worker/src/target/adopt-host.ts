@@ -73,9 +73,7 @@ async function recordReachability(serverId: string): Promise<void> {
         lastError: null,
         status: "connected",
         swarmNodeId: await getSwarmNodeId(docker),
-        totalMemoryMb: info.MemTotal
-          ? Math.round(info.MemTotal / 1024 / 1024)
-          : null,
+        totalMemoryMb: info.MemTotal ? Math.round(info.MemTotal / 1024 / 1024) : null,
       })
       .where(eq(servers.id, serverId));
     process.stdout.write(`  reachable: Docker ${version.Version ?? "?"}\n`);
@@ -102,11 +100,7 @@ async function recordReachability(serverId: string): Promise<void> {
 // combination rather than a flag, so that reinstalling on top of an
 // existing installation lands on the same row.
 const existing = await db.query.servers.findFirst({
-  where: and(
-    eq(servers.host, host),
-    eq(servers.sshPort, port),
-    eq(servers.sshUser, user)
-  ),
+  where: and(eq(servers.host, host), eq(servers.sshPort, port), eq(servers.sshUser, user)),
 });
 
 /**
@@ -138,11 +132,7 @@ async function seedInstallerKey(): Promise<string> {
   const values = {
     id,
     name,
-    privateKeyEncrypted: encryptSecret(
-      privateKey,
-      appKey,
-      secretContext.sshKey(id)
-    ),
+    privateKeyEncrypted: encryptSecret(privateKey, appKey, secretContext.sshKey(id)),
     publicKey: publicKeyOf(privateKey),
   };
 

@@ -20,17 +20,9 @@ import type { DeployContext } from "#runtime-context";
  */
 async function runInContainer(
   client: SshClient,
-  opts: { containerId: string; input: string; script: string }
+  opts: { containerId: string; input: string; script: string },
 ): Promise<void> {
-  const argv = [
-    "docker",
-    "exec",
-    "-i",
-    opts.containerId,
-    "sh",
-    "-c",
-    opts.script,
-  ];
+  const argv = ["docker", "exec", "-i", opts.containerId, "sh", "-c", opts.script];
   const { code, stderr } = await execStream(
     client,
     argv.map(quoteArg).join(" "),
@@ -42,12 +34,10 @@ async function runInContainer(
         stdin.on("error", reject);
         stdin.end(opts.input, () => resolve());
       });
-    }
+    },
   );
   if (code !== 0) {
-    throw new Error(
-      `password change failed (exit ${code}): ${stderr.slice(0, 500)}`
-    );
+    throw new Error(`password change failed (exit ${code}): ${stderr.slice(0, 500)}`);
   }
 }
 
@@ -61,7 +51,7 @@ async function runInContainer(
  */
 async function rotateSecret(
   managerDocker: DockerApi,
-  opts: { password: string; serviceName: string }
+  opts: { password: string; serviceName: string },
 ): Promise<void> {
   const { password, serviceName } = opts;
 
@@ -74,8 +64,7 @@ async function rotateSecret(
   }
 
   const spec = service.Spec as Record<string, unknown>;
-  const container = (spec.TaskTemplate as Record<string, unknown> | undefined)
-    ?.ContainerSpec as
+  const container = (spec.TaskTemplate as Record<string, unknown> | undefined)?.ContainerSpec as
     | { Secrets?: { File?: { Name?: string }; SecretName?: string }[] }
     | undefined;
   const mount = container?.Secrets?.[0];
@@ -131,7 +120,7 @@ async function rotateSecret(
 export async function changeDatabasePassword(
   ctx: DeployContext,
   databaseId: string,
-  password: string
+  password: string,
 ): Promise<void> {
   const database = await ctx.db.query.databases.findFirst({
     where: eq(databases.id, databaseId),
@@ -144,40 +133,33 @@ export async function changeDatabasePassword(
   const rootUser = database.rootUser ?? "root";
   assertSafeIdentifier(rootUser, "database user");
 
-  await withDeployClients(
-    ctx,
-    database.server,
-    async ({ buildClient, managerDocker }) => {
-      const containerId = await findDatabaseContainer(
-        buildClient,
-        database.swarmName
-      );
+  await withDeployClients(ctx, database.server, async ({ buildClient, managerDocker }) => {
+    const containerId = await findDatabaseContainer(buildClient, database.swarmName);
 
-      const change = passwordChangeFor(database.engine, {
-        password,
-        rootUser,
-      });
-      await runInContainer(buildClient, {
-        containerId,
-        input: change.input,
-        script: change.script,
-      });
+    const change = passwordChangeFor(database.engine, {
+      password,
+      rootUser,
+    });
+    await runInContainer(buildClient, {
+      containerId,
+      input: change.input,
+      script: change.script,
+    });
 
-      await rotateSecret(managerDocker, {
-        password,
-        serviceName: database.swarmName,
-      });
+    await rotateSecret(managerDocker, {
+      password,
+      serviceName: database.swarmName,
+    });
 
-      await ctx.db
-        .update(databases)
-        .set({
-          rootPasswordEncrypted: encryptSecret(
-            password,
-            ctx.appKey,
-            secretContext.databasePassword(database.id)
-          ),
-        })
-        .where(eq(databases.id, database.id));
-    }
-  );
+    await ctx.db
+      .update(databases)
+      .set({
+        rootPasswordEncrypted: encryptSecret(
+          password,
+          ctx.appKey,
+          secretContext.databasePassword(database.id),
+        ),
+      })
+      .where(eq(databases.id, database.id));
+  });
 }

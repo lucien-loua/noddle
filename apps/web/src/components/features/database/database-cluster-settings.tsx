@@ -33,9 +33,7 @@ export function DatabaseClusterSettings({
   canEdit: boolean;
   databaseId: string;
   replicas: number;
-  swarmSettings: Parameters<
-    typeof DatabaseSwarmSettingsDialog
-  >[0]["swarmSettings"];
+  swarmSettings: Parameters<typeof DatabaseSwarmSettingsDialog>[0]["swarmSettings"];
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -81,18 +79,12 @@ export function DatabaseClusterSettings({
           <div className="min-w-0">
             <FrameTitle>Cluster Settings</FrameTitle>
             <FrameDescription>
-              Applied on the next provision. Keep replicas at 1 unless the data
-              volume is shared — otherwise you risk corruption or an empty
-              volume.
+              Applied on the next provision. Keep replicas at 1 unless the data volume is shared —
+              otherwise you risk corruption or an empty volume.
             </FrameDescription>
           </div>
           {canEdit ? (
-            <Button
-              onClick={openSwarm}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
+            <Button onClick={openSwarm} size="sm" type="button" variant="outline">
               <GearSixIcon data-icon="inline-start" />
               Swarm Settings
             </Button>
@@ -102,13 +94,7 @@ export function DatabaseClusterSettings({
           <FieldGroup>
             <form.AppField name="replicas">
               {(f) => (
-                <f.FieldNumber
-                  disabled={!canEdit}
-                  label="Replicas"
-                  min={1}
-                  required
-                  step={1}
-                />
+                <f.FieldNumber disabled={!canEdit} label="Replicas" min={1} required step={1} />
               )}
             </form.AppField>
           </FieldGroup>
@@ -122,12 +108,7 @@ export function DatabaseClusterSettings({
 
         {canEdit ? (
           <FrameFooter className="flex-row justify-end">
-            <Button
-              disabled={save.isPending}
-              onClick={handleSubmit}
-              size="sm"
-              variant="outline"
-            >
+            <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
               {save.isPending ? <Spinner data-icon="inline-start" /> : null}
               Save
             </Button>

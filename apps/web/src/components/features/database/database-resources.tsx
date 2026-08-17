@@ -47,15 +47,9 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
               }
             />
             <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem onClick={handleWindowHours1}>
-                Last hour
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleWindowHours6}>
-                Last 6 hours
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleWindowHours24}>
-                Last 24 hours
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleWindowHours1}>Last hour</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleWindowHours6}>Last 6 hours</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleWindowHours24}>Last 24 hours</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </ButtonGroup>

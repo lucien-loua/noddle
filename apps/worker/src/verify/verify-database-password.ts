@@ -15,13 +15,7 @@ import {
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
-import {
-  connect,
-  disconnect,
-  dockerClient,
-  exec,
-  execArgv,
-} from "@noddle/ssh-executor";
+import { connect, disconnect, dockerClient, exec, execArgv } from "@noddle/ssh-executor";
 import { removeService, waitForRunningTask } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -48,25 +42,13 @@ const ko = (m: string) => {
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
 const { privateKey } = TARGET;
-const sshKeyId = await seedSshKey(
-  db,
-  appKey,
-  "verify-database-password",
-  privateKey
-);
+const sshKeyId = await seedSshKey(db, appKey, "verify-database-password", privateKey);
 
 /** The five engines, each with a fixed Swarm name for cleanup. */
-const ENGINES: DatabaseEngine[] = [
-  "postgres",
-  "mysql",
-  "mariadb",
-  "mongo",
-  "redis",
-];
+const ENGINES: DatabaseEngine[] = ["postgres", "mysql", "mariadb", "mongo", "redis"];
 const swarmNameOf = (engine: DatabaseEngine) => `noddle-pw-${engine}`;
 /** The database name created by the image, for engines that have one. */
-const dbNameOf = (engine: DatabaseEngine) =>
-  HAS_NAMED_DATABASE[engine] ? "pwdb" : null;
+const dbNameOf = (engine: DatabaseEngine) => (HAS_NAMED_DATABASE[engine] ? "pwdb" : null);
 
 /**
  * Clean secrets BY PREFIX, never by exact name.
@@ -77,7 +59,7 @@ const dbNameOf = (engine: DatabaseEngine) =>
  */
 async function removeSecretsByPrefix(
   docker: ReturnType<typeof dockerClient>,
-  prefix: string
+  prefix: string,
 ): Promise<void> {
   try {
     const list = (await docker.listSecrets({
@@ -141,27 +123,15 @@ try {
     await removeSecretsByPrefix(managerDocker, `${name}-password`);
     for (let i = 0; i < 10; i += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: intentional retry
-      const res = await execArgv(managerSsh, [
-        "sudo",
-        "docker",
-        "volume",
-        "rm",
-        name,
-      ]);
-      if (
-        res.code === 0 ||
-        /no such volume|volume .* not found/i.test(res.stderr)
-      ) {
+      const res = await execArgv(managerSsh, ["sudo", "docker", "volume", "rm", name]);
+      if (res.code === 0 || /no such volume|volume .* not found/i.test(res.stderr)) {
         break;
       }
       await new Promise((r) => setTimeout(r, 1500));
     }
   }
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "password-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "password-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -177,12 +147,7 @@ try {
    */
   const PROBE_ARGV: Record<
     DatabaseEngine,
-    (opts: {
-      hostName: string;
-      password: string;
-      port: number;
-      user: string | null;
-    }) => string[]
+    (opts: { hostName: string; password: string; port: number; user: string | null }) => string[]
   > = {
     mariadb: ({ hostName, password, user }) => [
       "-e",
@@ -241,7 +206,7 @@ try {
       password: string;
       port: number;
       user: string | null;
-    }
+    },
   ): string[] {
     const build = PROBE_ARGV[engine];
     if (!build) {
@@ -253,7 +218,7 @@ try {
   const canConnect = async (
     engine: DatabaseEngine,
     user: string | null,
-    password: string
+    password: string,
   ): Promise<boolean> => {
     if (!managerSsh) {
       throw new Error("no manager connection");
@@ -310,7 +275,7 @@ try {
         rootPasswordEncrypted: encryptSecret(
           oldPassword,
           appKey,
-          secretContext.databasePassword(database.id)
+          secretContext.databasePassword(database.id),
         ),
       })
       .where(eq(databases.id, database.id));
@@ -348,7 +313,7 @@ try {
       ? decryptSecret(
           row.rootPasswordEncrypted,
           appKey,
-          secretContext.databasePassword(database.id)
+          secretContext.databasePassword(database.id),
         )
       : "";
     if (stored === newPassword) {
@@ -358,10 +323,7 @@ try {
     }
 
     // Is the new password ABSENT from what the daemon reveals?
-    const inspect = await exec(
-      managerSsh,
-      `sudo docker service inspect ${swarmName}`
-    );
+    const inspect = await exec(managerSsh, `sudo docker service inspect ${swarmName}`);
     if (inspect.stdout.includes(newPassword)) {
       ko(`${engine}: the new password is in plaintext in service inspect`);
     } else {

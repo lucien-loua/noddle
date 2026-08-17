@@ -40,8 +40,7 @@ export function DatabaseConfiguration({
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const resolvedImage =
-    database.image ?? DEFAULT_DATABASE_IMAGE[database.engine];
+  const resolvedImage = database.image ?? DEFAULT_DATABASE_IMAGE[database.engine];
 
   const save = useMutation({
     mutationFn: (value: ConfigurationFormValues) =>
@@ -81,8 +80,8 @@ export function DatabaseConfiguration({
       <FrameHeader>
         <FrameTitle>Configuration</FrameTitle>
         <FrameDescription>
-          Engine image applied on the next provision. A major version bump can
-          crash-loop or ignore the existing data directory.
+          Engine image applied on the next provision. A major version bump can crash-loop or ignore
+          the existing data directory.
         </FrameDescription>
       </FrameHeader>
       <FramePanel>
@@ -108,12 +107,7 @@ export function DatabaseConfiguration({
 
       {canEdit ? (
         <FrameFooter className="flex-row justify-end">
-          <Button
-            disabled={save.isPending}
-            onClick={handleSubmit}
-            size="sm"
-            variant="outline"
-          >
+          <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>

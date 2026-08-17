@@ -24,5 +24,5 @@ export const getAuthState = createServerFn({ method: "GET" }).handler(
       role: (session?.user as { role?: string } | undefined)?.role ?? null,
       signedIn: session !== null,
     };
-  }
+  },
 );

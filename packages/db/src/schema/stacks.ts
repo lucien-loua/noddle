@@ -19,9 +19,7 @@ import { serviceStatus } from "#schema/services";
 export const stacks = pgTable(
   "stacks",
   {
-    composeFilePath: text("compose_file_path")
-      .notNull()
-      .default("docker-compose.yml"),
+    composeFilePath: text("compose_file_path").notNull().default("docker-compose.yml"),
     createdAt,
 
     // The currently served deployment — same role as
@@ -74,7 +72,7 @@ export const stacks = pgTable(
   (t) => [
     uniqueIndex("stacks_env_name_idx").on(t.environmentId, t.name),
     index("stacks_server_idx").on(t.serverId),
-  ]
+  ],
 );
 
 export const stackDeployments = pgTable(
@@ -109,18 +107,14 @@ export const stackDeployments = pgTable(
     // `docker stack deploy` returns before convergence, exactly like
     // `docker service update` — the same caution about the exit code
     // applies, multiplied by the number of containers in the stack.
-    swarmUpdateStates: jsonb("swarm_update_states").$type<
-      Record<string, string | null>
-    >(),
+    swarmUpdateStates: jsonb("swarm_update_states").$type<Record<string, string | null>>(),
     trigger: deploymentTrigger("trigger").notNull().default("manual"),
 
     // Like `deployments.watchUntil`: Swarm's guarantee expires with its
     // monitor window, Noddle's monitoring takes over.
     watchUntil: timestamp("watch_until", { withTimezone: true }),
   },
-  (t) => [
-    index("stack_deployments_stack_created_idx").on(t.stackId, t.createdAt),
-  ]
+  (t) => [index("stack_deployments_stack_created_idx").on(t.stackId, t.createdAt)],
 );
 
 export const stackDeploymentLogs = pgTable(
@@ -137,5 +131,5 @@ export const stackDeploymentLogs = pgTable(
     // reasoning as `deploymentLogs`.
     storageUrl: text("storage_url").notNull(),
   },
-  (t) => [index("stack_deployment_logs_deployment_idx").on(t.stackDeploymentId)]
+  (t) => [index("stack_deployment_logs_deployment_idx").on(t.stackDeploymentId)],
 );

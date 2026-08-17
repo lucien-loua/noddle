@@ -123,7 +123,7 @@ export const updateBackupConfig = createServerFn({ method: "POST" })
         return { saved: true };
       },
       target: ({ row }) => ({ id: row.id, name: row.databaseName }),
-    })
+    }),
   );
 
 export const deleteBackupConfig = createServerFn({ method: "POST" })
@@ -141,5 +141,5 @@ export const deleteBackupConfig = createServerFn({ method: "POST" })
         return { ok: true };
       },
       target: ({ row }) => ({ id: row.id, name: row.databaseName }),
-    })
+    }),
   );

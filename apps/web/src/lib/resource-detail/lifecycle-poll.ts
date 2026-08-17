@@ -14,10 +14,7 @@ export interface LifecyclePollRow {
   updatedAt: string;
 }
 
-export function isLifecycleSettled(
-  row: LifecyclePollRow,
-  awaiting: AwaitingLifecycle
-): boolean {
+export function isLifecycleSettled(row: LifecyclePollRow, awaiting: AwaitingLifecycle): boolean {
   if (Date.now() - awaiting.since > AWAITING_TIMEOUT_MS) {
     return true;
   }
@@ -30,7 +27,7 @@ export function isLifecycleSettled(
 export function lifecyclePollInterval(
   row: LifecyclePollRow | undefined,
   awaiting: AwaitingLifecycle | null,
-  opts?: { forcePoll?: boolean }
+  opts?: { forcePoll?: boolean },
 ): number | false {
   if (!row) {
     return false;

@@ -4,10 +4,7 @@ import type { ChangeEvent } from "react";
 import { useCallback, useState } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
-import {
-  RevealToggleButton,
-  useReveal,
-} from "@/components/features/database/reveal-secret";
+import { RevealToggleButton, useReveal } from "@/components/features/database/reveal-secret";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
@@ -23,13 +20,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@/components/ui/item";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
@@ -54,9 +45,7 @@ export function DatabaseExternal({
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [value, setValue] = useState(
-    externalPort === null ? "" : String(externalPort)
-  );
+  const [value, setValue] = useState(externalPort === null ? "" : String(externalPort));
   const [error, setError] = useState<string | null>(null);
   const { revealed, toggle: toggleReveal } = useReveal();
 
@@ -90,7 +79,7 @@ export function DatabaseExternal({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value),
-    []
+    [],
   );
   const handleSave = useCallback(() => save.mutate(), [save]);
 
@@ -99,15 +88,13 @@ export function DatabaseExternal({
       <FrameHeader>
         <FrameTitle>External credentials</FrameTitle>
         <FrameDescription>
-          To reach this database from outside the server, publish a port. Make
-          sure nothing else already uses it.
+          To reach this database from outside the server, publish a port. Make sure nothing else
+          already uses it.
         </FrameDescription>
       </FrameHeader>
       <FramePanel>
         <Field>
-          <FieldLabel htmlFor="external-port">
-            External port (internet)
-          </FieldLabel>
+          <FieldLabel htmlFor="external-port">External port (internet)</FieldLabel>
           {/* The button lives INSIDE the field, via `InputGroupAddon` — not
               placed next to it in a horizontal `Field`, which gave two
               boxes for a single control. Same shape as the password field
@@ -146,8 +133,7 @@ export function DatabaseExternal({
           ) : null}
         </Field>
 
-        {credentials.data?.externalConnectionUrl &&
-        credentials.data.maskedExternalConnectionUrl ? (
+        {credentials.data?.externalConnectionUrl && credentials.data.maskedExternalConnectionUrl ? (
           <Item className="mt-3" variant="muted">
             <ItemContent className="min-w-0">
               <ItemTitle>External connection URL</ItemTitle>
@@ -158,11 +144,7 @@ export function DatabaseExternal({
               </ItemDescription>
             </ItemContent>
             <ItemActions>
-              <RevealToggleButton
-                noun="URL"
-                onClick={toggleReveal}
-                revealed={revealed}
-              />
+              <RevealToggleButton noun="URL" onClick={toggleReveal} revealed={revealed} />
               <CopyButton
                 label="external connection URL"
                 value={credentials.data.externalConnectionUrl}

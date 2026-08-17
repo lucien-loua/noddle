@@ -1,13 +1,13 @@
 // tier: pure
 //   bun  run packages/notifier/src/verify.ts
 //   node packages/notifier/src/verify.ts
-import { createServer } from 'node:http';
-import type { Server } from 'node:http';
+import { createServer } from "node:http";
+import type { Server } from "node:http";
 
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 
-import { buildPayload, deliver, eventLabel, isFailure } from '#index';
-import type { NotificationEvent } from '#index';
+import { buildPayload, deliver, eventLabel, isFailure } from "#index";
+import type { NotificationEvent } from "#index";
 
 interface Received {
   body: string;
@@ -76,9 +76,8 @@ await runVerify("notifications", async () => {
     };
     check(
       "Discord: titled embed, failure color",
-      discord.embeds[0]?.title === "Deploy failed — api" &&
-        discord.embeds[0]?.color === 0xd1_3d_3d,
-      JSON.stringify(discord).slice(0, 120)
+      discord.embeds[0]?.title === "Deploy failed — api" && discord.embeds[0]?.color === 0xd1_3d_3d,
+      JSON.stringify(discord).slice(0, 120),
     );
 
     const success = buildPayload("discord", {
@@ -88,7 +87,7 @@ await runVerify("notifications", async () => {
     check(
       "Discord: distinct color for a success",
       success.embeds[0]?.color === 0x2e_9e_4f,
-      "same color for a success and a failure"
+      "same color for a success and a failure",
     );
 
     const slack = buildPayload("slack", event) as { text: string };
@@ -96,21 +95,21 @@ await runVerify("notifications", async () => {
       "Slack: plain text, mrkdwn-formatted link",
       slack.text.includes("Deploy failed — api") &&
         slack.text.includes("<https://noddle.example/|"),
-      slack.text
+      slack.text,
     );
 
     const raw = buildPayload("webhook", event) as Record<string, unknown>;
     check(
       "webhook: raw structured form, not formatted for display",
       raw.type === "deploy_failed" && raw.failure === true && Boolean(raw.at),
-      JSON.stringify(raw)
+      JSON.stringify(raw),
     );
 
     // A success must not be announced as a failure.
     check(
       "isFailure distinguishes a revert from a success",
       isFailure("watch_reverted") && !isFailure("deploy_succeeded"),
-      "isFailure is inconsistent"
+      "isFailure is inconsistent",
     );
 
     // The two forms of rollback stay DISTINCT: their difference is what
@@ -118,7 +117,7 @@ await runVerify("notifications", async () => {
     check(
       '"reverted by Swarm" and "reverted by monitoring" are distinct',
       eventLabel("deploy_reverted") !== eventLabel("watch_reverted"),
-      "the two forms of rollback carry the same label"
+      "the two forms of rollback carry the same label",
     );
   });
 
@@ -126,22 +125,17 @@ await runVerify("notifications", async () => {
     mode = "ok";
     received.length = 0;
     const r = await deliver({ kind: "discord", url: base }, event);
-    check(
-      `delivery succeeded: HTTP ${r.status}`,
-      r.ok && r.status === 204,
-      JSON.stringify(r)
-    );
+    check(`delivery succeeded: HTTP ${r.status}`, r.ok && r.status === 204, JSON.stringify(r));
     const [got] = received;
     check(
       "received as POST with JSON content-type",
-      got?.method === "POST" &&
-        Boolean(got.contentType?.includes("application/json")),
-      JSON.stringify(got)
+      got?.method === "POST" && Boolean(got.contentType?.includes("application/json")),
+      JSON.stringify(got),
     );
     check(
       "the body received on the other end matches what was built",
       Boolean(got && JSON.parse(got.body).embeds[0].title.includes("api")),
-      "the received body doesn't match"
+      "the received body doesn't match",
     );
   });
 
@@ -155,26 +149,19 @@ await runVerify("notifications", async () => {
     check(
       `revoked webhook detected: ${r.error?.slice(0, 40)}`,
       !r.ok && r.status === 404,
-      JSON.stringify(r)
+      JSON.stringify(r),
     );
 
     mode = "refuse";
     r = await deliver({ kind: "slack", url: base }, event);
-    check(
-      "refusing recipient detected (401)",
-      !r.ok && r.status === 401,
-      JSON.stringify(r)
-    );
+    check("refusing recipient detected (401)", !r.ok && r.status === 401, JSON.stringify(r));
 
     // Nonexistent host: network failure, no status.
-    r = await deliver(
-      { kind: "webhook", url: "https://hote-qui-nexiste-pas.invalid/x" },
-      event
-    );
+    r = await deliver({ kind: "webhook", url: "https://hote-qui-nexiste-pas.invalid/x" }, event);
     check(
       `unreachable host reported without status: ${r.error?.slice(0, 40) ?? "?"}`,
       Boolean(!(r.ok || r.status) && r.error),
-      JSON.stringify(r)
+      JSON.stringify(r),
     );
   });
 
@@ -186,7 +173,7 @@ await runVerify("notifications", async () => {
     check(
       "the channel URL doesn't leak into the error message",
       !r.error?.includes("tres-secret-abc123"),
-      "DANGER: the channel URL appears in the error message"
+      "DANGER: the channel URL appears in the error message",
     );
   });
 
@@ -201,7 +188,7 @@ await runVerify("notifications", async () => {
     check(
       "deliver never throws, even on an invalid URL",
       !threw,
-      "deliver threw — a broken channel would fail the calling job"
+      "deliver threw — a broken channel would fail the calling job",
     );
   });
 });

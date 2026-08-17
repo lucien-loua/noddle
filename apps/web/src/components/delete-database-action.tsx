@@ -24,8 +24,7 @@ export function useDeleteDatabaseAction({
   const [open, setOpen] = useState(false);
 
   const remove = useMutation({
-    mutationFn: (confirmName: string) =>
-      deleteDatabase({ data: { confirmName, databaseId } }),
+    mutationFn: (confirmName: string) => deleteDatabase({ data: { confirmName, databaseId } }),
     onError: (e: Error) => {
       setOpen(false);
       onError(errorMessage(e, "deletion failed"));
@@ -34,10 +33,7 @@ export function useDeleteDatabaseAction({
   });
 
   const handleOpen = useCallback(() => setOpen(true), []);
-  const handleConfirm = useCallback(
-    (typed: string) => remove.mutate(typed),
-    [remove]
-  );
+  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
 
   // The dialog is rendered WITHOUT a permission check: it's the caller who
   // decides whether to mount it, via `canDelete`. Mounting it here behind
@@ -47,13 +43,11 @@ export function useDeleteDatabaseAction({
       confirmLabel="Delete database"
       description={
         <>
-          The running container and its volume are removed — the data does not
-          survive this.{" "}
+          The running container and its volume are removed — the data does not survive this.{" "}
           {/* The backups' S3 objects, though, survive — see databases.ts:
                 destroying them would remove the only way to recover what
                 was just erased. */}
-          Backups already taken stay in your S3 bucket.{" "}
-          <strong>This cannot be undone.</strong>
+          Backups already taken stay in your S3 bucket. <strong>This cannot be undone.</strong>
         </>
       }
       onConfirm={handleConfirm}

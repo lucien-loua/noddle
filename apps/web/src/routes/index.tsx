@@ -14,18 +14,8 @@ import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import {
-  Frame,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
 import {
   Table,
   TableBody,
@@ -80,7 +70,7 @@ function OverviewPage() {
           "flex min-w-0 flex-col gap-6",
           // `h-full`: AppShell's scroller is not a flex column, so `flex-1`
           // here would not stretch. Same as the environment grid empty.
-          activity.length === 0 && "h-full"
+          activity.length === 0 && "h-full",
         )}
       >
         <StatCards counts={overview.counts} statusCounts={statusCounts} />
@@ -163,9 +153,7 @@ function StatCard({
           place to change and no second copy to keep in step. */}
       <FrameHeader className="flex-row items-center gap-1.5 text-muted-foreground">
         <Icon aria-hidden="true" className="size-3.5 shrink-0" weight="fill" />
-        <FrameTitle className="font-medium text-xs uppercase tracking-wide">
-          {label}
-        </FrameTitle>
+        <FrameTitle className="font-medium text-xs uppercase tracking-wide">{label}</FrameTitle>
       </FrameHeader>
       <FramePanel>{children}</FramePanel>
     </Frame>
@@ -189,13 +177,7 @@ function StatNumber({ detail, value }: { detail: string; value: number }) {
  * about what it would have shown. An install with no services is not
  * healthy — it is idle — so that case does not borrow the green check.
  */
-function AttentionPanel({
-  idle,
-  rows,
-}: {
-  idle: boolean;
-  rows: Overview["attention"];
-}) {
+function AttentionPanel({ idle, rows }: { idle: boolean; rows: Overview["attention"] }) {
   return (
     <Frame className="min-w-0" variant="ghost">
       <FrameHeader>
@@ -227,13 +209,9 @@ function AttentionRow({ row }: { row: Overview["attention"][number] }) {
       <div className="min-w-0">
         <p className="flex min-w-0 items-center gap-2 font-medium text-sm">
           <AttentionLink row={row}>{row.name}</AttentionLink>
-          <span className="truncate font-normal text-muted-foreground text-xs">
-            {row.scope}
-          </span>
+          <span className="truncate font-normal text-muted-foreground text-xs">{row.scope}</span>
         </p>
-        {row.detail ? (
-          <p className="mt-1 text-destructive text-sm">{row.detail}</p>
-        ) : null}
+        {row.detail ? <p className="mt-1 text-destructive text-sm">{row.detail}</p> : null}
       </div>
       <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
     </FramePanel>
@@ -296,17 +274,10 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
   const empty = rows.length === 0;
 
   return (
-    <Frame
-      className={empty ? "min-h-0 min-w-0 flex-1" : "min-w-0"}
-      variant="ghost"
-    >
+    <Frame className={empty ? "min-h-0 min-w-0 flex-1" : "min-w-0"} variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Recent deployments</FrameTitle>
-        <Button
-          nativeButton={false}
-          render={<Link to="/deployments" />}
-          variant="ghost"
-        >
+        <Button nativeButton={false} render={<Link to="/deployments" />} variant="ghost">
           View all
           <ArrowRightIcon data-icon="inline-end" weight="regular" />
         </Button>
@@ -316,8 +287,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
           <Empty className="min-h-48 flex-1 border-0">
             <EmptyTitle>Nothing deployed yet</EmptyTitle>
             <EmptyDescription>
-              Connect a repository, a Compose stack or a database to get
-              started.
+              Connect a repository, a Compose stack or a database to get started.
             </EmptyDescription>
             <EmptyContent>
               <Button nativeButton={false} render={<Link to="/projects" />}>
@@ -361,9 +331,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
                       <RelativeTime iso={row.createdAt} />
                     </TableCell>
                     <TableCell>
-                      <Badge variant={badgeVariant(status.tone)}>
-                        {status.label}
-                      </Badge>
+                      <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
                     </TableCell>
                   </TableRow>
                 );

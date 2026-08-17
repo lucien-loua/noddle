@@ -6,7 +6,7 @@ export const envVarKeySchema = z
   .max(128)
   .regex(
     /^[A-Za-z_][A-Za-z0-9_]*$/,
-    "expected a shell identifier: letters, digits and _, cannot start with a digit"
+    "expected a shell identifier: letters, digits and _, cannot start with a digit",
   );
 
 export const envVarInputSchema = z.object({

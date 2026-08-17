@@ -1,11 +1,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Frame,
   FrameDescription,
@@ -40,9 +36,7 @@ export function TeardownError({ message }: { message: string | null }) {
             the header's action, not a control floating under it. */}
         <FrameHeader className="flex-row justify-between gap-3">
           <div className="min-w-0">
-            <FrameTitle className="wrap-anywhere text-destructive">
-              {headline}
-            </FrameTitle>
+            <FrameTitle className="wrap-anywhere text-destructive">{headline}</FrameTitle>
             {detail ? (
               <FrameDescription>
                 The full output is in this deployment&apos;s build logs.

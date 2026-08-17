@@ -2,12 +2,7 @@ import type { ReactNode } from "react";
 
 import { MetricRow } from "@/components/resource-graphs";
 import { Badge } from "@/components/ui/badge";
-import {
-  Frame,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
 import { byteSize } from "@/lib/format";
 import type { ServicePoint, ServiceSeries } from "@/server/metrics";
 
@@ -70,9 +65,7 @@ export function ResourcePanel({
             </Badge>
           ) : null}
         </div>
-        {headerControls ? (
-          <div className="shrink-0">{headerControls}</div>
-        ) : null}
+        {headerControls ? <div className="shrink-0">{headerControls}</div> : null}
       </FrameHeader>
 
       <FramePanel className="flex-1">

@@ -1,9 +1,4 @@
-import {
-  decryptSecret,
-  encryptSecret,
-  resolveRetainedSecret,
-  secretContext,
-} from "@noddle/crypto";
+import { decryptSecret, encryptSecret, resolveRetainedSecret, secretContext } from "@noddle/crypto";
 import { registries, services } from "@noddle/db/schema";
 import {
   registryIdSchema,
@@ -45,7 +40,7 @@ function basic(username: string, password: string): string {
 async function bearerFor(
   challenge: string,
   username: string,
-  password: string
+  password: string,
 ): Promise<string | null> {
   const realm = BEARER_REALM.exec(challenge)?.[1];
   if (!realm) {
@@ -76,7 +71,7 @@ async function bearerFor(
 async function pingRegistry(
   host: string,
   username: string,
-  password: string
+  password: string,
 ): Promise<{ error: string | null }> {
   const endpoint = `https://${host}/v2/`;
   let res: Response;
@@ -100,9 +95,7 @@ async function pingRegistry(
       const retry = await fetch(endpoint, {
         headers: { authorization: `Bearer ${token}` },
       });
-      return retry.ok
-        ? { error: null }
-        : { error: "credentials refused by the registry" };
+      return retry.ok ? { error: null } : { error: "credentials refused by the registry" };
     }
     return { error: "credentials refused by the registry" };
   }
@@ -134,13 +127,10 @@ export const getRegistries = createServerFn({ method: "GET" }).handler(
           username: row.username,
         }));
       },
-    })
+    }),
 );
 
-async function resolvePassword(data: {
-  id?: string;
-  password: string;
-}): Promise<string> {
+async function resolvePassword(data: { id?: string; password: string }): Promise<string> {
   return await resolveRetainedSecret(
     data.password,
     async () => {
@@ -156,10 +146,10 @@ async function resolvePassword(data: {
       return decryptSecret(
         existing.passwordEncrypted,
         env.appKey,
-        secretContext.registry(existing.id)
+        secretContext.registry(existing.id),
       );
     },
-    "a password is required"
+    "a password is required",
   );
 }
 
@@ -175,7 +165,7 @@ export const testRegistry = createServerFn({ method: "POST" })
         return await pingRegistry(data.registryUrl, data.username, password);
       },
       target: () => ({ id: data.id ?? data.registryUrl, name: data.name }),
-    })
+    }),
   );
 
 export const saveRegistry = createServerFn({ method: "POST" })
@@ -195,7 +185,7 @@ export const saveRegistry = createServerFn({ method: "POST" })
               passwordEncrypted: encryptSecret(
                 password,
                 env.appKey,
-                secretContext.registry(data.id)
+                secretContext.registry(data.id),
               ),
               registryUrl: data.registryUrl,
               updatedAt: new Date(),
@@ -212,11 +202,7 @@ export const saveRegistry = createServerFn({ method: "POST" })
           id,
           imagePrefix: data.imagePrefix,
           name: data.name,
-          passwordEncrypted: encryptSecret(
-            password,
-            env.appKey,
-            secretContext.registry(id)
-          ),
+          passwordEncrypted: encryptSecret(password, env.appKey, secretContext.registry(id)),
           registryUrl: data.registryUrl,
           username: data.username,
         });
@@ -235,8 +221,7 @@ export const deleteRegistry = createServerFn({ method: "POST" })
   .validator(registryIdSchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>
     runGuarded({
-      load: () =>
-        db.query.registries.findFirst({ where: eq(registries.id, data.id) }),
+      load: () => db.query.registries.findFirst({ where: eq(registries.id, data.id) }),
       notFoundMessage: "registry not found",
       permission: { action: "delete", resource: "registry" },
       run: async ({ row }) => {
@@ -244,7 +229,7 @@ export const deleteRegistry = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );
 
 /**
@@ -266,7 +251,7 @@ export const getRegistryOptions = createServerFn({ method: "GET" }).handler(
         });
         return rows;
       },
-    })
+    }),
 );
 
 export const setServiceRegistry = createServerFn({ method: "POST" })
@@ -287,5 +272,5 @@ export const setServiceRegistry = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

@@ -11,13 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Frame,
-  FrameFooter,
-  FrameHeader,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -102,7 +96,7 @@ function toDraft(rows: EnvVarView[]): DraftVar[] {
       key: row.key,
       uid: row.id,
       value: row.value,
-    }))
+    })),
   );
 }
 
@@ -110,11 +104,7 @@ function toDraft(rows: EnvVarView[]): DraftVar[] {
  * Fill the focused row with the first pair, then insert the rest below —
  * the Vercel paste: a whole `.env` blob becomes rows, not one giant value.
  */
-function applyEnvPaste(
-  rows: DraftVar[],
-  uid: string,
-  pairs: EnvPair[]
-): DraftVar[] {
+function applyEnvPaste(rows: DraftVar[], uid: string, pairs: EnvPair[]): DraftVar[] {
   if (pairs.length === 0) {
     return rows;
   }
@@ -135,9 +125,7 @@ function applyEnvPaste(
 
   let insertAt = index + 1;
   for (const pair of rest) {
-    const existing = next.findIndex(
-      (row, rowIndex) => rowIndex !== index && row.key === pair.key
-    );
+    const existing = next.findIndex((row, rowIndex) => rowIndex !== index && row.key === pair.key);
     const existingRow = existing === -1 ? undefined : next[existing];
     if (existingRow) {
       next[existing] = {
@@ -187,8 +175,7 @@ function diff(saved: EnvVarView[], draft: DraftVar[]): Change[] {
       });
       continue;
     }
-    const valueChanged =
-      item.value !== null && item.value !== (previous.value ?? null);
+    const valueChanged = item.value !== null && item.value !== (previous.value ?? null);
     if (valueChanged || previous.isSecret !== item.isSecret) {
       changes.push({
         after: item.value,
@@ -232,9 +219,8 @@ function KeyCell({
   row: DraftVar;
 }) {
   const handleChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) =>
-      onUpdate(row.uid, { key: e.target.value }),
-    [onUpdate, row.uid]
+    (e: ChangeEvent<HTMLInputElement>) => onUpdate(row.uid, { key: e.target.value }),
+    [onUpdate, row.uid],
   );
 
   const handlePaste = useCallback(
@@ -246,7 +232,7 @@ function KeyCell({
       e.preventDefault();
       onPasteEnv(row.uid, parseEnvPaste(text));
     },
-    [onPasteEnv, row.key, row.uid]
+    [onPasteEnv, row.key, row.uid],
   );
 
   return (
@@ -272,9 +258,8 @@ function ValueCell({
   row: DraftVar;
 }) {
   const handleChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) =>
-      onUpdate(row.uid, { value: e.target.value }),
-    [onUpdate, row.uid]
+    (e: ChangeEvent<HTMLInputElement>) => onUpdate(row.uid, { value: e.target.value }),
+    [onUpdate, row.uid],
   );
 
   const handlePaste = useCallback(
@@ -286,7 +271,7 @@ function ValueCell({
       e.preventDefault();
       onPasteEnv(row.uid, parseEnvPaste(text));
     },
-    [onPasteEnv, row.key, row.uid]
+    [onPasteEnv, row.key, row.uid],
   );
 
   return (
@@ -305,17 +290,12 @@ function ValueCell({
 
 function SecretCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
   const handleChange = useCallback(
-    (checked: boolean | "indeterminate") =>
-      onUpdate(row.uid, { isSecret: checked === true }),
-    [onUpdate, row.uid]
+    (checked: boolean | "indeterminate") => onUpdate(row.uid, { isSecret: checked === true }),
+    [onUpdate, row.uid],
   );
 
   return (
-    <Checkbox
-      aria-label="Mark as secret"
-      checked={row.isSecret}
-      onCheckedChange={handleChange}
-    />
+    <Checkbox aria-label="Mark as secret" checked={row.isSecret} onCheckedChange={handleChange} />
   );
 }
 
@@ -323,12 +303,7 @@ function RemoveCell({ onRemove, row }: { onRemove: RemoveFn; row: DraftVar }) {
   const handleClick = useCallback(() => onRemove(row.uid), [onRemove, row.uid]);
 
   return (
-    <Button
-      aria-label={`Remove ${row.key}`}
-      onClick={handleClick}
-      size="icon-sm"
-      variant="ghost"
-    >
+    <Button aria-label={`Remove ${row.key}`} onClick={handleClick} size="icon-sm" variant="ghost">
       <TrashIcon />
     </Button>
   );
@@ -343,9 +318,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
   const changes = useMemo(() => diff(saved, draft), [saved, draft]);
 
   const update = useCallback<UpdateFn>((uid, patch) => {
-    setDraft((rows) =>
-      rows.map((row) => (row.uid === uid ? { ...row, ...patch } : row))
-    );
+    setDraft((rows) => rows.map((row) => (row.uid === uid ? { ...row, ...patch } : row)));
     setConfirming(false);
   }, []);
 
@@ -381,40 +354,26 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
   const columns = useMemo(
     () => [
       columnHelper.accessor("key", {
-        cell: (info) => (
-          <KeyCell
-            onPasteEnv={pasteEnv}
-            onUpdate={update}
-            row={info.row.original}
-          />
-        ),
+        cell: (info) => <KeyCell onPasteEnv={pasteEnv} onUpdate={update} row={info.row.original} />,
         header: "Key",
       }),
       columnHelper.accessor("value", {
         cell: (info) => (
-          <ValueCell
-            onPasteEnv={pasteEnv}
-            onUpdate={update}
-            row={info.row.original}
-          />
+          <ValueCell onPasteEnv={pasteEnv} onUpdate={update} row={info.row.original} />
         ),
         header: "Value",
       }),
       columnHelper.accessor("isSecret", {
-        cell: (info) => (
-          <SecretCell onUpdate={update} row={info.row.original} />
-        ),
+        cell: (info) => <SecretCell onUpdate={update} row={info.row.original} />,
         header: "Secret",
       }),
       columnHelper.display({
-        cell: (info) => (
-          <RemoveCell onRemove={remove} row={info.row.original} />
-        ),
+        cell: (info) => <RemoveCell onRemove={remove} row={info.row.original} />,
         header: "",
         id: "actions",
       }),
     ],
-    [pasteEnv, remove, update]
+    [pasteEnv, remove, update],
   );
 
   const table = useReactTable({
@@ -439,10 +398,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -463,9 +419,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
       </FramePanel>
       {note || changes.length > 0 ? (
         <FrameFooter className="gap-3">
-          {note ? (
-            <p className="text-muted-foreground text-xs">{note}</p>
-          ) : null}
+          {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
 
           {changes.length > 0 ? (
             <>
@@ -479,9 +433,8 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
                       className={cn(
                         "flex size-4 shrink-0 items-center justify-center rounded-sm font-bold",
                         change.kind === "add" && "bg-success/10 text-success",
-                        change.kind === "remove" &&
-                          "bg-destructive/10 text-destructive",
-                        change.kind === "change" && "bg-muted text-foreground"
+                        change.kind === "remove" && "bg-destructive/10 text-destructive",
+                        change.kind === "change" && "bg-muted text-foreground",
                       )}
                     >
                       {MARKS[change.kind]}
@@ -491,16 +444,14 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
                       <span
                         className={cn(
                           "text-muted-foreground",
-                          change.kind === "remove" && "line-through"
+                          change.kind === "remove" && "line-through",
                         )}
                       >
                         {change.kind === "change"
                           ? `${display(change.before, change.isSecret)} → ${display(change.after, change.isSecret)}`
                           : display(
-                              change.kind === "remove"
-                                ? change.before
-                                : change.after,
-                              change.isSecret
+                              change.kind === "remove" ? change.before : change.after,
+                              change.isSecret,
                             )}
                       </span>
                     </span>
@@ -513,9 +464,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
                   <Badge variant="outline">
                     {changes.length} change{changes.length > 1 ? "s" : ""}
                   </Badge>
-                  <span className="truncate text-muted-foreground text-xs">
-                    {effect}
-                  </span>
+                  <span className="truncate text-muted-foreground text-xs">{effect}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button onClick={reset} size="sm" variant="ghost">

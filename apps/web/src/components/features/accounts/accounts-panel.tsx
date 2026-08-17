@@ -43,20 +43,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { errorMessage } from "@/lib/format";
-import {
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
-  ROLE_ORDER,
-  roles,
-} from "@/lib/permissions";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_ORDER, roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  createAccount,
-  removeAccount,
-  setAccountRole,
-} from "@/server/accounts";
+import { createAccount, removeAccount, setAccountRole } from "@/server/accounts";
 import type { AccountRow } from "@/server/accounts";
 
 export function AccountsPanel({
@@ -81,18 +72,11 @@ export function AccountsPanel({
   const canCreate = useCan(known, "user", "create");
   // Accounts always render the table (no empty chrome) — only the list
   // + refresh seam is shared with the other settings panels.
-  const { data: accounts, refresh } = useResourceList(
-    queries.accounts,
-    initial
-  );
+  const { data: accounts, refresh } = useResourceList(queries.accounts, initial);
 
   return (
     <div className="space-y-4">
-      <CreateAccountDialog
-        onDone={refresh}
-        onOpenChange={onOpenChange}
-        open={open}
-      />
+      <CreateAccountDialog onDone={refresh} onOpenChange={onOpenChange} open={open} />
 
       {/* Accounts always render the table — at least the signed-in row. */}
       <SettingsList isEmpty={false}>
@@ -104,9 +88,7 @@ export function AccountsPanel({
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Account</TableHead>
-                <TableHead className="hidden w-32 sm:table-cell">
-                  Created
-                </TableHead>
+                <TableHead className="hidden w-32 sm:table-cell">Created</TableHead>
                 <TableHead className="w-44">Role</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
@@ -138,17 +120,14 @@ function AccountLine({
   onDone: () => void;
 }) {
   const setRole = useMutation({
-    mutationFn: (role: RoleName) =>
-      setAccountRole({ data: { role, userId: account.id } }),
+    mutationFn: (role: RoleName) => setAccountRole({ data: { role, userId: account.id } }),
     onSuccess: onDone,
   });
 
   // Removal carries its own message rather than an `Error`: it now lives in
   // a child component, which already surfaces the formatted text.
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const error = setRole.error
-    ? errorMessage(setRole.error, "action refused")
-    : removeError;
+  const error = setRole.error ? errorMessage(setRole.error, "action refused") : removeError;
 
   return (
     <TableRow>
@@ -157,17 +136,12 @@ function AccountLine({
           <span className="truncate font-medium">{account.name}</span>
           {account.isSelf ? <Badge variant="outline">you</Badge> : null}
         </span>
-        <span className="block truncate text-muted-foreground text-xs">
-          {account.email}
-        </span>
+        <span className="block truncate text-muted-foreground text-xs">{account.email}</span>
         {/* The failure is shown ON the row it concerns, not in a banner at
             the top: "this account is the last owner" means nothing if you
             can't see which one it is. */}
         {error ? (
-          <span
-            className="mt-1 block whitespace-normal text-destructive text-xs"
-            role="status"
-          >
+          <span className="mt-1 block whitespace-normal text-destructive text-xs" role="status">
             {error}
           </span>
         ) : null}
@@ -182,11 +156,7 @@ function AccountLine({
           information you can read without being able to act on it. */}
       <TableCell>
         {canManage ? (
-          <RoleSelect
-            onChange={setRole.mutate}
-            pending={setRole.isPending}
-            value={account.role}
-          />
+          <RoleSelect onChange={setRole.mutate} pending={setRole.isPending} value={account.role} />
         ) : (
           <Badge variant="outline">{roleLabel(account.role)}</Badge>
         )}
@@ -196,11 +166,7 @@ function AccountLine({
           the interface doesn't offer what it knows is impossible. */}
       <TableCell className="text-end">
         {account.isSelf || !canManage ? null : (
-          <RemoveAccountAction
-            account={account}
-            onDone={onDone}
-            onError={setRemoveError}
-          />
+          <RemoveAccountAction account={account} onDone={onDone} onError={setRemoveError} />
         )}
       </TableCell>
     </TableRow>
@@ -248,10 +214,7 @@ function RemoveAccountAction({
     onError(null);
     setOpen(true);
   }, [onError]);
-  const handleConfirm = useCallback(
-    (typed: string) => remove.mutate(typed),
-    [remove]
-  );
+  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
 
   return (
     <>
@@ -266,9 +229,8 @@ function RemoveAccountAction({
         confirmLabel="Remove account"
         description={
           <>
-            This account loses access immediately and its sessions are revoked.
-            What it did stays in the audit log.{" "}
-            <strong>This cannot be undone.</strong>
+            This account loses access immediately and its sessions are revoked. What it did stays in
+            the audit log. <strong>This cannot be undone.</strong>
           </>
         }
         onConfirm={handleConfirm}
@@ -310,19 +272,14 @@ function RoleSelect({
         onChange(next as RoleName);
       }
     },
-    [onChange]
+    [onChange],
   );
 
   return (
     // `items`: without it, Base UI displays the STORED value. The trigger
     // used to announce "owner" and "viewer" instead of their labels — the
     // database's jargon leaking up to the screen.
-    <Select
-      disabled={pending}
-      items={ROLE_LABELS}
-      onValueChange={handleChange}
-      value={value}
-    >
+    <Select disabled={pending} items={ROLE_LABELS} onValueChange={handleChange} value={value}>
       <SelectTrigger aria-label="Role" className="w-40" size="sm">
         {pending ? <Spinner /> : null}
         <SelectValue />
@@ -330,11 +287,7 @@ function RoleSelect({
       {/* `alignItemWithTrigger={false}`: otherwise the panel aligns itself
           on the chosen option AND takes the trigger's width, which crushes
           the descriptions into four lines each. */}
-      <SelectContent
-        alignItemWithTrigger={false}
-        className="w-80"
-        side="bottom"
-      >
+      <SelectContent alignItemWithTrigger={false} className="w-80" side="bottom">
         <SelectGroup>
           {ROLE_ORDER.map((role) => (
             <SelectItem key={role} value={role}>
@@ -401,7 +354,7 @@ function CreateAccountDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
   const handleClose = useCallback(
     (next: boolean) => {
@@ -414,7 +367,7 @@ function CreateAccountDialog({
       }
       onOpenChange(next);
     },
-    [create, onOpenChange]
+    [create, onOpenChange],
   );
 
   return (
@@ -523,8 +476,7 @@ function PasswordReveal({ password }: { password: string }) {
       <DialogHeader>
         <DialogTitle>Account created</DialogTitle>
         <DialogDescription>
-          Here is its password. It is shown once and can never be read again —
-          hand it over now.
+          Here is its password. It is shown once and can never be read again — hand it over now.
         </DialogDescription>
       </DialogHeader>
 

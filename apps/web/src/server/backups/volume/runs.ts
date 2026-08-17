@@ -1,14 +1,6 @@
-import {
-  buildVolumeBackupInsert,
-  resolveDestination,
-  resolveDestinationRow,
-} from "@noddle/backup";
+import { buildVolumeBackupInsert, resolveDestination, resolveDestinationRow } from "@noddle/backup";
 import { deleteObject } from "@noddle/backup-store";
-import {
-  services,
-  volumeBackupConfigs,
-  volumeBackups,
-} from "@noddle/db/schema";
+import { services, volumeBackupConfigs, volumeBackups } from "@noddle/db/schema";
 import {
   deleteVolumeBackupRunSchema,
   listVolumeBackupsSchema,
@@ -46,7 +38,7 @@ export const getVolumeBackups = createServerFn({ method: "GET" })
       where: data.configId
         ? and(
             eq(volumeBackups.serviceId, data.serviceId),
-            eq(volumeBackups.configId, data.configId)
+            eq(volumeBackups.configId, data.configId),
           )
         : eq(volumeBackups.serviceId, data.serviceId),
     });
@@ -86,7 +78,7 @@ export const triggerVolumeBackup = createServerFn({ method: "POST" })
               resolved,
               service: config.service,
               volumeName: config.volumeName,
-            })
+            }),
           )
           .returning();
         if (!created) {
@@ -124,11 +116,7 @@ export const deleteVolumeBackup = createServerFn({ method: "POST" })
 
         if (backup.destinationId) {
           try {
-            const { destination } = await resolveDestination(
-              db,
-              env.appKey,
-              backup.destinationId
-            );
+            const { destination } = await resolveDestination(db, env.appKey, backup.destinationId);
             await deleteObject(destination, backup.objectKey);
           } catch {
             // Object may already be gone; still drop the row.
@@ -139,7 +127,7 @@ export const deleteVolumeBackup = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.objectKey }),
-    })
+    }),
   );
 
 export const triggerVolumeRestore = createServerFn({ method: "POST" })
@@ -162,9 +150,7 @@ export const triggerVolumeRestore = createServerFn({ method: "POST" })
             throw new Error("volume backup not found for this service");
           }
           if (backup.status !== "completed") {
-            throw new Error(
-              "only a completed volume backup can be restored — this one is not"
-            );
+            throw new Error("only a completed volume backup can be restored — this one is not");
           }
           await enqueueDeploy({
             kind: "volume-restore",
@@ -175,9 +161,7 @@ export const triggerVolumeRestore = createServerFn({ method: "POST" })
         }
 
         if (!(data.destinationId && data.objectKey && data.volumeName)) {
-          throw new Error(
-            "destinationId, objectKey and volumeName are required"
-          );
+          throw new Error("destinationId, objectKey and volumeName are required");
         }
 
         await enqueueDeploy({
@@ -190,5 +174,5 @@ export const triggerVolumeRestore = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    })
+    }),
   );

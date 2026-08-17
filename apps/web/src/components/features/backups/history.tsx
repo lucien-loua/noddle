@@ -9,10 +9,7 @@ import { useState } from "react";
 import { copyFor } from "@/components/features/backups/copy";
 import { BackupHistoryTable } from "@/components/features/backups/history-table";
 import { BackupRunDetailDialog } from "@/components/features/backups/run-detail-dialog";
-import {
-  databaseRunLogs,
-  volumeRunLogs,
-} from "@/components/features/backups/run-logs";
+import { databaseRunLogs, volumeRunLogs } from "@/components/features/backups/run-logs";
 import type { BackupRunRow } from "@/components/features/backups/run-types";
 import {
   FocusModal,
@@ -52,20 +49,14 @@ export function BackupHistoryDialog({
   const backups = useQuery({
     ...queries.backupRunsFor(subject, configId),
     refetchInterval: (query) =>
-      query.state.data?.some(
-        (b) => b.status === "queued" || b.status === "running"
-      )
+      query.state.data?.some((b) => b.status === "queued" || b.status === "running")
         ? POLL_MS
         : false,
   });
 
-  const remove = useMutation(
-    mutations.deleteBackupRun(queryClient, subject, configId)
-  );
+  const remove = useMutation(mutations.deleteBackupRun(queryClient, subject, configId));
 
-  const rows = backups.isLoading
-    ? undefined
-    : (backups.data ?? []).slice(0, HISTORY_LIMIT);
+  const rows = backups.isLoading ? undefined : (backups.data ?? []).slice(0, HISTORY_LIMIT);
 
   return (
     <FocusModal onOpenChange={onOpenChange} open={open}>

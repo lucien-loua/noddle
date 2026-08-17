@@ -60,10 +60,7 @@ try {
       status: "connected",
     })
     .returning();
-  const [project] = await db
-    .insert(projects)
-    .values({ name: "limit-proj" })
-    .returning();
+  const [project] = await db.insert(projects).values({ name: "limit-proj" }).returning();
   const [environment] = await db
     .insert(environments)
     .values({ name: "production", projectId: project?.id ?? "" })
@@ -99,9 +96,7 @@ try {
       prNumber: pr,
     });
     if ("ignored" in r) {
-      ko(
-        `PR ${pr} refused even though the cap has not been reached: ${r.ignored}`
-      );
+      ko(`PR ${pr} refused even though the cap has not been reached: ${r.ignored}`);
       throw new Error("aborting");
     }
     madeIds.push(r.serviceId);
@@ -130,9 +125,7 @@ try {
     if (reason.includes("limit reached") && after === before) {
       ok(`the 6th is refused by the CAP ("${reason}") — nothing created`);
     } else {
-      ko(
-        `6th: reason "${reason || "created!"}", ${after} preview(s) instead of ${before}`
-      );
+      ko(`6th: reason "${reason || "created!"}", ${after} preview(s) instead of ${before}`);
     }
   }
 
@@ -152,17 +145,10 @@ try {
       prNumber: 3,
     });
     const after = (await livePreviews()).length;
-    if (
-      !("ignored" in r) &&
-      r.created === false &&
-      r.serviceId === targetId &&
-      after === before
-    ) {
+    if (!("ignored" in r) && r.created === false && r.serviceId === targetId && after === before) {
       ok("at the cap, a PR already previewed still redeploys");
     } else {
-      ko(
-        `PR 3 at the cap: ${JSON.stringify(r)}, ${after} preview(s) instead of ${before}`
-      );
+      ko(`PR 3 at the cap: ${JSON.stringify(r)}, ${after} preview(s) instead of ${before}`);
     }
   }
 
@@ -208,10 +194,7 @@ try {
   // `isNotNull(previewOfServiceId)` filters neither by parent nor by
   // project. A second project must therefore NOT start back from zero.
   {
-    const [proj2] = await db
-      .insert(projects)
-      .values({ name: "limit-proj-2" })
-      .returning();
+    const [proj2] = await db.insert(projects).values({ name: "limit-proj-2" }).returning();
     const [env2] = await db
       .insert(environments)
       .values({ name: "production", projectId: proj2?.id ?? "" })

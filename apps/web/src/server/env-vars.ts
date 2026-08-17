@@ -1,9 +1,4 @@
-import {
-  decryptSecret,
-  encryptSecret,
-  isRetainedSecret,
-  secretContext,
-} from "@noddle/crypto";
+import { decryptSecret, encryptSecret, isRetainedSecret, secretContext } from "@noddle/crypto";
 import { ENGINE_ENV_PREFIX } from "@noddle/database-spec";
 import { databases, envVars } from "@noddle/db/schema";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
@@ -31,7 +26,7 @@ export const envVarTargetSchema = z
   })
   .refine(
     (t) => Boolean(t.serviceId) !== Boolean(t.databaseId),
-    "give exactly one of serviceId or databaseId"
+    "give exactly one of serviceId or databaseId",
   );
 
 export type EnvVarTarget = z.infer<typeof envVarTargetSchema>;
@@ -46,10 +41,7 @@ export type EnvVarTarget = z.infer<typeof envVarTargetSchema>;
 function ownedBy(target: EnvVarTarget) {
   return target.serviceId
     ? and(eq(envVars.serviceId, target.serviceId), isNull(envVars.databaseId))
-    : and(
-        eq(envVars.databaseId, target.databaseId ?? ""),
-        isNull(envVars.serviceId)
-      );
+    : and(eq(envVars.databaseId, target.databaseId ?? ""), isNull(envVars.serviceId));
 }
 
 export interface EnvVarView {
@@ -81,14 +73,10 @@ export const getEnvVars = createServerFn({ method: "GET" })
           // the storage mode.
           value: row.isSecret
             ? null
-            : decryptSecret(
-                row.valueEncrypted,
-                env.appKey,
-                secretContext.envVar(row.id)
-              ),
+            : decryptSecret(row.valueEncrypted, env.appKey, secretContext.envVar(row.id)),
         }));
       },
-    })
+    }),
   );
 
 const envVarWriteSchema = z.object({
@@ -100,7 +88,7 @@ const envVarWriteSchema = z.object({
 
 const saveEnvVarsSchema = z.intersection(
   envVarTargetSchema,
-  z.object({ vars: z.array(envVarWriteSchema).max(500) })
+  z.object({ vars: z.array(envVarWriteSchema).max(500) }),
 );
 
 export interface EnvVarSaveResult {
@@ -118,10 +106,7 @@ export interface EnvVarSaveResult {
  * whatsoever, and the screen would claim a configuration that isn't
  * actually running.
  */
-async function assertNoReservedKeys(
-  databaseId: string,
-  vars: { key: string }[]
-): Promise<void> {
+async function assertNoReservedKeys(databaseId: string, vars: { key: string }[]): Promise<void> {
   const database = await db.query.databases.findFirst({
     where: eq(databases.id, databaseId),
   });
@@ -132,7 +117,7 @@ async function assertNoReservedKeys(
   const reserved = vars.filter((v) => v.key.startsWith(prefix));
   if (reserved.length > 0) {
     throw new Error(
-      `${reserved.map((v) => v.key).join(", ")}: ${prefix}* is set by Noddle from this database's own settings`
+      `${reserved.map((v) => v.key).join(", ")}: ${prefix}* is set by Noddle from this database's own settings`,
     );
   }
 }
@@ -153,7 +138,7 @@ async function writeEnvVar(
   incoming: EnvVarWrite,
   current: { id: string; isSecret: boolean } | undefined,
   owner: { databaseId: string | null; serviceId: string | null },
-  result: EnvVarSaveResult
+  result: EnvVarSaveResult,
 ): Promise<void> {
   if (current) {
     const plaintext = incoming.value;
@@ -174,7 +159,7 @@ async function writeEnvVar(
               valueEncrypted: encryptSecret(
                 plaintext,
                 env.appKey,
-                secretContext.envVar(current.id)
+                secretContext.envVar(current.id),
               ),
             }),
       })
@@ -193,11 +178,7 @@ async function writeEnvVar(
     id,
     isSecret: incoming.isSecret,
     key: incoming.key,
-    valueEncrypted: encryptSecret(
-      plaintext,
-      env.appKey,
-      secretContext.envVar(id)
-    ),
+    valueEncrypted: encryptSecret(plaintext, env.appKey, secretContext.envVar(id)),
   });
   result.added.push(incoming.key);
 }
@@ -248,13 +229,7 @@ export const saveEnvVars = createServerFn({ method: "POST" })
 
           for (const incoming of data.vars) {
             // biome-ignore lint/performance/noAwaitInLoops: ordered writes within a transaction
-            await writeEnvVar(
-              tx,
-              incoming,
-              byKey.get(incoming.key),
-              owner,
-              result
-            );
+            await writeEnvVar(tx, incoming, byKey.get(incoming.key), owner, result);
           }
 
           const removed = existing.filter((row) => !seen.has(row.key));
@@ -264,9 +239,9 @@ export const saveEnvVars = createServerFn({ method: "POST" })
                 ownedBy(data),
                 inArray(
                   envVars.id,
-                  removed.map((row) => row.id)
-                )
-              )
+                  removed.map((row) => row.id),
+                ),
+              ),
             );
             result.removed = removed.map((row) => row.key);
           }
@@ -280,14 +255,12 @@ export const saveEnvVars = createServerFn({ method: "POST" })
         //
         // Nothing is queued when NOTHING changed: restarting a database for an
         // empty save would be a pointless outage.
-        const changed =
-          result.added.length + result.removed.length + result.updated.length >
-          0;
+        const changed = result.added.length + result.removed.length + result.updated.length > 0;
         if (data.databaseId && changed) {
           await queueDatabaseProvision(data.databaseId);
         }
 
         return result;
       },
-    })
+    }),
   );

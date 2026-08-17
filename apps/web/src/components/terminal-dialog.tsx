@@ -4,14 +4,7 @@ import { TerminalIcon } from "@phosphor-icons/react";
 
 import "@wterm/dom/src/terminal.css";
 import type { TerminalHandle, WTerm } from "@wterm/react";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { useTheme } from "@/components/theme-provider";
@@ -104,10 +97,7 @@ function TerminalSession({
     if (ws?.readyState !== WebSocket.OPEN) {
       return;
     }
-    if (
-      sentSizeRef.current.cols === cols &&
-      sentSizeRef.current.rows === rows
-    ) {
+    if (sentSizeRef.current.cols === cols && sentSizeRef.current.rows === rows) {
       return;
     }
     sentSizeRef.current = { cols, rows };
@@ -126,7 +116,7 @@ function TerminalSession({
       sizeRef.current = { cols, rows };
       sendResize();
     },
-    [sendResize]
+    [sendResize],
   );
 
   const handleReady = useCallback((term: WTerm) => {
@@ -214,9 +204,7 @@ export function TerminalDialog({
   open: boolean;
   target: TerminalTarget | null;
 }) {
-  const [status, setStatus] = useState<"connecting" | "open" | "closed">(
-    "connecting"
-  );
+  const [status, setStatus] = useState<"connecting" | "open" | "closed">("connecting");
   // wterm measures once at mount, and the popup opens with a `zoom-in-95`
   // transform: mounted inside that window it sizes to a 95% box, and its
   // ResizeObserver never corrects it since the layout size never changed.
@@ -228,7 +216,7 @@ export function TerminalDialog({
       setSettled(next);
       onOpenChangeComplete?.(next);
     },
-    [onOpenChangeComplete]
+    [onOpenChangeComplete],
   );
 
   useEffect(() => {
@@ -242,10 +230,8 @@ export function TerminalDialog({
   }, []);
 
   const initialFocus = useCallback(
-    () =>
-      termHostRef.current?.querySelector<HTMLElement>("textarea") ??
-      termHostRef.current,
-    []
+    () => termHostRef.current?.querySelector<HTMLElement>("textarea") ?? termHostRef.current,
+    [],
   );
 
   const title = target ? target.title : "Terminal";
@@ -261,18 +247,12 @@ export function TerminalDialog({
         <FocusModalHeader>
           <div className="flex min-w-0 items-center gap-2">
             <TerminalIcon className="size-4 shrink-0" weight="regular" />
-            <FocusModalTitle className="font-mono text-sm">
-              {title}
-            </FocusModalTitle>
+            <FocusModalTitle className="font-mono text-sm">{title}</FocusModalTitle>
           </div>
         </FocusModalHeader>
         <FocusModalBody className="mask-none flex min-h-0 flex-col overflow-hidden p-0">
           {target && settled ? (
-            <TerminalSession
-              onStatus={handleStatus}
-              target={target}
-              termRef={termHostRef}
-            />
+            <TerminalSession onStatus={handleStatus} target={target} termRef={termHostRef} />
           ) : null}
         </FocusModalBody>
         <FocusModalFooter className="justify-between">
@@ -280,7 +260,7 @@ export function TerminalDialog({
             className={cn(
               "mt-0",
               status === "open" && "text-emerald-600 dark:text-emerald-400",
-              status === "connecting" && "text-amber-600 dark:text-amber-400"
+              status === "connecting" && "text-amber-600 dark:text-amber-400",
             )}
           >
             {kindLabel} · {statusLabel(status)}

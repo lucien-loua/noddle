@@ -96,15 +96,15 @@ export function EnvironmentSelector({
   const openCreate = useCallback(() => setDialog({ kind: "create" }), []);
   const handleRowDelete = useCallback(
     (env: EnvironmentView) => setDialog({ env, kind: "delete" }),
-    []
+    [],
   );
   const handleRowDuplicate = useCallback(
     (env: EnvironmentView) => setDialog({ env, kind: "duplicate" }),
-    []
+    [],
   );
   const handleRowRename = useCallback(
     (env: EnvironmentView) => setDialog({ env, kind: "rename" }),
-    []
+    [],
   );
   const handleDialogOpenChange = useCallback(
     (open: boolean) => {
@@ -112,7 +112,7 @@ export function EnvironmentSelector({
         closeDialog();
       }
     },
-    [closeDialog]
+    [closeDialog],
   );
   const handleDeleted = useCallback(() => {
     if (dialog?.kind === "delete") {
@@ -170,11 +170,7 @@ export function EnvironmentSelector({
         projectId={projectId}
       />
       {dialog?.kind === "rename" ? (
-        <RenameEnvironmentDialog
-          env={dialog.env}
-          onOpenChange={handleDialogOpenChange}
-          open
-        />
+        <RenameEnvironmentDialog env={dialog.env} onOpenChange={handleDialogOpenChange} open />
       ) : null}
       {dialog?.kind === "delete" ? (
         <DeleteEnvironmentDialog
@@ -217,41 +213,34 @@ function EnvironmentRow({
   onNavigate: (environmentId: string) => void;
   onRename: (env: EnvironmentView) => void;
 }) {
-  const handleSelect = useCallback(
-    () => onNavigate(env.id),
-    [env.id, onNavigate]
-  );
+  const handleSelect = useCallback(() => onNavigate(env.id), [env.id, onNavigate]);
   const handleRename = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
       onRename(env);
     },
-    [env, onRename]
+    [env, onRename],
   );
   const handleDuplicate = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
       onDuplicate(env);
     },
-    [env, onDuplicate]
+    [env, onDuplicate],
   );
   const handleDelete = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
       onDelete(env);
     },
-    [env, onDelete]
+    [env, onDelete],
   );
 
   return (
     <DropdownMenuItem className="justify-between gap-2" onClick={handleSelect}>
       <span className="flex min-w-0 items-center gap-2">
         <span
-          className={
-            current
-              ? "size-1.5 shrink-0 rounded-full bg-primary"
-              : "size-1.5 shrink-0"
-          }
+          className={current ? "size-1.5 shrink-0 rounded-full bg-primary" : "size-1.5 shrink-0"}
         />
         <span className="truncate">{env.name}</span>
         <span className="text-muted-foreground text-xs">({count})</span>
@@ -353,7 +342,7 @@ function CreateEnvironmentDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
 
   return (
@@ -362,8 +351,7 @@ function CreateEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>New environment</DialogTitle>
           <DialogDescription>
-            A place to connect services, stacks and databases to — e.g. staging,
-            next to production.
+            A place to connect services, stacks and databases to — e.g. staging, next to production.
           </DialogDescription>
         </DialogHeader>
         <DialogForm onSubmit={handleSubmit}>
@@ -448,7 +436,7 @@ function RenameEnvironmentDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
 
   return (
@@ -461,9 +449,7 @@ function RenameEnvironmentDialog({
           <DialogBody>
             <FieldGroup>
               <form.AppField name="name">
-                {(f) => (
-                  <f.FieldText addonStart={<TagIcon />} label="Name" required />
-                )}
+                {(f) => <f.FieldText addonStart={<TagIcon />} label="Name" required />}
               </form.AppField>
               <form.AppField name="description">
                 {(f) => <f.FieldTextarea label="Description (optional)" />}
@@ -526,8 +512,7 @@ function DeleteEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>Delete {env.name}?</DialogTitle>
           <DialogDescription>
-            Only possible while it is empty — remove its services, stacks and
-            databases first.
+            Only possible while it is empty — remove its services, stacks and databases first.
           </DialogDescription>
         </DialogHeader>
         {error ? (
@@ -536,11 +521,7 @@ function DeleteEnvironmentDialog({
           </Alert>
         ) : null}
         <DialogFooter>
-          <Button
-            disabled={remove.isPending}
-            onClick={handleConfirm}
-            variant="destructive"
-          >
+          <Button disabled={remove.isPending} onClick={handleConfirm} variant="destructive">
             {remove.isPending ? <Spinner data-icon="inline-start" /> : null}
             Delete environment
           </Button>
@@ -595,7 +576,7 @@ function DuplicateEnvironmentDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form]
+    [form],
   );
 
   return (
@@ -604,10 +585,9 @@ function DuplicateEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>Duplicate {env.name}</DialogTitle>
           <DialogDescription>
-            Copies services and stacks — configuration and environment
-            variables, not their running data. Domains are left unset so the
-            copy never fights the original for the same route. Databases are NOT
-            duplicated: they hold real data on a real volume, and a config-only
+            Copies services and stacks — configuration and environment variables, not their running
+            data. Domains are left unset so the copy never fights the original for the same route.
+            Databases are NOT duplicated: they hold real data on a real volume, and a config-only
             clone would only look like a copy.
           </DialogDescription>
         </DialogHeader>
@@ -616,11 +596,7 @@ function DuplicateEnvironmentDialog({
             <FieldGroup>
               <form.AppField name="name">
                 {(f) => (
-                  <f.FieldText
-                    addonStart={<TagIcon />}
-                    label="New environment name"
-                    required
-                  />
+                  <f.FieldText addonStart={<TagIcon />} label="New environment name" required />
                 )}
               </form.AppField>
               {duplicate.isError ? (
@@ -634,9 +610,7 @@ function DuplicateEnvironmentDialog({
           </DialogBody>
           <DialogFooter>
             <Button disabled={duplicate.isPending} type="submit">
-              {duplicate.isPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : null}
+              {duplicate.isPending ? <Spinner data-icon="inline-start" /> : null}
               Duplicate
             </Button>
           </DialogFooter>

@@ -49,24 +49,18 @@ const resourceFormSchema = z
   // with nothing to back it up: a reservation cannot exceed its limit, for
   // either of the two resources.
   .refine(
-    (v) =>
-      v.memLimit === null ||
-      v.memReservation === null ||
-      v.memReservation <= v.memLimit,
+    (v) => v.memLimit === null || v.memReservation === null || v.memReservation <= v.memLimit,
     {
       message: "The reservation cannot exceed the memory limit.",
       path: ["memReservation"],
-    }
+    },
   )
   .refine(
-    (v) =>
-      v.cpuLimit === null ||
-      v.cpuReservation === null ||
-      v.cpuReservation <= v.cpuLimit,
+    (v) => v.cpuLimit === null || v.cpuReservation === null || v.cpuReservation <= v.cpuLimit,
     {
       message: "The reservation cannot exceed the CPU limit.",
       path: ["cpuReservation"],
-    }
+    },
   );
 
 export function DatabaseResourceLimits({
@@ -126,13 +120,7 @@ export function DatabaseResourceLimits({
   // biome-ignore lint/correctness/useExhaustiveDependencies: the canonical props are the TRIGGER, not values read in the body
   useEffect(() => {
     form.reset();
-  }, [
-    form.reset,
-    cpuLimitNanos,
-    cpuReservationNanos,
-    memoryLimitBytes,
-    memoryReservationBytes,
-  ]);
+  }, [form.reset, cpuLimitNanos, cpuReservationNanos, memoryLimitBytes, memoryReservationBytes]);
 
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
 
@@ -141,8 +129,8 @@ export function DatabaseResourceLimits({
       <FrameHeader>
         <FrameTitle>Resource limits</FrameTitle>
         <FrameDescription>
-          Bound this database so a runaway query cannot take the whole machine
-          down. Leave a field empty for no limit. Applies on the next deploy.
+          Bound this database so a runaway query cannot take the whole machine down. Leave a field
+          empty for no limit. Applies on the next deploy.
         </FrameDescription>
       </FrameHeader>
       <FramePanel>
@@ -202,21 +190,14 @@ export function DatabaseResourceLimits({
 
         {save.isError ? (
           <Alert className="mt-3" variant="destructive">
-            <AlertDescription>
-              {errorMessage(save.error, "could not save")}
-            </AlertDescription>
+            <AlertDescription>{errorMessage(save.error, "could not save")}</AlertDescription>
           </Alert>
         ) : null}
       </FramePanel>
 
       {canEdit ? (
         <FrameFooter className="flex-row justify-end">
-          <Button
-            disabled={save.isPending}
-            onClick={handleSubmit}
-            size="sm"
-            variant="outline"
-          >
+          <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>

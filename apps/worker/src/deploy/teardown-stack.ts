@@ -17,9 +17,7 @@ import type { DeployContext } from "#runtime-context";
 const VOLUME_ALREADY_GONE = /not found|no such volume/i;
 
 type StackRow = NonNullable<Awaited<ReturnType<typeof loadStackForTeardown>>>;
-type DatabaseRow = NonNullable<
-  Awaited<ReturnType<typeof loadDatabaseForTeardown>>
->;
+type DatabaseRow = NonNullable<Awaited<ReturnType<typeof loadDatabaseForTeardown>>>;
 
 function loadStackForTeardown(ctx: DeployContext, stackId: string) {
   return ctx.db.query.stacks.findFirst({
@@ -43,28 +41,20 @@ function loadDatabaseForTeardown(ctx: DeployContext, databaseId: string) {
 async function teardownStack(
   ctx: DeployContext,
   stack: StackRow,
-  clients: DeployClients
+  clients: DeployClients,
 ): Promise<void> {
   // Swarm commands go through the MANAGER; only it holds the cluster's
   // replicated state.
   const { managerClient, managerDocker } = clients;
 
   // ── 1. Swarm — must succeed ────────────────────────────────────────────
-  const removed = await execArgv(managerClient, [
-    "sudo",
-    "docker",
-    "stack",
-    "rm",
-    stack.swarmName,
-  ]);
+  const removed = await execArgv(managerClient, ["sudo", "docker", "stack", "rm", stack.swarmName]);
   // An absent stack is NOT an error: `docker stack rm` on an unknown name
   // returns a message and a non-zero code, while the desired result —
   // nothing left running — is already reached. Only block on something
   // else.
   if (removed.code !== 0 && !removed.stderr.includes("Nothing found")) {
-    throw new Error(
-      `docker stack rm failed (${removed.code}): ${removed.stderr.slice(0, 300)}`
-    );
+    throw new Error(`docker stack rm failed (${removed.code}): ${removed.stderr.slice(0, 300)}`);
   }
 
   // `docker stack rm` returns BEFORE the services have disappeared — same
@@ -86,10 +76,7 @@ async function teardownStack(
  * `<stack>_default` network that Compose fabricates and that a loop over
  * services would leave behind.
  */
-export async function runStackTeardown(
-  ctx: DeployContext,
-  stackId: string
-): Promise<void> {
+export async function runStackTeardown(ctx: DeployContext, stackId: string): Promise<void> {
   const stack = await loadStackForTeardown(ctx, stackId);
   if (!stack) {
     // Already deleted, or job replayed. The desired result is reached: this
@@ -101,9 +88,7 @@ export async function runStackTeardown(
     // The connection lives inside `withDeployClients`: a failed key decrypt
     // must also write to `last_error`, as for a service, and the catch
     // below covers that case the same way it covers every other.
-    await withDeployClients(ctx, stack.server, (clients) =>
-      teardownStack(ctx, stack, clients)
-    );
+    await withDeployClients(ctx, stack.server, (clients) => teardownStack(ctx, stack, clients));
   } catch (error) {
     // If step 2 already succeeded, the row no longer exists: the UPDATE
     // then touches nothing, which is the desired result.
@@ -118,11 +103,7 @@ export async function runStackTeardown(
 }
 
 /** Wait until no service still carries the stack's prefix. */
-async function waitForStackGone(
-  docker: DockerApi,
-  swarmName: string,
-  seconds = 60
-): Promise<void> {
+async function waitForStackGone(docker: DockerApi, swarmName: string, seconds = 60): Promise<void> {
   const deadline = Date.now() + seconds * 1000;
   while (Date.now() < deadline) {
     // biome-ignore lint/performance/noAwaitInLoops: deliberate polling
@@ -143,7 +124,7 @@ async function waitForStackGone(
 async function teardownDatabase(
   ctx: DeployContext,
   database: DatabaseRow,
-  clients: DeployClients
+  clients: DeployClients,
 ): Promise<void> {
   const { buildClient, managerDocker } = clients;
 
@@ -163,21 +144,13 @@ async function teardownDatabase(
   // way.
   const volumeNames = [
     database.swarmName,
-    ...database.extraMounts
-      .filter((m) => m.type === "volume")
-      .map((m) => m.source),
+    ...database.extraMounts.filter((m) => m.type === "volume").map((m) => m.source),
   ];
   for (const volumeName of volumeNames) {
     let volumeGone = false;
     for (let i = 0; i < 20; i += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: deliberate retry
-      const res = await execArgv(buildClient, [
-        "sudo",
-        "docker",
-        "volume",
-        "rm",
-        volumeName,
-      ]);
+      const res = await execArgv(buildClient, ["sudo", "docker", "volume", "rm", volumeName]);
       if (res.code === 0 || VOLUME_ALREADY_GONE.test(res.stderr)) {
         volumeGone = true;
         break;
@@ -186,7 +159,7 @@ async function teardownDatabase(
     }
     if (!volumeGone) {
       throw new Error(
-        `volume ${volumeName} could not be removed — the database row is kept so it stays visible`
+        `volume ${volumeName} could not be removed — the database row is kept so it stays visible`,
       );
     }
   }
@@ -204,10 +177,7 @@ async function teardownDatabase(
  * Volume-after-service order is not cosmetic: Docker refuses to delete a
  * volume that is still mounted, so the reverse would always fail.
  */
-export async function runDatabaseTeardown(
-  ctx: DeployContext,
-  databaseId: string
-): Promise<void> {
+export async function runDatabaseTeardown(ctx: DeployContext, databaseId: string): Promise<void> {
   const database = await loadDatabaseForTeardown(ctx, databaseId);
   if (!database) {
     return;
@@ -215,7 +185,7 @@ export async function runDatabaseTeardown(
 
   try {
     await withDeployClients(ctx, database.server, (clients) =>
-      teardownDatabase(ctx, database, clients)
+      teardownDatabase(ctx, database, clients),
     );
   } catch (error) {
     await ctx.db

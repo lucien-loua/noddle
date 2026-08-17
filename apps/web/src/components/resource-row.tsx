@@ -55,17 +55,11 @@ export function ResourceRow({
       {tag}
     </ItemTitle>
   );
-  const description = secondary ? (
-    <ItemDescription>{secondary}</ItemDescription>
-  ) : null;
+  const description = secondary ? <ItemDescription>{secondary}</ItemDescription> : null;
 
   return (
     <Item
-      className={cn(
-        "relative",
-        onToggle && "hover:bg-muted",
-        selected && "bg-muted/40"
-      )}
+      className={cn("relative", onToggle && "hover:bg-muted", selected && "bg-muted/40")}
       size="sm"
       variant="outline"
     >
@@ -140,9 +134,7 @@ export function RowGroup({
   return (
     <section className="min-w-0" id={id}>
       {title ? (
-        <h3 className="mb-2 px-1 font-medium text-muted-foreground text-xs">
-          {title}
-        </h3>
+        <h3 className="mb-2 px-1 font-medium text-muted-foreground text-xs">{title}</h3>
       ) : null}
       <ItemGroup>{children}</ItemGroup>
     </section>

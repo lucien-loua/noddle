@@ -43,15 +43,11 @@ export function FieldRadio({
         field.handleChange(value);
       }
     },
-    [field]
+    [field],
   );
 
   return (
-    <RadioGroup
-      disabled={disabled}
-      onValueChange={handleChange}
-      value={field.state.value}
-    >
+    <RadioGroup disabled={disabled} onValueChange={handleChange} value={field.state.value}>
       {options.map((option) => {
         const optionId = `${id}-${option.value}`;
         return (

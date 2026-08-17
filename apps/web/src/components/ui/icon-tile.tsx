@@ -92,7 +92,7 @@ const iconTileVariants = cva(
         solid: "bg-primary text-primary-foreground",
       },
     },
-  }
+  },
 );
 
 interface IconTileProps extends useRender.ComponentProps<"span"> {

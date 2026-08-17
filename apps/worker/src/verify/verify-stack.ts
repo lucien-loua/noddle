@@ -19,13 +19,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { createDatabase } from "@noddle/db";
-import {
-  environments,
-  projects,
-  servers,
-  stackDeployments,
-  stacks,
-} from "@noddle/db/schema";
+import { environments, projects, servers, stackDeployments, stacks } from "@noddle/db/schema";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
@@ -59,7 +53,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-stack", privateKey);
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -87,7 +81,7 @@ services:
 const writeOrigin = async (
   ssh: Awaited<ReturnType<typeof connect>>,
   indexBody: string,
-  message: string
+  message: string,
 ) => {
   await exec(
     ssh,
@@ -99,7 +93,7 @@ const writeOrigin = async (
       "EOF\n" +
       `printf '%s' ${JSON.stringify(indexBody)} > web/index.html && ` +
       "git init -q -b main . 2>/dev/null; git config user.email e@x && git config user.name e && " +
-      `git add -A && git commit -q -m ${JSON.stringify(message)} --allow-empty`
+      `git add -A && git commit -q -m ${JSON.stringify(message)} --allow-empty`,
   );
 };
 
@@ -149,15 +143,12 @@ try {
 
   await exec(
     managerSsh,
-    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN}`
+    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN}`,
   );
   await writeOrigin(managerSsh, "compose bonjour un", "v1");
   ok("compose repo created (build: web, image: redis)");
 
-  const [proj] = await db
-    .insert(projects)
-    .values({ name: "stack-probe" })
-    .returning();
+  const [proj] = await db.insert(projects).values({ name: "stack-probe" }).returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -202,9 +193,7 @@ try {
     where: eq(stackDeployments.id, dep1.id),
   });
   if (dep1Final?.status === "succeeded") {
-    ok(
-      `v1 succeeded — services built: ${JSON.stringify(dep1Final.serviceImages)}`
-    );
+    ok(`v1 succeeded — services built: ${JSON.stringify(dep1Final.serviceImages)}`);
   } else {
     ko(`v1: status ${dep1Final?.status} — ${dep1Final?.errorMessage ?? ""}`);
   }
@@ -220,9 +209,7 @@ try {
   }
 
   if (dep1Final?.composeSource?.includes("build: ./web")) {
-    ok(
-      "the stored composeSource is the text BEFORE rewriting (build: still present)"
-    );
+    ok("the stored composeSource is the text BEFORE rewriting (build: still present)");
   } else {
     ko("composeSource doesn't contain the original build:");
   }
@@ -252,15 +239,8 @@ try {
       // biome-ignore lint/performance/noAwaitInLoops: intentional retry, Traefik's Swarm provider polls every 15s
       const result = await execFileAsync(
         "curl",
-        [
-          "-fsS",
-          "--max-time",
-          "10",
-          "-H",
-          `Host: ${domain}`,
-          `http://${TARGET.host}/`,
-        ],
-        { timeout: 12_000 }
+        ["-fsS", "--max-time", "10", "-H", `Host: ${domain}`, `http://${TARGET.host}/`],
+        { timeout: 12_000 },
       ).catch(() => null);
       if (result?.stdout.trim()) {
         body = result.stdout.trim();

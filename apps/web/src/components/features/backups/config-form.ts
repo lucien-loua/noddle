@@ -1,7 +1,4 @@
-import {
-  backupCronSchema,
-  objectPrefixSchema,
-} from "@noddle/shared/validation/backup";
+import { backupCronSchema, objectPrefixSchema } from "@noddle/shared/validation/backup";
 import { dockerVolumeNameSchema } from "@noddle/shared/validation/volume-backup";
 import { z } from "zod";
 
@@ -20,7 +17,7 @@ const keepLatestCountFormSchema = z.string().refine(
   },
   {
     message: "Enter a number between 1 and 100, or leave empty to keep all.",
-  }
+  },
 );
 
 export function parseKeepLatestCount(raw: string): number | null {
@@ -38,15 +35,14 @@ export function parseKeepLatestCount(raw: string): number | null {
 export function configFormDefaults(
   editing: BackupConfigRow | null,
   defaultDatabaseName: string,
-  fallbackDestinationId: string
+  fallbackDestinationId: string,
 ) {
   if (editing) {
     return {
       databaseName: editing.databaseName,
       destinationId: editing.destinationId,
       enabled: editing.enabled,
-      keepLatestCount:
-        editing.keepLatestCount === null ? "" : String(editing.keepLatestCount),
+      keepLatestCount: editing.keepLatestCount === null ? "" : String(editing.keepLatestCount),
       prefix: editing.prefix,
       schedule: editing.schedule,
     };
@@ -71,20 +67,17 @@ export const volumeBackupConfigFormSchema = z.object({
   volumeName: dockerVolumeNameSchema,
 });
 
-export type VolumeBackupConfigFormValues = z.infer<
-  typeof volumeBackupConfigFormSchema
->;
+export type VolumeBackupConfigFormValues = z.infer<typeof volumeBackupConfigFormSchema>;
 
 export function volumeConfigFormDefaults(
   editing: VolumeBackupConfigRow | null,
-  fallbackDestinationId: string
+  fallbackDestinationId: string,
 ): VolumeBackupConfigFormValues {
   if (editing) {
     return {
       destinationId: editing.destinationId,
       enabled: editing.enabled,
-      keepLatestCount:
-        editing.keepLatestCount === null ? "" : String(editing.keepLatestCount),
+      keepLatestCount: editing.keepLatestCount === null ? "" : String(editing.keepLatestCount),
       mountPath: editing.mountPath ?? "",
       prefix: editing.prefix,
       schedule: editing.schedule,

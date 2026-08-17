@@ -36,67 +36,41 @@ function lacksLegacy(source: string, needles: readonly string[]): string[] {
 }
 
 await runVerify("backup cache seam (C8)", () => {
-  const mutations = readFileSync(
-    join(import.meta.dirname, "lib/mutations.ts"),
-    "utf-8"
-  );
+  const mutations = readFileSync(join(import.meta.dirname, "lib/mutations.ts"), "utf-8");
   const cache = readFileSync(join(import.meta.dirname, "lib/cache.ts"), "utf-8");
 
-  check(
-    "deleteBackupRun invalidates via cache.backupRunsFor",
-    DELETE_BACKUP_RUN.test(mutations)
-  );
-  check(
-    "triggerBackupRun invalidates via cache.backupRunsFor",
-    TRIGGER_BACKUP_RUN.test(mutations)
-  );
+  check("deleteBackupRun invalidates via cache.backupRunsFor", DELETE_BACKUP_RUN.test(mutations));
+  check("triggerBackupRun invalidates via cache.backupRunsFor", TRIGGER_BACKUP_RUN.test(mutations));
   check(
     "legacy cache helpers delegate to *For",
     cache.includes("cache.backupConfigsFor(qc, databaseBackupSubject") &&
-      cache.includes("cache.backupRunsFor(qc, databaseBackupSubject")
+      cache.includes("cache.backupRunsFor(qc, databaseBackupSubject"),
   );
 
   const panel = readFeature(PANEL);
-  check(
-    `${PANEL} invalidates via backupConfigsFor`,
-    panel.includes("backupConfigsFor(")
-  );
+  check(`${PANEL} invalidates via backupConfigsFor`, panel.includes("backupConfigsFor("));
   check(
     `${PANEL} queries via backupConfigsFor(subject)`,
-    panel.includes("queries.backupConfigsFor(subject)")
+    panel.includes("queries.backupConfigsFor(subject)"),
   );
   const panelLegacy = lacksLegacy(panel, LEGACY_CACHE);
-  check(
-    `${PANEL} avoids legacy cache helpers`,
-    panelLegacy.length === 0,
-    panelLegacy.join(", ")
-  );
+  check(`${PANEL} avoids legacy cache helpers`, panelLegacy.length === 0, panelLegacy.join(", "));
 
   const history = readFeature(HISTORY);
-  check(
-    `${HISTORY} uses deleteBackupRun`,
-    history.includes("deleteBackupRun(")
-  );
+  check(`${HISTORY} uses deleteBackupRun`, history.includes("deleteBackupRun("));
   check(
     `${HISTORY} queries via backupRunsFor(subject)`,
-    history.includes("queries.backupRunsFor(subject")
+    history.includes("queries.backupRunsFor(subject"),
   );
   const historyLegacy = lacksLegacy(history, LEGACY_MUTATIONS);
-  check(
-    `${HISTORY} avoids legacy mutations`,
-    historyLegacy.length === 0,
-    historyLegacy.join(", ")
-  );
+  check(`${HISTORY} avoids legacy mutations`, historyLegacy.length === 0, historyLegacy.join(", "));
 
   const card = readFeature(CONFIG_CARD);
-  check(
-    `${CONFIG_CARD} uses triggerBackupRun`,
-    card.includes("triggerBackupRun(")
-  );
+  check(`${CONFIG_CARD} uses triggerBackupRun`, card.includes("triggerBackupRun("));
   const cardLegacy = lacksLegacy(card, [...LEGACY_CACHE, ...LEGACY_MUTATIONS]);
   check(
     `${CONFIG_CARD} avoids legacy trigger/cache`,
     cardLegacy.length === 0,
-    cardLegacy.join(", ")
+    cardLegacy.join(", "),
   );
 });

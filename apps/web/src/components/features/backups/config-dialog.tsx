@@ -7,10 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { copyFor } from "@/components/features/backups/copy";
-import {
-  DEFAULT_CRON,
-  scheduleModeFor,
-} from "@/components/features/backups/schedule";
+import { DEFAULT_CRON, scheduleModeFor } from "@/components/features/backups/schedule";
 import type { ScheduleMode } from "@/components/features/backups/schedule";
 import { ScheduleCadence } from "@/components/features/backups/schedule-cadence";
 import { ServiceVolumePicker } from "@/components/features/backups/service-volume-picker";
@@ -27,21 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import type { BackupSubject } from "@/lib/backup-subject";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
-import {
-  createBackupConfig,
-  updateBackupConfig,
-} from "@/server/backups/configs";
+import { createBackupConfig, updateBackupConfig } from "@/server/backups/configs";
 import type { BackupConfigRow } from "@/server/backups/configs";
 import type { DestinationRow } from "@/server/backups/destinations";
 import {
@@ -70,15 +59,11 @@ function EnabledField({
   return (
     <Field>
       <div className="flex items-center gap-2">
-        <Checkbox
-          checked={checked}
-          onCheckedChange={(value) => onCheckedChange(value === true)}
-        />
+        <Checkbox checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
         <FieldLabel className="font-normal">Run on schedule</FieldLabel>
       </div>
       <FieldDescription>
-        When off, Noddle ignores this cadence until you turn it back on. Manual
-        runs still work.
+        When off, Noddle ignores this cadence until you turn it back on. Manual runs still work.
       </FieldDescription>
     </Field>
   );
@@ -102,13 +87,9 @@ function DatabaseScheduleForm({
   open: boolean;
 }) {
   const copy = copyFor("database");
-  const defaults = configFormDefaults(
-    editing,
-    defaultDatabaseName,
-    fallbackDestinationId
-  );
+  const defaults = configFormDefaults(editing, defaultDatabaseName, fallbackDestinationId);
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
-    scheduleModeFor(defaults.schedule)
+    scheduleModeFor(defaults.schedule),
   );
 
   const form = useAppForm({
@@ -166,9 +147,7 @@ function DatabaseScheduleForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
-          {editing ? copy.dialogTitleEdit : copy.dialogTitleNew}
-        </DialogTitle>
+        <DialogTitle>{editing ? copy.dialogTitleEdit : copy.dialogTitleNew}</DialogTitle>
         <DialogDescription>
           {editing ? copy.dialogDescriptionEdit : copy.dialogDescriptionNew}
         </DialogDescription>
@@ -201,17 +180,9 @@ function DatabaseScheduleForm({
               )}
             </form.AppField>
 
-            <ScheduleCadence
-              onModeChange={handleModeChange}
-              scheduleMode={scheduleMode}
-            >
+            <ScheduleCadence onModeChange={handleModeChange} scheduleMode={scheduleMode}>
               <form.AppField name="schedule">
-                {(f) => (
-                  <f.FieldText
-                    label="Cron expression"
-                    placeholder={DEFAULT_CRON}
-                  />
-                )}
+                {(f) => <f.FieldText label="Cron expression" placeholder={DEFAULT_CRON} />}
               </form.AppField>
             </ScheduleCadence>
 
@@ -247,10 +218,7 @@ function DatabaseScheduleForm({
       </DialogBody>
       <DialogFooter>
         <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
-        <Button
-          disabled={form.state.isSubmitting}
-          onClick={() => form.handleSubmit()}
-        >
+        <Button disabled={form.state.isSubmitting} onClick={() => form.handleSubmit()}>
           {form.state.isSubmitting ? <Spinner /> : null}
           {editing ? "Save changes" : "Add schedule"}
         </Button>
@@ -277,7 +245,7 @@ function VolumeScheduleForm({
   const copy = copyFor("volume");
   const defaults = volumeConfigFormDefaults(editing, fallbackDestinationId);
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
-    scheduleModeFor(defaults.schedule)
+    scheduleModeFor(defaults.schedule),
   );
   const volumesQuery = useQuery({
     ...queries.serviceVolumes(serviceId),
@@ -326,7 +294,7 @@ function VolumeScheduleForm({
       form.setFieldValue("volumeName", volume.volumeName);
       form.setFieldValue("mountPath", volume.mountPath);
     },
-    [form.setFieldValue]
+    [form.setFieldValue],
   );
 
   const handleModeChange = (next: ScheduleMode) => {
@@ -339,9 +307,7 @@ function VolumeScheduleForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
-          {editing ? copy.dialogTitleEdit : copy.dialogTitleNew}
-        </DialogTitle>
+        <DialogTitle>{editing ? copy.dialogTitleEdit : copy.dialogTitleNew}</DialogTitle>
         <DialogDescription>
           {editing ? copy.dialogDescriptionEdit : copy.dialogDescriptionNew}
         </DialogDescription>
@@ -378,7 +344,7 @@ function VolumeScheduleForm({
               listeners={{
                 onChange: ({ value }) => {
                   const volume = serviceVolumes.find(
-                    (v: ServiceVolumeRow) => v.volumeName === value
+                    (v: ServiceVolumeRow) => v.volumeName === value,
                   );
                   form.setFieldValue("mountPath", volume?.mountPath ?? "");
                 },
@@ -395,18 +361,9 @@ function VolumeScheduleForm({
               )}
             </form.AppField>
 
-            <ScheduleCadence
-              onModeChange={handleModeChange}
-              scheduleMode={scheduleMode}
-            >
+            <ScheduleCadence onModeChange={handleModeChange} scheduleMode={scheduleMode}>
               <form.AppField name="schedule">
-                {(f) => (
-                  <f.FieldText
-                    label="Cron expression"
-                    placeholder={DEFAULT_CRON}
-                    required
-                  />
-                )}
+                {(f) => <f.FieldText label="Cron expression" placeholder={DEFAULT_CRON} required />}
               </form.AppField>
             </ScheduleCadence>
 
@@ -476,13 +433,9 @@ interface VolumeConfigDialogProps {
   subject: Extract<BackupSubject, { kind: "volume" }>;
 }
 
-type BackupConfigDialogProps =
-  | DatabaseConfigDialogProps
-  | VolumeConfigDialogProps;
+type BackupConfigDialogProps = DatabaseConfigDialogProps | VolumeConfigDialogProps;
 
-function isDatabaseConfig(
-  props: BackupConfigDialogProps
-): props is DatabaseConfigDialogProps {
+function isDatabaseConfig(props: BackupConfigDialogProps): props is DatabaseConfigDialogProps {
   return props.subject.kind === "database";
 }
 

@@ -1,11 +1,6 @@
 import type { ReactNode } from "react";
 
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 
 /**
  * What the preset's `FieldError` expects: a list of objects with `message`.
@@ -19,9 +14,7 @@ import {
 export function toFieldErrors(errors: unknown[]): { message?: string }[] {
   return errors
     .filter((e) => e !== undefined && e !== null)
-    .map((e) =>
-      typeof e === "string" ? { message: e } : (e as { message?: string })
-    );
+    .map((e) => (typeof e === "string" ? { message: e } : (e as { message?: string })));
 }
 
 export interface FieldShellProps {

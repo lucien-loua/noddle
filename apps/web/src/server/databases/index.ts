@@ -3,15 +3,8 @@
  */
 export { attachDatabase } from "./attach";
 export { connectDatabase } from "./connect";
-export {
-  type DatabaseCredentials,
-  getDatabaseCredentials,
-} from "./credentials";
-export {
-  deleteDatabase,
-  rebuildDatabase,
-  triggerDatabaseLifecycle,
-} from "./lifecycle";
+export { type DatabaseCredentials, getDatabaseCredentials } from "./credentials";
+export { deleteDatabase, rebuildDatabase, triggerDatabaseLifecycle } from "./lifecycle";
 export { type DatabaseRow, getDatabase, getDatabaseDashboard } from "./read";
 export {
   addDatabaseMount,

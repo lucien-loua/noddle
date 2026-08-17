@@ -23,7 +23,7 @@ interface ProviderService {
  */
 export async function providerCloneUrl(
   ctx: DeployContext,
-  service: ProviderService
+  service: ProviderService,
 ): Promise<string | null> {
   const provider = service.gitProvider;
   if (!(provider && service.gitRepoUrl)) {

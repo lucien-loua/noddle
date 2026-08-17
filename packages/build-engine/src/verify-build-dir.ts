@@ -5,12 +5,7 @@
 // target on the client's server, so what matters here is the REFUSALS.
 import { check, expectThrows, runVerify } from "@noddle/testing";
 
-import {
-  BuildError,
-  FORCED_DEPLOY_PACKAGES,
-  looksOutOfMemory,
-  resolveBuildDir,
-} from "#index";
+import { BuildError, FORCED_DEPLOY_PACKAGES, looksOutOfMemory, resolveBuildDir } from "#index";
 
 const CLONE = "/var/lib/noddle/builds/abc";
 const WHITESPACE = /\s+/;
@@ -21,24 +16,21 @@ await runVerify("build directory resolution", () => {
     resolveBuildDir(CLONE, null) === CLONE &&
       resolveBuildDir(CLONE, undefined) === CLONE &&
       resolveBuildDir(CLONE, "") === CLONE &&
-      resolveBuildDir(CLONE, "   ") === CLONE
+      resolveBuildDir(CLONE, "   ") === CLONE,
   );
 
-  check(
-    "a subdirectory is appended",
-    resolveBuildDir(CLONE, "apps/web") === `${CLONE}/apps/web`
-  );
+  check("a subdirectory is appended", resolveBuildDir(CLONE, "apps/web") === `${CLONE}/apps/web`);
 
   check(
     "surrounding slashes are tolerated, not treated as absolute",
-    resolveBuildDir(CLONE, "/apps/web/") === `${CLONE}/apps/web`
+    resolveBuildDir(CLONE, "/apps/web/") === `${CLONE}/apps/web`,
   );
 
   for (const outside of ["..", "../etc", "apps/../../etc", "apps//web"]) {
     expectThrows(
       `"${outside}" is refused`,
       () => resolveBuildDir(CLONE, outside),
-      (e) => e instanceof BuildError
+      (e) => e instanceof BuildError,
     );
   }
 
@@ -47,7 +39,7 @@ await runVerify("build directory resolution", () => {
   expectThrows(
     "a leading dash is refused",
     () => resolveBuildDir(CLONE, "-rf"),
-    (e) => e instanceof BuildError
+    (e) => e instanceof BuildError,
   );
 
   // The leading `...` means "extend railpack's generated package list".
@@ -56,7 +48,7 @@ await runVerify("build directory resolution", () => {
   // is quietly wrong, which is the worst shape a failure can take.
   check(
     "the forced package list EXTENDS rather than replaces",
-    FORCED_DEPLOY_PACKAGES.trimStart().startsWith("...")
+    FORCED_DEPLOY_PACKAGES.trimStart().startsWith("..."),
   );
 
   // Measured inside a built image, under the same non-login `sh -c` a
@@ -65,7 +57,7 @@ await runVerify("build directory resolution", () => {
   // or every task fails to converge and it reads as a routing bug.
   check(
     "curl is forced into every image Noddle builds from source",
-    FORCED_DEPLOY_PACKAGES.split(WHITESPACE).includes("curl")
+    FORCED_DEPLOY_PACKAGES.split(WHITESPACE).includes("curl"),
   );
 
   // Measured on a 2 GB VM: Next.js compiled, then TypeScript was killed and
@@ -78,13 +70,11 @@ await runVerify("build directory resolution", () => {
       'error: script "build" was terminated by signal SIGKILL (Forced quit)',
       "Killed",
       "fatal error: out of memory",
-    ].every(looksOutOfMemory)
+    ].every(looksOutOfMemory),
   );
 
   check(
     "an ordinary build failure is NOT reported as memory",
-    !looksOutOfMemory(
-      "error TS2304: Cannot find name 'foo'\nbuild failed with 1 error"
-    )
+    !looksOutOfMemory("error TS2304: Cannot find name 'foo'\nbuild failed with 1 error"),
   );
 });

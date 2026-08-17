@@ -1,11 +1,7 @@
 import { unlink } from "node:fs/promises";
 
 import { deployments, services } from "@noddle/db/schema";
-import {
-  deleteManifest,
-  garbageCollect,
-  parseRegistryRef,
-} from "@noddle/registry";
+import { deleteManifest, garbageCollect, parseRegistryRef } from "@noddle/registry";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { execArgv } from "@noddle/ssh-executor";
@@ -23,12 +19,8 @@ const REGISTRY_CONTAINER = "noddle-registry-1";
 
 const FILE_URL = "file://";
 
-type ServiceRow = NonNullable<
-  Awaited<ReturnType<typeof loadServiceForTeardown>>
->;
-type DeploymentRow = Awaited<
-  ReturnType<typeof loadDeploymentsForTeardown>
->[number];
+type ServiceRow = NonNullable<Awaited<ReturnType<typeof loadServiceForTeardown>>>;
+type DeploymentRow = Awaited<ReturnType<typeof loadDeploymentsForTeardown>>[number];
 
 function loadServiceForTeardown(ctx: DeployContext, serviceId: string) {
   return ctx.db.query.services.findFirst({
@@ -55,7 +47,7 @@ async function teardownService(
   service: ServiceRow,
   rows: DeploymentRow[],
   opts: { containerName?: string },
-  clients: DeployClients
+  clients: DeployClients,
 ): Promise<void> {
   const { buildClient, managerClient, managerDocker } = clients;
 
@@ -75,7 +67,7 @@ async function teardownService(
       r.logs
         .map((l) => l.storageUrl)
         .filter((u) => u.startsWith(FILE_URL))
-        .map((u) => u.slice(FILE_URL.length))
+        .map((u) => u.slice(FILE_URL.length)),
     ),
     managerClient,
     registryContainer: opts.containerName ?? REGISTRY_CONTAINER,
@@ -86,7 +78,7 @@ async function teardownService(
 export async function runServiceTeardown(
   ctx: DeployContext,
   serviceId: string,
-  opts: { containerName?: string } = {}
+  opts: { containerName?: string } = {},
 ): Promise<void> {
   const service = await loadServiceForTeardown(ctx, serviceId);
   if (!service) {
@@ -105,7 +97,7 @@ export async function runServiceTeardown(
     // before its own connection is made costs nothing to disconnect, so the
     // catch below covers that case the same way it covers every other.
     await withDeployClients(ctx, service.server, (clients) =>
-      teardownService(ctx, service, rows, opts, clients)
+      teardownService(ctx, service, rows, opts, clients),
     );
   } catch (error) {
     // If step 2 already succeeded, the row no longer exists: the update
@@ -113,12 +105,7 @@ export async function runServiceTeardown(
     // error to handle.
     await ctx.db
       .update(services)
-      .set(
-        markFailed(
-          "deleting",
-          error instanceof Error ? error.message : String(error)
-        )
-      )
+      .set(markFailed("deleting", error instanceof Error ? error.message : String(error)))
       .where(eq(services.id, serviceId));
     throw error;
   }
@@ -138,23 +125,18 @@ async function purgeBytes(
     managerClient: Parameters<typeof dockerClient>[0];
     registryContainer: string;
     serviceId: string;
-  }
+  },
 ): Promise<void> {
   // The clone directory on the build server.
-  await execArgv(o.buildClient, [
-    "sudo",
-    "rm",
-    "-rf",
-    `${BUILD_ROOT}/${o.serviceId}`,
-  ]).catch(() => {});
+  await execArgv(o.buildClient, ["sudo", "rm", "-rf", `${BUILD_ROOT}/${o.serviceId}`]).catch(
+    () => {},
+  );
 
   // Local images, if any remain (a pre-registry version, or an image
   // re-pulled by the node that was running the service).
   for (const tag of o.imageTags) {
     // biome-ignore lint/performance/noAwaitInLoops: one image at a time, deliberately
-    await execArgv(o.buildClient, ["sudo", "docker", "rmi", "-f", tag]).catch(
-      () => {}
-    );
+    await execArgv(o.buildClient, ["sudo", "docker", "rmi", "-f", tag]).catch(() => {});
   }
 
   // The registry repository: each tag, then garbage collection — otherwise
@@ -171,9 +153,7 @@ async function purgeBytes(
       deletedAny = deletedAny || gone;
     }
     if (deletedAny) {
-      await garbageCollect(o.managerClient, o.registryContainer).catch(
-        () => {}
-      );
+      await garbageCollect(o.managerClient, o.registryContainer).catch(() => {});
     }
   }
 

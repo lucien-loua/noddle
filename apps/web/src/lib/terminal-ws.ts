@@ -16,11 +16,8 @@ import {
 export function tryUpgradeTerminal(
   req: Request,
   server: {
-    upgrade: (
-      request: Request,
-      options: { data: TerminalSocketData }
-    ) => boolean;
-  }
+    upgrade: (request: Request, options: { data: TerminalSocketData }) => boolean;
+  },
 ): Response | undefined {
   const url = new URL(req.url);
   if (!isTerminalPath(url.pathname)) {

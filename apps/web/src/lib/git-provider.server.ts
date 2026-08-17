@@ -17,7 +17,7 @@ import { env } from "@/lib/env.server";
  * installation is exactly what is missing when we go looking for it.
  */
 export function githubAppCredentials(
-  gitProviderId: string
+  gitProviderId: string,
 ): Promise<{ appId: string; privateKeyPem: string; url: string }> {
   return appCredentials(db, env.appKey, gitProviderId);
 }
@@ -33,7 +33,7 @@ export async function saveCreatedApp(
     name: string;
     pem: string;
     webhookSecret: string;
-  }
+  },
 ): Promise<void> {
   await db
     .update(githubProviders)
@@ -44,18 +44,18 @@ export async function saveCreatedApp(
       clientSecretEncrypted: encryptSecret(
         created.clientSecret,
         env.appKey,
-        secretContext.gitProvider(gitProviderId, "client_secret")
+        secretContext.gitProvider(gitProviderId, "client_secret"),
       ),
       htmlUrl: created.htmlUrl,
       privateKeyEncrypted: encryptSecret(
         created.pem,
         env.appKey,
-        secretContext.gitProvider(gitProviderId, "private_key")
+        secretContext.gitProvider(gitProviderId, "private_key"),
       ),
       webhookSecretEncrypted: encryptSecret(
         created.webhookSecret,
         env.appKey,
-        secretContext.gitProvider(gitProviderId, "webhook_secret")
+        secretContext.gitProvider(gitProviderId, "webhook_secret"),
       ),
     })
     .where(eq(githubProviders.gitProviderId, gitProviderId));

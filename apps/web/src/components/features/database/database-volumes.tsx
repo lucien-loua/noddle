@@ -103,8 +103,7 @@ export function DatabaseVolumes({
   }, [queryClient, router]);
 
   const remove = useMutation({
-    mutationFn: (mountId: string) =>
-      deleteDatabaseMount({ data: { databaseId, mountId } }),
+    mutationFn: (mountId: string) => deleteDatabaseMount({ data: { databaseId, mountId } }),
     onSuccess: invalidate,
   });
 
@@ -114,17 +113,12 @@ export function DatabaseVolumes({
         <div className="min-w-0">
           <FrameTitle>Volumes</FrameTitle>
           <FrameDescription>
-            Mounts applied on the next provision. The primary volume is fixed to
-            this database; only the path inside the container is editable.
+            Mounts applied on the next provision. The primary volume is fixed to this database; only
+            the path inside the container is editable.
           </FrameDescription>
         </div>
         {canEdit ? (
-          <Button
-            onClick={() => setAddOpen(true)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
+          <Button onClick={() => setAddOpen(true)} size="sm" type="button" variant="outline">
             <PlusIcon data-icon="inline-start" weight="regular" />
             Add Volume
           </Button>
@@ -157,10 +151,7 @@ export function DatabaseVolumes({
               key={mount.id}
             >
               <div className="grid min-w-0 gap-2 sm:grid-cols-3 sm:gap-4">
-                <MountFact
-                  label="Mount Type"
-                  value={mount.type.toUpperCase()}
-                />
+                <MountFact label="Mount Type" value={mount.type.toUpperCase()} />
                 <MountFact
                   label={mount.type === "bind" ? "Host Path" : "Volume Name"}
                   value={mount.source}
@@ -292,20 +283,14 @@ function PrimaryPathDialog({
         <DialogHeader>
           <DialogTitle>Edit primary mount path</DialogTitle>
           <DialogDescription>
-            The volume name stays fixed. Only the path inside the container
-            changes — needed when an image major bump moves the data directory.
+            The volume name stays fixed. Only the path inside the container changes — needed when an
+            image major bump moves the data directory.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <FieldGroup>
             <form.AppField name="volumePath">
-              {(f) => (
-                <f.FieldText
-                  label="Mount Path"
-                  placeholder={defaultPath}
-                  required
-                />
-              )}
+              {(f) => <f.FieldText label="Mount Path" placeholder={defaultPath} required />}
             </form.AppField>
           </FieldGroup>
           {save.isError ? (
@@ -316,11 +301,7 @@ function PrimaryPathDialog({
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button variant="outline">Cancel</Button>} />
-          <Button
-            disabled={save.isPending}
-            onClick={() => form.handleSubmit()}
-            type="button"
-          >
+          <Button disabled={save.isPending} onClick={() => form.handleSubmit()} type="button">
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>
@@ -401,8 +382,8 @@ function MountDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Extra mounts sit alongside the primary data volume. Do not target
-            the engine data directory or /run/secrets.
+            Extra mounts sit alongside the primary data volume. Do not target the engine data
+            directory or /run/secrets.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -410,9 +391,7 @@ function MountDialog({
             <Field>
               <FieldLabel>Mount Type</FieldLabel>
               <Select
-                onValueChange={(v) =>
-                  setType((v as "bind" | "volume") ?? "volume")
-                }
+                onValueChange={(v) => setType((v as "bind" | "volume") ?? "volume")}
                 value={type}
               >
                 <SelectTrigger className="w-full">
@@ -427,9 +406,7 @@ function MountDialog({
               </Select>
             </Field>
             <Field>
-              <FieldLabel>
-                {type === "bind" ? "Host Path" : "Volume Name"}
-              </FieldLabel>
+              <FieldLabel>{type === "bind" ? "Host Path" : "Volume Name"}</FieldLabel>
               <Input
                 onChange={(e) => setSource(e.target.value)}
                 placeholder={type === "bind" ? "/var/lib/extra" : "my-volume"}

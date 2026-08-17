@@ -32,9 +32,7 @@ export async function createLogSink(o: LogSinkOptions): Promise<LogSink> {
       closed = true;
       return new Promise((resolve, reject) => {
         stream.end((err?: Error | null) =>
-          err
-            ? reject(err)
-            : resolve({ byteSize: bytes, storageUrl: `file://${path}` })
+          err ? reject(err) : resolve({ byteSize: bytes, storageUrl: `file://${path}` }),
         );
       });
     },

@@ -15,7 +15,7 @@ const PENDING_LABEL: Record<LifecycleAction, string> = {
 
 function resolveStatus(
   database: DatabaseRow,
-  pendingAction: LifecycleAction | null
+  pendingAction: LifecycleAction | null,
 ): { label: string; tone: Tone } {
   if (pendingAction) {
     return { label: PENDING_LABEL[pendingAction], tone: "busy" };

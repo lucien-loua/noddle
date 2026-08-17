@@ -45,7 +45,7 @@ export function loadRegistryConfig(): RegistryConfig | undefined {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `REGISTRY_HOST is set but the CA is unreadable (${CA_PATH}) — did the installer run? ${detail}`,
-      { cause: error }
+      { cause: error },
     );
   }
   return { caCert, host, password, username: REGISTRY_USER };
@@ -87,11 +87,7 @@ export async function resolveRegistry(opts: {
   return {
     host: row.registryUrl,
     imagePrefix: row.imagePrefix || undefined,
-    password: decryptSecret(
-      row.passwordEncrypted,
-      opts.appKey,
-      secretContext.registry(row.id)
-    ),
+    password: decryptSecret(row.passwordEncrypted, opts.appKey, secretContext.registry(row.id)),
     username: row.username,
   };
 }
@@ -160,10 +156,7 @@ export async function sweepRegistryTrust(opts: {
       if (!server.swarmNodeId) {
         // Catches up servers provisioned before the column existed.
         const nodeId = await getSwarmNodeId(createDockerApi(client));
-        await opts.db
-          .update(servers)
-          .set({ swarmNodeId: nodeId })
-          .where(eq(servers.id, server.id));
+        await opts.db.update(servers).set({ swarmNodeId: nodeId }).where(eq(servers.id, server.id));
       }
     } catch {
       result.skipped += 1;

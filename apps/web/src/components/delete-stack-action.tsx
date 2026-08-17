@@ -25,8 +25,7 @@ export function DeleteStackAction({
   const [open, setOpen] = useState(false);
 
   const remove = useMutation({
-    mutationFn: (confirmName: string) =>
-      deleteStack({ data: { confirmName, stackId } }),
+    mutationFn: (confirmName: string) => deleteStack({ data: { confirmName, stackId } }),
     onError: (e: Error) => {
       setOpen(false);
       onError(errorMessage(e, "deletion failed"));
@@ -35,10 +34,7 @@ export function DeleteStackAction({
   });
 
   const handleOpen = useCallback(() => setOpen(true), []);
-  const handleConfirm = useCallback(
-    (typed: string) => remove.mutate(typed),
-    [remove]
-  );
+  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
 
   if (!canDelete) {
     return null;
@@ -54,13 +50,13 @@ export function DeleteStackAction({
         confirmLabel="Delete stack"
         description={
           <>
-            Every container in this stack is stopped and removed, along with its
-            deployment history and build logs.{" "}
+            Every container in this stack is stopped and removed, along with its deployment history
+            and build logs.{" "}
             {/* Volumes SURVIVE, by design — see teardown-stack.ts: an
                 arbitrary Compose stack can carry someone's database, and
                 the user never explicitly designated it for deletion. */}
-            Named volumes are kept — a Compose stack can hold data nobody asked
-            to erase. <strong>This cannot be undone.</strong>
+            Named volumes are kept — a Compose stack can hold data nobody asked to erase.{" "}
+            <strong>This cannot be undone.</strong>
           </>
         }
         onConfirm={handleConfirm}

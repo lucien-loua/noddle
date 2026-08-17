@@ -50,37 +50,34 @@ await runVerify("webhook payloads", () => {
     const r = parseWebhookPullRequest(gh(action));
     check(
       `GitHub ${action} → PR 42, branch feature/x, alive`,
-      r !== null &&
-        !r.closed &&
-        r.number === 42 &&
-        r.headBranch === "feature/x",
-      `got ${JSON.stringify(r)}`
+      r !== null && !r.closed && r.number === 42 && r.headBranch === "feature/x",
+      `got ${JSON.stringify(r)}`,
     );
   }
 
   check(
     "GitHub closed → closed",
     parseWebhookPullRequest(gh("closed"))?.closed === true,
-    "not read as a closure"
+    "not read as a closure",
   );
 
   check(
     "GitHub from a FORK → detected (different repos)",
     parseWebhookPullRequest(gh("opened", false))?.fromFork === true,
-    "a fork was NOT detected — secrets would leak out"
+    "a fork was NOT detected — secrets would leak out",
   );
 
   check(
     "GitHub same repo → not a fork",
     parseWebhookPullRequest(gh("opened"))?.fromFork === false,
-    "an identical repo was seen as a fork"
+    "an identical repo was seen as a fork",
   );
 
   for (const action of ["labeled", "assigned", "edited", "review_requested"]) {
     check(
       `GitHub ${action} → ignored (changes neither the code nor the PR)`,
       parseWebhookPullRequest(gh(action)) === null,
-      "would have triggered a deployment"
+      "would have triggered a deployment",
     );
   }
 
@@ -95,7 +92,7 @@ await runVerify("webhook payloads", () => {
     check(
       "GitHub with no head.repo → treated as a fork (fails on the safe side)",
       parseWebhookPullRequest(JSON.stringify(body))?.fromFork === true,
-      "a missing head.repo was not treated as a fork"
+      "a missing head.repo was not treated as a fork",
     );
   }
 
@@ -105,7 +102,7 @@ await runVerify("webhook payloads", () => {
     check(
       `GitLab ${action} → MR 42, alive`,
       r !== null && !r.closed && r.number === 42,
-      `got ${JSON.stringify(r)}`
+      `got ${JSON.stringify(r)}`,
     );
   }
 
@@ -113,35 +110,25 @@ await runVerify("webhook payloads", () => {
     check(
       `GitLab ${action} → closed`,
       parseWebhookPullRequest(gl(action))?.closed === true,
-      "not read as a closure"
+      "not read as a closure",
     );
   }
 
   check(
     "GitLab source project ≠ target → fork detected",
     parseWebhookPullRequest(gl("open", false))?.fromFork === true,
-    "a GitLab fork was NOT detected"
+    "a GitLab fork was NOT detected",
   );
 
   // ── what must produce NOTHING ────────────────────────────────────────
   const rejected: [string, string][] = [
     ["unreadable body", "not json"],
-    [
-      "push (the other event)",
-      JSON.stringify({ after: "abc", ref: "refs/heads/main" }),
-    ],
+    ["push (the other event)", JSON.stringify({ after: "abc", ref: "refs/heads/main" })],
     ["empty object", "{}"],
-    [
-      "pull_request with no head",
-      JSON.stringify({ action: "opened", pull_request: {} }),
-    ],
+    ["pull_request with no head", JSON.stringify({ action: "opened", pull_request: {} })],
   ];
   for (const [label, raw] of rejected) {
-    check(
-      `${label} → null`,
-      parseWebhookPullRequest(raw) === null,
-      "produced a PR"
-    );
+    check(`${label} → null`, parseWebhookPullRequest(raw) === null, "produced a PR");
   }
 
   // ── the file list a watch-path filter is applied to ──────────────────
@@ -153,7 +140,7 @@ await runVerify("webhook payloads", () => {
         { added: [], modified: ["src/b.ts"], removed: ["old/c.ts"] },
       ],
       ref: "refs/heads/main",
-    })
+    }),
   );
   check(
     "a push lists every file it touched, across commits",
@@ -164,18 +151,16 @@ await runVerify("webhook payloads", () => {
       // A removal is a change: dropping the last file under a watched path
       // must still deploy.
       push.files.includes("old/c.ts"),
-    `got ${JSON.stringify(push?.files)}`
+    `got ${JSON.stringify(push?.files)}`,
   );
 
   // A push with no readable commits stays a valid push — the deploy
   // decision belongs to shouldDeployPaths, not to the parser.
-  const bare = parseWebhookPush(
-    JSON.stringify({ after: "abc123", ref: "refs/heads/main" })
-  );
+  const bare = parseWebhookPush(JSON.stringify({ after: "abc123", ref: "refs/heads/main" }));
   check(
     "a push with no commits array is still a push, with no files",
     bare !== null && bare.branch === "main" && bare.files.length === 0,
-    `got ${JSON.stringify(bare)}`
+    `got ${JSON.stringify(bare)}`,
   );
 
   // ── matching a payload's repository to a stored clone URL ────────────
@@ -191,17 +176,17 @@ await runVerify("webhook payloads", () => {
   check(
     "every spelling of one repository resolves to the same slug",
     spellings.every((u) => repoSlug(u) === "org/app"),
-    `got ${JSON.stringify(spellings.map(repoSlug))}`
+    `got ${JSON.stringify(spellings.map(repoSlug))}`,
   );
 
   check(
     "a self-hosted host does not change the slug",
-    repoSlug("https://git.acme.io/team/api.git") === "team/api"
+    repoSlug("https://git.acme.io/team/api.git") === "team/api",
   );
 
   check(
     "a nested GitLab-style group keeps the LAST two segments",
-    repoSlug("https://gitlab.com/group/sub/app.git") === "sub/app"
+    repoSlug("https://gitlab.com/group/sub/app.git") === "sub/app",
   );
 
   check(
@@ -209,7 +194,7 @@ await runVerify("webhook payloads", () => {
     repoSlug(null) === null &&
       repoSlug("") === null &&
       repoSlug("https://github.com/") === null &&
-      repoSlug("nonsense") === null
+      repoSlug("nonsense") === null,
   );
 
   // ── matching a payload's repository to a service ─────────────────────
@@ -227,15 +212,15 @@ await runVerify("webhook payloads", () => {
   check(
     "a GitLab subgroup matches its path_with_namespace",
     repositoryMatches(picked, "group/sub/app"),
-    "this is the comparison that silently stopped deploying"
+    "this is the comparison that silently stopped deploying",
   );
   check(
     "a subgroup service is NOT matched by the truncated slug",
-    !repositoryMatches(picked, "sub/app")
+    !repositoryMatches(picked, "sub/app"),
   );
   check(
     "case and stray whitespace do not split one repository in two",
-    repositoryMatches(picked, "  Group/Sub/App  ")
+    repositoryMatches(picked, "  Group/Sub/App  "),
   );
 
   check(
@@ -245,23 +230,23 @@ await runVerify("webhook payloads", () => {
         gitRepoFullName: "org/app",
         gitRepoUrl: "https://github.com/Org/App.git",
       },
-      "Org/App"
-    )
+      "Org/App",
+    ),
   );
 
   // Without a stored name both sides reduce to a slug — reducing the
   // PAYLOAD too is what keeps the by-URL case symmetric.
   check(
     "a by-URL subgroup service still matches, via both sides reducing",
-    repositoryMatches(byUrl, "group/sub/app")
+    repositoryMatches(byUrl, "group/sub/app"),
   );
   check(
     "a by-URL service does not match a different repository",
-    !repositoryMatches(byUrl, "group/sub/other")
+    !repositoryMatches(byUrl, "group/sub/other"),
   );
   check(
     "a service with neither name nor URL matches nothing",
-    !repositoryMatches({ gitRepoFullName: null, gitRepoUrl: null }, "org/app")
+    !repositoryMatches({ gitRepoFullName: null, gitRepoUrl: null }, "org/app"),
   );
 
   // ── naming the repository, per forge ─────────────────────────────────
@@ -275,27 +260,25 @@ await runVerify("webhook payloads", () => {
 
   check(
     "GitHub reads repository.full_name, lowercased",
-    payloadRepository("github", ghBody) === "org/app"
+    payloadRepository("github", ghBody) === "org/app",
   );
   check(
     "GitLab reads project.path_with_namespace, subgroups intact",
-    payloadRepository("gitlab", glBody) === "group/sub/app"
+    payloadRepository("gitlab", glBody) === "group/sub/app",
   );
   check(
     "each forge reads its OWN field and not the other's",
-    payloadRepository("github", glBody) === null &&
-      payloadRepository("gitlab", ghBody) === null
+    payloadRepository("github", glBody) === null && payloadRepository("gitlab", ghBody) === null,
   );
   check(
     "an unreadable body names nothing rather than throwing",
-    payloadRepository("github", "{{") === null &&
-      payloadRepository("gitlab", "[]") === null
+    payloadRepository("github", "{{") === null && payloadRepository("gitlab", "[]") === null,
   );
 
   // The end-to-end shape of the defect that started this: a GitLab subgroup
   // payload against the service that deploys it.
   check(
     "a GitLab subgroup payload matches its service",
-    repositoryMatches(picked, payloadRepository("gitlab", glBody) ?? "")
+    repositoryMatches(picked, payloadRepository("gitlab", glBody) ?? ""),
   );
 });

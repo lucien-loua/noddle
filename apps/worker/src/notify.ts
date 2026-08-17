@@ -15,18 +15,13 @@ import type { DeployContext } from "#runtime-context";
  * silently is worse than no notification at all, since you'd believe you're
  * being watched.
  */
-export async function notify(
-  ctx: DeployContext,
-  event: NotificationEvent
-): Promise<void> {
+export async function notify(ctx: DeployContext, event: NotificationEvent): Promise<void> {
   try {
     const channels = await ctx.db.query.notificationChannels.findMany({
       where: eq(notificationChannels.enabled, true),
     });
 
-    const concerned = channels.filter(
-      (c) => isFailure(event.type) || c.notifySuccess
-    );
+    const concerned = channels.filter((c) => isFailure(event.type) || c.notifySuccess);
     if (concerned.length === 0) {
       return;
     }
@@ -38,7 +33,7 @@ export async function notify(
         const url = decryptSecret(
           channel.urlEncrypted,
           ctx.appKey,
-          secretContext.notificationChannel(channel.id)
+          secretContext.notificationChannel(channel.id),
         );
         const result = await deliver({ kind: channel.kind, url }, event);
 
@@ -47,16 +42,16 @@ export async function notify(
           .set(
             result.ok
               ? { lastError: null, lastSuccessAt: new Date() }
-              : { lastError: result.error ?? "unknown failure" }
+              : { lastError: result.error ?? "unknown failure" },
           )
           .where(eq(notificationChannels.id, channel.id));
-      })
+      }),
     );
   } catch (error) {
     // Including an unreachable database or a decryption failure. Nothing
     // that happens here is allowed to propagate up to the job.
     process.stderr.write(
-      `notification not sent: ${error instanceof Error ? error.message : String(error)}\n`
+      `notification not sent: ${error instanceof Error ? error.message : String(error)}\n`,
     );
   }
 }

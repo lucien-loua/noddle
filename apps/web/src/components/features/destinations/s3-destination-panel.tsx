@@ -21,11 +21,7 @@ import { useTestAndSave } from "@/components/features/settings-list/hooks/use-te
 import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
-import {
-  ResourceCard,
-  ResourceCardFact,
-  ResourceCardMeta,
-} from "@/components/resource-card";
+import { ResourceCard, ResourceCardFact, ResourceCardMeta } from "@/components/resource-card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -47,23 +43,14 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import {
-  Frame,
-  FrameDescription,
-  FrameHeader,
-  FrameTitle,
-} from "@/components/ui/frame";
+import { Frame, FrameDescription, FrameHeader, FrameTitle } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import {
-  deleteDestination,
-  saveDestination,
-  testDestination,
-} from "@/server/backups/destinations";
+import { deleteDestination, saveDestination, testDestination } from "@/server/backups/destinations";
 import type { DestinationRow } from "@/server/backups/destinations";
 
 interface Props {
@@ -88,11 +75,7 @@ export function S3DestinationPanel({
   // A destination is configuration, not a secret to hide: reading stays
   // open, only writing is guarded.
   const canEdit = useCan(known, "backup", "create");
-  const {
-    data: destinations,
-    isEmpty,
-    refresh,
-  } = useResourceList(queries.destinations, initial);
+  const { data: destinations, isEmpty, refresh } = useResourceList(queries.destinations, initial);
 
   const handleCreate = useCallback(() => {
     onEdit(null);
@@ -104,7 +87,7 @@ export function S3DestinationPanel({
       onEdit(row);
       onOpenChange(true);
     },
-    [onEdit, onOpenChange]
+    [onEdit, onOpenChange],
   );
 
   return (
@@ -128,8 +111,8 @@ export function S3DestinationPanel({
           <SettingsList.EmptyHeader>
             <SettingsList.EmptyTitle>No S3 destination</SettingsList.EmptyTitle>
             <SettingsList.EmptyDescription>
-              Databases cannot be backed up until Noddle has somewhere to push
-              the dumps. Any S3-compatible store works.
+              Databases cannot be backed up until Noddle has somewhere to push the dumps. Any
+              S3-compatible store works.
             </SettingsList.EmptyDescription>
           </SettingsList.EmptyHeader>
           {canEdit ? (
@@ -143,8 +126,8 @@ export function S3DestinationPanel({
           <FrameHeader>
             <FrameTitle>S3 destinations</FrameTitle>
             <FrameDescription>
-              Where Noddle pushes database dumps. One is enough for most
-              installations — a picker only shows up once there are two.
+              Where Noddle pushes database dumps. One is enough for most installations — a picker
+              only shows up once there are two.
             </FrameDescription>
           </FrameHeader>
           {destinations.map((row) => (
@@ -192,12 +175,7 @@ function DestinationLine({
             <Button onClick={handleEdit} size="sm" variant="outline">
               Edit
             </Button>
-            <Button
-              disabled={isPending}
-              onClick={handleRemove}
-              size="sm"
-              variant="ghost"
-            >
+            <Button disabled={isPending} onClick={handleRemove} size="sm" variant="ghost">
               {isPending ? <Spinner data-icon="inline-start" /> : null}
               Remove
             </Button>
@@ -249,8 +227,7 @@ function DestinationDialog({
       await onSaved();
     },
     saveError: { fallback: "destination rejected", title: "Not saved" },
-    saveFn: (value: DestinationFormValues) =>
-      saveDestination({ data: toPayload(value) }),
+    saveFn: (value: DestinationFormValues) => saveDestination({ data: toPayload(value) }),
     saveSuccess: (value) => ({
       description: "Tested, then saved.",
       title: initial ? `${value.name} updated` : `${value.name} added`,
@@ -259,8 +236,7 @@ function DestinationDialog({
       fallback: "the bucket refused the credentials",
       title: "Cannot reach the destination",
     },
-    testFn: (value: DestinationFormValues) =>
-      testDestination({ data: toPayload(value) }),
+    testFn: (value: DestinationFormValues) => testDestination({ data: toPayload(value) }),
     testSuccess: () => ({
       description: "Write, read and delete all verified against the bucket.",
       title: "Destination reachable",
@@ -269,8 +245,7 @@ function DestinationDialog({
 
   const form = useAppForm({
     defaultValues,
-    onSubmit: ({ meta, value }) =>
-      meta.intent === "test" ? runTest(value) : runSave(value),
+    onSubmit: ({ meta, value }) => (meta.intent === "test" ? runTest(value) : runSave(value)),
     onSubmitMeta: { intent: "save" } as { intent: "save" | "test" },
     validators: { onDynamic: formSchema },
   });
@@ -286,7 +261,7 @@ function DestinationDialog({
       event.preventDefault();
       form.handleSubmit({ intent: "save" });
     },
-    [form]
+    [form],
   );
   const handleTest = useCallback(() => {
     form.handleSubmit({ intent: "test" });
@@ -296,12 +271,9 @@ function DestinationDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {initial ? `Edit ${initial.name}` : "Add an S3 destination"}
-          </DialogTitle>
+          <DialogTitle>{initial ? `Edit ${initial.name}` : "Add an S3 destination"}</DialogTitle>
           <DialogDescription>
-            Saving tests it first — a write, a read and a delete against the
-            bucket.
+            Saving tests it first — a write, a read and a delete against the bucket.
           </DialogDescription>
         </DialogHeader>
 
@@ -330,12 +302,7 @@ function DestinationDialog({
                     }}
                     name="providerId"
                   >
-                    {(f) => (
-                      <f.FieldSelect
-                        label="Provider"
-                        options={providerSelectOptions}
-                      />
-                    )}
+                    {(f) => <f.FieldSelect label="Provider" options={providerSelectOptions} />}
                   </form.AppField>
 
                   <form.Subscribe selector={selectProviderRegion}>
@@ -345,10 +312,7 @@ function DestinationDialog({
                           <f.FieldText
                             addonStart={<LinkIcon />}
                             label="Endpoint"
-                            placeholder={endpointPlaceholder(
-                              providerId,
-                              region
-                            )}
+                            placeholder={endpointPlaceholder(providerId, region)}
                             required
                           />
                         )}
@@ -370,22 +334,12 @@ function DestinationDialog({
                   <form.AppField
                     listeners={{
                       onChange: ({ value }) => {
-                        applyRegion(
-                          value ?? "",
-                          form.state.values.providerId,
-                          form.setFieldValue
-                        );
+                        applyRegion(value ?? "", form.state.values.providerId, form.setFieldValue);
                       },
                     }}
                     name="region"
                   >
-                    {(f) => (
-                      <f.FieldText
-                        addonStart={<GlobeIcon />}
-                        label="Region"
-                        required
-                      />
-                    )}
+                    {(f) => <f.FieldText addonStart={<GlobeIcon />} label="Region" required />}
                   </form.AppField>
 
                   <form.AppField name="prefix">
@@ -403,9 +357,8 @@ function DestinationDialog({
               <FieldSet disabled={!canEdit}>
                 <FieldLegend variant="label">Credentials</FieldLegend>
                 <FieldDescription>
-                  Encrypted at rest and never sent back to the browser.
-                  Noddle&apos;s own servers push the dumps, so these never
-                  travel to a target machine.
+                  Encrypted at rest and never sent back to the browser. Noddle&apos;s own servers
+                  push the dumps, so these never travel to a target machine.
                 </FieldDescription>
                 <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
                   <form.AppField name="accessKeyId">
@@ -424,11 +377,7 @@ function DestinationDialog({
                       <f.FieldText
                         addonStart={<KeyIcon />}
                         autoComplete="new-password"
-                        description={
-                          initial
-                            ? "Leave empty to keep the stored key."
-                            : undefined
-                        }
+                        description={initial ? "Leave empty to keep the stored key." : undefined}
                         label="Secret access key"
                         placeholder={initial ? "unchanged" : ""}
                         required={!initial}
@@ -445,9 +394,7 @@ function DestinationDialog({
                         checked={field.state.value}
                         id="pathStyle"
                         // biome-ignore lint/performance/noJsxPropsBind: adapts onCheckedChange to the field
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked === true)
-                        }
+                        onCheckedChange={(checked) => field.handleChange(checked === true)}
                       />
                       <FieldLabel className="font-normal" htmlFor="pathStyle">
                         Path-style addressing (required outside Amazon S3)
@@ -469,12 +416,7 @@ function DestinationDialog({
             />
             {canEdit ? (
               <>
-                <Button
-                  disabled={busy}
-                  onClick={handleTest}
-                  type="button"
-                  variant="outline"
-                >
+                <Button disabled={busy} onClick={handleTest} type="button" variant="outline">
                   {testPending ? <Spinner /> : null}
                   Test connection
                 </Button>

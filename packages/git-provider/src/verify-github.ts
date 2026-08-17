@@ -50,10 +50,7 @@ await runVerify("github app", async () => {
 
   check("the JWT has three segments", Boolean(header && payload && signature));
 
-  check(
-    "it is RS256 — GitHub rejects anything else",
-    decodeSegment(header ?? "").alg === "RS256"
-  );
+  check("it is RS256 — GitHub rejects anything else", decodeSegment(header ?? "").alg === "RS256");
 
   const claims = decodeSegment(payload ?? "");
   const iat = claims.iat as number;
@@ -64,81 +61,72 @@ await runVerify("github app", async () => {
   // get a 401 on every call, saying nothing about clocks.
   check("iat is backdated, never in the future", iat < nowSeconds);
 
-  check(
-    "exp stays under GitHub's 10 minute ceiling",
-    exp > iat && exp - iat <= 600
-  );
+  check("exp stays under GitHub's 10 minute ceiling", exp > iat && exp - iat <= 600);
 
   check("iss is the app id", claims.iss === APP.appId);
 
   check(
     "base64url — a JWT with + / or = is rejected",
-    !BASE64_UNSAFE.test(token) && token.includes(".")
+    !BASE64_UNSAFE.test(token) && token.includes("."),
   );
 
   // ── the API host ─────────────────────────────────────────────────────
   check(
     "github.com uses api.github.com",
     apiBase("https://github.com") === "https://api.github.com" &&
-      apiBase("https://github.com/") === "https://api.github.com"
+      apiBase("https://github.com/") === "https://api.github.com",
   );
 
   check(
     "Enterprise keeps its host under /api/v3",
-    apiBase("https://git.acme.io") === "https://git.acme.io/api/v3"
+    apiBase("https://git.acme.io") === "https://git.acme.io/api/v3",
   );
 
   // ── the clone URL is a secret ────────────────────────────────────────
-  const cloneUrl = cloneUrlWithToken(
-    "https://github.com/org/app.git",
-    "ghs_secrettoken"
-  );
+  const cloneUrl = cloneUrlWithToken("https://github.com/org/app.git", "ghs_secrettoken");
 
   check(
     "the token is embedded for git",
-    cloneUrl.includes("x-access-token") && cloneUrl.includes("ghs_secrettoken")
+    cloneUrl.includes("x-access-token") && cloneUrl.includes("ghs_secrettoken"),
   );
 
   check(
     "redaction removes it — this is what may be logged",
     !redactCloneUrl(cloneUrl).includes("ghs_secrettoken") &&
-      redactCloneUrl(cloneUrl).includes("github.com/org/app.git")
+      redactCloneUrl(cloneUrl).includes("github.com/org/app.git"),
   );
 
   check(
     "an unparseable URL redacts to a placeholder, never to itself",
-    redactCloneUrl("ghs_secret@@@not a url") === "<repository>"
+    redactCloneUrl("ghs_secret@@@not a url") === "<repository>",
   );
   // ── minting a token ──────────────────────────────────────────────────
   let seenUrl = "";
   let seenAuth = "";
   const minted = await installationToken(APP, (url, init) => {
     seenUrl = url;
-    seenAuth = String(
-      (init?.headers as Record<string, string> | undefined)?.Authorization
-    );
+    seenAuth = String((init?.headers as Record<string, string> | undefined)?.Authorization);
     return Promise.resolve(
       jsonResponse({
         expires_at: "2026-01-01T13:00:00Z",
         token: "ghs_installation",
-      })
+      }),
     );
   });
 
   check(
     "it posts to the installation's access_tokens endpoint",
-    seenUrl === "https://api.github.com/app/installations/678/access_tokens"
+    seenUrl === "https://api.github.com/app/installations/678/access_tokens",
   );
 
   check(
     "the JWT authenticates the mint, not the repository call",
-    seenAuth.startsWith("Bearer ey")
+    seenAuth.startsWith("Bearer ey"),
   );
 
   check(
     "expiry is kept — the token must not outlive it",
-    minted.token === "ghs_installation" &&
-      minted.expiresAt === Date.parse("2026-01-01T13:00:00Z")
+    minted.token === "ghs_installation" && minted.expiresAt === Date.parse("2026-01-01T13:00:00Z"),
   );
 
   // ── a failure says what GitHub said ──────────────────────────────────
@@ -146,26 +134,17 @@ await runVerify("github app", async () => {
     "a 401 surfaces GitHub's own message",
     () =>
       installationToken(APP, () =>
-        Promise.resolve(
-          jsonResponse(
-            { message: "A JSON web token could not be decoded" },
-            401
-          )
-        )
+        Promise.resolve(jsonResponse({ message: "A JSON web token could not be decoded" }, 401)),
       ),
     (e) =>
-      e instanceof GithubError &&
-      e.status === 401 &&
-      e.message.includes("could not be decoded")
+      e instanceof GithubError && e.status === 401 && e.message.includes("could not be decoded"),
   );
 
   // ── pagination terminates ────────────────────────────────────────────
   let calls = 0;
   const repos = await listRepositories(APP, (url) => {
     if (url.includes("access_tokens")) {
-      return Promise.resolve(
-        jsonResponse({ expires_at: "2026-01-01T13:00:00Z", token: "ghs_x" })
-      );
+      return Promise.resolve(jsonResponse({ expires_at: "2026-01-01T13:00:00Z", token: "ghs_x" }));
     }
     calls += 1;
     // A remote that always answers a full page must not spin forever.
@@ -177,14 +156,11 @@ await runVerify("github app", async () => {
           full_name: `org/r${calls}-${i}`,
           private: true,
         })),
-      })
+      }),
     );
   });
 
-  check(
-    "a remote that never stops paginating is bounded",
-    calls === 20 && repos.length === 2000
-  );
+  check("a remote that never stops paginating is bounded", calls === 20 && repos.length === 2000);
 
   // ── the manifest ─────────────────────────────────────────────────────
   const manifest = appManifest({
@@ -204,19 +180,15 @@ await runVerify("github app", async () => {
         contents: "read",
         metadata: "read",
         pull_requests: "read",
-      })
+      }),
   );
 
   check(
     "push and pull_request, because previews need the second",
-    JSON.stringify(manifest.default_events) ===
-      JSON.stringify(["push", "pull_request"])
+    JSON.stringify(manifest.default_events) === JSON.stringify(["push", "pull_request"]),
   );
 
-  check(
-    "the App is private — it is the operator's, not a listing",
-    manifest.public === false
-  );
+  check("the App is private — it is the operator's, not a listing", manifest.public === false);
 
   check(
     "the webhook is active from creation, not a later manual step",
@@ -224,7 +196,7 @@ await runVerify("github app", async () => {
       JSON.stringify({
         active: true,
         url: "https://noddle.acme.io/api/webhooks/github",
-      })
+      }),
   );
 
   check(
@@ -235,44 +207,39 @@ await runVerify("github app", async () => {
       !isPubliclyReachable("http://localhost:3000") &&
       !isPubliclyReachable("http://127.0.0.1:3000") &&
       !isPubliclyReachable("http://192.168.1.10:3000") &&
-      !isPubliclyReachable("http://noddle.local")
+      !isPubliclyReachable("http://noddle.local"),
   );
 
   // ── the code exchange ────────────────────────────────────────────────
   let exchangeUrl = "";
-  const created = await exchangeManifestCode(
-    "abc123",
-    "https://github.com",
-    (url, init) => {
-      exchangeUrl = `${init?.method} ${url}`;
-      return Promise.resolve(
-        jsonResponse({
-          client_id: "Iv1.deadbeef",
-          client_secret: "shhh",
-          html_url: "https://github.com/apps/noddle-acme",
-          id: 987_654,
-          name: "noddle-acme",
-          pem: "-----BEGIN RSA PRIVATE KEY-----\n",
-          webhook_secret: "whsec",
-        })
-      );
-    }
-  );
+  const created = await exchangeManifestCode("abc123", "https://github.com", (url, init) => {
+    exchangeUrl = `${init?.method} ${url}`;
+    return Promise.resolve(
+      jsonResponse({
+        client_id: "Iv1.deadbeef",
+        client_secret: "shhh",
+        html_url: "https://github.com/apps/noddle-acme",
+        id: 987_654,
+        name: "noddle-acme",
+        pem: "-----BEGIN RSA PRIVATE KEY-----\n",
+        webhook_secret: "whsec",
+      }),
+    );
+  });
 
   check(
     "the code is exchanged by POST at the conversions endpoint",
-    exchangeUrl ===
-      "POST https://api.github.com/app-manifests/abc123/conversions"
+    exchangeUrl === "POST https://api.github.com/app-manifests/abc123/conversions",
   );
 
   check(
     "the numeric app id becomes a string — it is a JWT claim and a path",
-    created.appId === "987654" && typeof created.appId === "string"
+    created.appId === "987654" && typeof created.appId === "string",
   );
 
   check(
     "the private key and webhook secret are carried back",
-    created.pem.startsWith("-----BEGIN") && created.webhookSecret === "whsec"
+    created.pem.startsWith("-----BEGIN") && created.webhookSecret === "whsec",
   );
 
   // `redirect_url` fires after CREATION, `setup_url` after INSTALLATION.
@@ -280,27 +247,20 @@ await runVerify("github app", async () => {
   // measured against a real App.
   check(
     "the manifest asks to be called back after installing, not only after creating",
-    manifest.setup_url === manifest.redirect_url &&
-      typeof manifest.setup_url === "string"
+    manifest.setup_url === manifest.redirect_url && typeof manifest.setup_url === "string",
   );
 
   const installs = await listInstallations(APP, () =>
-    Promise.resolve(
-      jsonResponse([{ account: { login: "acme" }, id: 42_424_242 }])
-    )
+    Promise.resolve(jsonResponse([{ account: { login: "acme" }, id: 42_424_242 }])),
   );
   check(
     "installations are discoverable from the App itself",
-    installs.length === 1 &&
-      installs[0]?.id === "42424242" &&
-      installs[0]?.account === "acme"
+    installs.length === 1 && installs[0]?.id === "42424242" && installs[0]?.account === "acme",
   );
 
   check(
     "the install URL is derived from the App page",
-    installUrl(created.htmlUrl) ===
-      "https://github.com/apps/noddle-acme/installations/new" &&
-      installUrl("https://github.com/apps/x/") ===
-        "https://github.com/apps/x/installations/new"
+    installUrl(created.htmlUrl) === "https://github.com/apps/noddle-acme/installations/new" &&
+      installUrl("https://github.com/apps/x/") === "https://github.com/apps/x/installations/new",
   );
 });

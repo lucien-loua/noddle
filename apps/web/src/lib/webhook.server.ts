@@ -2,11 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { safeEqual } from "@noddle/crypto";
 
-export function verifyWebhookSignature(
-  headers: Headers,
-  rawBody: string,
-  secret: string
-): boolean {
+export function verifyWebhookSignature(headers: Headers, rawBody: string, secret: string): boolean {
   const githubSignature = headers.get("x-hub-signature-256");
   if (githubSignature) {
     const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
@@ -104,9 +100,7 @@ export interface WebhookPullRequest {
  * push event — where both share the SAME schema and a single reader is
  * enough — the payloads differ here, so both shapes are read explicitly.
  */
-export function parseWebhookPullRequest(
-  rawBody: string
-): WebhookPullRequest | null {
+export function parseWebhookPullRequest(rawBody: string): WebhookPullRequest | null {
   let payload: unknown;
   try {
     payload = JSON.parse(rawBody);
@@ -125,9 +119,7 @@ export function parseWebhookPullRequest(
 
 const GITHUB_LIVE_ACTIONS = new Set(["opened", "reopened", "synchronize"]);
 
-function parseGithubPullRequest(
-  body: Record<string, unknown>
-): WebhookPullRequest | null {
+function parseGithubPullRequest(body: Record<string, unknown>): WebhookPullRequest | null {
   const { action, pull_request: pr } = body as {
     action?: unknown;
     pull_request?: Record<string, unknown>;
@@ -148,11 +140,7 @@ function parseGithubPullRequest(
   const baseRepo = base?.repo as Record<string, unknown> | undefined;
   const number = body.number ?? pr.number;
 
-  if (
-    typeof number !== "number" ||
-    typeof head?.sha !== "string" ||
-    typeof head.ref !== "string"
-  ) {
+  if (typeof number !== "number" || typeof head?.sha !== "string" || typeof head.ref !== "string") {
     return null;
   }
 
@@ -173,9 +161,7 @@ function parseGithubPullRequest(
 
 const GITLAB_LIVE_ACTIONS = new Set(["open", "reopen", "update"]);
 
-function parseGitlabMergeRequest(
-  body: Record<string, unknown>
-): WebhookPullRequest | null {
+function parseGitlabMergeRequest(body: Record<string, unknown>): WebhookPullRequest | null {
   const attrs = body.object_attributes as Record<string, unknown> | undefined;
   if (!attrs) {
     return null;
@@ -230,11 +216,7 @@ export function repoSlug(url: string | null | undefined): string | null {
   if (!url) {
     return null;
   }
-  const path = url
-    .trim()
-    .replace(URL_SCHEME, "")
-    .replace(SSH_PREFIX, "")
-    .replace(DOT_GIT, "");
+  const path = url.trim().replace(URL_SCHEME, "").replace(SSH_PREFIX, "").replace(DOT_GIT, "");
   const parts = path.split("/").filter(Boolean);
   if (parts.length < 2) {
     return null;
@@ -246,19 +228,14 @@ export function repoSlug(url: string | null | undefined): string | null {
  * The repository a payload names. GitHub says `repository.full_name`,
  * GitLab `project.path_with_namespace`.
  */
-export function payloadRepository(
-  forge: "github" | "gitlab",
-  rawBody: string
-): string | null {
+export function payloadRepository(forge: "github" | "gitlab", rawBody: string): string | null {
   try {
     const body = JSON.parse(rawBody) as {
       project?: { path_with_namespace?: unknown };
       repository?: { full_name?: unknown };
     };
     const named =
-      forge === "gitlab"
-        ? body.project?.path_with_namespace
-        : body.repository?.full_name;
+      forge === "gitlab" ? body.project?.path_with_namespace : body.repository?.full_name;
     return typeof named === "string" ? named.toLowerCase() : null;
   } catch {
     return null;
@@ -283,7 +260,7 @@ export function payloadRepository(
  */
 export function repositoryMatches(
   service: { gitRepoFullName: string | null; gitRepoUrl: string | null },
-  repository: string
+  repository: string,
 ): boolean {
   const full = service.gitRepoFullName?.trim().toLowerCase();
   if (full) {

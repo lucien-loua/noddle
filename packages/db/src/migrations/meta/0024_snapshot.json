@@ -2603,14 +2603,7 @@
     "public.service_status": {
       "name": "service_status",
       "schema": "public",
-      "values": [
-        "created",
-        "deploying",
-        "running",
-        "stopped",
-        "crashed",
-        "deleting"
-      ]
+      "values": ["created", "deploying", "running", "stopped", "crashed", "deleting"]
     },
     "public.source_type": {
       "name": "source_type",
