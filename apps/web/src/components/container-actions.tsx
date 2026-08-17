@@ -47,6 +47,10 @@ export function ContainerActions({
         },
       }),
     onError: (e: Error) => onError(errorMessage(e, "restart failed")),
+    // Same as `act` above: restarting a Swarm service changes what the
+    // container list reports, and without this the row keeps showing the
+    // state from before the restart.
+    onSuccess: () => router.invalidate(),
   });
 
   const handleStop = useCallback(() => act.mutate("stop"), [act]);

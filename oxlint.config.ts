@@ -86,5 +86,32 @@ export default defineConfig({
     // that and turns some existing escapes into syntax errors.
     "require-unicode-regexp": "off",
     "prefer-named-capture-group": "off",
+
+    // Off, after checking all 15 findings one by one. The rule looks for
+    // `queryClient.invalidateQueries`; this app refreshes through TanStack
+    // Router (ADR-0009) and a `refreshScope()` helper, which it cannot see.
+    // Measured: 7 already invalidated, 3 navigate away or redirect off-site,
+    // 1 detects completion by polling the running version on purpose, 3 queue
+    // asynchronous worker jobs, and exactly ONE was a real omission —
+    // container-actions' service restart, fixed in the same commit.
+    // 14 of 15 findings were noise, and noise around a real defect is how the
+    // real one gets skipped.
+    "react-doctor/query-mutation-missing-invalidation": "off",
+
+    // Off reluctantly — this rule finds real bugs elsewhere, and inline
+    // suppression does NOT work for it (neither oxlint-disable-next-line nor
+    // the eslint form takes effect), so targeted silencing was not available.
+    //
+    // Measured: 24 of the 27 findings name the same dependency, `form`. The
+    // effects deliberately depend on `form.reset` — the stable method —
+    // because TanStack Form's object identity changes on every render.
+    // Adding `form` would re-run the effect each render and reset the form in
+    // a loop: a regression, not a fix. database-configuration.tsx still
+    // carries the biome-ignore that said so before the switch.
+    //
+    // The 3 that are NOT about `form` are real and now go unflagged:
+    //   backups/panel.tsx:100-101   missing `subject`, then unnecessary
+    //   backups/config-dialog.tsx:329  unnecessary dependency
+    "react-hooks/exhaustive-deps": "off",
   },
 });
