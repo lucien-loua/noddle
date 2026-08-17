@@ -1,10 +1,10 @@
-export type { BackupSweepResult } from "#backup-run/sweep";
-
 import {
   pruneDatabaseBackups,
   sweepDatabaseBackups,
 } from "#backup-run/subjects/database";
 import type { DeployContext } from "#runtime-context";
+
+export type { BackupSweepResult } from "#backup-run/sweep";
 
 export async function sweepBackups(
   ctx: DeployContext,
