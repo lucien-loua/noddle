@@ -247,9 +247,16 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     // named IN ADDITION to root, with rights on their database. The image
     // REFUSES `MARIADB_USER=root`, hence the filter: when root is requested
     // there's nothing to create, it already exists.
+    // `?? rootUser` matches what connectionUrl() already does for every
+    // engine. `database_name` is nullable, and without the fallback the
+    // template interpolates the string "undefined": the container comes up
+    // with a database of that name while the URL Noddle hands out points at
+    // `rootUser`. Measured on a real VM — psql answered
+    // `FATAL: database "noddle" does not exist` against a database that was
+    // running and healthy.
     env: ({ databaseName, rootUser, secretPath }) => [
       `MARIADB_ROOT_PASSWORD_FILE=${secretPath}`,
-      `MARIADB_DATABASE=${databaseName}`,
+      `MARIADB_DATABASE=${databaseName ?? rootUser}`,
       ...(rootUser && rootUser !== "root"
         ? [`MARIADB_USER=${rootUser}`, `MARIADB_PASSWORD_FILE=${secretPath}`]
         : []),
@@ -293,7 +300,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     env: ({ databaseName, rootUser, secretPath }) => [
       `MONGO_INITDB_ROOT_USERNAME=${rootUser}`,
       `MONGO_INITDB_ROOT_PASSWORD_FILE=${secretPath}`,
-      `MONGO_INITDB_DATABASE=${databaseName}`,
+      `MONGO_INITDB_DATABASE=${databaseName ?? rootUser}`,
     ],
     // WITHOUT credentials, deliberately: a healthcheck doesn't need to prove
     // access, just that the server responds, and passing them would put the
@@ -338,7 +345,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     },
     env: ({ databaseName, rootUser, secretPath }) => [
       `MYSQL_ROOT_PASSWORD_FILE=${secretPath}`,
-      `MYSQL_DATABASE=${databaseName}`,
+      `MYSQL_DATABASE=${databaseName ?? rootUser}`,
       ...(rootUser && rootUser !== "root"
         ? [`MYSQL_USER=${rootUser}`, `MYSQL_PASSWORD_FILE=${secretPath}`]
         : []),
@@ -383,7 +390,7 @@ export const ENGINE_SPECS: Record<DatabaseEngine, EngineSpec> = {
     env: ({ databaseName, rootUser, secretPath }) => [
       `POSTGRES_USER=${rootUser}`,
       `POSTGRES_PASSWORD_FILE=${secretPath}`,
-      `POSTGRES_DB=${databaseName}`,
+      `POSTGRES_DB=${databaseName ?? rootUser}`,
     ],
     // pg_isready is provided by the official image. No password required:
     // the local connection goes through the socket, which the generated
