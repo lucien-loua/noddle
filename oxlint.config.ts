@@ -113,5 +113,45 @@ export default defineConfig({
     //   backups/panel.tsx:100-101   missing `subject`, then unnecessary
     //   backups/config-dialog.tsx:329  unnecessary dependency
     "react-hooks/exhaustive-deps": "off",
+
+    // Off: it contradicts the standard this repo writes down. All 22 findings
+    // say the same thing — "use default import for module `node:path`" — and
+    // AGENTS.md asks for the opposite: "Prefer specific imports over namespace
+    // imports". `import { join } from "node:path"` IS the specific form, it is
+    // what every file here uses, and it is what tree-shaking wants.
+    "unicorn/import-style": "off",
+
+    // ── Style opinions this codebase does not share ──────────────────────
+    //
+    // `(await import("@wterm/react")).Terminal` is how a dynamic import reads;
+    // hoisting it to a temporary says nothing the reader did not know.
+    "unicorn/no-await-expression-member": "off",
+    // `.then()` on a fire-and-forget cache refresh is not a readability
+    // problem, and the alternative is an async IIFE wrapping one line.
+    "promise/prefer-await-to-then": "off",
+    // `== null` is ONE check for null-or-undefined, used deliberately here.
+    // `eqeqeq` and `no-eq-null` together forbid exactly that idiom.
+    "eqeqeq": "off",
+    "no-eq-null": "off",
+    // The comments this flags are the ones CLAUDE.md asks for — the "why"
+    // next to the line it explains.
+    "no-inline-comments": "off",
+    // Key order is a formatter's business, and oxfmt does not reorder.
+    "sort-keys": "off",
+    // Naming a handler `onOpen` rather than `handleOpen` is a convention this
+    // repo did not adopt, and the rule cannot tell the two apart.
+    "react/jsx-handler-names": "off",
+    "unicorn/prefer-ternary": "off",
+
+    // ── Micro-optimisation advice, not defects ───────────────────────────
+    //
+    // These suggest faster shapes for code that is not on any hot path: a
+    // Set lookup instead of Array#includes over five items, two loops
+    // merged into one. Real advice, wrong altitude — it buries the rules
+    // below that name actual bugs.
+    "react-doctor/js-set-map-lookups": "off",
+    "react-doctor/js-combine-iterations": "off",
+    "react-doctor/js-index-maps": "off",
+    "react-doctor/js-cache-property-access": "off",
   },
 });
