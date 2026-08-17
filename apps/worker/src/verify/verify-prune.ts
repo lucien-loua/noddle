@@ -107,7 +107,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-prune", privateKey);
 
 async function reset(): Promise<void> {
@@ -321,11 +321,12 @@ try {
   // disappears — but no row is marked.
   const partial = await pruneDocker(ctx);
 
-  if (partial.nodes.length === 1 && partial.skipped[0] === dead.id) {
+  if (partial.nodes.length === 1 && partial.skipped[0]?.serverId === dead.id) {
     ok("the reachable node is pruned, the dead node is flagged");
   } else {
     ko(
-      `${partial.nodes.length} node(s) pruned, ${partial.skipped.length} skipped`
+      `${partial.nodes.length} node(s) pruned, ${partial.skipped.length} skipped` +
+        (partial.skipped[0] ? ` — ${partial.skipped[0].reason}` : "")
     );
   }
 

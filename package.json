@@ -51,7 +51,7 @@
     "dev": "bun run scripts/dev-preflight.ts && bun run dev:stack && bun run --cwd packages/db migrate && vp run -r dev",
     "dev:stack": "docker compose -f compose.dev.yml up -d --wait && bun run packages/testing/src/seed-stack.ts",
     "dev:stack:down": "docker compose -f compose.dev.yml down",
-    "dev:stack:reset": "docker compose -f compose.dev.yml down -v && docker compose -f compose.dev.yml up -d --wait && bun run --cwd packages/db migrate",
+    "dev:stack:reset": "docker compose -f compose.dev.yml down -v && bun run dev:stack && bun run --cwd packages/db migrate && bun run scripts/dev-adopt-notice.ts",
     "fix": "ultracite fix",
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "verify:local": "vp run -r verify:local",

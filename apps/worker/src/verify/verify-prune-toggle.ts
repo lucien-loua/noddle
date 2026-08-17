@@ -59,7 +59,7 @@ const ko = (m: string) => {
 
 const appKey = loadAppKey(process.env.APP_KEY);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 
 async function docker(
   client: SshClient,
@@ -129,7 +129,12 @@ try {
   if (result.reconciledFully) {
     ok("the disabled node still counts for reconciliation");
   } else {
-    ko("reconciliation stays blocked even though the only server responded");
+    ko(
+      "reconciliation stays blocked even though the only server responded" +
+        (result.skipped.length > 0
+          ? ` — skipped: ${result.skipped.map((s) => s.reason).join("; ")}`
+          : " — nothing was skipped, so the count is off elsewhere")
+    );
   }
 
   const after = await db.query.serverDiskUsage.findMany({

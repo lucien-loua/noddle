@@ -63,8 +63,15 @@ export interface PruneResult {
    * exactly the zero-instead-of-a-gap mistake this project refuses elsewhere.
    */
   reconciledFully: boolean;
-  /** Unreachable servers. Their disk usage wasn't recorded, and that's all. */
-  skipped: string[];
+  /**
+   * Servers that did not return their image list, WITH the reason.
+   *
+   * The reason is not decoration: one skipped server holds `reconciledFully`
+   * false forever, so nothing is ever reclaimed — and the bare `catch` that
+   * used to sit below discarded the cause entirely. The symptom was a prune
+   * that silently stopped working, with nothing anywhere saying why.
+   */
+  skipped: Array<{ reason: string; serverId: string }>;
 }
 
 /**
@@ -258,10 +265,13 @@ export async function pruneDocker(ctx: DeployContext): Promise<PruneResult> {
       }
       surveyed += 1;
       await recordDiskUsage(ctx, docker, server.id);
-    } catch {
+    } catch (error) {
       // Unreachable, SSH refused, Docker down: nothing is pruned on this
       // machine, and above all nothing is KNOWN about what it contains.
-      result.skipped.push(server.id);
+      result.skipped.push({
+        reason: error instanceof Error ? error.message : String(error),
+        serverId: server.id,
+      });
     } finally {
       if (client) {
         disconnect(client);
