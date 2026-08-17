@@ -45,7 +45,7 @@ const S3_KEY = devStack().s3.accessKeyId;
 const S3_SECRET = devStack().s3.secretAccessKey;
 const S3_BUCKET = devStack().s3.bucket;
 
-const NAME = "probe-planif";
+const NAME = "probe_planif";
 const PREFIX = "planif";
 
 let pass = 0;
@@ -61,7 +61,7 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(
   db,
   appKey,

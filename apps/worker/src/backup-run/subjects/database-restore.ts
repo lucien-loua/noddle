@@ -79,9 +79,18 @@ async function applyDatabaseRestore(
         buildClient,
         database.swarmName
       );
-      const databaseName =
-        database.databaseName ?? database.rootUser ?? database.name;
-      assertSafeIdentifier(databaseName, "database name");
+      // `?? database.name` used to close this chain, and it was the only
+      // place in the repo that did: `name` names the RESOURCE in Noddle and
+      // is validated by serviceNameSchema, which allows dashes — while every
+      // consumer here needs an unquoted SQL identifier. connectionUrl() and
+      // the engine env builders all stop at `rootUser`; this now does too.
+      //
+      // Undefined is a legitimate answer: Redis has no database name, only
+      // numbers, so both columns are null by design and the spec ignores it.
+      const databaseName = database.databaseName ?? database.rootUser;
+      if (databaseName) {
+        assertSafeIdentifier(databaseName, "database name");
+      }
       if (database.rootUser) {
         assertSafeIdentifier(database.rootUser, "database user");
       }

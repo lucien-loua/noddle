@@ -60,7 +60,7 @@ const S3_SECRET = devStack().s3.secretAccessKey;
 const S3_BUCKET = devStack().s3.bucket;
 
 const PG_NAME = "probe-restore-pg";
-const REDIS_NAME = "probe-restore-redis";
+const REDIS_NAME = "probe_restore_redis";
 
 let pass = 0;
 let fail = 0;
@@ -88,7 +88,7 @@ async function must(
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const {privateKey} = TARGET;
+const { privateKey } = TARGET;
 const sshKeyId = await seedSshKey(db, appKey, "verify-restore", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
