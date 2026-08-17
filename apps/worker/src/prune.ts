@@ -233,6 +233,19 @@ export async function pruneDocker(ctx: DeployContext): Promise<PruneResult> {
 
   const all = await ctx.db.query.servers.findMany();
   const connected = all.filter((server) => server.status === "connected");
+
+  // A server that is not connected blocks `reconciledFully` exactly like one
+  // that threw — `surveyed` is compared against ALL of them. Leaving it out
+  // of `skipped` too made it invisible: reclamation stopped for good and
+  // nothing anywhere named the machine responsible.
+  for (const server of all) {
+    if (server.status !== "connected") {
+      result.skipped.push({
+        reason: `server is ${server.status}, not connected`,
+        serverId: server.id,
+      });
+    }
+  }
   const present = new Set<string>();
   let surveyed = 0;
 

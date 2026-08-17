@@ -37,7 +37,7 @@ import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { pruneDocker } from "#prune";
-import { verifyCtx } from "#verify-seed";
+import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
 const TARGET = devTarget();
@@ -80,13 +80,37 @@ let ssh: SshClient | undefined;
 let restoreTo: boolean | undefined;
 
 try {
-  const server = await db.query.servers.findFirst({
-    where: eq(servers.host, TARGET.host),
-  });
+  // Seeds its own server, like every sibling bench.
+  //
+  // It used to flip whatever server was already registered for this host,
+  // and that could not work: `servers` is UNIQUE on (host, ssh_port,
+  // ssh_user), so a bench that registers its own target must first delete
+  // whoever holds the slot — which the twelve others all do. This bench
+  // therefore scored 6/6 alone and 2/4 inside the tier, decided by whether a
+  // neighbour had run first. The constancy of that failure is what made me
+  // read it as a product defect for five runs.
+  const sshKeyId = await seedSshKey(
+    db,
+    appKey,
+    "verify-prune-toggle",
+    TARGET.privateKey
+  );
+  await db.delete(servers).where(eq(servers.host, TARGET.host));
+  const [server] = await db
+    .insert(servers)
+    .values({
+      host: TARGET.host,
+      name: "prune-toggle-probe",
+      role: "manager",
+      // The bench flips a node that Noddle considers reachable; anything else
+      // is excluded from the pass before the toggle even matters.
+      status: "connected",
+      sshKeyId,
+      sshUser: TARGET.user,
+    })
+    .returning();
   if (!server) {
-    throw new Error(
-      `no server registered for ${TARGET.host} — this bench flips the already-present server, it creates nothing`
-    );
+    throw new Error("server insert failed");
   }
   restoreTo = server.pruneEnabled;
 
