@@ -17,6 +17,8 @@ import {
   projects,
   s3Destinations,
   servers,
+  volumeBackupConfigs,
+  volumeBackups,
 } from "@noddle/db/schema";
 import {
   connect,
@@ -71,7 +73,14 @@ const sshKeyId = await seedSshKey(
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
+// Every table that references a destination, before the destination:
+// `onDelete: "restrict"` is deliberate — the product refuses to drop a
+// destination whose backups could then never be restored, and says so.
+// A bench deleting rows directly has to honour the same order itself.
 await db.delete(backups);
+await db.delete(backupConfigs);
+await db.delete(volumeBackups);
+await db.delete(volumeBackupConfigs);
 await db.delete(s3Destinations);
 await db.delete(databases);
 await db.delete(environments);
