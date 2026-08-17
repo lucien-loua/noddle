@@ -81,8 +81,12 @@ async function writeAndDeployStack(
 ): Promise<DeployStackResult> {
   const { createDockerApi, managerClient, stackName, doc } = opts;
   const stream = opts.stream ?? {
-    onStderr: () => {},
-    onStdout: () => {},
+    onStderr: () => {
+      /* empty */
+    },
+    onStdout: () => {
+      /* empty */
+    },
   };
   const managerDocker = createDockerApi(managerClient);
   await ensureOverlayNetwork(managerDocker, route.networkName);
@@ -139,7 +143,9 @@ async function writeAndDeployStack(
     }
     return { accepted, swarmUpdateStates };
   } finally {
-    await execArgv(managerClient, ["rm", "-f", tmpPath]).catch(() => {});
+    await execArgv(managerClient, ["rm", "-f", tmpPath]).catch(() => {
+      /* empty */
+    });
   }
 }
 

@@ -28,7 +28,7 @@ const APP = {
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
 
 function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
+  return Response.json(body, { status });
 }
 
 await runVerify("gitlab oauth", async () => {

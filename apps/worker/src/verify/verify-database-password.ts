@@ -394,7 +394,9 @@ try {
     for (const engine of ENGINES) {
       const name = swarmNameOf(engine);
       // biome-ignore lint/performance/noAwaitInLoops: sequential cleanup
-      await removeService(managerDocker, name).catch(() => {});
+      await removeService(managerDocker, name).catch(() => {
+        /* empty */
+      });
       await removeSecretsByPrefix(managerDocker, `${name}-password`);
     }
     disconnect(managerSsh);

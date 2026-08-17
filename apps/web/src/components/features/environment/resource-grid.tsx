@@ -487,7 +487,7 @@ export function ResourceGrid({
   );
 
   const servers = useMemo(
-    () => [...new Set(items.map((i) => i.serverName))].sort(),
+    () => [...new Set(items.map((i) => i.serverName))].toSorted(),
     [items]
   );
 
@@ -508,7 +508,7 @@ export function ResourceGrid({
         (item.domain?.toLowerCase().includes(q) ?? false)
       );
     });
-    return [...list].sort((a, b) =>
+    return [...list].toSorted((a, b) =>
       sort === "name"
         ? a.name.localeCompare(b.name)
         : a.status.localeCompare(b.status)

@@ -42,6 +42,10 @@ const ko = (m: string) => {
   } else {
     ko(`floor not respected: ${tiny.memory}`);
   }
+  // parseInt, NOT Number: `memory` carries its unit — "960m". Number()
+  // returns NaN on it, every comparison below becomes false, and the bench
+  // reports a cap failure that is really a parse failure. An auto-fix made
+  // this substitution; the pure tier could not catch it, this suite is vm.
   if (Number.parseInt(vps.memory, 10) < 2048 - 768) {
     ok(`2 GB VPS → ${vps.memory}, control-plane room is reserved`);
   } else {

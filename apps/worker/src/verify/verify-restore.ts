@@ -363,7 +363,7 @@ try {
   const rBefore = (await must(ssh, redis("KEYS", "*")))
     .trim()
     .split("\n")
-    .sort();
+    .toSorted();
   ok(`state before restore: ${rBefore.join(", ")}`);
 
   await runRestore(ctx, { backupId: rdBackup.id, databaseId: rd.id });
@@ -386,7 +386,7 @@ try {
     .trim()
     .split("\n")
     .filter((l) => l !== "")
-    .sort();
+    .toSorted();
 
   if (rAfter.length === 1 && rAfter[0] === "avant") {
     ok('Redis restored: "avant" came back, "apres" is gone');

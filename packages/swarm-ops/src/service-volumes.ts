@@ -105,7 +105,7 @@ export async function listServiceVolumeMounts(
   const specMounts = mountsFromTaskTemplate(found?.Spec?.TaskTemplate);
   const taskMounts = await mountsFromRunningTask(docker, serviceName);
 
-  return dedupeMounts([...specMounts, ...taskMounts]).sort((a, b) =>
+  return dedupeMounts([...specMounts, ...taskMounts]).toSorted((a, b) =>
     a.volumeName.localeCompare(b.volumeName)
   );
 }

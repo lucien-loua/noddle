@@ -15,7 +15,7 @@ const keepLatestCountFormSchema = z.string().refine(
     if (trimmed === "") {
       return true;
     }
-    const parsed = Number.parseInt(trimmed, 10);
+    const parsed = Math.trunc(Number(trimmed));
     return Number.isFinite(parsed) && parsed >= 1 && parsed <= 100;
   },
   {
@@ -28,7 +28,7 @@ export function parseKeepLatestCount(raw: string): number | null {
   if (trimmed === "") {
     return null;
   }
-  const parsed = Number.parseInt(trimmed, 10);
+  const parsed = Math.trunc(Number(trimmed));
   if (!Number.isFinite(parsed)) {
     throw new TypeError("Keep latest must be a number");
   }

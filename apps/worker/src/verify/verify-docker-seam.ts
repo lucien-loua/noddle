@@ -74,7 +74,11 @@ await runVerify("DockerApi seam (C4)", async () => {
   }
 
   let createDockerApiCalls = 0;
-  const mockClient = { end: () => {} } as unknown as SshClient;
+  const mockClient = {
+    end: () => {
+      /* empty */
+    },
+  } as unknown as SshClient;
   const server = {
     id: "11111111-1111-4111-8111-111111111111",
   } as typeof servers.$inferSelect;

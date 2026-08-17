@@ -97,7 +97,9 @@ export function BackupPanel(props: BackupPanelProps) {
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   const invalidate = useCallback(() => {
-    cache.backupConfigsFor(queryClient, subject).catch(() => {});
+    cache.backupConfigsFor(queryClient, subject).catch(() => {
+      /* empty */
+    });
   }, [queryClient, subject.kind, backupSubjectScopeId(subject)]);
 
   if (destinations.length === 0) {

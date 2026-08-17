@@ -92,7 +92,7 @@ export function ServiceDomainCard({
               target="_blank"
             >
               {domain.host}
-              {publicPath ? publicPath : null}
+              {publicPath || null}
               <ArrowSquareOutIcon
                 className="size-3.5 shrink-0"
                 weight="regular"

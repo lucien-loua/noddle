@@ -114,8 +114,8 @@ function parseDims(params: Record<string, string>): {
   cols: number;
   rows: number;
 } {
-  const cols = Number.parseInt(params.cols || "80", 10);
-  const rows = Number.parseInt(params.rows || "24", 10);
+  const cols = Math.trunc(Number(params.cols || "80"));
+  const rows = Math.trunc(Number(params.rows || "24"));
   return {
     cols: Number.isFinite(cols) && cols > 0 ? cols : 80,
     rows: Number.isFinite(rows) && rows > 0 ? rows : 24,

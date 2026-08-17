@@ -79,7 +79,7 @@ function DeploymentsPage() {
   const [type, setType] = useState<TypeFilter>("all");
 
   const statuses = useMemo(
-    () => [...new Set(log.map((d) => d.status))].sort(),
+    () => [...new Set(log.map((d) => d.status))].toSorted(),
     [log]
   );
 

@@ -17,12 +17,12 @@ import {
 import { check, runVerify } from "@noddle/testing";
 import { getTableColumns } from "drizzle-orm";
 
-const columns = Object.keys(getTableColumns(services)).sort();
+const columns = Object.keys(getTableColumns(services)).toSorted();
 const spec = [...BUILD_SPEC_FIELDS] as string[];
 const identity = [...SERVICE_IDENTITY_FIELDS] as string[];
 
 await runVerify("service build spec", () => {
-  const classified = [...spec, ...identity].sort();
+  const classified = [...spec, ...identity].toSorted();
 
   const unclassified = columns.filter((c) => !classified.includes(c));
   check(
@@ -70,7 +70,7 @@ await runVerify("service build spec", () => {
 
   check(
     "buildSpecOf picks exactly the build spec, and every field of it",
-    Object.keys(picked).sort().join(",") === [...spec].sort().join(",")
+    Object.keys(picked).toSorted().join(",") === [...spec].toSorted().join(",")
   );
   check(
     "buildSpecOf carries the values through untouched",

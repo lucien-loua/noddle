@@ -146,14 +146,18 @@ async function purgeBytes(
     "rm",
     "-rf",
     `${BUILD_ROOT}/${o.serviceId}`,
-  ]).catch(() => {});
+  ]).catch(() => {
+    /* empty */
+  });
 
   // Local images, if any remain (a pre-registry version, or an image
   // re-pulled by the node that was running the service).
   for (const tag of o.imageTags) {
     // biome-ignore lint/performance/noAwaitInLoops: one image at a time, deliberately
     await execArgv(o.buildClient, ["sudo", "docker", "rmi", "-f", tag]).catch(
-      () => {}
+      () => {
+        /* empty */
+      }
     );
   }
 
@@ -171,15 +175,17 @@ async function purgeBytes(
       deletedAny = deletedAny || gone;
     }
     if (deletedAny) {
-      await garbageCollect(o.managerClient, o.registryContainer).catch(
-        () => {}
-      );
+      await garbageCollect(o.managerClient, o.registryContainer).catch(() => {
+        /* empty */
+      });
     }
   }
 
   // Log files, on the control plane — not on the target.
   for (const path of o.logPaths) {
     // biome-ignore lint/performance/noAwaitInLoops: one file at a time, deliberately
-    await unlink(path).catch(() => {});
+    await unlink(path).catch(() => {
+      /* empty */
+    });
   }
 }

@@ -65,7 +65,9 @@ async function ensureVolumeExists(
   const { code, stderr } = await execStream(
     client,
     `docker volume inspect ${quoteArg(volumeName)}`,
-    async () => {}
+    async () => {
+      /* empty */
+    }
   );
   if (code !== 0) {
     throw new Error(

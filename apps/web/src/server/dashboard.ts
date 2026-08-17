@@ -592,7 +592,7 @@ async function buildDashboardData(): Promise<DashboardData> {
     ).databases.push(d);
   }
 
-  const sorted = [...scopes.values()].sort((a, b) =>
+  const sorted = [...scopes.values()].toSorted((a, b) =>
     a.key.localeCompare(b.key)
   );
 

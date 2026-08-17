@@ -686,7 +686,7 @@ try {
       managerSsh as Awaited<ReturnType<typeof connect>>,
       `sudo docker exec ${REGISTRY_CONTAINER} du -sm /var/lib/registry`
     );
-    return Number.parseInt(res.stdout.trim().split(FIRST_FIELD)[0] ?? "0", 10);
+    return Math.trunc(Number(res.stdout.trim().split(FIRST_FIELD)[0] ?? "0"));
   };
 
   // An image WITH an exclusive layer: without it the GC has nothing to

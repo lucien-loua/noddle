@@ -418,9 +418,9 @@ function FilterRemoveButton({
       size={
         context.size === "sm"
           ? "icon-sm"
-          : (context.size === "lg"
+          : context.size === "lg"
             ? "icon-lg"
-            : "icon")
+            : "icon"
       }
       variant="outline"
       {...props}
@@ -665,7 +665,7 @@ function useFieldOptions<T = unknown>(
       return;
     }
 
-    const requestId = ++requestIdRef.current;
+    const requestId = (requestIdRef.current += 1);
     let cancelled = false;
     setState((prev) => ({ ...prev, error: false, loading: true }));
 
@@ -980,9 +980,9 @@ function SelectOptionsPopover<T = unknown>({
     const isSelected = effectiveValues.includes(option.value);
     const next = isSelected
       ? (effectiveValues.filter((v) => v !== option.value) as T[])
-      : (isMultiSelect
+      : isMultiSelect
         ? ([...effectiveValues, option.value] as T[])
-        : ([option.value] as T[]));
+        : ([option.value] as T[]);
 
     if (
       !isSelected &&
@@ -1083,9 +1083,9 @@ function SelectOptionsPopover<T = unknown>({
                   );
                   const next = isSelected
                     ? (effectiveValues.filter((v) => v !== option.value) as T[])
-                    : (isMultiSelect
+                    : isMultiSelect
                       ? ([...effectiveValues, option.value] as T[])
-                      : ([option.value] as T[]));
+                      : ([option.value] as T[]);
 
                   if (
                     !isSelected &&
@@ -1212,9 +1212,9 @@ function SelectOptionsPopover<T = unknown>({
                   )}
                   {selectedOptions.length === 1
                     ? selectedOptions[0]?.label
-                    : (selectedOptions.length > 1
+                    : selectedOptions.length > 1
                       ? `${selectedOptions.length} ${context.i18n.selectedCount}`
-                      : context.i18n.select)}
+                      : context.i18n.select}
                 </>
               )}
             </div>
@@ -2010,6 +2010,7 @@ export function Filters<T = unknown>({
 
               <div className="relative flex max-h-full">
                 <div
+                  tabIndex={0}
                   className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain"
                   id={`${rootId}-listbox`}
                   onMouseEnter={() => setActiveMenu("root")}

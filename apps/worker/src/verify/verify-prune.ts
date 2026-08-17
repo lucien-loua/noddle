@@ -189,12 +189,12 @@ async function imageExists(client: SshClient, tag: string): Promise<boolean> {
 /** The names of RUNNING containers, to compare before and after. */
 async function runningContainers(client: SshClient): Promise<string[]> {
   const res = await docker(client, "ps", "--format", "{{.Names}}");
-  return res.stdout.split("\n").filter(Boolean).sort();
+  return res.stdout.split("\n").filter(Boolean).toSorted();
 }
 
 async function networkNames(client: SshClient): Promise<string[]> {
   const res = await docker(client, "network", "ls", "--format", "{{.Name}}");
-  return res.stdout.split("\n").filter(Boolean).sort();
+  return res.stdout.split("\n").filter(Boolean).toSorted();
 }
 
 const registry: RegistryConfig = {

@@ -47,7 +47,7 @@ export function parseTail(raw: string | null): number {
   if (!raw) {
     return DEFAULT_TAIL;
   }
-  const n = Number.parseInt(raw, 10);
+  const n = Math.trunc(Number(raw));
   if (!Number.isFinite(n) || n < 1) {
     return DEFAULT_TAIL;
   }

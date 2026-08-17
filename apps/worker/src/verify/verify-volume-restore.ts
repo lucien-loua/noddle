@@ -311,9 +311,13 @@ try {
 } finally {
   if (ssh && swarmNameForCleanup) {
     const docker = dockerClient(ssh);
-    await removeService(docker, swarmNameForCleanup).catch(() => {});
+    await removeService(docker, swarmNameForCleanup).catch(() => {
+      /* empty */
+    });
     await execArgv(ssh, ["docker", "volume", "rm", "-f", VOLUME_NAME]).catch(
-      () => {}
+      () => {
+        /* empty */
+      }
     );
     disconnect(ssh);
   }

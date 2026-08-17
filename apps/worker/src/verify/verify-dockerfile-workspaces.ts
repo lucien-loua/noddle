@@ -24,7 +24,7 @@ function workspaceMembers(): string[] {
       .map((entry) => `${group}/${entry.name}`)
       .filter((member) => existsSync(join(REPO_ROOT, member, "package.json")));
 
-  return [...dirs("apps"), ...dirs("packages")].sort();
+  return [...dirs("apps"), ...dirs("packages")].toSorted();
 }
 
 await runVerify("Dockerfile workspace manifests", () => {

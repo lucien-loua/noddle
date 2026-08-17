@@ -72,9 +72,7 @@ function humanToBytes(size: string): number {
     TB: 1e12,
     kB: 1e3,
   };
-  return (
-    Number.parseFloat(match[1] as string) * (scale[match[2] as string] ?? 1)
-  );
+  return Number(match[1]) * (scale[String(match[2])] ?? 1);
 }
 
 /**
