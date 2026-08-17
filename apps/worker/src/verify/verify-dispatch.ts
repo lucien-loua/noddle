@@ -7,8 +7,8 @@ import type {
 } from "@noddle/deploy-contract";
 import { check, runVerify, suite } from "@noddle/testing";
 
-import { dispatch, handlerModules } from '#handlers';
-import type { Handlers } from '#handlers';
+import { dispatch, handlerModules } from "#handlers";
+import type { Handlers } from "#handlers";
 import type { WorkerDeps } from "#runtime-context";
 
 const ID = "11111111-1111-4111-8111-111111111111";

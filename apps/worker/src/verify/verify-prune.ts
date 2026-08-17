@@ -1,7 +1,7 @@
 // tier: vm
 // Docker pruning, against a REAL VM and a real Postgres.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune.ts
+//   node apps/worker/src/verify/verify-prune.ts
 //
 // Pruning is the only operation in this product that destroys without being
 // asked — a timer, on a machine the user owns. The bench's question is
@@ -62,24 +62,28 @@ import {
   services,
 } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
-import { connect, disconnect, dockerClient, execArgv } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  execArgv,
+} from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { pruneDocker } from "#prune";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 const DEAD = "192.0.2.1"; // TEST-NET-1: guaranteed non-routable
 
 /** The registry prefix. No registry needs to be running: only the SHAPE of
  *  the reference decides its portability, which is the whole principle
  *  behind `isPortableImage`. */
-const REGISTRY_HOST = `${HOST}:5000`;
+const REGISTRY_HOST = `${TARGET.host}:5000`;
 
 const ORPHAN = "noddle-prune-probe-orphan:v1";
 const KEPT = "noddle-prune-probe-keep:v1";
@@ -94,16 +98,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-prune", privateKey);
 
 async function reset(): Promise<void> {
@@ -205,12 +209,17 @@ const registry: RegistryConfig = {
 
 await reset();
 
-console.log(`\n\x1B[1mDocker prune — VM ${HOST}\x1B[0m`);
+console.log(`\n\u001B[1mDocker prune — VM ${TARGET.host}\u001B[0m`);
 
 let ssh: SshClient | undefined;
 
 try {
-  ssh = await connect({ host: HOST, port: 22, privateKey, user: USER });
+  ssh = await connect({
+    host: TARGET.host,
+    port: 22,
+    privateKey,
+    user: TARGET.user,
+  });
   await seedJunk(ssh);
 
   const beforeRunning = await runningContainers(ssh);
@@ -224,11 +233,11 @@ try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "prune-probe",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -240,7 +249,7 @@ try {
       name: "prune-probe-mort",
       role: "worker",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -499,5 +508,5 @@ try {
   await reset();
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

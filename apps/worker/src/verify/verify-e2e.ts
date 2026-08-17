@@ -21,15 +21,14 @@ import {
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { runDeploy } from "#deploy";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const SERVICE_NAME = "noddle-e2e";
 const ORIGIN = "/opt/noddle-e2e-origin";
@@ -47,20 +46,20 @@ const ko = (m: string) => {
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-e2e", privateKey);
-const domain = `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`;
+const domain = `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
 try {
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
 
   // Source repo on the target. `file://` is an inert transport, allowed by the
   // allowlist; `ext::` is not — and that is the point.
   await exec(
     ssh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$TARGET.user" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' '{"name":"e2e","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("e2e "+(process.env.GREETING||"?"))).listen(p)' > s.js && ` +
@@ -73,7 +72,7 @@ try {
   const [srv] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       isSelf: false,
       name: "e2e-target",
       // `role: "manager"`: this bench depended on it without declaring it. It
@@ -85,7 +84,7 @@ try {
       // `adopt-host` writes in production.
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       totalMemoryMb: 2048,
     })
     .returning();

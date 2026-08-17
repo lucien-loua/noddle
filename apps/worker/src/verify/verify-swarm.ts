@@ -12,18 +12,17 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { routeLabels } from "@noddle/proxy-config";
-import { connect, disconnect, dockerClient } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import {
   deployService,
   ensureOverlayNetwork,
   isDeployAccepted,
   removeService,
 } from "@noddle/swarm-ops";
+import { devTarget } from "@noddle/testing/dev-target";
 
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const HEALTHY_A = process.env.IMG_A ?? "spike-app:1785648147";
 const HEALTHY_B = process.env.IMG_B ?? "spike-app:1785647822";
@@ -71,12 +70,12 @@ let client: SshClient | undefined;
 
 try {
   client = await connect({
-    host: HOST,
-    privateKey: readFileSync(KEY, "utf-8"),
-    user: USER,
+    host: TARGET.host,
+    privateKey: TARGET.privateKey,
+    user: TARGET.user,
   });
   const docker = dockerClient(client);
-  ok(`connected to ${USER}@${HOST}`);
+  ok(`connected to ${TARGET.user}@${TARGET.host}`);
 
   await removeService(docker, SERVICE);
   await ensureOverlayNetwork(docker, NETWORK);

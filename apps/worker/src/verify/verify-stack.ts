@@ -6,7 +6,7 @@
 // does `docker stack deploy` do what compose.ts asks it to do, and does
 // rollback really replay a past version without touching the repo?
 //
-//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-stack.ts
+//   DATABASE_URL=… node apps/worker/src/verify/verify-stack.ts
 //
 // The manager must ALREADY be in Swarm (any VM used for a Phase 0/1/2 test
 // already is).
@@ -30,36 +30,36 @@ import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { redeployStack, runStackDeploy } from "#compose";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
+const TARGET = devTarget();
+
 const execFileAsync = promisify(execFile);
 
 const DB_URL = devStack().databaseUrl;
-const STACK_HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
 const STACK_NAME = "noddle-stack-probe";
 const ORIGIN = "/opt/noddle-stack-origin";
-const domain = `${STACK_NAME}.${STACK_HOST.replaceAll(".", "-")}.sslip.io`;
+const domain = `${STACK_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
 
 let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-stack", privateKey);
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -73,7 +73,7 @@ await db.delete(stackDeployments);
 await db.delete(stacks);
 await db.delete(environments);
 await db.delete(projects);
-await db.delete(servers).where(inArray(servers.host, [STACK_HOST]));
+await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
 const COMPOSE_CONTENT = `
 services:
@@ -107,11 +107,11 @@ try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: STACK_HOST,
+      host: TARGET.host,
       name: "stack-probe-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -125,7 +125,11 @@ try {
   const route = { networkName: "noddle-public" };
   const build = { logRoot: "/tmp/noddle-stack-logs" };
 
-  managerSsh = await connect({ host: STACK_HOST, privateKey, user: USER });
+  managerSsh = await connect({
+    host: TARGET.host,
+    privateKey,
+    user: TARGET.user,
+  });
   // By PREFIX, never by exact name: a stack's Swarm name now carries 8 hex
   // digits drawn from its id, so it changes on every run. An exact name
   // would leave an orphan behind on every interrupted run. Also covers the
@@ -145,7 +149,7 @@ try {
 
   await exec(
     managerSsh,
-    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN}`
+    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$TARGET.user" ${ORIGIN}`
   );
   await writeOrigin(managerSsh, "compose bonjour un", "v1");
   ok("compose repo created (build: web, image: redis)");
@@ -254,7 +258,7 @@ try {
           "10",
           "-H",
           `Host: ${domain}`,
-          `http://${STACK_HOST}/`,
+          `http://${TARGET.host}/`,
         ],
         { timeout: 12_000 }
       ).catch(() => null);
@@ -332,7 +336,7 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 
 // A bench that doesn't return an exit code can't be chained: a RED run would
 // be indistinguishable from a green one to the caller. And without an

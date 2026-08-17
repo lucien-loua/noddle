@@ -6,7 +6,7 @@
 // question, and it can't be answered by a typecheck or on a single machine —
 // it requires a second Docker daemon that has never seen the image.
 //
-//   MANAGER_HOST=192.168.252.3 WORKER_HOST=192.168.252.5 \
+//   \
 //     DATABASE_URL=… node apps/worker/src/verify/verify-registry.ts
 //
 // The manager must ALREADY be in Swarm. The worker can be bare or already a
@@ -32,8 +32,14 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import { ensureRegistryTrust, KEEP_PER_SERVICE, pushImage, REGISTRY_USER, registryImageTag } from '@noddle/registry';
-import type { RegistryConfig } from '@noddle/registry';
+import {
+  ensureRegistryTrust,
+  KEEP_PER_SERVICE,
+  pushImage,
+  REGISTRY_USER,
+  registryImageTag,
+} from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/registry";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -45,6 +51,7 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { redeployImage, runDeploy } from "#deploy";
@@ -53,13 +60,13 @@ import { sweepRegistry } from "#registry-sweep";
 import { runServiceTeardown } from "#teardown";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
+// Two machines: the Swarm manager and a worker that joins it.
+const MANAGER = devTarget();
+const WORKER = devTarget("noddle-target-2");
+
 const execFileAsync = promisify(execFile);
 
 const DB_URL = devStack().databaseUrl;
-const MANAGER_HOST = process.env.MANAGER_HOST ?? "192.168.252.3";
-const WORKER_HOST = process.env.WORKER_HOST ?? "192.168.252.5";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
 const SERVICE_NAME = "noddle-reg";
 const ORIGIN = "/opt/noddle-reg-origin";
@@ -71,20 +78,20 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
-const step = (m: string) => console.log(`\n\x1B[1m${m}\x1B[0m`);
+const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = MANAGER.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-registry", privateKey);
 const registryPassword = randomBytes(16).toString("hex");
-const domain = `${SERVICE_NAME}.${MANAGER_HOST.replaceAll(".", "-")}.sslip.io`;
+const domain = `${SERVICE_NAME}.${MANAGER.host.replaceAll(".", "-")}.sslip.io`;
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
 let workerSsh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -106,10 +113,14 @@ await db.delete(environments);
 await db.delete(projects);
 await db
   .delete(servers)
-  .where(inArray(servers.host, [MANAGER_HOST, WORKER_HOST]));
+  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
 
 try {
-  managerSsh = await connect({ host: MANAGER_HOST, privateKey, user: USER });
+  managerSsh = await connect({
+    host: MANAGER.host,
+    privateKey,
+    user: MANAGER.user,
+  });
   const managerDocker = dockerClient(managerSsh);
 
   // ── fixture setup: the registry on the manager ────────────────────────────
@@ -128,9 +139,9 @@ try {
       `-subj '/CN=Noddle Registry CA' ` +
       `-addext 'basicConstraints=critical,CA:TRUE' ` +
       `-addext 'keyUsage=critical,keyCertSign,cRLSign' 2>/dev/null && ` +
-      `printf 'subjectAltName=IP:${MANAGER_HOST}\\nbasicConstraints=CA:FALSE\\nkeyUsage=critical,digitalSignature,keyEncipherment\\nextendedKeyUsage=serverAuth\\n' | sudo tee ${CERT_DIR}/ext.cnf >/dev/null && ` +
+      `printf 'subjectAltName=IP:${MANAGER.host}\\nbasicConstraints=CA:FALSE\\nkeyUsage=critical,digitalSignature,keyEncipherment\\nextendedKeyUsage=serverAuth\\n' | sudo tee ${CERT_DIR}/ext.cnf >/dev/null && ` +
       `sudo openssl req -newkey rsa:2048 -nodes -keyout ${CERT_DIR}/registry.key ` +
-      `-out ${CERT_DIR}/registry.csr -subj '/CN=${MANAGER_HOST}' 2>/dev/null && ` +
+      `-out ${CERT_DIR}/registry.csr -subj '/CN=${MANAGER.host}' 2>/dev/null && ` +
       `sudo openssl x509 -req -in ${CERT_DIR}/registry.csr -CA ${CERT_DIR}/ca.crt ` +
       `-CAkey ${CERT_DIR}/ca.key -CAcreateserial -out ${CERT_DIR}/registry.crt ` +
       `-days 3650 -sha256 -extfile ${CERT_DIR}/ext.cnf 2>/dev/null`
@@ -195,7 +206,7 @@ try {
   ).stdout.trim();
   const registry: RegistryConfig = {
     caCert,
-    host: `${MANAGER_HOST}:5000`,
+    host: `${MANAGER.host}:5000`,
     password: registryPassword,
     username: REGISTRY_USER,
   };
@@ -245,11 +256,11 @@ try {
   const [managerRow] = await db
     .insert(servers)
     .values({
-      host: MANAGER_HOST,
+      host: MANAGER.host,
       name: "reg-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: MANAGER.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -261,10 +272,10 @@ try {
   const [workerRow] = await db
     .insert(servers)
     .values({
-      host: WORKER_HOST,
+      host: WORKER.host,
       name: "reg-worker",
       sshKeyId,
-      sshUser: USER,
+      sshUser: MANAGER.user,
     })
     .returning();
   if (!workerRow) {
@@ -291,7 +302,11 @@ try {
     );
   }
 
-  workerSsh = await connect({ host: WORKER_HOST, privateKey, user: USER });
+  workerSsh = await connect({
+    host: WORKER.host,
+    privateKey,
+    user: MANAGER.user,
+  });
   const caOnWorker = await exec(
     workerSsh,
     `sudo cat /etc/docker/certs.d/${registry.host}/ca.crt`
@@ -309,7 +324,7 @@ try {
   step("Deployment: built on the worker, pushed, not pinned");
   await exec(
     workerSsh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' '{"name":"reg","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
@@ -474,7 +489,7 @@ try {
           "10",
           "-H",
           `Host: ${domain}`,
-          `http://${MANAGER_HOST}/`,
+          `http://${MANAGER.host}/`,
         ],
         { timeout: 12_000 }
       ).catch(() => null);
@@ -634,7 +649,7 @@ try {
 
   await exec(
     managerSsh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("registre bonjour")).listen(p)' > s.js && ` +
       'printf \'FROM node:24-slim\\nRUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*\\nWORKDIR /app\\nCOPY . .\\nCMD ["node","s.js"]\\n\' > Dockerfile && ' +
@@ -855,8 +870,9 @@ try {
     disconnect(managerSsh);
   }
   console.log(
-    `\n\x1b[1m${pass} passed, ${fail} failed\x1b[0m${ 
-      fail === 0 ? " \x1b[32m✓\x1b[0m\n" : " \x1b[31m✗\x1b[0m\n"}`
+    `\n\u001B[1m${pass} passed, ${fail} failed\u001B[0m${
+      fail === 0 ? " \u001B[32m✓\u001B[0m\n" : " \u001B[31m✗\u001B[0m\n"
+    }`
   );
   process.exit(fail === 0 ? 0 : 1);
 }

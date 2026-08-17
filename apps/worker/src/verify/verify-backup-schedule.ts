@@ -1,12 +1,12 @@
 // tier: vm
-// STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-backup-schedule.ts
+// node apps/worker/src/verify/verify-backup-schedule.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
-import { backupObjectKey, objectExists } from '@noddle/backup-store';
-import type { BackupDestination } from '@noddle/backup-store';
+import { backupObjectKey, objectExists } from "@noddle/backup-store";
+import type { BackupDestination } from "@noddle/backup-store";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { runBackup } from "#backup";
@@ -34,10 +35,10 @@ import { provisionDatabase } from "#database";
 import { legacyDatabaseServiceName } from "#database-runtime";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
+const TARGET = devTarget();
+
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const KEY = process.env.SSH_KEY ?? path.join(homedir(), ".ssh", "id_ed25519");
 
 const S3_ENDPOINT = devStack().s3.endpoint;
 const S3_KEY = devStack().s3.accessKeyId;
@@ -51,16 +52,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(
   db,
   appKey,
@@ -75,9 +76,9 @@ await db.delete(s3Destinations);
 await db.delete(databases);
 await db.delete(environments);
 await db.delete(projects);
-await db.delete(servers).where(inArray(servers.host, [HOST]));
+await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(`\n\x1B[1mScheduling and retention — VM ${HOST}\x1B[0m`);
+console.log(`\n\u001B[1mScheduling and retention — VM ${TARGET.host}\u001B[0m`);
 
 const destination: BackupDestination = {
   accessKeyId: S3_KEY,
@@ -93,11 +94,11 @@ try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "planif-probe-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -135,7 +136,7 @@ try {
   const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   await removeService(dockerClient(ssh), legacyDatabaseServiceName(NAME));
   await execArgv(ssh, [
     "sh",
@@ -336,5 +337,5 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

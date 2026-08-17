@@ -1,7 +1,7 @@
 // tier: vm
 // The prune switch, against the REAL VM.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-prune-toggle.ts
+//   node apps/worker/src/verify/verify-prune-toggle.ts
 //
 // Isolated from verify-prune.ts rather than added to it: this change WRAPS
 // code already covered 17/17 (pruneNode, imageTagsOn, recordDiskUsage) under
@@ -30,18 +30,17 @@ import { join } from "node:path";
 import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { serverDiskUsage, servers } from "@noddle/db/schema";
-import { connect, disconnect, execArgv } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { connect, disconnect, execArgv } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { pruneDocker } from "#prune";
 import { verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const suffix = randomBytes(3).toString("hex");
 const ORPHAN = `noddle-toggle-off-${suffix}:v1`;
@@ -51,16 +50,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = loadAppKey(process.env.APP_KEY);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 
 async function docker(
   client: SshClient,
@@ -75,23 +74,28 @@ async function imageExists(client: SshClient, tag: string): Promise<boolean> {
   return res.code === 0;
 }
 
-console.log(`\n\x1B[1mPrune switch — VM ${HOST}\x1B[0m`);
+console.log(`\n\u001B[1mPrune switch — VM ${TARGET.host}\u001B[0m`);
 
 let ssh: SshClient | undefined;
 let restoreTo: boolean | undefined;
 
 try {
   const server = await db.query.servers.findFirst({
-    where: eq(servers.host, HOST),
+    where: eq(servers.host, TARGET.host),
   });
   if (!server) {
     throw new Error(
-      `no server registered for ${HOST} — this bench flips the already-present server, it creates nothing`
+      `no server registered for ${TARGET.host} — this bench flips the already-present server, it creates nothing`
     );
   }
   restoreTo = server.pruneEnabled;
 
-  ssh = await connect({ host: HOST, port: 22, privateKey, user: USER });
+  ssh = await connect({
+    host: TARGET.host,
+    port: 22,
+    privateKey,
+    user: TARGET.user,
+  });
 
   await docker(ssh, "rm", "-f", DEAD_CONTAINER);
   await docker(ssh, "pull", "alpine:3");
@@ -172,9 +176,9 @@ try {
     await db
       .update(servers)
       .set({ pruneEnabled: restoreTo })
-      .where(eq(servers.host, HOST));
+      .where(eq(servers.host, TARGET.host));
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

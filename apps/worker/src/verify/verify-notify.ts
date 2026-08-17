@@ -18,11 +18,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
@@ -75,7 +75,7 @@ async function addChannel(opts: {
   return id;
 }
 
-console.log("\n\x1B[1mNotification delivery — real Postgres + HTTP\x1B[0m");
+console.log("\n\u001B[1mNotification delivery — real Postgres + HTTP\u001B[0m");
 
 await db.delete(notificationChannels);
 
@@ -195,5 +195,5 @@ try {
   server.close();
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

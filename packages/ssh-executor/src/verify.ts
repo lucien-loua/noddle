@@ -8,16 +8,24 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { connect, disconnect, dockerClient, exec, execArgv, execStream, quoteArg } from '#index';
-import type { ServerCredentials } from '#index';
+import { devTarget } from "@noddle/testing/dev-target";
+
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  exec,
+  execArgv,
+  execStream,
+  quoteArg,
+} from "#index";
+import type { ServerCredentials } from "#index";
 
 /** Digest recorded ON the VM, to compare against the one recomputed here. */
 let remoteDigest = "";
 const WHITESPACE = /\s+/;
 
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const runtime =
   globalThis.Bun === undefined
@@ -28,21 +36,21 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m?\x1B[0m ${m}`);
+  console.log(`  \u001B[32m?\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m?\x1B[0m ${m}`);
+  console.log(`  \u001B[31m?\u001B[0m ${m}`);
 };
 
-console.log(`\n\x1B[1mRuntime: ${runtime}\x1B[0m`);
-console.log(`Target  : ${USER}@${HOST}\n`);
+console.log(`\n\u001B[1mRuntime: ${runtime}\u001B[0m`);
+console.log(`Target  : ${TARGET.user}@${TARGET.host}\n`);
 
 // The key must never be logged, here or anywhere else.
 const creds: ServerCredentials = {
-  host: HOST,
-  privateKey: readFileSync(KEY, "utf-8"),
-  user: USER,
+  host: TARGET.host,
+  privateKey: TARGET.privateKey,
+  user: TARGET.user,
 };
 
 // ?? 1. Shell escaping (pure, testable without network) ???????????????????????
@@ -247,5 +255,7 @@ try {
   }
 }
 
-console.log(`\n\x1B[1m${runtime} — passed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(
+  `\n\u001B[1m${runtime} — passed ${pass}, failed ${fail}\u001B[0m\n`
+);
 process.exit(fail === 0 ? 0 : 1);

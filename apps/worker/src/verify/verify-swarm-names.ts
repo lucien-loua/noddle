@@ -11,7 +11,7 @@
 // Hence the assertion that matters: we WRITE a row in one and verify it's
 // INVISIBLE from the other. It would fail on the old code.
 //
-//   STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-swarm-names.ts
+//   DATABASE_URL=… node apps/worker/src/verify/verify-swarm-names.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -30,15 +30,14 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { provisionDatabase } from "#database";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 const NETWORK = "noddle-public";
 
 /** The SHARED name. That's the whole point: the same label on both sides. */
@@ -48,16 +47,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-swarm-names", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -138,17 +137,17 @@ await db.delete(projects);
 await db.delete(servers);
 
 try {
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   await sweepLeftovers(ssh);
 
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "swarm-names-probe",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })

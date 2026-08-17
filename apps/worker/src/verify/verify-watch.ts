@@ -34,6 +34,7 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { desc, eq } from "drizzle-orm";
 
 import { runDeploy } from "#deploy";
@@ -42,9 +43,7 @@ import { sweepWatch } from "#sweep";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const SERVICE_NAME = "noddle-watch";
 const ORIGIN = "/opt/noddle-watch-origin";
@@ -68,7 +67,7 @@ const step = (m: string) => console.log(`    ${m}`);
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-watch", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -88,13 +87,13 @@ async function writeApp(
 }
 
 try {
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   const docker = dockerClient(ssh);
   await removeService(docker, SERVICE_NAME);
 
   await exec(
     ssh,
-    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$TARGET.user" ${quoteArg(ORIGIN)} && ` +
       `cd ${quoteArg(ORIGIN)} && printf '%s' '{"name":"w","scripts":{"start":"node s.js"}}' > package.json && ` +
       "git init -q -b main . && git config user.email w@x && git config user.name w"
   );
@@ -109,11 +108,11 @@ try {
   const [srv] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "watch-target",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       totalMemoryMb: 2048,
     })
     .returning();
@@ -140,7 +139,7 @@ try {
     .returning();
   if (svc) {
     await db.insert(serviceDomains).values({
-      host: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+      host: `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`,
       serviceId: svc.id,
     });
   }
@@ -243,7 +242,7 @@ try {
   }
 
   // ── the proof: the service serves the healthy version again ─────────────
-  const domain = `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`;
+  const domain = `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
   let body = "";
   const httpDeadline = Date.now() + 90_000;
   while (Date.now() < httpDeadline) {

@@ -73,7 +73,10 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
       "utf-8"
     );
     const deploy = readFileSync(join(WORKER_SRC, "deploy/deploy.ts"), "utf-8");
-    const compose = readFileSync(join(WORKER_SRC, "deploy/compose.ts"), "utf-8");
+    const compose = readFileSync(
+      join(WORKER_SRC, "deploy/compose.ts"),
+      "utf-8"
+    );
 
     check(
       "accepted-deployment imports watchUntilFor",

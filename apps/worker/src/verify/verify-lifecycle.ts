@@ -1,5 +1,5 @@
 // tier: vm
-// TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-lifecycle.ts
+// DATABASE_URL=… node apps/worker/src/verify/verify-lifecycle.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -19,6 +19,7 @@ import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { runDeploy } from "#deploy";
@@ -26,9 +27,7 @@ import { runLifecycle } from "#lifecycle";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 const NAME = "noddle-lifecycle";
 const ORIGIN = "/opt/noddle-lifecycle-origin";
 
@@ -36,16 +35,16 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-lifecycle", privateKey);
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -93,13 +92,13 @@ async function waitForRunningTasks(
 }
 
 try {
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   const docker = dockerClient(ssh);
 
   // Staging: a minimal HTTP-served repo, like verify-e2e.
   await exec(
     ssh,
-    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$USER" ${ORIGIN} && ` +
+    `sudo rm -rf ${ORIGIN} && sudo mkdir -p ${ORIGIN} && sudo chown -R "$TARGET.user" ${ORIGIN} && ` +
       // A NODE server, not `python3 -m http.server`: a railpack image for a
       // Node project does not ship python3, and the task exited 127
       // (command not found) — faulty staging that blamed the code.
@@ -119,11 +118,11 @@ try {
   const [srv] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "lifecycle-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -157,7 +156,7 @@ try {
     throw new Error("service insert failed");
   }
   await db.insert(serviceDomains).values({
-    host: `${NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+    host: `${NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`,
     serviceId: svc.id,
   });
   const swarmName = swarmServiceName(svc);

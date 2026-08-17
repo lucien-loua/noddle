@@ -1,5 +1,5 @@
 // tier: vm
-// STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-metrics.ts
+// node apps/worker/src/verify/verify-metrics.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -18,6 +18,7 @@ import {
 } from "@noddle/db/schema";
 import { connect, disconnect, exec } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import {
@@ -29,25 +30,23 @@ import {
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 const DEAD = "192.0.2.1"; // TEST-NET-1: guaranteed non-routable
 
 let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-metrics", privateKey);
 
 const HUMAN_SIZE = /^([\d.]+)\s*([kMGTP]?B)$/;
@@ -94,20 +93,20 @@ async function reset(): Promise<void> {
   await db.delete(serverMetrics);
   await db.delete(serverDiskUsage);
   const probes = await db.query.servers.findMany({
-    where: inArray(servers.host, [HOST, DEAD]),
+    where: inArray(servers.host, [TARGET.host, DEAD]),
   });
   for (const s of probes) {
     // biome-ignore lint/performance/noAwaitInLoops: sequential cleanup by design
     await db.delete(databases).where(eq(databases.serverId, s.id));
     await db.delete(services).where(eq(services.serverId, s.id));
   }
-  await db.delete(servers).where(inArray(servers.host, [HOST, DEAD]));
+  await db.delete(servers).where(inArray(servers.host, [TARGET.host, DEAD]));
   await db.delete(projects).where(eq(projects.name, "metrics-probe"));
 }
 
 await reset();
 
-console.log(`\n\x1B[1mResource collection — VM ${HOST}\u001b[0m`);
+console.log(`\n\u001B[1mResource collection — VM ${TARGET.host}\u001B[0m`);
 
 try {
   // ── 1. Parsing, no network ──────────────────────────────────────────────
@@ -167,11 +166,11 @@ try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "metrics-probe",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -243,7 +242,11 @@ try {
     throw new Error("no disk breakdown written");
   }
 
-  const cli = await connect({ host: HOST, privateKey, user: USER });
+  const cli = await connect({
+    host: TARGET.host,
+    privateKey,
+    user: TARGET.user,
+  });
   let cliOut = "";
   try {
     cliOut = (await exec(cli, "docker system df --format '{{json .}}'")).stdout;
@@ -334,7 +337,7 @@ try {
       name: "metrics-probe-dead",
       role: "worker",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -382,7 +385,11 @@ try {
   // would cost minutes and 300 MB on a 2 048 MB VM — `verify-database.ts`
   // already proves provisioning; no need to redo it here.
   const probeName = `ndb-metrics-${randomBytes(4).toString("hex")}`;
-  const managerSsh = await connect({ host: HOST, privateKey, user: USER });
+  const managerSsh = await connect({
+    host: TARGET.host,
+    privateKey,
+    user: TARGET.user,
+  });
   // PINNED to the manager, as a real database is (its volume only exists on
   // its node). Without a constraint, Swarm places wherever it wants:
   // measured, the first attempt landed on the OTHER VM, so the container was
@@ -540,5 +547,5 @@ try {
   await reset();
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

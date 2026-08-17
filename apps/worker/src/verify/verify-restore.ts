@@ -2,7 +2,7 @@
 // Restore, against REAL infrastructure — this is the test that decides
 // whether backups are good for anything.
 //
-//   STACK_HOST=192.168.252.3 node apps/worker/src/verify/verify-restore.ts
+//   node apps/worker/src/verify/verify-restore.ts
 //
 // "The job finishes without error" proves nothing. The only question that
 // matters is: **is the data from before back, and is the data from after
@@ -19,8 +19,8 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { backupObjectKey, deleteObject } from '@noddle/backup-store';
-import type { BackupDestination } from '@noddle/backup-store';
+import { backupObjectKey, deleteObject } from "@noddle/backup-store";
+import type { BackupDestination } from "@noddle/backup-store";
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {
@@ -39,6 +39,7 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { runBackup } from "#backup";
@@ -51,9 +52,7 @@ import { runRestore } from "#restore";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const S3_ENDPOINT = devStack().s3.endpoint;
 const S3_KEY = devStack().s3.accessKeyId;
@@ -67,11 +66,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 async function must(
@@ -89,7 +88,7 @@ async function must(
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-restore", privateKey);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -99,9 +98,11 @@ await db.delete(s3Destinations);
 await db.delete(databases);
 await db.delete(environments);
 await db.delete(projects);
-await db.delete(servers).where(inArray(servers.host, [HOST]));
+await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
-console.log(`\n\x1B[1mRestore — VM ${HOST}, S3 ${S3_ENDPOINT}\x1B[0m`);
+console.log(
+  `\n\u001B[1mRestore — VM ${TARGET.host}, S3 ${S3_ENDPOINT}\u001B[0m`
+);
 
 const destination: BackupDestination = {
   accessKeyId: S3_KEY,
@@ -117,11 +118,11 @@ try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "restore-probe-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -159,7 +160,7 @@ try {
   const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
   const [proj] = await db
     .insert(projects)
     .values({ name: "restore-probe" })
@@ -407,5 +408,5 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

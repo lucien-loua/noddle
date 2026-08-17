@@ -1,7 +1,7 @@
 // tier: vm
 // Deleting a stack, a database, a server — against a REAL VM.
 //
-//   TARGET_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-teardown.ts
+//   DATABASE_URL=… node apps/worker/src/verify/verify-teardown.ts
 //
 // WHAT WOULD MAKE THIS TEST PASS FOR THE WRONG REASON, laid out before
 // writing the assertions:
@@ -38,6 +38,7 @@ import {
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";
 
 import { provisionDatabase } from "#database";
@@ -46,25 +47,23 @@ import { runDatabaseTeardown } from "#teardown-stack";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 const DB_NAME = "teardown-probe";
 
 let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-teardown", privateKey);
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -100,7 +99,7 @@ const secretExists = async (
 };
 
 try {
-  ssh = await connect({ host: HOST, privateKey, user: USER });
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
 
   await db.delete(databases);
   await db.delete(stacks);
@@ -112,11 +111,11 @@ try {
   const [srv] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "teardown-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -206,7 +205,7 @@ try {
         name: "teardown-worker",
         role: "worker",
         sshKeyId,
-        sshUser: USER,
+        sshUser: TARGET.user,
         status: "connected",
       })
       .returning();

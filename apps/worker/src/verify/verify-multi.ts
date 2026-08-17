@@ -1,5 +1,5 @@
 // tier: vm
-// MANAGER_HOST=192.168.252.3 WORKER_HOST=192.168.252.5 DATABASE_URL=… node apps/worker/src/verify/verify-multi.ts
+//   DATABASE_URL=… node apps/worker/src/verify/verify-multi.ts
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -26,19 +26,20 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { runDeploy } from "#deploy";
 import { provisionServer } from "#provision";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
+// Two machines: the Swarm manager and a worker that joins it.
+const MANAGER = devTarget();
+const WORKER = devTarget("noddle-target-2");
+
 const execFileAsync = promisify(execFile);
 
 const DB_URL = devStack().databaseUrl;
-const MANAGER_HOST = process.env.MANAGER_HOST ?? "192.168.252.3";
-const WORKER_HOST = process.env.WORKER_HOST ?? "192.168.252.5";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
 
 const SERVICE_NAME = "noddle-multi";
 const ORIGIN = "/opt/noddle-multi-origin";
@@ -47,18 +48,18 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = MANAGER.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-multi", privateKey);
-const domain = `${SERVICE_NAME}.${WORKER_HOST.replaceAll(".", "-")}.sslip.io`;
+const domain = `${SERVICE_NAME}.${WORKER.host.replaceAll(".", "-")}.sslip.io`;
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -71,18 +72,18 @@ await db.delete(environments);
 await db.delete(projects);
 await db
   .delete(servers)
-  .where(inArray(servers.host, [MANAGER_HOST, WORKER_HOST]));
+  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
 
 try {
   // ── staging: both servers in the DB ─────────────────────────────────────
   const [managerRow] = await db
     .insert(servers)
     .values({
-      host: MANAGER_HOST,
+      host: MANAGER.host,
       name: "multi-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: MANAGER.user,
       totalMemoryMb: 2048,
     })
     .returning();
@@ -94,10 +95,10 @@ try {
   const [workerRow] = await db
     .insert(servers)
     .values({
-      host: WORKER_HOST,
+      host: WORKER.host,
       name: "multi-worker",
       sshKeyId,
-      sshUser: USER,
+      sshUser: MANAGER.user,
       // default role: "worker" — never set explicitly, exactly as the
       // `addServer` server function would do.
     })
@@ -132,7 +133,11 @@ try {
   ok("provisioning replayable without error (idempotent)");
 
   // ── Swarm truth: two nodes, not one ─────────────────────────────────────
-  managerSsh = await connect({ host: MANAGER_HOST, privateKey, user: USER });
+  managerSsh = await connect({
+    host: MANAGER.host,
+    privateKey,
+    user: MANAGER.user,
+  });
   const managerDocker = dockerClient(managerSsh);
   const nodes = (await managerDocker.listNodes()) as {
     ID?: string;
@@ -152,14 +157,14 @@ try {
 
   // ── source repo on the WORKER, not the manager ──────────────────────────
   const workerSsh = await connect({
-    host: WORKER_HOST,
+    host: WORKER.host,
     privateKey,
-    user: USER,
+    user: MANAGER.user,
   });
   try {
     await exec(
       workerSsh,
-      `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+      `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$MANAGER.user" ${quoteArg(ORIGIN)} && ` +
         `cd ${quoteArg(ORIGIN)} && ` +
         `printf '%s' '{"name":"multi","scripts":{"start":"node s.js"}}' > package.json && ` +
         `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("multi hello")).listen(p)' > s.js && ` +
@@ -258,7 +263,7 @@ try {
         "10",
         "-H",
         `Host: ${domain}`,
-        `http://${MANAGER_HOST}/`,
+        `http://${MANAGER.host}/`,
       ],
       { timeout: 12_000 }
     ).catch(() => null);
@@ -325,5 +330,5 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

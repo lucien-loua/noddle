@@ -28,15 +28,14 @@ import {
 } from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME, deployJobSchema } from "@noddle/deploy-contract";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { Queue } from "bullmq";
 import { desc, eq } from "drizzle-orm";
 import IORedis from "ioredis";
 
 const DB_URL = devStack().databaseUrl;
 const REDIS_URL = devStack().redisUrl;
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const PORT = Number(process.env.PORT ?? 3312);
 const BASE = `http://localhost:${PORT}`;
@@ -53,11 +52,11 @@ let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = loadAppKey(process.env.APP_KEY);
@@ -134,7 +133,7 @@ try {
   const remoteScript = [
     `sudo rm -rf '${ORIGIN}'`,
     `sudo mkdir -p '${ORIGIN}'`,
-    `sudo chown -R "$USER" '${ORIGIN}'`,
+    `sudo chown -R "$TARGET.user" '${ORIGIN}'`,
     `cd '${ORIGIN}'`,
     `printf '%s' '{"name":"live","scripts":{"start":"node s.js"}}' > package.json`,
     `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("live "+(process.env.GREETING||"?"))).listen(p)' > s.js`,
@@ -148,12 +147,12 @@ try {
   const seed = Bun.spawnSync([
     "ssh",
     "-i",
-    KEY,
+    TARGET.keyPath,
     "-o",
     "StrictHostKeyChecking=no",
     "-o",
     "UserKnownHostsFile=/dev/null",
-    `${USER}@${HOST}`,
+    `${TARGET.user}@${TARGET.host}`,
     remoteScript,
   ]);
   if (seed.exitCode === 0) {
@@ -174,7 +173,7 @@ try {
     id: sshKeyId,
     name: "live-target",
     privateKeyEncrypted: encryptSecret(
-      readFileSync(KEY, "utf-8"),
+      TARGET.privateKey,
       appKey,
       secretContext.sshKey(sshKeyId)
     ),
@@ -187,10 +186,10 @@ try {
   const [srv] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "live-target",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       totalMemoryMb: 2048,
     })
     .returning();
@@ -215,7 +214,7 @@ try {
   const serviceId = svc?.id ?? "";
   if (svc) {
     await db.insert(serviceDomains).values({
-      host: `${SERVICE_NAME}.${HOST.replaceAll(".", "-")}.sslip.io`,
+      host: `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`,
       serviceId: svc.id,
     });
   }
@@ -228,13 +227,14 @@ try {
       env: process.env,
       stderr: "pipe",
       stdout: "pipe",
-    })
-  , Bun.spawn(["bun", "run", "server.ts"], {
+    }),
+    Bun.spawn(["bun", "run", "server.ts"], {
       cwd: join(repoRoot, "apps/web"),
       env: { ...process.env, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",
-    }));
+    })
+  );
 
   if (await waitForWeb()) {
     ok("worker (Node) and web (Bun) started, two distinct processes");
@@ -394,5 +394,5 @@ try {
   await redis.quit();
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);

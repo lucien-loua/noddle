@@ -1,5 +1,5 @@
 // tier: vm
-// STACK_HOST=192.168.252.3 DATABASE_URL=… node apps/worker/src/verify/verify-database.ts
+// DATABASE_URL=… node apps/worker/src/verify/verify-database.ts
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -17,30 +17,29 @@ import {
 } from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { provisionDatabase, removeSecretIfExists } from "#database";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
-const HOST = process.env.STACK_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 let pass = 0;
 let fail = 0;
 const ok = (m: string) => {
   pass += 1;
-  console.log(`  \x1B[32m✓\x1B[0m ${m}`);
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
 };
 const ko = (m: string) => {
   fail += 1;
-  console.log(`  \x1B[31m✗\x1B[0m ${m}`);
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
 };
 
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
-const privateKey = readFileSync(KEY, "utf-8");
+const privateKey = TARGET.privateKey;
 const sshKeyId = await seedSshKey(db, appKey, "verify-database", privateKey);
 
 let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
@@ -48,17 +47,17 @@ let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
 await db.delete(databases);
 await db.delete(environments);
 await db.delete(projects);
-await db.delete(servers).where(inArray(servers.host, [HOST]));
+await db.delete(servers).where(inArray(servers.host, [TARGET.host]));
 
 try {
   const [server] = await db
     .insert(servers)
     .values({
-      host: HOST,
+      host: TARGET.host,
       name: "database-probe-manager",
       role: "manager",
       sshKeyId,
-      sshUser: USER,
+      sshUser: TARGET.user,
       status: "connected",
       totalMemoryMb: 2048,
     })
@@ -71,7 +70,11 @@ try {
   const ctx = verifyCtx({ appKey, db });
   const route = { networkName: "noddle-public" };
 
-  managerSsh = await connect({ host: HOST, privateKey, user: USER });
+  managerSsh = await connect({
+    host: TARGET.host,
+    privateKey,
+    user: TARGET.user,
+  });
   await removeService(dockerClient(managerSsh), "noddle-db-probe-postgres");
   await removeService(dockerClient(managerSsh), "noddle-db-probe-redis");
 
@@ -444,7 +447,7 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 
 // A harness that does not return an exit code cannot be chained: a RED run
 // would be indistinguishable from a green one to the caller. And without an

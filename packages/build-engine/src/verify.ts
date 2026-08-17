@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { connect, disconnect, exec, quoteArg } from '@noddle/ssh-executor';
-import type { SshClient } from '@noddle/ssh-executor';
+import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
+import { devTarget } from "@noddle/testing/dev-target";
 
 import {
   BUILDKIT_CONTAINER,
@@ -17,9 +18,7 @@ import {
   fetchSource,
 } from "#index";
 
-const HOST = process.env.TARGET_HOST ?? "192.168.252.3";
-const USER = process.env.TARGET_USER ?? "ubuntu";
-const KEY = process.env.SSH_KEY ?? join(homedir(), ".ssh", "id_ed25519");
+const TARGET = devTarget();
 
 const WORK = "/opt/noddle-verify";
 const TAG = `noddle-verify:${Date.now()}`;
@@ -62,11 +61,11 @@ let client: SshClient | undefined;
 
 try {
   client = await connect({
-    host: HOST,
-    privateKey: readFileSync(KEY, "utf-8"),
-    user: USER,
+    host: TARGET.host,
+    privateKey: TARGET.privateKey,
+    user: TARGET.user,
   });
-  ok(`connected to ${USER}@${HOST}`);
+  ok(`connected to ${TARGET.user}@${TARGET.host}`);
 
   // ── 2. cap actually applied to the builder ────────────────────────────────
   const cap = computeBuildCap({ totalMemoryMb: 2048 });
@@ -151,7 +150,7 @@ try {
   const origin = `${WORK}/origin`;
   await exec(
     client,
-    `sudo rm -rf ${quoteArg(WORK)} && sudo mkdir -p ${quoteArg(origin)} && sudo chown -R "$USER" ${quoteArg(WORK)} && ` +
+    `sudo rm -rf ${quoteArg(WORK)} && sudo mkdir -p ${quoteArg(origin)} && sudo chown -R "$TARGET.user" ${quoteArg(WORK)} && ` +
       `cd ${quoteArg(origin)} && ` +
       `printf '{"name":"v","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf 'require("http").createServer((q,r)=>r.end("ok")).listen(3000)' > s.js && ` +
@@ -229,5 +228,5 @@ try {
   }
 }
 
-console.log(`\n\x1B[1mpassed ${pass}, failed ${fail}\x1B[0m\n`);
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
 process.exit(fail === 0 ? 0 : 1);
