@@ -150,7 +150,7 @@ async function nodeNames(): Promise<Map<string, string>> {
 
 function toSummary(
   row: typeof deployments.$inferSelect,
-  nodes: Map<string, string>,
+  nodes: Map<string, string>
 ): DeploymentSummary {
   return {
     commitSha: row.commitSha,
@@ -211,7 +211,7 @@ function toServiceRow(
   last: typeof deployments.$inferSelect | undefined,
   nodes: Map<string, string>,
   watching: boolean,
-  hookError: string | null = null,
+  hookError: string | null = null
 ): ServiceRow {
   return {
     autoDeploy: service.autoDeploy,
@@ -258,7 +258,9 @@ function toServiceRow(
   };
 }
 
-function toStackSummary(row: typeof stackDeployments.$inferSelect): DeploymentSummary {
+function toStackSummary(
+  row: typeof stackDeployments.$inferSelect
+): DeploymentSummary {
   return {
     commitSha: row.commitSha,
     createdAt: row.createdAt.toISOString(),
@@ -300,17 +302,22 @@ async function hookErrors(): Promise<Map<string, string>> {
 
 function hookErrorOf(
   errors: Map<string, string>,
-  service: { gitProviderId: string | null; gitRepoFullName: string | null },
+  service: { gitProviderId: string | null; gitRepoFullName: string | null }
 ): string | null {
   return service.gitProviderId && service.gitRepoFullName
-    ? (errors.get(`${service.gitProviderId}:${service.gitRepoFullName}`) ?? null)
+    ? (errors.get(`${service.gitProviderId}:${service.gitRepoFullName}`) ??
+        null)
     : null;
 }
 
-async function loadServiceDashboard(environmentId?: string): Promise<ServiceRow[]> {
+async function loadServiceDashboard(
+  environmentId?: string
+): Promise<ServiceRow[]> {
   const rows = await db.query.services.findMany({
     orderBy: services.name,
-    where: environmentId ? eq(services.environmentId, environmentId) : undefined,
+    where: environmentId
+      ? eq(services.environmentId, environmentId)
+      : undefined,
     with: {
       domains: { orderBy: asc(serviceDomains.createdAt) },
       environment: { with: { project: true } },
@@ -328,7 +335,7 @@ async function loadServiceDashboard(environmentId?: string): Promise<ServiceRow[
     orderBy: desc(deployments.createdAt),
     where: inArray(
       deployments.serviceId,
-      rows.map((r) => r.id),
+      rows.map((r) => r.id)
     ),
   });
 
@@ -352,8 +359,8 @@ async function loadServiceDashboard(environmentId?: string): Promise<ServiceRow[
       latest.get(service.id),
       nodes,
       watched.has(service.id),
-      hookErrorOf(errors, service),
-    ),
+      hookErrorOf(errors, service)
+    )
   );
 }
 
@@ -361,7 +368,7 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<ServiceRow[]> => {
     await requireSession();
     return loadServiceDashboard();
-  },
+  }
 );
 
 export const getService = createServerFn({ method: "GET" })
@@ -385,13 +392,15 @@ export const getService = createServerFn({ method: "GET" })
       where: eq(deployments.serviceId, row.id),
     });
     const nodes = await nodeNames();
-    const watching = Boolean(last?.watchUntil && last.watchUntil.getTime() > Date.now());
+    const watching = Boolean(
+      last?.watchUntil && last.watchUntil.getTime() > Date.now()
+    );
     return toServiceRow(
       row,
       last ?? undefined,
       nodes,
       watching,
-      hookErrorOf(await hookErrors(), row),
+      hookErrorOf(await hookErrors(), row)
     );
   });
 
@@ -412,7 +421,7 @@ async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
     orderBy: desc(stackDeployments.createdAt),
     where: inArray(
       stackDeployments.stackId,
-      rows.map((r) => r.id),
+      rows.map((r) => r.id)
     ),
   });
 
@@ -455,7 +464,7 @@ export const getStackDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<StackRow[]> => {
     await requireSession();
     return loadStackDashboard();
-  },
+  }
 );
 
 export const getDeployments = createServerFn({ method: "GET" })
@@ -539,7 +548,7 @@ async function buildDashboardData(): Promise<DashboardData> {
     projectId: string,
     project: string,
     environmentId: string,
-    environment: string,
+    environment: string
   ): Scope => {
     const key = scopeKey(project, environment);
     const found = scopes.get(key);
@@ -562,16 +571,30 @@ async function buildDashboardData(): Promise<DashboardData> {
   };
 
   for (const s of serviceRows) {
-    ensure(s.projectId, s.project, s.environmentId, s.environment).services.push(s);
+    ensure(
+      s.projectId,
+      s.project,
+      s.environmentId,
+      s.environment
+    ).services.push(s);
   }
   for (const s of stackRows) {
-    ensure(s.projectId, s.project, s.environmentId, s.environment).stacks.push(s);
+    ensure(s.projectId, s.project, s.environmentId, s.environment).stacks.push(
+      s
+    );
   }
   for (const d of databaseRows) {
-    ensure(d.projectId, d.project, d.environmentId, d.environment).databases.push(d);
+    ensure(
+      d.projectId,
+      d.project,
+      d.environmentId,
+      d.environment
+    ).databases.push(d);
   }
 
-  const sorted = [...scopes.values()].sort((a, b) => a.key.localeCompare(b.key));
+  const sorted = [...scopes.values()].sort((a, b) =>
+    a.key.localeCompare(b.key)
+  );
 
   const groups: ProjectGroup[] = [];
   for (const scope of sorted) {
@@ -620,7 +643,7 @@ export const getDashboardGroups = createServerFn({ method: "GET" }).handler(
   async (): Promise<DashboardData> => {
     await requireSession();
     return buildDashboardData();
-  },
+  }
 );
 
 /**
@@ -638,7 +661,7 @@ export const getEnvironmentScope = createServerFn({ method: "GET" })
     const environment = await db.query.environments.findFirst({
       where: and(
         eq(environments.id, data.environmentId),
-        eq(environments.projectId, data.projectId),
+        eq(environments.projectId, data.projectId)
       ),
       with: { project: true },
     });
@@ -770,7 +793,7 @@ export const getDeploymentLog = createServerFn({ method: "GET" }).handler(
     // the two interleaved are not.
     merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return merged.slice(0, 200);
-  },
+  }
 );
 
 export interface ActivityRow {
@@ -834,7 +857,7 @@ function collectAttention(
   }[],
   kind: AttentionKind,
   scope: { environmentId: string; label: string; projectId: string },
-  into: Overview["attention"],
+  into: Overview["attention"]
 ): void {
   for (const row of rows) {
     if (NEEDS_ATTENTION.has(row.status)) {
@@ -894,7 +917,10 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
 
     const since = new Date(Date.now() - SEVEN_DAYS_MS);
     const [deployRows, projectRows, environmentRows] = await Promise.all([
-      db.select({ value: count() }).from(deployments).where(gte(deployments.createdAt, since)),
+      db
+        .select({ value: count() })
+        .from(deployments)
+        .where(gte(deployments.createdAt, since)),
       db.select({ value: count() }).from(projects),
       db.select({ value: count() }).from(environments),
     ]);
@@ -938,5 +964,5 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
       },
       statusCounts,
     };
-  },
+  }
 );

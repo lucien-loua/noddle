@@ -24,7 +24,7 @@ export const attachDatabase = createServerFn({ method: "POST" })
         const password = decryptSecret(
           database.rootPasswordEncrypted,
           env.appKey,
-          secretContext.databasePassword(database.id),
+          secretContext.databasePassword(database.id)
         );
         const host = database.swarmName;
         const value = connectionString(
@@ -32,11 +32,14 @@ export const attachDatabase = createServerFn({ method: "POST" })
           host,
           password,
           database.rootUser,
-          database.databaseName,
+          database.databaseName
         );
 
         const existing = await db.query.envVars.findFirst({
-          where: and(eq(envVars.serviceId, data.serviceId), eq(envVars.key, data.envVarKey)),
+          where: and(
+            eq(envVars.serviceId, data.serviceId),
+            eq(envVars.key, data.envVarKey)
+          ),
         });
 
         if (existing) {
@@ -45,7 +48,11 @@ export const attachDatabase = createServerFn({ method: "POST" })
             .set({
               isSecret: true,
               updatedAt: new Date(),
-              valueEncrypted: encryptSecret(value, env.appKey, secretContext.envVar(existing.id)),
+              valueEncrypted: encryptSecret(
+                value,
+                env.appKey,
+                secretContext.envVar(existing.id)
+              ),
             })
             .where(eq(envVars.id, existing.id));
         } else {
@@ -55,7 +62,11 @@ export const attachDatabase = createServerFn({ method: "POST" })
             isSecret: true,
             key: data.envVarKey,
             serviceId: data.serviceId,
-            valueEncrypted: encryptSecret(value, env.appKey, secretContext.envVar(id)),
+            valueEncrypted: encryptSecret(
+              value,
+              env.appKey,
+              secretContext.envVar(id)
+            ),
           });
         }
 
@@ -64,5 +75,5 @@ export const attachDatabase = createServerFn({ method: "POST" })
       // The Database attached to, never the connection string — it
       // carries the root password.
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );

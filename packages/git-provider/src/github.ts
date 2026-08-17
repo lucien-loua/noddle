@@ -40,10 +40,16 @@ function base64Url(input: Buffer | string): string {
  * would otherwise fail every call with a 401 that says nothing about
  * clocks. `exp` stays under GitHub's 10-minute ceiling.
  */
-export function appJwt(appId: string, privateKeyPem: string, now: number = Date.now()): string {
+export function appJwt(
+  appId: string,
+  privateKeyPem: string,
+  now: number = Date.now()
+): string {
   const issued = Math.floor(now / 1000) - 60;
   const header = base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const payload = base64Url(JSON.stringify({ exp: issued + 540, iat: issued, iss: appId }));
+  const payload = base64Url(
+    JSON.stringify({ exp: issued + 540, iat: issued, iss: appId })
+  );
   const signingInput = `${header}.${payload}`;
 
   const signer = createSign("RSA-SHA256");
@@ -66,12 +72,18 @@ export interface GithubApp {
  */
 export function apiBase(url: string): string {
   const trimmed = url.replace(TRAILING_SLASHES, "");
-  return trimmed === "https://github.com" ? "https://api.github.com" : `${trimmed}/api/v3`;
+  return trimmed === "https://github.com"
+    ? "https://api.github.com"
+    : `${trimmed}/api/v3`;
 }
 
 type GithubFetch = (url: string, init?: RequestInit) => Promise<Response>;
 
-async function githubJson<T>(fetchImpl: GithubFetch, url: string, init: RequestInit): Promise<T> {
+async function githubJson<T>(
+  fetchImpl: GithubFetch,
+  url: string,
+  init: RequestInit
+): Promise<T> {
   const response = await fetchImpl(url, {
     ...init,
     headers: {
@@ -86,7 +98,7 @@ async function githubJson<T>(fetchImpl: GithubFetch, url: string, init: RequestI
     const detail = await response.text().catch(() => "");
     throw new GithubError(
       `GitHub responded ${response.status}: ${detail.slice(0, 300)}`,
-      response.status,
+      response.status
     );
   }
   return (await response.json()) as T;
@@ -105,13 +117,13 @@ export interface InstallationToken {
  */
 export async function installationToken(
   app: GithubApp,
-  fetchImpl: GithubFetch = fetch,
+  fetchImpl: GithubFetch = fetch
 ): Promise<InstallationToken> {
   const jwt = appJwt(app.appId, app.privateKeyPem);
   const body = await githubJson<{ expires_at: string; token: string }>(
     fetchImpl,
     `${apiBase(app.url)}/app/installations/${app.installationId}/access_tokens`,
-    { headers: { Authorization: `Bearer ${jwt}` }, method: "POST" },
+    { headers: { Authorization: `Bearer ${jwt}` }, method: "POST" }
   );
   return {
     expiresAt: Date.parse(body.expires_at),
@@ -134,7 +146,7 @@ export interface GithubInstallation {
  */
 export async function listInstallations(
   app: { appId: string; privateKeyPem: string; url: string },
-  fetchImpl: GithubFetch = fetch,
+  fetchImpl: GithubFetch = fetch
 ): Promise<GithubInstallation[]> {
   const jwt = appJwt(app.appId, app.privateKeyPem);
   const body = await githubJson<{ account?: { login?: string }; id: number }[]>(
@@ -142,7 +154,7 @@ export async function listInstallations(
     `${apiBase(app.url)}/app/installations?per_page=100`,
     {
       headers: { Authorization: `Bearer ${jwt}` },
-    },
+    }
   );
   return body.map((i) => ({
     account: i.account?.login ?? "unknown",
@@ -168,7 +180,7 @@ interface RawRepo {
 /** Every repository the installation can see, following pagination. */
 export async function listRepositories(
   app: GithubApp,
-  fetchImpl: GithubFetch = fetch,
+  fetchImpl: GithubFetch = fetch
 ): Promise<GithubRepo[]> {
   const { token } = await installationToken(app, fetchImpl);
   const repos: GithubRepo[] = [];
@@ -180,7 +192,7 @@ export async function listRepositories(
     const body = await githubJson<{ repositories: RawRepo[] }>(
       fetchImpl,
       `${apiBase(app.url)}/installation/repositories?per_page=100&page=${page}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
     for (const r of body.repositories) {
       repos.push({
@@ -201,13 +213,13 @@ export async function listRepositories(
 export async function listBranches(
   app: GithubApp,
   fullName: string,
-  fetchImpl: GithubFetch = fetch,
+  fetchImpl: GithubFetch = fetch
 ): Promise<string[]> {
   const { token } = await installationToken(app, fetchImpl);
   const body = await githubJson<{ name: string }[]>(
     fetchImpl,
     `${apiBase(app.url)}/repos/${fullName}/branches?per_page=100`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { Authorization: `Bearer ${token}` } }
   );
   return body.map((b) => b.name);
 }
@@ -335,7 +347,7 @@ export interface CreatedApp {
 export async function exchangeManifestCode(
   code: string,
   url: string,
-  fetchImpl: GithubFetch = fetch,
+  fetchImpl: GithubFetch = fetch
 ): Promise<CreatedApp> {
   const body = await githubJson<{
     client_id: string;

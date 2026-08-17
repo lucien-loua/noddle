@@ -65,9 +65,11 @@ await runVerify("deploy-contract job schema", async () => {
     }
   });
 
-  expectThrows("unknown kind is refused", () => deployJobSchema.parse({ kind: "not-a-real-kind" }));
+  expectThrows("unknown kind is refused", () =>
+    deployJobSchema.parse({ kind: "not-a-real-kind" })
+  );
 
   expectThrows("extra key is refused (strictObject)", () =>
-    deployJobSchema.parse({ kind: "prune-docker", surplus: true }),
+    deployJobSchema.parse({ kind: "prune-docker", surplus: true })
   );
 });

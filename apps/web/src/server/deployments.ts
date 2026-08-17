@@ -33,7 +33,7 @@ export const triggerDeploy = createServerFn({ method: "POST" })
           trigger: "manual",
         }),
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 /**
@@ -68,7 +68,7 @@ export const triggerLifecycle = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 export const triggerRollback = createServerFn({ method: "POST" })
@@ -90,14 +90,16 @@ export const triggerRollback = createServerFn({ method: "POST" })
         const target = await db.query.deployments.findFirst({
           where: and(
             eq(deployments.id, data.deploymentId),
-            eq(deployments.serviceId, data.serviceId),
+            eq(deployments.serviceId, data.serviceId)
           ),
         });
         if (!target) {
           throw new Error("deployment not found for this service");
         }
         if (!target.imageTag) {
-          throw new Error("this deployment produced no image — there is nothing to redeploy");
+          throw new Error(
+            "this deployment produced no image — there is nothing to redeploy"
+          );
         }
 
         // No build: the image already exists on the server. That's what makes
@@ -111,5 +113,5 @@ export const triggerRollback = createServerFn({ method: "POST" })
         return { imageTag: target.imageTag };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );

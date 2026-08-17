@@ -17,7 +17,7 @@ export const projects = pgTable(
   // The name is what's read in the grid AND the key of `connectRepo`'s
   // find-or-create: two "default" projects would be indistinguishable
   // there, and the second one would never be found.
-  (t) => [uniqueIndex("projects_name_idx").on(t.name)],
+  (t) => [uniqueIndex("projects_name_idx").on(t.name)]
 );
 
 export const environments = pgTable(
@@ -42,5 +42,5 @@ export const environments = pgTable(
     uniqueIndex("environments_one_default_idx")
       .on(t.projectId)
       .where(sql`${t.isDefault} = true`),
-  ],
+  ]
 );

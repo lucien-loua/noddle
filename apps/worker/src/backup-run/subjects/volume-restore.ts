@@ -1,7 +1,11 @@
 import { pipeline } from "node:stream/promises";
 
 import { buildVolumeBackupInsert, resolveDestinationRow } from "@noddle/backup";
-import { services, volumeBackupConfigs, volumeBackups } from "@noddle/db/schema";
+import {
+  services,
+  volumeBackupConfigs,
+  volumeBackups,
+} from "@noddle/db/schema";
 import type { servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect, execStream, quoteArg } from "@noddle/ssh-executor";
@@ -11,7 +15,11 @@ import { eq } from "drizzle-orm";
 
 import { runRestorePipeline } from "#backup-run/restore-pipeline";
 import type { RestoreSubject } from "#backup-run/restore-pipeline";
-import { ALPINE_IMAGE, assertSafeVolumeName, ensureAlpineImage } from "#backup-run/subjects/volume";
+import {
+  ALPINE_IMAGE,
+  assertSafeVolumeName,
+  ensureAlpineImage,
+} from "#backup-run/subjects/volume";
 import { withDeployClients } from "#job-run";
 import type { DeployContext } from "#runtime-context";
 import { runVolumeBackup } from "#volume-backup";
@@ -29,7 +37,9 @@ type ServiceRow = NonNullable<
 > & { server: typeof servers.$inferSelect };
 
 type VolumeBackupRow = NonNullable<
-  Awaited<ReturnType<DeployContext["db"]["query"]["volumeBackups"]["findFirst"]>>
+  Awaited<
+    ReturnType<DeployContext["db"]["query"]["volumeBackups"]["findFirst"]>
+  >
 > & {
   config?: Awaited<
     ReturnType<DeployContext["db"]["query"]["volumeBackupConfigs"]["findFirst"]>
@@ -67,40 +77,49 @@ function tarRestoreCommand(volumeName: string): string {
 async function restoreVolumeStream(
   client: SshClient,
   volumeName: string,
-  body: NodeJS.ReadableStream,
+  body: NodeJS.ReadableStream
 ): Promise<void> {
   const command = tarRestoreCommand(volumeName);
   const { code, stderr } = await execStream(client, command, async (io) => {
     await pipeline(body, io.stdin);
   });
   if (code !== 0) {
-    throw new Error(`volume restore tar failed (code ${code}): ${stderr.slice(0, 500)}`);
+    throw new Error(
+      `volume restore tar failed (code ${code}): ${stderr.slice(0, 500)}`
+    );
   }
 }
 
 async function applyVolumeRestore(
   ctx: DeployContext,
   loaded: VolumeRestoreLoaded,
-  body: NodeJS.ReadableStream,
+  body: NodeJS.ReadableStream
 ): Promise<void> {
   const swarmName = swarmServiceName(loaded.service);
 
-  await withDeployClients(ctx, loaded.service.server, async ({ managerDocker }) => {
-    await scaleServiceAndWait(managerDocker, swarmName, 0);
+  await withDeployClients(
+    ctx,
+    loaded.service.server,
+    async ({ managerDocker }) => {
+      await scaleServiceAndWait(managerDocker, swarmName, 0);
 
-    const client = await ctx.connectTo(loaded.service.server);
-    try {
-      await ensureAlpineImage(client);
-      await restoreVolumeStream(client, loaded.targetVolume, body);
-    } finally {
-      disconnect(client);
+      const client = await ctx.connectTo(loaded.service.server);
+      try {
+        await ensureAlpineImage(client);
+        await restoreVolumeStream(client, loaded.targetVolume, body);
+      } finally {
+        disconnect(client);
+      }
+
+      await scaleServiceAndWait(managerDocker, swarmName, 1);
     }
-
-    await scaleServiceAndWait(managerDocker, swarmName, 1);
-  });
+  );
 }
 
-const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLoaded> = {
+const volumeRestoreSubject: RestoreSubject<
+  VolumeRestoreRequest,
+  VolumeRestoreLoaded
+> = {
   apply: applyVolumeRestore,
   load: async (ctx, request) => {
     const service = await ctx.db.query.services.findFirst({
@@ -118,7 +137,10 @@ const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLo
         })) ?? null)
       : null;
 
-    if (request.backupId && (!backupRow || backupRow.serviceId !== service.id)) {
+    if (
+      request.backupId &&
+      (!backupRow || backupRow.serviceId !== service.id)
+    ) {
       throw new Error("volume backup not found for this service");
     }
     if (backupRow && backupRow.status !== "completed") {
@@ -126,7 +148,10 @@ const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLo
     }
 
     const targetVolume =
-      backupRow?.volumeName ?? backupRow?.config?.volumeName ?? request.volumeName ?? "";
+      backupRow?.volumeName ??
+      backupRow?.config?.volumeName ??
+      request.volumeName ??
+      "";
     if (!targetVolume) {
       throw new Error("cannot resolve target volume for restore");
     }
@@ -163,7 +188,10 @@ const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLo
     if (!configForPre) {
       return;
     }
-    const resolved = await resolveDestinationRow(ctx.db, configForPre.destinationId);
+    const resolved = await resolveDestinationRow(
+      ctx.db,
+      configForPre.destinationId
+    );
     const [pre] = await ctx.db
       .insert(volumeBackups)
       .values(
@@ -174,7 +202,7 @@ const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLo
           resolved,
           service: loaded.service,
           volumeName: loaded.targetVolume,
-        }),
+        })
       )
       .returning();
     if (pre) {
@@ -185,7 +213,7 @@ const volumeRestoreSubject: RestoreSubject<VolumeRestoreRequest, VolumeRestoreLo
 
 export async function runVolumeRestore(
   ctx: DeployContext,
-  request: VolumeRestoreRequest,
+  request: VolumeRestoreRequest
 ): Promise<void> {
   await runRestorePipeline(volumeRestoreSubject, ctx, request);
 }

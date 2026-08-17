@@ -25,7 +25,10 @@ const ENGINE_TINT: Partial<Record<DatabaseEngine, string>> = {
   mariadb: "text-foreground",
 };
 
-const ENGINE_ICON: Record<DatabaseEngine, (props: { className?: string }) => React.JSX.Element> = {
+const ENGINE_ICON: Record<
+  DatabaseEngine,
+  (props: { className?: string }) => React.JSX.Element
+> = {
   mariadb: MariadbIcon,
   mongo: MongodbIcon,
   mysql: MysqlIcon,
@@ -56,7 +59,15 @@ export function DatabaseMark({
   // `aria-hidden`: the engine's name is ALWAYS written next to it by the
   // caller, so announcing it a second time would say nothing more.
   return (
-    <span aria-hidden className={cn("shrink-0", SIZE_CLASS[size], ENGINE_TINT[engine], className)}>
+    <span
+      aria-hidden
+      className={cn(
+        "shrink-0",
+        SIZE_CLASS[size],
+        ENGINE_TINT[engine],
+        className
+      )}
+    >
       <Icon className="size-full" />
     </span>
   );

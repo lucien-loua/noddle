@@ -105,12 +105,12 @@ Do not reopen finished phase work without an ADR conflict flagged explicitly.
 
 Spike reference (still the contract for the deploy chain):
 
-| Run                                | Proves                                                    |
-| ---------------------------------- | --------------------------------------------------------- |
-| `./scripts/spike-local.sh`         | SSH → Swarm → clone → Railpack → service → Traefik → HTTP |
-| `./scripts/spike-local.sh` (again) | `docker service update` zero-downtime path                |
-| `./scripts/spike-local.sh break`   | broken image does not take down the running version       |
-| `./scripts/spike-local.sh cap`     | memory-hungry build killed; running service untouched     |
+| Run | Proves |
+| --- | --- |
+| `./scripts/spike-local.sh` | SSH → Swarm → clone → Railpack → service → Traefik → HTTP |
+| `./scripts/spike-local.sh` (again) | `docker service update` zero-downtime path |
+| `./scripts/spike-local.sh break` | broken image does not take down the running version |
+| `./scripts/spike-local.sh cap` | memory-hungry build killed; running service untouched |
 
 ---
 
@@ -118,17 +118,17 @@ Spike reference (still the contract for the deploy chain):
 
 **Bun is the package manager everywhere. `apps/worker` runs on NODE — ADR-0015, settled by measurement, not preference.** `packages/ssh-executor/src/verify.ts` runs the real paths against a real VM; run it on both runtimes to re-check after any upgrade:
 
-|            | `ssh2` | `dockerode` over the SSH tunnel                |         |
-| ---------- | ------ | ---------------------------------------------- | ------- |
-| Node 24    | ✓      | ✓ Docker 29.7.1, `UpdateStatus.State` readable | **9/9** |
-| Bun 1.3.13 | ✓      | ✗ `ECONNREFUSED`                               | 6/7     |
+|  | `ssh2` | `dockerode` over the SSH tunnel |  |
+| --- | --- | --- | --- |
+| Node 24 | ✓ | ✓ Docker 29.7.1, `UpdateStatus.State` readable | **9/9** |
+| Bun 1.3.13 | ✓ | ✗ `ECONNREFUSED` | 6/7 |
 
 `ssh2` itself is fine on Bun — connection, exec, exit codes, chunked streaming. What breaks is `dockerode` over the tunnel. **Two independent approaches were tried and both fail on Bun:**
 
-| approach                                                                             | Node | Bun                                                                                       |
-| ------------------------------------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------------- |
-| custom `createConnection` on `http.Agent`                                            | ✓    | ✗ `ECONNREFUSED` — Bun ignores it and opens a real TCP connection to the placeholder host |
-| local Unix socket proxied to the remote socket over an SSH channel (no agent at all) | ✓    | ✗ hangs forever on the first request                                                      |
+| approach | Node | Bun |
+| --- | --- | --- |
+| custom `createConnection` on `http.Agent` | ✓ | ✗ `ECONNREFUSED` — Bun ignores it and opens a real TCP connection to the placeholder host |
+| local Unix socket proxied to the remote socket over an SSH channel (no agent at all) | ✓ | ✗ hangs forever on the first request |
 
 The second was the obvious escape hatch — no custom agent, so nothing for a runtime to ignore — and it still hangs. Only the `http.Agent` path is kept in the code; the socket-proxy variant was deleted rather than left as dead code.
 
@@ -151,10 +151,10 @@ Two constraints that follow, both already cost time:
 
 **Swarm's safety net expires. `--update-monitor` is not a tuning knob — it is the definition of "when is a deploy considered final".** Measured on a real VM, same image, only the crash delay changed:
 
-| App dies at | vs `monitor=45s` | Outcome                                                                                                                                                                                |
-| ----------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 25 s        | inside           | Swarm counts the failure and **rolls back**. Previous version serves again.                                                                                                            |
-| 90 s        | outside          | Update reported `completed`. Previous task already drained. Restart policy relaunches **the broken image**, forever. Measured availability: **9/12 requests over 60 s**, indefinitely. |
+| App dies at | vs `monitor=45s` | Outcome |
+| --- | --- | --- |
+| 25 s | inside | Swarm counts the failure and **rolls back**. Previous version serves again. |
+| 90 s | outside | Update reported `completed`. Previous task already drained. Restart policy relaunches **the broken image**, forever. Measured availability: **9/12 requests over 60 s**, indefinitely. |
 
 Raising the window is not the fix: it makes every deploy wait that long before it is confirmed, and a crash one minute later still slips through. Real apps die under load after minutes, not seconds — so the outside case is the _common_ one.
 
@@ -184,10 +184,10 @@ Railpack does not emit a Dockerfile at all: it builds the LLB graph and hands it
 
 **The base image inverted too, and this one fails silently.** Measured inside a built image under the same non-login `sh -c` a HEALTHCHECK runs in:
 
-|        | `nixpacks:ubuntu`                         | railpack (Debian 12)        |
-| ------ | ----------------------------------------- | --------------------------- |
-| `curl` | present, `/bin/curl`                      | **ABSENT**                  |
-| `wget` | absent                                    | absent                      |
+|  | `nixpacks:ubuntu` | railpack (Debian 12) |
+| --- | --- | --- |
+| `curl` | present, `/bin/curl` | **ABSENT** |
+| `wget` | absent | absent |
 | `node` | **not** on PATH (login-shell nix profile) | present, `/mise/shims/node` |
 
 The deploy healthcheck is a curl probe, so `build-engine` forces `curl` into every image Noddle builds from source (`FORCED_DEPLOY_PACKAGES`). Drop that and no task ever converges — and it presents as a Traefik routing bug, not a missing binary. For a user's own Dockerfile it stays their image's problem, as before.

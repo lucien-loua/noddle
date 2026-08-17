@@ -28,7 +28,8 @@ export const Route = createFileRoute("/notifications")({
 
 function NotificationsPage() {
   const { channels, email, role } = Route.useLoaderData();
-  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
   const canManage = useCan(known, "notification", "manage");
 
   // The dialog's state lives HERE and not in the panel: its opening button
@@ -39,12 +40,19 @@ function NotificationsPage() {
 
   return (
     <AppShell
-      actions={canManage ? <Button onClick={handleOpen}>Add channel</Button> : null}
+      actions={
+        canManage ? <Button onClick={handleOpen}>Add channel</Button> : null
+      }
       email={email}
       role={role}
       title="Notifications"
     >
-      <NotificationChannels initial={channels} onOpenChange={setOpen} open={open} role={role} />
+      <NotificationChannels
+        initial={channels}
+        onOpenChange={setOpen}
+        open={open}
+        role={role}
+      />
     </AppShell>
   );
 }

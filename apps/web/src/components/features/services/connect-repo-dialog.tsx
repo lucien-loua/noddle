@@ -108,7 +108,7 @@ export function ConnectRepoDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form],
+    [form]
   );
 
   const noServers = servers.length === 0;
@@ -119,16 +119,16 @@ export function ConnectRepoDialog({
         <DialogHeader>
           <DialogTitle>Create</DialogTitle>
           <DialogDescription>
-            Assign a name to your application. The source and build are configured on the next
-            screen, then Deploy.
+            Assign a name to your application. The source and build are
+            configured on the next screen, then Deploy.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              No servers registered. Add one before creating an application — a service needs a
-              machine to build and run on.
+              No servers registered. Add one before creating an application — a
+              service needs a machine to build and run on.
             </AlertDescription>
           </Alert>
         ) : (
@@ -149,7 +149,9 @@ export function ConnectRepoDialog({
                   )}
 
                   <form.AppField name="name">
-                    {(f) => <f.FieldText label="Name" placeholder="my-app" required />}
+                    {(f) => (
+                      <f.FieldText label="Name" placeholder="my-app" required />
+                    )}
                   </form.AppField>
 
                   <form.AppField name="serverId">
@@ -162,7 +164,9 @@ export function ConnectRepoDialog({
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
                         itemToStringLabel={(server) => server.name}
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
-                        itemToStringValue={(server) => `${server.name} · ${server.host}`}
+                        itemToStringValue={(server) =>
+                          `${server.name} · ${server.host}`
+                        }
                         label="Server"
                         placeholder="Search servers…"
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
@@ -191,7 +195,9 @@ export function ConnectRepoDialog({
 
             <DialogFooter>
               <Button disabled={connect.isPending} type="submit">
-                {connect.isPending ? <Spinner data-icon="inline-start" /> : null}
+                {connect.isPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : null}
                 Create
               </Button>
             </DialogFooter>

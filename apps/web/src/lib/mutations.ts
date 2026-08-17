@@ -11,11 +11,17 @@ import { mutationOptions } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { DraftVar } from "@/components/features/env-vars/table";
-import { databaseBackupSubject, volumeBackupSubject } from "@/lib/backup-subject";
+import {
+  databaseBackupSubject,
+  volumeBackupSubject,
+} from "@/lib/backup-subject";
 import type { BackupSubject } from "@/lib/backup-subject";
 import { cache } from "@/lib/cache";
 import { deleteBackup, triggerBackup } from "@/server/backups/runs";
-import { deleteVolumeBackup, triggerVolumeBackup } from "@/server/backups/volume/runs";
+import {
+  deleteVolumeBackup,
+  triggerVolumeBackup,
+} from "@/server/backups/volume/runs";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { saveEnvVars } from "@/server/env-vars";
 import { addServer } from "@/server/servers";
@@ -49,7 +55,11 @@ export const mutations = {
   deleteBackup: (qc: QueryClient, databaseId: string, configId: string) =>
     mutations.deleteBackupRun(qc, databaseBackupSubject(databaseId), configId),
 
-  deleteBackupRun: (qc: QueryClient, subject: BackupSubject, configId: string) =>
+  deleteBackupRun: (
+    qc: QueryClient,
+    subject: BackupSubject,
+    configId: string
+  ) =>
     mutationOptions({
       mutationFn: (backupId: string) =>
         subject.kind === "database"
@@ -80,7 +90,11 @@ export const mutations = {
   triggerBackup: (qc: QueryClient, databaseId: string, configId: string) =>
     mutations.triggerBackupRun(qc, databaseBackupSubject(databaseId), configId),
 
-  triggerBackupRun: (qc: QueryClient, subject: BackupSubject, configId: string) =>
+  triggerBackupRun: (
+    qc: QueryClient,
+    subject: BackupSubject,
+    configId: string
+  ) =>
     mutationOptions({
       mutationFn: async () => {
         if (subject.kind === "database") {

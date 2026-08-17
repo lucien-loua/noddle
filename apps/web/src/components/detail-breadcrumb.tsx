@@ -107,7 +107,9 @@ export function DetailBreadcrumb({
               you're looking at matters more than the path that led there,
               and the whole trail wouldn't fit. */}
           <BreadcrumbItem className="hidden sm:inline-flex">
-            <BreadcrumbLink render={<ParentLink parent={parent}>{parent.label}</ParentLink>} />
+            <BreadcrumbLink
+              render={<ParentLink parent={parent}>{parent.label}</ParentLink>}
+            />
           </BreadcrumbItem>
           <BreadcrumbSeparator className="hidden sm:block" />
           {project && environment ? (
@@ -123,7 +125,9 @@ export function DetailBreadcrumb({
             </>
           ) : null}
           <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="truncate font-medium">{name}</BreadcrumbPage>
+            <BreadcrumbPage className="truncate font-medium">
+              {name}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

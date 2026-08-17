@@ -1,4 +1,8 @@
-import { s3Destinations, services, volumeBackupConfigs } from "@noddle/db/schema";
+import {
+  s3Destinations,
+  services,
+  volumeBackupConfigs,
+} from "@noddle/db/schema";
 import {
   createVolumeBackupConfigSchema,
   updateVolumeBackupConfigSchema,
@@ -38,7 +42,7 @@ function normalizeMountPath(path: string | undefined): string | null {
 async function resolveMountPath(
   serviceId: string,
   volumeName: string,
-  mountPathFromForm?: string,
+  mountPathFromForm?: string
 ): Promise<string | null> {
   const fromForm = normalizeMountPath(mountPathFromForm);
   if (fromForm) {
@@ -103,7 +107,11 @@ export const createVolumeBackupConfig = createServerFn({ method: "POST" })
             destinationId: data.destinationId,
             enabled: data.enabled,
             keepLatestCount: data.keepLatestCount,
-            mountPath: await resolveMountPath(service.id, data.volumeName, data.mountPath),
+            mountPath: await resolveMountPath(
+              service.id,
+              data.volumeName,
+              data.mountPath
+            ),
             prefix: data.prefix,
             schedule: data.schedule.trim(),
             serviceId: service.id,
@@ -145,7 +153,11 @@ export const updateVolumeBackupConfig = createServerFn({ method: "POST" })
             destinationId: data.destinationId,
             enabled: data.enabled,
             keepLatestCount: data.keepLatestCount,
-            mountPath: await resolveMountPath(existing.serviceId, data.volumeName, data.mountPath),
+            mountPath: await resolveMountPath(
+              existing.serviceId,
+              data.volumeName,
+              data.mountPath
+            ),
             prefix: data.prefix,
             schedule: data.schedule.trim(),
             updatedAt: new Date(),
@@ -158,7 +170,7 @@ export const updateVolumeBackupConfig = createServerFn({ method: "POST" })
         id: row.id,
         name: row.service.name,
       }),
-    }),
+    })
   );
 
 export const deleteVolumeBackupConfig = createServerFn({ method: "POST" })
@@ -173,9 +185,11 @@ export const deleteVolumeBackupConfig = createServerFn({ method: "POST" })
       notFoundMessage: "volume backup config not found",
       permission: { action: "create", resource: "backup" },
       run: async ({ row }) => {
-        await db.delete(volumeBackupConfigs).where(eq(volumeBackupConfigs.id, row.id));
+        await db
+          .delete(volumeBackupConfigs)
+          .where(eq(volumeBackupConfigs.id, row.id));
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.service.name }),
-    }),
+    })
   );

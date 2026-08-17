@@ -4,7 +4,7 @@
  */
 export function assertNotDefaultEnvironment(
   environment: { isDefault: boolean },
-  action: "delete" | "rename",
+  action: "delete" | "rename"
 ): void {
   if (!environment.isDefault) {
     return;
@@ -12,6 +12,6 @@ export function assertNotDefaultEnvironment(
   throw new Error(
     action === "delete"
       ? "you cannot delete the default environment"
-      : "you cannot rename the default environment",
+      : "you cannot rename the default environment"
   );
 }

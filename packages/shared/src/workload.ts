@@ -68,7 +68,7 @@ export type DockerodeRestartPolicyOverride = Partial<{
 
 function mergeDefined<T extends Record<string, unknown>>(
   base: T,
-  override: Record<string, unknown> | null | undefined,
+  override: Record<string, unknown> | null | undefined
 ): T {
   if (!override) {
     return base;
@@ -83,19 +83,19 @@ function mergeDefined<T extends Record<string, unknown>>(
 }
 
 export function resolveDockerodeUpdateConfig(
-  override?: DockerodeUpdateConfigOverride | null,
+  override?: DockerodeUpdateConfigOverride | null
 ): DockerodeUpdateConfig {
   return mergeDefined(renderDockerodeUpdateConfig(), override);
 }
 
 export function resolveDockerodeRollbackConfig(
-  override?: DockerodeRollbackConfigOverride | null,
+  override?: DockerodeRollbackConfigOverride | null
 ): DockerodeRollbackConfig {
   return mergeDefined(renderDockerodeRollbackConfig(), override);
 }
 
 export function resolveDockerodeRestartPolicy(
-  override?: DockerodeRestartPolicyOverride | null,
+  override?: DockerodeRestartPolicyOverride | null
 ): DockerodeRestartPolicy {
   return mergeDefined(renderDockerodeRestartPolicy(), override);
 }

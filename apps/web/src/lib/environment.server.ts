@@ -17,7 +17,10 @@ export async function insertProjectEnvironment(values: {
 }): Promise<typeof environments.$inferSelect> {
   const existingDefault = await db.query.environments.findFirst({
     columns: { id: true },
-    where: and(eq(environments.projectId, values.projectId), eq(environments.isDefault, true)),
+    where: and(
+      eq(environments.projectId, values.projectId),
+      eq(environments.isDefault, true)
+    ),
   });
   const [created] = await db
     .insert(environments)

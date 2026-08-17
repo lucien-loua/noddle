@@ -23,7 +23,8 @@ export const backupCopy = {
     emptyTitle: "No schedules yet",
     historyAria: "Dump history",
     historyTitle: "Dump history",
-    noDestination: "Noddle needs somewhere to push dumps before a schedule can run. Add one under",
+    noDestination:
+      "Noddle needs somewhere to push dumps before a schedule can run. Add one under",
     queueErrorTitle: "Could not queue backup",
     queuedToast: "Backup queued",
     restoreConfirmLabel: "Restore database",
@@ -39,7 +40,8 @@ export const backupCopy = {
     description: "Tar Docker volumes on the server to S3 on a schedule.",
     dialogDescriptionEdit:
       "Changes apply to the next run. A backup already in flight keeps its original settings.",
-    dialogDescriptionNew: "Tar a Docker volume on the service's server to S3 on a schedule.",
+    dialogDescriptionNew:
+      "Tar a Docker volume on the service's server to S3 on a schedule.",
     dialogTitleEdit: "Edit volume backup",
     dialogTitleNew: "Add volume backup",
     emptyDescription: (name: string) =>

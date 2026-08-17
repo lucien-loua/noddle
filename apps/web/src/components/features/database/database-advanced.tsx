@@ -42,7 +42,10 @@ export function DatabaseAdvanced({
         memoryReservationBytes={database.memoryReservationBytes}
       />
       {canEdit ? (
-        <DatabaseDangerZone databaseId={database.id} databaseName={database.name} />
+        <DatabaseDangerZone
+          databaseId={database.id}
+          databaseName={database.name}
+        />
       ) : null}
     </div>
   );

@@ -8,7 +8,10 @@ import {
   ConnectGitlabDialog,
   GitProvidersList,
 } from "@/components/features/git-providers/git-providers-panel";
-import { GithubIcon, GitlabIcon } from "@/components/features/services/provider-icons";
+import {
+  GithubIcon,
+  GitlabIcon,
+} from "@/components/features/services/provider-icons";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,7 +50,8 @@ export const Route = createFileRoute("/git-providers")({
 
 function GitProvidersPage() {
   const { email, providers, role } = Route.useLoaderData();
-  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "gitProvider", "create");
   const [open, setOpen] = useState(false);
   const [gitlabOpen, setGitlabOpen] = useState(false);

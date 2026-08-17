@@ -57,7 +57,10 @@ export function ServiceFacts({
                         target="_blank"
                       >
                         <span className="min-w-0 truncate">{d.host}</span>
-                        <ArrowSquareOutIcon className="size-3.5 shrink-0" weight="regular" />
+                        <ArrowSquareOutIcon
+                          className="size-3.5 shrink-0"
+                          weight="regular"
+                        />
                       </a>
                     </li>
                   );
@@ -70,7 +73,9 @@ export function ServiceFacts({
 
           <Fact label="Commit">
             {service.lastDeployment?.commitSha ? (
-              <span className="font-mono">{shortSha(service.lastDeployment.commitSha)}</span>
+              <span className="font-mono">
+                {shortSha(service.lastDeployment.commitSha)}
+              </span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -91,7 +96,11 @@ export function ServiceFacts({
           </Fact>
 
           <Fact label="Registry">
-            <ServiceRegistry registryId={service.registryId} role={role} serviceId={service.id} />
+            <ServiceRegistry
+              registryId={service.registryId}
+              role={role}
+              serviceId={service.id}
+            />
           </Fact>
         </dl>
       </FramePanel>

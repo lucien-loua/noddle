@@ -27,12 +27,15 @@ export const deleteDatabase = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "delete", resource: "database" },
       run: async ({ row }) => {
-        await db.update(databases).set(markDeleting(null)).where(eq(databases.id, row.id));
+        await db
+          .update(databases)
+          .set(markDeleting(null))
+          .where(eq(databases.id, row.id));
         await enqueueDeploy({ databaseId: row.id, kind: "delete-database" });
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 export const rebuildDatabase = createServerFn({ method: "POST" })
@@ -50,12 +53,15 @@ export const rebuildDatabase = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "delete", resource: "database" },
       run: async ({ row }) => {
-        await db.update(databases).set(markDeploying(null)).where(eq(databases.id, row.id));
+        await db
+          .update(databases)
+          .set(markDeploying(null))
+          .where(eq(databases.id, row.id));
         await enqueueDeploy({ databaseId: row.id, kind: "rebuild-database" });
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 export const triggerDatabaseLifecycle = createServerFn({ method: "POST" })
@@ -79,5 +85,5 @@ export const triggerDatabaseLifecycle = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );

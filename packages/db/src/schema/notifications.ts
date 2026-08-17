@@ -1,4 +1,11 @@
-import { boolean, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
 
@@ -7,7 +14,11 @@ import { createdAt, updatedAt } from "#schema/columns";
  * the payload changes, because Discord and Slack each impose their own.
  * `webhook` is Noddle's raw form, the one you wire up to anything else.
  */
-export const notificationKind = pgEnum("notification_kind", ["webhook", "discord", "slack"]);
+export const notificationKind = pgEnum("notification_kind", [
+  "webhook",
+  "discord",
+  "slack",
+]);
 
 export const notificationChannels = pgTable("notification_channels", {
   createdAt,

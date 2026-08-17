@@ -117,7 +117,10 @@ const FIELDS = 7;
 /** Parses the tab-separated output. A malformed line is IGNORED rather than
  *  rendered halfway: a container of unknown kind would get offered the
  *  default kind's actions. */
-export function parsePs(stdout: string, server: { id: string; name: string }): ContainerRow[] {
+export function parsePs(
+  stdout: string,
+  server: { id: string; name: string }
+): ContainerRow[] {
   const rows: ContainerRow[] = [];
   for (const line of stdout.split("\n")) {
     if (!line.trim()) {
@@ -127,15 +130,8 @@ export function parsePs(stdout: string, server: { id: string; name: string }): C
     if (parts.length !== FIELDS) {
       continue;
     }
-    const [id, name, image, state, status, swarmService, composeProject] = parts as [
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-    ];
+    const [id, name, image, state, status, swarmService, composeProject] =
+      parts as [string, string, string, string, string, string, string];
     rows.push({
       createdAt: "",
       id,
@@ -173,7 +169,14 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
         // the worker's own passes.
         // biome-ignore lint/performance/noAwaitInLoops: deliberately sequential
         await withServerSession(server, async (client) => {
-          const res = await execArgv(client, ["sudo", "docker", "ps", "-a", "--format", PS_FORMAT]);
+          const res = await execArgv(client, [
+            "sudo",
+            "docker",
+            "ps",
+            "-a",
+            "--format",
+            PS_FORMAT,
+          ]);
           if (res.code !== 0) {
             throw new Error(res.stderr.trim() || "docker ps failed");
           }
@@ -188,7 +191,7 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
       }
     }
     return view;
-  },
+  }
 );
 
 /**
@@ -202,7 +205,7 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
  */
 async function readKind(
   client: SshClient,
-  containerId: string,
+  containerId: string
 ): Promise<{ kind: ContainerKind; name: string } | null> {
   const res = await execArgv(client, [
     "sudo",
@@ -243,7 +246,9 @@ export const containerAction = createServerFn({ method: "POST" })
     // as everywhere else in the role model. Computed BEFORE the call:
     // runGuarded takes one permission, not a function of the payload.
     const permission = {
-      action: (data.action === "remove" ? "delete" : "operate") as "delete" | "operate",
+      action: (data.action === "remove" ? "delete" : "operate") as
+        | "delete"
+        | "operate",
       resource: "container" as const,
     };
 
@@ -261,7 +266,7 @@ export const containerAction = createServerFn({ method: "POST" })
             throw new Error(
               found.kind === "swarm"
                 ? `${found.name} is a Swarm task — restart its service instead, stopping the container only makes Swarm reschedule it.`
-                : `${found.name} is part of Noddle itself and cannot be changed from here.`,
+                : `${found.name} is part of Noddle itself and cannot be changed from here.`
             );
           }
 
@@ -271,7 +276,9 @@ export const containerAction = createServerFn({ method: "POST" })
               : ["sudo", "docker", data.action, data.containerId];
           const res = await execArgv(client, argv);
           if (res.code !== 0) {
-            throw new Error(res.stderr.trim() || `docker ${data.action} failed`);
+            throw new Error(
+              res.stderr.trim() || `docker ${data.action} failed`
+            );
           }
           return { containerName: found.name, done: true as const };
         }),
@@ -315,7 +322,8 @@ async function isManagedSwarmService(serviceName: string): Promise<boolean> {
   // Compose services are `<swarmName>_<key>`; the stack namespace itself
   // is also a legitimate match if ever targeted directly.
   return stackRows.some(
-    (s) => serviceName === s.swarmName || serviceName.startsWith(`${s.swarmName}_`),
+    (s) =>
+      serviceName === s.swarmName || serviceName.startsWith(`${s.swarmName}_`)
   );
 }
 
@@ -344,7 +352,7 @@ export const restartSwarmService = createServerFn({ method: "POST" })
       run: async () => {
         if (!(await isManagedSwarmService(data.serviceName))) {
           throw new Error(
-            `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`,
+            `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
           );
         }
 
@@ -365,12 +373,14 @@ export const restartSwarmService = createServerFn({ method: "POST" })
           }
           const rows = parsePs(res.stdout, { id: data.serverId, name: "" });
           if (rows.length === 0) {
-            throw new Error(`no running task for Swarm service ${data.serviceName} on that server`);
+            throw new Error(
+              `no running task for Swarm service ${data.serviceName} on that server`
+            );
           }
           const foreign = rows.find((r) => r.kind !== "swarm");
           if (foreign) {
             throw new Error(
-              `${foreign.name} is part of Noddle itself and cannot be changed from here.`,
+              `${foreign.name} is part of Noddle itself and cannot be changed from here.`
             );
           }
         });
@@ -382,5 +392,5 @@ export const restartSwarmService = createServerFn({ method: "POST" })
         return { queued: true as const };
       },
       target: () => ({ id: data.serviceName, name: data.serviceName }),
-    }),
+    })
   );

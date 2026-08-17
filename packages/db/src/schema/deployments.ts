@@ -93,7 +93,7 @@ export const deployments = pgTable(
     // guarantee expires with --update-monitor; this one takes over.
     watchUntil: timestamp("watch_until", { withTimezone: true }),
   },
-  (t) => [index("deployments_service_created_idx").on(t.serviceId, t.createdAt)],
+  (t) => [index("deployments_service_created_idx").on(t.serviceId, t.createdAt)]
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,5 +116,5 @@ export const deploymentLogs = pgTable(
     // Next.js build produces tens of thousands of them.
     storageUrl: text("storage_url").notNull(),
   },
-  (t) => [index("deployment_logs_deployment_idx").on(t.deploymentId)],
+  (t) => [index("deployment_logs_deployment_idx").on(t.deploymentId)]
 );

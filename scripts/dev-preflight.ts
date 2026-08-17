@@ -28,9 +28,13 @@ function missing(message: string): void {
   process.stdout.write(`  ${RED}\u2717${OFF} ${message}\n`);
 }
 
-const docker = spawnSync("docker", ["version", "--format", "{{.Server.Version}}"], {
-  encoding: "utf-8",
-});
+const docker = spawnSync(
+  "docker",
+  ["version", "--format", "{{.Server.Version}}"],
+  {
+    encoding: "utf-8",
+  }
+);
 if (docker.status === 0) {
   ok(`docker ${docker.stdout.trim()}`);
 } else {
@@ -50,6 +54,8 @@ for (const app of ["web", "worker"]) {
 }
 
 if (problems.length > 0) {
-  process.stdout.write(`\n${RED}Cannot start.${OFF} Fix the above and run again.\n\n`);
+  process.stdout.write(
+    `\n${RED}Cannot start.${OFF} Fix the above and run again.\n\n`
+  );
   process.exit(1);
 }

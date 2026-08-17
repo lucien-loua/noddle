@@ -38,11 +38,11 @@ The worker loads its code once, at startup. A change to `build-engine`, `ssh-exe
 
 Suites live next to the module they cover, named `verify*.ts`, and each declares on its first line what it needs to run:
 
-|                        |                            |                         |
-| ---------------------- | -------------------------- | ----------------------- |
-| `bun run verify:pure`  | nothing                    | every push, in CI       |
-| `bun run verify:local` | `bun run dev:stack`        | Postgres, Redis, S3     |
-| `bun run verify:vm`    | `./scripts/spike-local.sh` | a real machine over SSH |
+|  |  |  |
+| --- | --- | --- |
+| `bun run verify:pure` | nothing | every push, in CI |
+| `bun run verify:local` | `bun run dev:stack` | Postgres, Redis, S3 |
+| `bun run verify:vm` | `./scripts/spike-local.sh` | a real machine over SSH |
 
 **Infrastructure code is not done when it typechecks.** Anything touching SSH, Swarm, Railpack or Traefik has to run against a real machine before it counts.
 

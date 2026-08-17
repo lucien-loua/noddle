@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
               await removePending();
               return new Response(
                 `GitLab refused the authorisation (${denied}). The connection was removed — start it again.`,
-                { headers: { "content-type": "text/plain" }, status: 400 },
+                { headers: { "content-type": "text/plain" }, status: 400 }
               );
             }
 
@@ -72,15 +72,19 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
               // The code is single use. Retrying this URL cannot work, so
               // the pending row goes rather than being left looking
               // connected when it is not.
-              const detail = error instanceof Error ? error.message : String(error);
+              const detail =
+                error instanceof Error ? error.message : String(error);
               await removePending();
               return new Response(
                 `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,
-                { headers: { "content-type": "text/plain" }, status: 400 },
+                { headers: { "content-type": "text/plain" }, status: 400 }
               );
             }
 
-            return Response.redirect(new URL("/git-providers", request.url), 303);
+            return Response.redirect(
+              new URL("/git-providers", request.url),
+              303
+            );
           },
           target: () => ({ id: state, name: "gitlab" }),
         });

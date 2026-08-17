@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
 import { databases } from "#schema/databases";
@@ -51,6 +58,9 @@ export const envVars = pgTable(
     uniqueIndex("env_vars_database_key_idx")
       .on(t.databaseId, t.key)
       .where(sql`${t.databaseId} is not null`),
-    check("env_vars_one_owner", sql`(${t.serviceId} is null) <> (${t.databaseId} is null)`),
-  ],
+    check(
+      "env_vars_one_owner",
+      sql`(${t.serviceId} is null) <> (${t.databaseId} is null)`
+    ),
+  ]
 );

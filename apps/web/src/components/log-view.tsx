@@ -97,7 +97,12 @@ interface LogViewProps {
 }
 
 function renderLine(line: Line) {
-  return <TerminalLogs.Line key={line.id} line={{ id: String(line.id), text: line.text }} />;
+  return (
+    <TerminalLogs.Line
+      key={line.id}
+      line={{ id: String(line.id), text: line.text }}
+    />
+  );
 }
 
 function LogViewHeader({
@@ -107,7 +112,10 @@ function LogViewHeader({
   right,
   title,
   toolbar,
-}: Pick<LogViewProps, "description" | "idleLabel" | "live" | "right" | "title" | "toolbar">) {
+}: Pick<
+  LogViewProps,
+  "description" | "idleLabel" | "live" | "right" | "title" | "toolbar"
+>) {
   const showTitleRow = title !== undefined || right !== undefined;
   if (!(showTitleRow || toolbar !== undefined)) {
     return null;
@@ -121,7 +129,9 @@ function LogViewHeader({
         <div className="flex flex-row items-start justify-between gap-3">
           <div className="min-w-0">
             {title ? <FrameTitle>{title}</FrameTitle> : null}
-            {description ? <FrameDescription>{description}</FrameDescription> : null}
+            {description ? (
+              <FrameDescription>{description}</FrameDescription>
+            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {right}
@@ -176,7 +186,8 @@ export function LogView({
 
   const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
-    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < PIN_THRESHOLD_PX;
+    pinnedRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < PIN_THRESHOLD_PX;
   }, []);
 
   const stream = (
@@ -207,7 +218,9 @@ export function LogView({
       {/* TWO elements: `scroll-fade` is a mask-image — it eats the
           background and radius of whatever carries it. The FramePanel
           keeps the border; only the scrolling body is masked. */}
-      <FramePanel className="flex min-h-0 flex-1 flex-col p-0">{stream}</FramePanel>
+      <FramePanel className="flex min-h-0 flex-1 flex-col p-0">
+        {stream}
+      </FramePanel>
     </Frame>
   );
 }

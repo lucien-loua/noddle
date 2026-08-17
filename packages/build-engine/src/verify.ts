@@ -69,8 +69,14 @@ try {
 
   // ── 2. cap actually applied to the builder ────────────────────────────────
   const cap = computeBuildCap({ totalMemoryMb: 2048 });
-  await exec(client, `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`);
-  await exec(client, `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`);
+  await exec(
+    client,
+    `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+  );
+  await exec(
+    client,
+    `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
+  );
   await ensureCappedBuilder(client, cap);
   ok(`builder created (${cap.memory}, quota ${cap.cpuQuota}/${cap.cpuPeriod})`);
 
@@ -78,7 +84,7 @@ try {
   // claims to have done.
   const inspect = await exec(
     client,
-    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)} --format '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'`,
+    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)} --format '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'`
   );
   const [memBytes, quota] = inspect.stdout.trim().split(" ").map(Number);
   const expectedBytes = Number.parseInt(cap.memory, 10) * 1024 * 1024;
@@ -86,7 +92,9 @@ try {
   if (memBytes === expectedBytes) {
     ok(`memory cgroup actually set: ${memBytes} bytes`);
   } else {
-    ko(`memory cgroup missing or wrong: ${memBytes}, expected ${expectedBytes}`);
+    ko(
+      `memory cgroup missing or wrong: ${memBytes}, expected ${expectedBytes}`
+    );
   }
   if (quota === cap.cpuQuota) {
     ok(`CPU cgroup actually set: ${quota}`);
@@ -125,7 +133,7 @@ try {
               outcome: "error" as const,
             };
       }
-    }),
+    })
   );
 
   for (const a of attempts) {
@@ -147,7 +155,7 @@ try {
       `printf '{"name":"v","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf 'require("http").createServer((q,r)=>r.end("ok")).listen(3000)' > s.js && ` +
       "git init -q . && git config user.email v@x && git config user.name v && " +
-      "git add -A && git commit -q -m init",
+      "git add -A && git commit -q -m init"
   );
 
   const sha = await fetchSource(client, {
@@ -175,7 +183,10 @@ try {
   });
   ok(`build succeeded, ${lines} log fragment(s) streamed`);
 
-  const imgs = await exec(client, `sudo docker image inspect ${quoteArg(TAG)} --format '{{.Id}}'`);
+  const imgs = await exec(
+    client,
+    `sudo docker image inspect ${quoteArg(TAG)} --format '{{.Id}}'`
+  );
   if (imgs.code === 0 && imgs.stdout.trim().startsWith("sha256:")) {
     ok("image exists in the local Docker store");
   } else {
@@ -192,7 +203,7 @@ try {
   // as a Traefik routing bug, so this failure has to be caught here instead.
   const probe = await exec(
     client,
-    `sudo docker run --rm --entrypoint /bin/sh ${quoteArg(TAG)} -c 'command -v curl'`,
+    `sudo docker run --rm --entrypoint /bin/sh ${quoteArg(TAG)} -c 'command -v curl'`
   );
   if (probe.code === 0 && probe.stdout.trim() !== "") {
     ok(`curl is on the image's non-login PATH: ${probe.stdout.trim()}`);
@@ -203,8 +214,14 @@ try {
   ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
 } finally {
   if (client) {
-    await exec(client, `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`);
-    await exec(client, `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`);
+    await exec(
+      client,
+      `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+    );
+    await exec(
+      client,
+      `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
+    );
     await exec(client, `sudo docker image rm -f ${quoteArg(TAG)} 2>/dev/null`);
     await exec(client, `sudo rm -rf ${quoteArg(WORK)}`);
     disconnect(client);

@@ -36,7 +36,7 @@ function stub(status: number, payload: unknown) {
       new Response(payload === undefined ? null : JSON.stringify(payload), {
         headers: { "content-type": "application/json" },
         status,
-      }),
+      })
     );
   };
   return { calls, fetchImpl };
@@ -45,13 +45,21 @@ function stub(status: number, payload: unknown) {
 await runVerify("git-provider-credentials/hooks", async () => {
   // ── the project path is URL-encoded, subgroups included ───────────────
   const listed = stub(200, [{ id: 7, url: "https://noddle.test/hook" }]);
-  const hooks = await listProjectHooks(URL_BASE, TOKEN, NESTED, listed.fetchImpl);
+  const hooks = await listProjectHooks(
+    URL_BASE,
+    TOKEN,
+    NESTED,
+    listed.fetchImpl
+  );
   check(
     "a subgroup path is encoded, not split into path segments",
     listed.calls[0]?.url.includes("group%2Fsub%2Fapp") === true,
-    listed.calls[0]?.url,
+    listed.calls[0]?.url
   );
-  check("hook ids come back as strings", hooks.length === 1 && hooks[0]?.id === "7");
+  check(
+    "hook ids come back as strings",
+    hooks.length === 1 && hooks[0]?.id === "7"
+  );
 
   // ── creation carries the events Noddle actually needs ────────────────
   const created = stub(201, { id: 9, url: "https://noddle.test/hook" });
@@ -60,18 +68,19 @@ await runVerify("git-provider-credentials/hooks", async () => {
     TOKEN,
     NESTED,
     { hookUrl: "https://noddle.test/hook", token: "s3cret" },
-    created.fetchImpl,
+    created.fetchImpl
   );
   const body = new URLSearchParams(created.calls[0]?.body ?? "");
   check("created hook id is a string", hook.id === "9");
   check("POSTed", created.calls[0]?.method === "POST");
   check(
     "push AND merge request events, matching the GitHub App's defaults",
-    body.get("push_events") === "true" && body.get("merge_requests_events") === "true",
+    body.get("push_events") === "true" &&
+      body.get("merge_requests_events") === "true"
   );
   check(
     "the shared secret goes in `token`, which GitLab echoes as x-gitlab-token",
-    body.get("token") === "s3cret",
+    body.get("token") === "s3cret"
   );
   check("the hook URL is sent", body.get("url") === "https://noddle.test/hook");
 
@@ -85,19 +94,25 @@ await runVerify("git-provider-credentials/hooks", async () => {
     NESTED,
     "9",
     { hookUrl: "https://new.example/hook", token: "s3cret" },
-    moved.fetchImpl,
+    moved.fetchImpl
   );
   const movedBody = new URLSearchParams(moved.calls[0]?.body ?? "");
-  check("repointing is a PUT on the existing hook", moved.calls[0]?.method === "PUT");
+  check(
+    "repointing is a PUT on the existing hook",
+    moved.calls[0]?.method === "PUT"
+  );
   check(
     "it addresses the hook by id rather than creating another",
     moved.calls[0]?.url.endsWith("/hooks/9") === true,
-    moved.calls[0]?.url,
+    moved.calls[0]?.url
   );
-  check("the new URL is sent", movedBody.get("url") === "https://new.example/hook");
+  check(
+    "the new URL is sent",
+    movedBody.get("url") === "https://new.example/hook"
+  );
   check(
     "the secret is re-sent, since GitLab does not return it",
-    movedBody.get("token") === "s3cret",
+    movedBody.get("token") === "s3cret"
   );
   check("the same hook comes back", repointed.id === "9");
 
@@ -106,14 +121,14 @@ await runVerify("git-provider-credentials/hooks", async () => {
   await deleteProjectHook(URL_BASE, TOKEN, NESTED, "9", gone.fetchImpl);
   check(
     "a hook already deleted by hand is success, not a failure",
-    gone.calls[0]?.method === "DELETE",
+    gone.calls[0]?.method === "DELETE"
   );
 
   const refused = stub(403, { message: "403 Forbidden" });
   await expectThrowsAsync(
     "a 403 is raised so the caller can record it",
     () => deleteProjectHook(URL_BASE, TOKEN, NESTED, "9", refused.fetchImpl),
-    (err) => err instanceof GitlabError && err.status === 403,
+    (err) => err instanceof GitlabError && err.status === 403
   );
 
   // Maintainer-or-better is required to create a hook. The caller turns this
@@ -128,8 +143,8 @@ await runVerify("git-provider-credentials/hooks", async () => {
         TOKEN,
         NESTED,
         { hookUrl: "https://noddle.test/hook", token: "s" },
-        denied.fetchImpl,
+        denied.fetchImpl
       ),
-    (err) => err instanceof GitlabError && err.status === 403,
+    (err) => err instanceof GitlabError && err.status === 403
   );
 });

@@ -55,8 +55,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Frame, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  Frame,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -165,7 +175,9 @@ interface ResourceSnapshot {
  */
 function ResourceAddress({ item }: { item: GridItem }) {
   if (item.engine) {
-    return <span className="truncate">{DATABASE_ENGINE_LABEL[item.engine]}</span>;
+    return (
+      <span className="truncate">{DATABASE_ENGINE_LABEL[item.engine]}</span>
+    );
   }
   if (!item.domain) {
     return <span className="text-muted-foreground">No domain</span>;
@@ -204,7 +216,10 @@ function scopeIsTransient(scope: Scope): boolean {
   );
 }
 
-function snapshotInScope(scope: Scope, key: string): ResourceSnapshot | undefined {
+function snapshotInScope(
+  scope: Scope,
+  key: string
+): ResourceSnapshot | undefined {
   const colon = key.indexOf(":");
   const kind = key.slice(0, colon) as Kind;
   const id = key.slice(colon + 1);
@@ -223,7 +238,7 @@ function snapshotInScope(scope: Scope, key: string): ResourceSnapshot | undefine
 function isLifecycleSettled(
   current: ResourceSnapshot | undefined,
   entry: AwaitingEntry,
-  now: number,
+  now: number
 ): boolean {
   if (current === undefined || now - entry.since > AWAITING_TIMEOUT_MS) {
     return true;
@@ -242,7 +257,7 @@ function isLifecycleSettled(
  */
 function refineAwaiting(
   scope: Scope,
-  awaiting: Map<string, AwaitingEntry>,
+  awaiting: Map<string, AwaitingEntry>
 ): Map<string, AwaitingEntry> {
   if (awaiting.size === 0) {
     return awaiting;
@@ -258,7 +273,10 @@ function refineAwaiting(
   return next.size === awaiting.size ? awaiting : next;
 }
 
-function shouldPoll(scope: Scope | undefined, awaiting: Map<string, AwaitingEntry>): boolean {
+function shouldPoll(
+  scope: Scope | undefined,
+  awaiting: Map<string, AwaitingEntry>
+): boolean {
   if (!scope) {
     return false;
   }
@@ -284,7 +302,10 @@ function hasDeploy(kind: Kind): boolean {
 }
 
 /** The same call, routed by type: two server functions, one intention. */
-function runLifecycleFor(item: GridItem, action: LifecycleAction): Promise<unknown> {
+function runLifecycleFor(
+  item: GridItem,
+  action: LifecycleAction
+): Promise<unknown> {
   if (item.kind === "database") {
     return triggerDatabaseLifecycle({
       data: { action, databaseId: item.id },
@@ -314,9 +335,13 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
             )}
           </IconStack>
         </EmptyMedia>
-        <EmptyTitle>{filtered ? "Nothing matches" : "Nothing here yet"}</EmptyTitle>
+        <EmptyTitle>
+          {filtered ? "Nothing matches" : "Nothing here yet"}
+        </EmptyTitle>
         <EmptyDescription>
-          {filtered ? "Try a different search or filter." : "Create a service to get started."}
+          {filtered
+            ? "Try a different search or filter."
+            : "Create a service to get started."}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -342,12 +367,15 @@ export function ResourceGrid({
   // destination environment's loader come from route data, not this query.
   const router = useRouter();
 
-  const [awaitingSettle, setAwaitingSettle] = useState(() => new Map<string, AwaitingEntry>());
+  const [awaitingSettle, setAwaitingSettle] = useState(
+    () => new Map<string, AwaitingEntry>()
+  );
 
   const scopeQuery = useQuery({
     ...queries.environmentScope(projectId, environmentId),
     initialData: initialScope,
-    refetchInterval: (q) => (shouldPoll(q.state.data, awaitingSettle) ? SCOPE_POLL_MS : false),
+    refetchInterval: (q) =>
+      shouldPoll(q.state.data, awaitingSettle) ? SCOPE_POLL_MS : false,
   });
   const scope = scopeQuery.data ?? initialScope;
 
@@ -357,24 +385,27 @@ export function ResourceGrid({
 
   const refreshScope = useCallback(
     () => cache.environmentScope(queryClient, projectId, environmentId),
-    [queryClient, projectId, environmentId],
+    [queryClient, projectId, environmentId]
   );
 
-  const markSettling = useCallback((targets: GridItem[], action: LifecycleAction) => {
-    setAwaitingSettle((prev) => {
-      const next = new Map(prev);
-      const now = Date.now();
-      for (const item of targets) {
-        next.set(itemKey(item), {
-          action,
-          since: now,
-          status: item.status,
-          updatedAt: item.updatedAt,
-        });
-      }
-      return next;
-    });
-  }, []);
+  const markSettling = useCallback(
+    (targets: GridItem[], action: LifecycleAction) => {
+      setAwaitingSettle((prev) => {
+        const next = new Map(prev);
+        const now = Date.now();
+        for (const item of targets) {
+          next.set(itemKey(item), {
+            action,
+            since: now,
+            status: item.status,
+            updatedAt: item.updatedAt,
+          });
+        }
+        return next;
+      });
+    },
+    []
+  );
 
   const unmarkSettling = useCallback((targets: GridItem[]) => {
     setAwaitingSettle((prev) => {
@@ -411,7 +442,9 @@ export function ResourceGrid({
         const [first] = s.domains;
         return {
           domain: first?.host ?? null,
-          domainUrl: first ? `${first.https ? "https" : "http"}://${first.host}` : null,
+          domainUrl: first
+            ? `${first.https ? "https" : "http"}://${first.host}`
+            : null,
           id: s.id,
           kind: "service",
           lastError: s.lastError,
@@ -450,10 +483,13 @@ export function ResourceGrid({
         updatedAt: d.updatedAt,
       })),
     ],
-    [scope],
+    [scope]
   );
 
-  const servers = useMemo(() => [...new Set(items.map((i) => i.serverName))].sort(), [items]);
+  const servers = useMemo(
+    () => [...new Set(items.map((i) => i.serverName))].sort(),
+    [items]
+  );
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -468,11 +504,14 @@ export function ResourceGrid({
         return true;
       }
       return (
-        item.name.toLowerCase().includes(q) || (item.domain?.toLowerCase().includes(q) ?? false)
+        item.name.toLowerCase().includes(q) ||
+        (item.domain?.toLowerCase().includes(q) ?? false)
       );
     });
     return [...list].sort((a, b) =>
-      sort === "name" ? a.name.localeCompare(b.name) : a.status.localeCompare(b.status),
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : a.status.localeCompare(b.status)
     );
   }, [items, search, typeFilter, serverFilter, sort]);
 
@@ -492,7 +531,7 @@ export function ResourceGrid({
 
   const selectedItems = useMemo(
     () => visible.filter((i) => selected.has(itemKey(i))),
-    [visible, selected],
+    [visible, selected]
   );
 
   const openItem = useCallback(
@@ -520,7 +559,7 @@ export function ResourceGrid({
         });
       }
     },
-    [navigate, scope.environmentId, scope.projectId],
+    [navigate, scope.environmentId, scope.projectId]
   );
   const requestMove = useCallback(
     (item: GridItem) =>
@@ -529,7 +568,7 @@ export function ResourceGrid({
         id: item.id,
         name: item.name,
       }),
-    [scope.environmentId],
+    [scope.environmentId]
   );
   const closeMove = useCallback((open: boolean) => {
     if (!open) {
@@ -601,8 +640,14 @@ export function ResourceGrid({
       });
     },
   });
-  const handleBulkStart = useCallback(() => bulkLifecycle.mutate("start"), [bulkLifecycle]);
-  const handleBulkStop = useCallback(() => bulkLifecycle.mutate("stop"), [bulkLifecycle]);
+  const handleBulkStart = useCallback(
+    () => bulkLifecycle.mutate("start"),
+    [bulkLifecycle]
+  );
+  const handleBulkStop = useCallback(
+    () => bulkLifecycle.mutate("stop"),
+    [bulkLifecycle]
+  );
 
   const bulkDelete = useMutation({
     mutationFn: async () => {
@@ -646,25 +691,31 @@ export function ResourceGrid({
 
   const handleSearchChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value),
-    [],
+    []
   );
   const handleTypeFilterChange = useCallback(
     (next: unknown) => setTypeFilter(next as TypeFilter),
-    [],
+    []
   );
   const handleServerFilterChange = useCallback(
     (next: unknown) => setServerFilter(next as string),
-    [],
+    []
   );
-  const handleSortChange = useCallback((next: unknown) => setSort(next as SortKey), []);
+  const handleSortChange = useCallback(
+    (next: unknown) => setSort(next as SortKey),
+    []
+  );
 
   const hasSelection = selected.size > 0;
-  const canBulkDeploy = canDeploy && selectedItems.some((i) => hasDeploy(i.kind));
+  const canBulkDeploy =
+    canDeploy && selectedItems.some((i) => hasDeploy(i.kind));
   // The button only appears if the selection contains at least one
   // resource the user is allowed to operate — a service with
   // `service:deploy`, a database with `database:operate`.
   const canBulkOperate = selectedItems.some(
-    (i) => (i.kind === "service" && canDeploy) || (i.kind === "database" && canOperateDatabase),
+    (i) =>
+      (i.kind === "service" && canDeploy) ||
+      (i.kind === "database" && canOperateDatabase)
   );
 
   return (
@@ -710,7 +761,10 @@ export function ResourceGrid({
         </Select>
         {servers.length > 1 ? (
           <Select
-            items={Object.fromEntries([["all", "All servers"], ...servers.map((s) => [s, s])])}
+            items={Object.fromEntries([
+              ["all", "All servers"],
+              ...servers.map((s) => [s, s]),
+            ])}
             onValueChange={handleServerFilterChange}
             value={serverFilter}
           >
@@ -852,8 +906,9 @@ export function ResourceGrid({
           <DialogHeader>
             <DialogTitle>Delete {selected.size} items?</DialogTitle>
             <DialogDescription>
-              {selectedItems.map((i) => i.name).join(", ")}. Every deployment history, log and image
-              tied to them is removed too. <strong>This cannot be undone.</strong>
+              {selectedItems.map((i) => i.name).join(", ")}. Every deployment
+              history, log and image tied to them is removed too.{" "}
+              <strong>This cannot be undone.</strong>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -863,7 +918,9 @@ export function ResourceGrid({
               onClick={handleBulkDelete}
               variant="destructive"
             >
-              {bulkDelete.isPending ? <Spinner data-icon="inline-start" /> : null}
+              {bulkDelete.isPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : null}
               Delete {selected.size} items
             </Button>
           </DialogFooter>
@@ -921,13 +978,18 @@ function ResourceGridCard({
   // `created` = never deployed, `deploying` = provision in flight,
   // `deleting` = teardown: no stable Swarm service to operate.
   const settled =
-    item.status !== "created" && item.status !== "deploying" && item.status !== "deleting";
+    item.status !== "created" &&
+    item.status !== "deploying" &&
+    item.status !== "deleting";
   const inFlight = pendingAction !== null || TRANSIENT_STATUS.has(item.status);
   const mayOperate = item.kind === "database" ? canOperateDatabase : canDeploy;
   const lifecycleAvailable = hasLifecycle(item.kind) && mayOperate && settled;
 
   const handleOpen = useCallback(() => onOpen(item), [item, onOpen]);
-  const handleToggleSelect = useCallback(() => onToggleSelect(item), [item, onToggleSelect]);
+  const handleToggleSelect = useCallback(
+    () => onToggleSelect(item),
+    [item, onToggleSelect]
+  );
   const handleMove = useCallback(() => {
     onMove?.(item);
   }, [item, onMove]);
@@ -1116,15 +1178,22 @@ function ResourceCardMenu({
   const lifecycleBusy = lifecycle.isPending || pendingAction !== null;
   const handleToggleRun = useCallback(
     () => lifecycle.mutate(stopped ? "start" : "stop"),
-    [lifecycle, stopped],
+    [lifecycle, stopped]
   );
-  const handleRestart = useCallback(() => lifecycle.mutate("restart"), [lifecycle]);
+  const handleRestart = useCallback(
+    () => lifecycle.mutate("restart"),
+    [lifecycle]
+  );
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button aria-label={`Actions for ${item.name}`} size="icon-xs" variant="ghost">
+          <Button
+            aria-label={`Actions for ${item.name}`}
+            size="icon-xs"
+            variant="ghost"
+          >
             <DotsThreeIcon weight="regular" />
           </Button>
         }
@@ -1203,15 +1272,18 @@ function ResourceDeleteDialog({
     },
   });
 
-  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
+  const handleConfirm = useCallback(
+    (typed: string) => remove.mutate(typed),
+    [remove]
+  );
 
   return (
     <ConfirmNameDialog
       confirmLabel="Delete"
       description={
         <>
-          Every deployment in its history, its logs and its images are removed too.{" "}
-          <strong>This cannot be undone.</strong>
+          Every deployment in its history, its logs and its images are removed
+          too. <strong>This cannot be undone.</strong>
         </>
       }
       onConfirm={handleConfirm}

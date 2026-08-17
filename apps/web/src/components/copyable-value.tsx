@@ -90,12 +90,19 @@ export function CopyableValue({
           eighteen, and the button used to end up suspended in the middle of
           the block, far from anything. Aligned to the top, it stays on the
           first line regardless of height. */}
-      <div className={cn("flex items-start gap-2 rounded-2xl bg-muted p-2", className)}>
+      <div
+        className={cn(
+          "flex items-start gap-2 rounded-2xl bg-muted p-2",
+          className
+        )}
+      >
         {/* `min-w-0` + `break-all`: without both, a single long word value —
             a public key runs 80 characters with no spaces — widens the box
             instead of fitting inside it, and overflows the dialog.
             Measured. */}
-        <code className="min-w-0 flex-1 break-all px-1 font-mono text-xs">{value}</code>
+        <code className="min-w-0 flex-1 break-all px-1 font-mono text-xs">
+          {value}
+        </code>
         <CopyButton label={label} value={value} />
       </div>
     </>

@@ -1,6 +1,9 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { servers, services, sshKeys } from "@noddle/db/schema";
-import { deleteSshKeySchema, sshKeyInputSchema } from "@noddle/shared/validation/server";
+import {
+  deleteSshKeySchema,
+  sshKeyInputSchema,
+} from "@noddle/shared/validation/server";
 import { generateKeyPair, publicKeyOf } from "@noddle/ssh-executor/keys";
 import { createServerFn } from "@tanstack/react-start";
 import { desc, eq } from "drizzle-orm";
@@ -42,7 +45,7 @@ export const getSshKeys = createServerFn({ method: "GET" }).handler(
           serverCount: machines.filter((m) => m.sshKeyId === row.id).length,
         }));
       },
-    }),
+    })
 );
 
 /**
@@ -76,7 +79,7 @@ export const createSshKey = createServerFn({ method: "POST" })
           // that point that the key doesn't open would leave a server
           // "unreachable" with no readable cause.
           throw new Error(
-            "this private key could not be read — it may be malformed, or protected by a passphrase, which Noddle does not support",
+            "this private key could not be read — it may be malformed, or protected by a passphrase, which Noddle does not support"
           );
         }
 
@@ -87,7 +90,11 @@ export const createSshKey = createServerFn({ method: "POST" })
         await db.insert(sshKeys).values({
           id,
           name: data.name,
-          privateKeyEncrypted: encryptSecret(pair.privateKey, env.appKey, secretContext.sshKey(id)),
+          privateKeyEncrypted: encryptSecret(
+            pair.privateKey,
+            env.appKey,
+            secretContext.sshKey(id)
+          ),
           publicKey: pair.publicKey,
         });
 
@@ -110,7 +117,8 @@ export const deleteSshKey = createServerFn({ method: "POST" })
   .validator(deleteSshKeySchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>
     runGuarded({
-      load: () => db.query.sshKeys.findFirst({ where: eq(sshKeys.id, data.sshKeyId) }),
+      load: () =>
+        db.query.sshKeys.findFirst({ where: eq(sshKeys.id, data.sshKeyId) }),
       notFoundMessage: "ssh key not found",
       permission: { action: "delete", resource: "sshKey" },
       run: async ({ row }) => {
@@ -121,7 +129,7 @@ export const deleteSshKey = createServerFn({ method: "POST" })
           throw new Error(
             `this key still opens ${used.length} server(s): ${used
               .map((s) => s.name)
-              .join(", ")} — remove them first`,
+              .join(", ")} — remove them first`
           );
         }
 
@@ -135,7 +143,7 @@ export const deleteSshKey = createServerFn({ method: "POST" })
           throw new Error(
             `this key still clones for ${deploying.length} service(s): ${deploying
               .map((s) => s.name)
-              .join(", ")} — change their provider first`,
+              .join(", ")} — change their provider first`
           );
         }
 
@@ -143,5 +151,5 @@ export const deleteSshKey = createServerFn({ method: "POST" })
         return { ok: true };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );

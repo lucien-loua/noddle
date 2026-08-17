@@ -4,7 +4,14 @@ import { cn } from "@/lib/utils";
 /** The reading order, from most urgent to most mundane — this is the only
  *  thing the display adds to the server's raw count. A status missing
  *  from this list wouldn't be rendered, so it covers all of them. */
-const STATUS_ORDER = ["crashed", "deploying", "running", "stopped", "deleting", "created"] as const;
+const STATUS_ORDER = [
+  "crashed",
+  "deploying",
+  "running",
+  "stopped",
+  "deleting",
+  "created",
+] as const;
 
 /**
  * We show ONLY the statuses that are present. "0 crashed" on a healthy

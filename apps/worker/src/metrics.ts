@@ -84,14 +84,8 @@ export function parseHostFacts(stdout: string): HostSample | null {
   if (parts.length !== 6 || parts.some((n) => !Number.isFinite(n))) {
     return null;
   }
-  const [load1, cores, memTotalKib, memAvailKib, diskTotal, diskUsed] = parts as [
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-  ];
+  const [load1, cores, memTotalKib, memAvailKib, diskTotal, diskUsed] =
+    parts as [number, number, number, number, number, number];
   return {
     cpuCount: cores,
     cpuLoad1: load1,
@@ -161,7 +155,8 @@ export function cpuPercent(stats: DockerStats): number | null {
     (stats.cpu_stats?.cpu_usage?.total_usage ?? 0) -
     (stats.precpu_stats?.cpu_usage?.total_usage ?? 0);
   const systemDelta =
-    (stats.cpu_stats?.system_cpu_usage ?? 0) - (stats.precpu_stats?.system_cpu_usage ?? 0);
+    (stats.cpu_stats?.system_cpu_usage ?? 0) -
+    (stats.precpu_stats?.system_cpu_usage ?? 0);
   if (systemDelta <= 0) {
     return null;
   }
@@ -189,7 +184,7 @@ const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
  * fewer calls than before.
  */
 async function swarmContainersByService(
-  docker: DockerApi,
+  docker: DockerApi
 ): Promise<Map<string, { id: string; name: string }>> {
   const list = await docker.listContainers();
   const byService = new Map<string, { id: string; name: string }>();
@@ -225,7 +220,10 @@ interface DockerDf {
   VolumeUsage?: DfUsage;
 }
 
-type DiskSample = Omit<typeof serverDiskUsage.$inferInsert, "id" | "sampledAt" | "serverId">;
+type DiskSample = Omit<
+  typeof serverDiskUsage.$inferInsert,
+  "id" | "sampledAt" | "serverId"
+>;
 
 /**
  * The disk usage breakdown, in RAW BYTES.
@@ -295,7 +293,7 @@ async function sampleDiskUsage(
   ctx: DeployContext,
   docker: DockerApi,
   serverId: string,
-  result: CollectResult,
+  result: CollectResult
 ): Promise<void> {
   const last = await ctx.db.query.serverDiskUsage.findFirst({
     orderBy: desc(serverDiskUsage.sampledAt),
@@ -326,7 +324,7 @@ async function sampleDiskUsage(
 export async function recordDiskUsage(
   ctx: DeployContext,
   docker: DockerApi,
-  serverId: string,
+  serverId: string
 ): Promise<boolean> {
   const usage = parseDiskUsage((await docker.df()) as DockerDf);
   if (!usage) {
@@ -345,8 +343,14 @@ interface IoTotals {
 
 function ioTotalsFrom(stats: DockerStats): IoTotals {
   const network = stats.networks ?? {};
-  const networkInBytes = Object.values(network).reduce((sum, v) => sum + (v.rx_bytes ?? 0), 0);
-  const networkOutBytes = Object.values(network).reduce((sum, v) => sum + (v.tx_bytes ?? 0), 0);
+  const networkInBytes = Object.values(network).reduce(
+    (sum, v) => sum + (v.rx_bytes ?? 0),
+    0
+  );
+  const networkOutBytes = Object.values(network).reduce(
+    (sum, v) => sum + (v.tx_bytes ?? 0),
+    0
+  );
 
   const blk = stats.blkio_stats?.io_service_bytes_recursive ?? [];
   let blockReadBytes = 0;
@@ -379,9 +383,11 @@ async function sampleContainer(
   docker: DockerApi,
   container: { id: string; name: string },
   owner: { databaseId: string } | { serviceId: string },
-  serverIo?: IoTotals,
+  serverIo?: IoTotals
 ): Promise<boolean> {
-  const stats = (await docker.getContainer(container.id).stats({ stream: false })) as DockerStats;
+  const stats = (await docker
+    .getContainer(container.id)
+    .stats({ stream: false })) as DockerStats;
 
   const percent = cpuPercent(stats);
   const used = stats.memory_stats?.usage;
@@ -430,7 +436,7 @@ async function sampleDatabases(
   present: Map<string, { id: string; name: string }>,
   docker: DockerApi,
   result: CollectResult,
-  serverIo?: IoTotals,
+  serverIo?: IoTotals
 ): Promise<void> {
   const running = await ctx.db.query.databases.findMany({
     where: eq(databases.status, "running"),
@@ -449,7 +455,7 @@ async function sampleDatabases(
       {
         databaseId: database.id,
       },
-      serverIo,
+      serverIo
     );
     if (sampled) {
       result.databases += 1;
@@ -463,7 +469,7 @@ async function sampleServices(
   present: Map<string, { id: string; name: string }>,
   docker: DockerApi,
   result: CollectResult,
-  serverIo?: IoTotals,
+  serverIo?: IoTotals
 ): Promise<void> {
   // ALL running services, not just the ones for which this server is the
   // BUILD server: with a registry, Swarm places wherever it wants. It's the
@@ -485,7 +491,7 @@ async function sampleServices(
       {
         serviceId: service.id,
       },
-      serverIo,
+      serverIo
     );
     if (sampled) {
       result.services += 1;
@@ -496,7 +502,7 @@ async function sampleServices(
 async function sampleServer(
   ctx: DeployContext,
   server: typeof servers.$inferSelect,
-  result: CollectResult,
+  result: CollectResult
 ): Promise<void> {
   const client = await ctx.connectTo(server);
   try {
@@ -546,7 +552,9 @@ async function sampleServer(
  * unreachable server produces a GAP in its series — visible as such —
  * instead of a made-up measurement.
  */
-export async function collectMetrics(ctx: DeployContext): Promise<CollectResult> {
+export async function collectMetrics(
+  ctx: DeployContext
+): Promise<CollectResult> {
   const result: CollectResult = {
     databases: 0,
     disks: 0,
@@ -578,6 +586,10 @@ export async function collectMetrics(ctx: DeployContext): Promise<CollectResult>
 export async function pruneMetrics(ctx: DeployContext): Promise<void> {
   const cutoff = new Date(Date.now() - RETENTION_MS);
   await ctx.db.delete(serverMetrics).where(lt(serverMetrics.sampledAt, cutoff));
-  await ctx.db.delete(serviceMetrics).where(lt(serviceMetrics.sampledAt, cutoff));
-  await ctx.db.delete(serverDiskUsage).where(lt(serverDiskUsage.sampledAt, cutoff));
+  await ctx.db
+    .delete(serviceMetrics)
+    .where(lt(serviceMetrics.sampledAt, cutoff));
+  await ctx.db
+    .delete(serverDiskUsage)
+    .where(lt(serverDiskUsage.sampledAt, cutoff));
 }

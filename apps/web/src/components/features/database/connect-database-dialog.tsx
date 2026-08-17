@@ -145,7 +145,7 @@ export function ConnectDatabaseDialog({
   const [name, setName] = useState("");
   const handleNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setName(e.target.value),
-    [],
+    []
   );
 
   /**
@@ -192,7 +192,7 @@ export function ConnectDatabaseDialog({
 
   const regenerate = useCallback(
     () => form.setFieldValue("rootPassword", generateDatabasePassword()),
-    [form],
+    [form]
   );
 
   useEffect(() => {
@@ -217,7 +217,10 @@ export function ConnectDatabaseDialog({
       // the two diverged, it's the real choice that would go to the server.
       const answers = new FormData(event.currentTarget);
       const picked = answers.get("engine");
-      if (typeof picked !== "string" || !(DATABASE_ENGINES as readonly string[]).includes(picked)) {
+      if (
+        typeof picked !== "string" ||
+        !(DATABASE_ENGINES as readonly string[]).includes(picked)
+      ) {
         setError("Pick a database engine first.");
         return;
       }
@@ -233,7 +236,9 @@ export function ConnectDatabaseDialog({
             // hand yields `""`, which must mean "leave the default" — not
             // "the name is the empty string", which Zod would reject with a
             // message pointing at the wrong field.
-            databaseName: hasNamedDatabase ? values.databaseName || undefined : undefined,
+            databaseName: hasNamedDatabase
+              ? values.databaseName || undefined
+              : undefined,
             description: values.description || undefined,
             engine: chosen,
             environmentName: values.environmentName,
@@ -241,7 +246,9 @@ export function ConnectDatabaseDialog({
             name,
             projectName: values.projectName,
             rootPassword: values.rootPassword || undefined,
-            rootUser: hasNamedDatabase ? values.rootUser || undefined : undefined,
+            rootUser: hasNamedDatabase
+              ? values.rootUser || undefined
+              : undefined,
             serverId: values.serverId,
           },
         });
@@ -254,7 +261,7 @@ export function ConnectDatabaseDialog({
         setPending(false);
       }
     },
-    [form, hasNamedDatabase, name, onOpenChange, queryClient, router],
+    [form, hasNamedDatabase, name, onOpenChange, queryClient, router]
   );
 
   const noServers = servers.length === 0;
@@ -266,7 +273,8 @@ export function ConnectDatabaseDialog({
         <DialogHeader>
           <DialogTitle>{STEP_COPY[step].title}</DialogTitle>
           <DialogDescription>
-            {STEP_COPY[step].description || "An official image, on the server you pick."}
+            {STEP_COPY[step].description ||
+              "An official image, on the server you pick."}
           </DialogDescription>
         </DialogHeader>
 
@@ -291,7 +299,9 @@ export function ConnectDatabaseDialog({
           >
             <DialogBody>
               <QuestionnaireItem name="engine" required>
-                <QuestionnaireTitle className="sr-only">Which engine?</QuestionnaireTitle>
+                <QuestionnaireTitle className="sr-only">
+                  Which engine?
+                </QuestionnaireTitle>
                 {/* The radios' `change` bubbles up here: the primitive
                     doesn't expose the current answer during render, and the
                     "credentials" step needs it to know what to show. */}
@@ -312,7 +322,9 @@ export function ConnectDatabaseDialog({
               </QuestionnaireItem>
 
               <QuestionnaireItem name="details" required>
-                <QuestionnaireTitle className="sr-only">Details</QuestionnaireTitle>
+                <QuestionnaireTitle className="sr-only">
+                  Details
+                </QuestionnaireTitle>
                 <FieldGroup>
                   {lockedScope ? null : (
                     <div className="grid grid-cols-2 gap-4">
@@ -347,7 +359,9 @@ export function ConnectDatabaseDialog({
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
                         itemToStringLabel={(server) => server.name}
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
-                        itemToStringValue={(server) => `${server.name} · ${server.host}`}
+                        itemToStringValue={(server) =>
+                          `${server.name} · ${server.host}`
+                        }
                         label="Server"
                         placeholder="Search servers…"
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
@@ -369,7 +383,9 @@ export function ConnectDatabaseDialog({
                         {(f) => (
                           <f.FieldText
                             label="Database name"
-                            placeholder={suggestIdentifier(name || "my_database")}
+                            placeholder={suggestIdentifier(
+                              name || "my_database"
+                            )}
                           />
                         )}
                       </form.AppField>

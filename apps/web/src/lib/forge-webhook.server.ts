@@ -26,14 +26,24 @@ function webhookSecretOf(row: {
   gitlab?: { webhookSecretEncrypted: string | null } | null;
   id: string;
 }): string | null {
-  const encrypted = row.github?.webhookSecretEncrypted ?? row.gitlab?.webhookSecretEncrypted;
+  const encrypted =
+    row.github?.webhookSecretEncrypted ?? row.gitlab?.webhookSecretEncrypted;
   return encrypted
-    ? decryptSecret(encrypted, env.appKey, secretContext.gitProvider(row.id, "webhook_secret"))
+    ? decryptSecret(
+        encrypted,
+        env.appKey,
+        secretContext.gitProvider(row.id, "webhook_secret")
+      )
     : null;
 }
 
 /** GitHub signs the body; GitLab echoes the shared secret in a header. */
-function presents(forge: Forge, request: Request, rawBody: string, secret: string): boolean {
+function presents(
+  forge: Forge,
+  request: Request,
+  rawBody: string,
+  secret: string
+): boolean {
   if (forge === "gitlab") {
     const token = request.headers.get("x-gitlab-token");
     return token !== null && safeEqual(secret, token);
@@ -50,7 +60,7 @@ async function providerFor(
   forge: Forge,
   request: Request,
   rawBody: string,
-  gitProviderId?: string,
+  gitProviderId?: string
 ): Promise<string | null> {
   const rows = gitProviderId
     ? await db.query.gitProviders

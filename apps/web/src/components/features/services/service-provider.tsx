@@ -40,7 +40,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
@@ -54,7 +59,13 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
 import {
   Select,
   SelectContent,
@@ -91,7 +102,9 @@ function providerTab(sourceType: ServiceRow["sourceType"]): ProviderTab {
   return "git";
 }
 
-function selectRegistryChoice(state: { values: { registryChoice: string } }): string {
+function selectRegistryChoice(state: {
+  values: { registryChoice: string };
+}): string {
   return state.values.registryChoice;
 }
 
@@ -100,7 +113,9 @@ function selectRegistryChoice(state: { values: { registryChoice: string } }): st
  * each render and forces a resubscribe. Same shape as
  * `selectProviderRegion` in `s3-destination-form.ts`.
  */
-function selectRepoAndBranch(state: { values: { gitBranch: string; gitRepoUrl: string } }) {
+function selectRepoAndBranch(state: {
+  values: { gitBranch: string; gitRepoUrl: string };
+}) {
   return {
     branch: state.values.gitBranch,
     repoUrl: state.values.gitRepoUrl,
@@ -111,7 +126,13 @@ function isProviderTab(value: string): value is ProviderTab {
   return value === "docker" || isGitSourceType(value);
 }
 
-function WatchPathRow({ onRemove, path }: { onRemove: (path: string) => void; path: string }) {
+function WatchPathRow({
+  onRemove,
+  path,
+}: {
+  onRemove: (path: string) => void;
+  path: string;
+}) {
   const handleRemove = useCallback(() => onRemove(path), [onRemove, path]);
 
   return (
@@ -120,7 +141,12 @@ function WatchPathRow({ onRemove, path }: { onRemove: (path: string) => void; pa
         <ItemTitle className="truncate font-mono">{path}</ItemTitle>
       </ItemContent>
       <ItemActions>
-        <Button aria-label={`Remove ${path}`} onClick={handleRemove} size="icon-sm" variant="ghost">
+        <Button
+          aria-label={`Remove ${path}`}
+          onClick={handleRemove}
+          size="icon-sm"
+          variant="ghost"
+        >
           <XIcon weight="regular" />
         </Button>
       </ItemActions>
@@ -154,12 +180,12 @@ function WatchPathsField({
 
   const remove = useCallback(
     (path: string) => onChange(value.filter((p) => p !== path)),
-    [onChange, value],
+    [onChange, value]
   );
 
   const handleDraft = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value),
-    [],
+    []
   );
 
   // Enter adds the path instead of submitting the form: the field sits in
@@ -171,15 +197,15 @@ function WatchPathsField({
         add();
       }
     },
-    [add],
+    [add]
   );
 
   return (
     <Field>
       <FieldLabel htmlFor="watch-path-draft">Watch paths</FieldLabel>
       <FieldDescription>
-        Deploy only when a push touches one of these globs, for example apps/web/**. Empty deploys
-        on every push.
+        Deploy only when a push touches one of these globs, for example
+        apps/web/**. Empty deploys on every push.
       </FieldDescription>
       <InputGroup>
         <InputGroupInput
@@ -236,7 +262,7 @@ function DeployKeyField({
         onChange(next === NO_DEPLOY_KEY ? null : next);
       }
     },
-    [onChange],
+    [onChange]
   );
 
   const rows = keys.data ?? [];
@@ -245,8 +271,8 @@ function DeployKeyField({
     <Field>
       <FieldLabel htmlFor="deploy-key">Deploy key</FieldLabel>
       <FieldDescription>
-        SSH key used to clone a private repository. Add its public half as a deploy key on the
-        repository.
+        SSH key used to clone a private repository. Add its public half as a
+        deploy key on the repository.
       </FieldDescription>
       <Select
         disabled={!canEdit}
@@ -310,7 +336,7 @@ function ProviderBranchField({
         onChange(next);
       }
     },
-    [onChange],
+    [onChange]
   );
 
   return (
@@ -321,7 +347,11 @@ function ProviderBranchField({
           {errorMessage(branches.error, "could not list branches")}
         </FieldDescription>
       ) : null}
-      <Combobox items={branches.data ?? []} onValueChange={handleChange} value={branch}>
+      <Combobox
+        items={branches.data ?? []}
+        onValueChange={handleChange}
+        value={branch}
+      >
         <ComboboxInput
           className="w-full"
           disabled={!canEdit || branches.isPending}
@@ -379,12 +409,16 @@ function ProviderRepositoryField({
   //
   // And only connections that can actually list something: an App created
   // but never installed would offer an empty list with no way to tell why.
-  const connected = (providers.data ?? []).filter((p) => p.connected && p.providerType === forge);
+  const connected = (providers.data ?? []).filter(
+    (p) => p.connected && p.providerType === forge
+  );
 
   // A Service stores ONE connection, and every forge tab reads it. On the
   // tab it does not belong to, it is not a selectable value — left as-is the
   // trigger renders the raw id, because no item carries that label.
-  const selected = connected.some((p) => p.id === providerId) ? providerId : null;
+  const selected = connected.some((p) => p.id === providerId)
+    ? providerId
+    : null;
 
   const repos = useQuery({
     ...queries.providerRepositories(selected ?? ""),
@@ -397,7 +431,7 @@ function ProviderRepositoryField({
         onProviderChange(next);
       }
     },
-    [onProviderChange],
+    [onProviderChange]
   );
 
   const rows = repos.data ?? [];
@@ -409,7 +443,7 @@ function ProviderRepositoryField({
         onPick(next);
       }
     },
-    [onPick],
+    [onPick]
   );
 
   // The unconnected case never reaches here — `ForgeTab` replaces the whole
@@ -419,8 +453,8 @@ function ProviderRepositoryField({
       <Field>
         <FieldLabel htmlFor="git-provider">Connection</FieldLabel>
         <FieldDescription>
-          Which connected account clones this repository. To clone a public repository by URL
-          instead, use the Git tab.
+          Which connected account clones this repository. To clone a public
+          repository by URL instead, use the Git tab.
         </FieldDescription>
         <Select
           disabled={!canEdit}
@@ -438,7 +472,11 @@ function ProviderRepositoryField({
                   {/* The forge, not just the name a user typed: two
                       connections can be called anything. */}
                   <span className="flex items-center gap-2">
-                    {p.providerType === "gitlab" ? <GitlabIcon /> : <GithubIcon />}
+                    {p.providerType === "gitlab" ? (
+                      <GitlabIcon />
+                    ) : (
+                      <GithubIcon />
+                    )}
                     {p.name}
                   </span>
                 </SelectItem>
@@ -583,12 +621,12 @@ function GitSourceForm({
       form.setFieldValue("gitRepoFullName", repo.fullName);
       form.setFieldValue("gitBranch", repo.defaultBranch);
     },
-    [form],
+    [form]
   );
 
   const handleBranchPick = useCallback(
     (next: string) => form.setFieldValue("gitBranch", next),
-    [form],
+    [form]
   );
 
   return (
@@ -635,7 +673,12 @@ function GitSourceForm({
             </form.AppField>
             <form.AppField name="gitBranch">
               {(f) => (
-                <f.FieldText disabled={!canEdit} label="Branch" placeholder="main" required />
+                <f.FieldText
+                  disabled={!canEdit}
+                  label="Branch"
+                  placeholder="main"
+                  required
+                />
               )}
             </form.AppField>
           </>
@@ -656,13 +699,21 @@ function GitSourceForm({
         {sourceType === "git" ? (
           <form.AppField name="deployKeyId">
             {(f) => (
-              <DeployKeyField canEdit={canEdit} onChange={f.handleChange} value={f.state.value} />
+              <DeployKeyField
+                canEdit={canEdit}
+                onChange={f.handleChange}
+                value={f.state.value}
+              />
             )}
           </form.AppField>
         ) : null}
         <form.AppField name="watchPaths">
           {(f) => (
-            <WatchPathsField canEdit={canEdit} onChange={f.handleChange} value={f.state.value} />
+            <WatchPathsField
+              canEdit={canEdit}
+              onChange={f.handleChange}
+              value={f.state.value}
+            />
           )}
         </form.AppField>
         <form.AppField name="gitSubmodules">
@@ -670,7 +721,9 @@ function GitSourceForm({
             <Field orientation="horizontal">
               <div className="flex flex-1 flex-col gap-1">
                 <FieldLabel className="font-medium">Submodules</FieldLabel>
-                <FieldDescription>Clone submodules alongside the repository.</FieldDescription>
+                <FieldDescription>
+                  Clone submodules alongside the repository.
+                </FieldDescription>
               </div>
               <Switch
                 checked={f.state.value}
@@ -690,7 +743,12 @@ function GitSourceForm({
 
       {canEdit ? (
         <div className="mt-4 flex justify-end">
-          <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
+          <Button
+            disabled={save.isPending}
+            onClick={handleSubmit}
+            size="sm"
+            variant="outline"
+          >
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>
@@ -700,7 +758,13 @@ function GitSourceForm({
   );
 }
 
-function DockerSourceForm({ canEdit, service }: { canEdit: boolean; service: ServiceRow }) {
+function DockerSourceForm({
+  canEdit,
+  service,
+}: {
+  canEdit: boolean;
+  service: ServiceRow;
+}) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -856,7 +920,12 @@ function DockerSourceForm({ canEdit, service }: { canEdit: boolean; service: Ser
 
       {canEdit ? (
         <div className="mt-4 flex justify-end">
-          <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
+          <Button
+            disabled={save.isPending}
+            onClick={handleSubmit}
+            size="sm"
+            variant="outline"
+          >
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>
@@ -891,7 +960,9 @@ function ForgeTab({
 }) {
   const providers = useQuery(queries.gitProviders());
 
-  const connected = (providers.data ?? []).filter((p) => p.connected && p.providerType === forge);
+  const connected = (providers.data ?? []).filter(
+    (p) => p.connected && p.providerType === forge
+  );
 
   // Loading is NOT emptiness. Rendering the empty state first would flash
   // "not connected" at someone who is connected, every single time.
@@ -912,13 +983,18 @@ function ForgeTab({
         <EmptyHeader>
           <EmptyTitle>{FORGE_LABEL[forge]} is not connected</EmptyTitle>
           <EmptyDescription>
-            Connect a {FORGE_LABEL[forge]} account to pick a repository from a list and deploy on
-            every push. To clone a public repository by URL instead, use the Git tab.
+            Connect a {FORGE_LABEL[forge]} account to pick a repository from a
+            list and deploy on every push. To clone a public repository by URL
+            instead, use the Git tab.
           </EmptyDescription>
         </EmptyHeader>
         {canEdit ? (
           <EmptyContent>
-            <Button nativeButton={false} render={<Link to="/git-providers" />} variant="outline">
+            <Button
+              nativeButton={false}
+              render={<Link to="/git-providers" />}
+              variant="outline"
+            >
               Connect {FORGE_LABEL[forge]}
             </Button>
           </EmptyContent>
@@ -927,11 +1003,21 @@ function ForgeTab({
     );
   }
 
-  return <GitSourceForm canEdit={canEdit} service={service} sourceType={forge} />;
+  return (
+    <GitSourceForm canEdit={canEdit} service={service} sourceType={forge} />
+  );
 }
 
-export function ServiceProvider({ canEdit, service }: { canEdit: boolean; service: ServiceRow }) {
-  const [tab, setTab] = useState<ProviderTab>(() => providerTab(service.sourceType));
+export function ServiceProvider({
+  canEdit,
+  service,
+}: {
+  canEdit: boolean;
+  service: ServiceRow;
+}) {
+  const [tab, setTab] = useState<ProviderTab>(() =>
+    providerTab(service.sourceType)
+  );
 
   useEffect(() => {
     setTab(providerTab(service.sourceType));
@@ -977,7 +1063,11 @@ export function ServiceProvider({ canEdit, service }: { canEdit: boolean; servic
             <ForgeTab canEdit={canEdit} forge="gitlab" service={service} />
           </TabsContent>
           <TabsContent value="git">
-            <GitSourceForm canEdit={canEdit} service={service} sourceType="git" />
+            <GitSourceForm
+              canEdit={canEdit}
+              service={service}
+              sourceType="git"
+            />
           </TabsContent>
           <TabsContent value="docker">
             <DockerSourceForm canEdit={canEdit} service={service} />

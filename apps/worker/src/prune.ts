@@ -71,7 +71,7 @@ export interface PruneResult {
    * used to sit below discarded the cause entirely. The symptom was a prune
    * that silently stopped working, with nothing anywhere saying why.
    */
-  skipped: Array<{ reason: string; serverId: string }>;
+  skipped: { reason: string; serverId: string }[];
 }
 
 /**
@@ -87,7 +87,10 @@ export interface PruneResult {
  * unit (the conversion trap already documented). The usage recorded right
  * after the prune carries the truth.
  */
-async function pruneBuildCache(client: SshClient, builder: string): Promise<void> {
+async function pruneBuildCache(
+  client: SshClient,
+  builder: string
+): Promise<void> {
   const res = await execArgv(client, [
     "sudo",
     "docker",
@@ -103,7 +106,7 @@ async function pruneBuildCache(client: SshClient, builder: string): Promise<void
     return;
   }
   throw new Error(
-    `could not prune the build cache of ${builder} (code ${res.code}): ${res.stderr.trim().split("\n").slice(-2).join(" ")}`,
+    `could not prune the build cache of ${builder} (code ${res.code}): ${res.stderr.trim().split("\n").slice(-2).join(" ")}`
   );
 }
 
@@ -138,7 +141,7 @@ async function pruneBuildCache(client: SshClient, builder: string): Promise<void
  */
 async function pruneNode(
   client: SshClient,
-  docker: DockerApi,
+  docker: DockerApi
 ): Promise<Omit<NodePruneResult, "serverId">> {
   const containers = await docker.pruneContainers();
   const images = await docker.pruneImages({
@@ -149,7 +152,8 @@ async function pruneNode(
     await pruneBuildCache(client, builder);
   }
   return {
-    bytesReclaimed: (containers.SpaceReclaimed ?? 0) + (images.SpaceReclaimed ?? 0),
+    bytesReclaimed:
+      (containers.SpaceReclaimed ?? 0) + (images.SpaceReclaimed ?? 0),
     containersDeleted: containers.ContainersDeleted?.length ?? 0,
     imagesDeleted: images.ImagesDeleted?.length ?? 0,
   };
@@ -179,15 +183,23 @@ async function imageTagsOn(docker: DockerApi): Promise<string[]> {
  * before the registry carries no `node_id`. Hence `surveyed`: if even one
  * server didn't respond, nothing at all is marked.
  */
-async function reconcile(ctx: DeployContext, present: Set<string>): Promise<string[]> {
+async function reconcile(
+  ctx: DeployContext,
+  present: Set<string>
+): Promise<string[]> {
   const rows = await ctx.db.query.deployments.findMany({
-    where: and(isNotNull(deployments.imageTag), eq(deployments.imagePurged, false)),
+    where: and(
+      isNotNull(deployments.imageTag),
+      eq(deployments.imagePurged, false)
+    ),
   });
 
   const gone = rows
     .filter(
       (row) =>
-        row.imageTag && !isPortableImage(row.imageTag, ctx.registry) && !present.has(row.imageTag),
+        row.imageTag &&
+        !isPortableImage(row.imageTag, ctx.registry) &&
+        !present.has(row.imageTag)
     )
     .map((row) => row.id);
 

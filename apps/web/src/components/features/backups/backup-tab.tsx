@@ -10,7 +10,10 @@ import { RestoreDialog } from "@/components/features/backups/restore-dialog";
 import type { BackupRestoreTarget } from "@/components/features/backups/restore-types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { queueBackupRestore } from "@/lib/backup-restore";
-import type { DatabaseBackupSubject, VolumeBackupSubject } from "@/lib/backup-subject";
+import type {
+  DatabaseBackupSubject,
+  VolumeBackupSubject,
+} from "@/lib/backup-subject";
 import { queries } from "@/lib/queries";
 import type { DestinationRow } from "@/server/backups/destinations";
 
@@ -30,13 +33,14 @@ export type BackupTabProps =
     };
 
 function isDatabaseTab(
-  props: BackupTabProps,
+  props: BackupTabProps
 ): props is Extract<BackupTabProps, { subject: DatabaseBackupSubject }> {
   return props.subject.kind === "database";
 }
 
 function useBackupRestore(subject: BackupTabProps["subject"]) {
-  const [restoreTarget, setRestoreTarget] = useState<BackupRestoreTarget | null>(null);
+  const [restoreTarget, setRestoreTarget] =
+    useState<BackupRestoreTarget | null>(null);
 
   const restore = useMutation({
     mutationFn: (confirmName: string) => {
@@ -55,7 +59,7 @@ function useBackupRestore(subject: BackupTabProps["subject"]) {
   }, []);
   const handleRestoreConfirm = useCallback(
     (confirmName: string) => restore.mutate(confirmName),
-    [restore],
+    [restore]
   );
 
   return {

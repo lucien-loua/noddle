@@ -54,7 +54,7 @@ export interface RegistryConfig {
  */
 export async function ensureRegistryTrust(
   client: SshClient,
-  registry: RegistryConfig,
+  registry: RegistryConfig
 ): Promise<boolean> {
   const { caCert } = registry;
   if (!caCert) {
@@ -79,10 +79,18 @@ export async function ensureRegistryTrust(
     // `install -D` creates the parent directories AND sets the mode in one
     // go. The directory name contains a ":" — hence execArgv, never a
     // concatenated string.
-    const res = await execArgv(client, ["sudo", "install", "-D", "-m", "644", staging, target]);
+    const res = await execArgv(client, [
+      "sudo",
+      "install",
+      "-D",
+      "-m",
+      "644",
+      staging,
+      target,
+    ]);
     if (res.code !== 0) {
       throw new Error(
-        `could not install the registry CA: ${res.stderr.trim() || res.stdout.trim()}`,
+        `could not install the registry CA: ${res.stderr.trim() || res.stdout.trim()}`
       );
     }
   } finally {
@@ -106,7 +114,9 @@ export async function ensureRegistryTrust(
  * ever sees the password.
  */
 function dockerConfigJson(registry: RegistryConfig): string {
-  const auth = Buffer.from(`${registry.username}:${registry.password}`).toString("base64");
+  const auth = Buffer.from(
+    `${registry.username}:${registry.password}`
+  ).toString("base64");
   return JSON.stringify({ auths: { [registry.host]: { auth } } });
 }
 
@@ -133,10 +143,12 @@ export interface PushOptions extends ExecOptions {
 export async function pushImage(
   client: SshClient,
   registry: RegistryConfig,
-  o: PushOptions,
+  o: PushOptions
 ): Promise<void> {
   if (!o.imageTag.startsWith(`${registry.host}/`)) {
-    throw new Error(`image to push is not qualified by the registry: ${o.imageTag}`);
+    throw new Error(
+      `image to push is not qualified by the registry: ${o.imageTag}`
+    );
   }
 
   const dir = `/tmp/noddle-push-${randomBytes(6).toString("hex")}`;
@@ -148,14 +160,28 @@ export async function pushImage(
   }
 
   try {
-    await writeRemoteFile(client, `${dir}/config.json`, dockerConfigJson(registry));
-    const res = await execArgv(client, ["sudo", "docker", "--config", dir, "push", o.imageTag], {
-      onStderr: o.onStderr,
-      onStdout: o.onStdout,
-    });
+    await writeRemoteFile(
+      client,
+      `${dir}/config.json`,
+      dockerConfigJson(registry)
+    );
+    const res = await execArgv(
+      client,
+      ["sudo", "docker", "--config", dir, "push", o.imageTag],
+      {
+        onStderr: o.onStderr,
+        onStdout: o.onStdout,
+      }
+    );
     if (res.code !== 0) {
-      const tail = (res.stderr || res.stdout).trim().split("\n").slice(-6).join("\n");
-      throw new Error(`push to the registry failed (code ${res.code})\n${tail}`);
+      const tail = (res.stderr || res.stdout)
+        .trim()
+        .split("\n")
+        .slice(-6)
+        .join("\n");
+      throw new Error(
+        `push to the registry failed (code ${res.code})\n${tail}`
+      );
     }
   } finally {
     // Always, even if the push threw: the credentials don't stay on the
@@ -182,7 +208,11 @@ export async function pushImage(
  * The prefix isn't decorative — it's what Docker reads to know where to
  * pull from, so it's what carries the fact "this image is portable".
  */
-export function registryImageTag(registry: RegistryConfig, name: string, version: string): string {
+export function registryImageTag(
+  registry: RegistryConfig,
+  name: string,
+  version: string
+): string {
   const prefix = registry.imagePrefix ? `${registry.imagePrefix}/` : "";
   return `${registry.host}/${prefix}${name}:${version}`;
 }
@@ -220,7 +250,7 @@ export const KEEP_PER_SERVICE = 10;
  */
 function registryRequest(
   registry: RegistryConfig,
-  o: { headers?: Record<string, string>; method: string; path: string },
+  o: { headers?: Record<string, string>; method: string; path: string }
 ): Promise<{
   headers: Record<string, string | string[] | undefined>;
   status: number;
@@ -244,8 +274,10 @@ function registryRequest(
         // carry the response — but it MUST be consumed, otherwise the
         // socket stays open and the process won't return control.
         res.resume();
-        res.on("end", () => resolve({ headers: res.headers, status: res.statusCode ?? 0 }));
-      },
+        res.on("end", () =>
+          resolve({ headers: res.headers, status: res.statusCode ?? 0 })
+        );
+      }
     );
     req.on("error", reject);
     req.end();
@@ -255,7 +287,7 @@ function registryRequest(
 /** Splits `host:port/repository:tag` into its two useful halves. */
 export function parseRegistryRef(
   image: string,
-  registry: RegistryConfig,
+  registry: RegistryConfig
 ): { repository: string; tag: string } | null {
   const prefix = `${registry.host}/`;
   if (!image.startsWith(prefix)) {
@@ -281,7 +313,7 @@ export function parseRegistryRef(
  */
 export async function deleteManifest(
   registry: RegistryConfig,
-  ref: { repository: string; tag: string },
+  ref: { repository: string; tag: string }
 ): Promise<boolean> {
   // The digest is only readable if we ANNOUNCE the accepted manifest types:
   // without this header, the registry answers in a legacy format and
@@ -299,7 +331,9 @@ export async function deleteManifest(
     path: `/v2/${ref.repository}/manifests/${ref.tag}`,
   });
   const digest = head.headers["docker-content-digest"];
-  if (!(head.status >= 200 && head.status < 300 && typeof digest === "string")) {
+  if (
+    !(head.status >= 200 && head.status < 300 && typeof digest === "string")
+  ) {
     return false;
   }
   const del = await registryRequest(registry, {
@@ -323,7 +357,7 @@ export async function deleteManifest(
  */
 export async function garbageCollect(
   managerClient: SshClient,
-  containerName: string,
+  containerName: string
 ): Promise<void> {
   const res = await execArgv(managerClient, [
     "sudo",
@@ -338,7 +372,7 @@ export async function garbageCollect(
   ]);
   if (res.code !== 0) {
     throw new Error(
-      `garbage-collect failed (code ${res.code}): ${res.stderr.trim().split("\n").slice(-3).join(" ")}`,
+      `garbage-collect failed (code ${res.code}): ${res.stderr.trim().split("\n").slice(-3).join(" ")}`
     );
   }
 }
@@ -356,6 +390,9 @@ export async function garbageCollect(
  * the registry thus stays pinned to the node that holds it, and keeps
  * working, while new deployments are free.
  */
-export function isPortableImage(image: string, registry: RegistryConfig | undefined): boolean {
+export function isPortableImage(
+  image: string,
+  registry: RegistryConfig | undefined
+): boolean {
   return registry !== undefined && image.startsWith(`${registry.host}/`);
 }

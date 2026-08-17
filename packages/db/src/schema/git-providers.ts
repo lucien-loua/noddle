@@ -1,8 +1,18 @@
-import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
 
-export const gitProviderType = pgEnum("git_provider_type", ["github", "gitlab"]);
+export const gitProviderType = pgEnum("git_provider_type", [
+  "github",
+  "gitlab",
+]);
 
 /**
  * A connected source forge. Carries a name and a type, and NOTHING else:
@@ -19,7 +29,7 @@ export const gitProviders = pgTable(
     providerType: gitProviderType("provider_type").notNull(),
     updatedAt,
   },
-  (t) => [uniqueIndex("git_providers_name_idx").on(t.name)],
+  (t) => [uniqueIndex("git_providers_name_idx").on(t.name)]
 );
 
 /**
@@ -108,5 +118,10 @@ export const gitlabRepositoryHooks = pgTable(
     repositoryFullName: text("repository_full_name").notNull(),
     updatedAt,
   },
-  (t) => [uniqueIndex("gitlab_repository_hooks_idx").on(t.gitProviderId, t.repositoryFullName)],
+  (t) => [
+    uniqueIndex("gitlab_repository_hooks_idx").on(
+      t.gitProviderId,
+      t.repositoryFullName
+    ),
+  ]
 );

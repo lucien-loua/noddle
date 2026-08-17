@@ -40,5 +40,5 @@ export const getAuditLog = createServerFn({ method: "GET" }).handler(
           role: r.role,
         }));
       },
-    }),
+    })
 );

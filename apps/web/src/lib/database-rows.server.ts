@@ -1,6 +1,9 @@
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { databases } from "@noddle/db/schema";
-import type { DatabaseExtraMount, DatabaseSwarmSettings } from "@noddle/db/schema";
+import type {
+  DatabaseExtraMount,
+  DatabaseSwarmSettings,
+} from "@noddle/db/schema";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
@@ -62,10 +65,14 @@ export function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
 /** Impure load — no session check. Callers that are already behind a
  *  requireSession use this so overview/groups don't re-auth five times.
  *  Pass `environmentId` to scope the inventory to one environment. */
-export async function loadDatabaseDashboardRows(environmentId?: string): Promise<DatabaseRow[]> {
+export async function loadDatabaseDashboardRows(
+  environmentId?: string
+): Promise<DatabaseRow[]> {
   const rows = await db.query.databases.findMany({
     orderBy: databases.name,
-    where: environmentId ? eq(databases.environmentId, environmentId) : undefined,
+    where: environmentId
+      ? eq(databases.environmentId, environmentId)
+      : undefined,
     with: {
       environment: { with: { project: true } },
       server: true,

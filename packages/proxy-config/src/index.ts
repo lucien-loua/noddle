@@ -37,7 +37,9 @@ export const MAX_DOMAIN_ROUTERS = 32;
 
 function assertRuleSafe(value: string, label: string): void {
   if (RULE_UNSAFE_CHARS.test(value)) {
-    throw new Error(`invalid ${label} for a Traefik rule: ${JSON.stringify(value)}`);
+    throw new Error(
+      `invalid ${label} for a Traefik rule: ${JSON.stringify(value)}`
+    );
   }
 }
 
@@ -79,7 +81,7 @@ function routerLabels(
   serviceName: string,
   rule: string,
   entrypoint: string,
-  tls?: { certResolver?: string },
+  tls?: { certResolver?: string }
 ): void {
   labels[`traefik.http.routers.${routerName}.rule`] = rule;
   labels[`traefik.http.routers.${routerName}.entrypoints`] = entrypoint;
@@ -87,7 +89,8 @@ function routerLabels(
   if (tls) {
     labels[`traefik.http.routers.${routerName}.tls`] = "true";
     if (tls.certResolver) {
-      labels[`traefik.http.routers.${routerName}.tls.certresolver`] = tls.certResolver;
+      labels[`traefik.http.routers.${routerName}.tls.certresolver`] =
+        tls.certResolver;
     }
   }
 }
@@ -95,7 +98,7 @@ function routerLabels(
 function attachPathMiddlewares(
   labels: TraefikLabels,
   routerName: string,
-  domain: DomainRoute,
+  domain: DomainRoute
 ): void {
   const path = normalizePath(domain.path);
   const middlewares: string[] = [];
@@ -116,7 +119,8 @@ function attachPathMiddlewares(
   }
 
   if (middlewares.length > 0) {
-    labels[`traefik.http.routers.${routerName}.middlewares`] = middlewares.join(",");
+    labels[`traefik.http.routers.${routerName}.middlewares`] =
+      middlewares.join(",");
   }
 }
 
@@ -135,14 +139,16 @@ export function serviceRouteLabels(cfg: {
 
   const labels: TraefikLabels = {
     "traefik.enable": "true",
-    [`traefik.http.services.${serviceName}.loadbalancer.server.port`]: String(port),
+    [`traefik.http.services.${serviceName}.loadbalancer.server.port`]:
+      String(port),
   };
 
   for (const [index, domain] of cfg.domains.entries()) {
     const routerName = `${serviceName}-d${index}`;
     const path = normalizePath(domain.path);
     const entrypoint = domain.https ? "websecure" : "web";
-    const wantsLetsEncrypt = domain.https && domain.certificateType === "letsencrypt";
+    const wantsLetsEncrypt =
+      domain.https && domain.certificateType === "letsencrypt";
 
     routerLabels(
       labels,
@@ -152,9 +158,12 @@ export function serviceRouteLabels(cfg: {
       entrypoint,
       domain.https
         ? {
-            certResolver: wantsLetsEncrypt && cfg.certResolver ? cfg.certResolver : undefined,
+            certResolver:
+              wantsLetsEncrypt && cfg.certResolver
+                ? cfg.certResolver
+                : undefined,
           }
-        : undefined,
+        : undefined
     );
     attachPathMiddlewares(labels, routerName, { ...domain, path });
   }
@@ -177,12 +186,14 @@ export function routeLabels(cfg: RouteConfig): TraefikLabels {
     "traefik.enable": "true",
     [`traefik.http.routers.${serviceName}.rule`]: hostRule(domains),
     [`traefik.http.routers.${serviceName}.entrypoints`]: entrypoint,
-    [`traefik.http.services.${serviceName}.loadbalancer.server.port`]: String(port),
+    [`traefik.http.services.${serviceName}.loadbalancer.server.port`]:
+      String(port),
   };
 
   if (cfg.certResolver) {
     labels[`traefik.http.routers.${serviceName}.tls`] = "true";
-    labels[`traefik.http.routers.${serviceName}.tls.certresolver`] = cfg.certResolver;
+    labels[`traefik.http.routers.${serviceName}.tls.certresolver`] =
+      cfg.certResolver;
   }
 
   return labels;
@@ -205,7 +216,11 @@ export function toLabelArgs(labels: TraefikLabels): string[] {
  * route active.
  */
 export function staleRouteLabelKeys(serviceName: string): string[] {
-  const routers = [serviceName, `${serviceName}-web`, `${serviceName}-websecure`];
+  const routers = [
+    serviceName,
+    `${serviceName}-web`,
+    `${serviceName}-websecure`,
+  ];
   for (let i = 0; i < MAX_DOMAIN_ROUTERS; i += 1) {
     routers.push(`${serviceName}-d${i}`);
   }
@@ -217,14 +232,14 @@ export function staleRouteLabelKeys(serviceName: string): string[] {
       `traefik.http.routers.${router}.tls`,
       `traefik.http.routers.${router}.tls.certresolver`,
       `traefik.http.routers.${router}.service`,
-      `traefik.http.routers.${router}.middlewares`,
+      `traefik.http.routers.${router}.middlewares`
     );
   }
   for (let i = 0; i < MAX_DOMAIN_ROUTERS; i += 1) {
     const base = `${serviceName}-d${i}`;
     keys.push(
       `traefik.http.middlewares.${base}-strip.stripprefix.prefixes`,
-      `traefik.http.middlewares.${base}-add.addprefix.prefix`,
+      `traefik.http.middlewares.${base}-add.addprefix.prefix`
     );
   }
   keys.push(`traefik.http.services.${serviceName}.loadbalancer.server.port`);

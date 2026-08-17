@@ -1,9 +1,17 @@
-import { CodeIcon, DatabaseIcon, StackIcon, TreeStructureIcon } from "@phosphor-icons/react";
+import {
+  CodeIcon,
+  DatabaseIcon,
+  StackIcon,
+  TreeStructureIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { CreateProjectButton, ProjectRowActions } from "@/components/project-actions";
+import {
+  CreateProjectButton,
+  ProjectRowActions,
+} from "@/components/project-actions";
 import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
@@ -33,7 +41,10 @@ export const Route = createFileRoute("/projects")({
   },
   component: ProjectsPage,
   loader: async ({ context }) => {
-    const [dashboard, allProjects] = await Promise.all([getDashboardGroups(), getProjects()]);
+    const [dashboard, allProjects] = await Promise.all([
+      getDashboardGroups(),
+      getProjects(),
+    ]);
     return {
       allProjects,
       dashboard,
@@ -45,11 +56,12 @@ export const Route = createFileRoute("/projects")({
 
 function ProjectsPage() {
   const { allProjects, dashboard, email, role } = Route.useLoaderData();
-  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
 
   const byId = useMemo(
     () => new Map(dashboard.groups.map((g) => [g.projectId, g])),
-    [dashboard.groups],
+    [dashboard.groups]
   );
 
   return (
@@ -63,8 +75,8 @@ function ProjectsPage() {
         <Empty className="h-full">
           <EmptyTitle>No projects yet</EmptyTitle>
           <EmptyDescription>
-            A project groups environments, and an environment holds your services, stacks and
-            databases.
+            A project groups environments, and an environment holds your
+            services, stacks and databases.
           </EmptyDescription>
         </Empty>
       ) : (
@@ -125,7 +137,9 @@ function ProjectCard({
   const stacks = scopes.reduce((n, s) => n + s.stacks.length, 0);
   const databases = scopes.reduce((n, s) => n + s.databases.length, 0);
   const environments = scopes.length;
-  const deployed = group ? Object.values(group.statusCounts).reduce((n, c) => n + c, 0) : 0;
+  const deployed = group
+    ? Object.values(group.statusCounts).reduce((n, c) => n + c, 0)
+    : 0;
 
   // Same three tiers as a resource card: the header says WHICH project,
   // the panel says WHAT IS IN IT and how it is doing, the footer says HOW
@@ -151,7 +165,9 @@ function ProjectCard({
               </Link>
             </FrameTitle>
             {project.description ? (
-              <FrameDescription className="line-clamp-2">{project.description}</FrameDescription>
+              <FrameDescription className="line-clamp-2">
+                {project.description}
+              </FrameDescription>
             ) : null}
           </div>
           {/* `z-20`: stay above the title's stretched `::after`. */}
@@ -194,7 +210,12 @@ function ProjectCard({
           {/* `z-20`: the card's stretched link sits at `z-10` and would
               otherwise take the hover, so the tooltip would never open. */}
           <span>
-            Created <RelativeTime className="relative z-20" iso={project.createdAt} long />
+            Created{" "}
+            <RelativeTime
+              className="relative z-20"
+              iso={project.createdAt}
+              long
+            />
           </span>
           <span aria-hidden>·</span>
           <span className="flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 /** 62 symbols: ~5.95 bits per character, so ~119 bits over 20. */
-const CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const CHARSET =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 const DEFAULT_LENGTH = 20;
 

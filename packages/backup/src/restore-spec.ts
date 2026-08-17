@@ -45,7 +45,7 @@ async function restorePostgres(
     containerId: string;
     databaseName: string;
     rootUser: string;
-  },
+  }
 ): Promise<void> {
   const argv = [
     "docker",
@@ -68,7 +68,7 @@ async function restorePostgres(
     async ({ stdin, stdout }) => {
       stdout.resume();
       await pipeline(opts.body, stdin);
-    },
+    }
   );
 
   if (code !== 0) {
@@ -92,7 +92,7 @@ async function restoreMysqlFamily(
     databaseName: string;
     password: string;
     rootUser: string;
-  },
+  }
 ): Promise<void> {
   const argv = [
     "docker",
@@ -112,11 +112,13 @@ async function restoreMysqlFamily(
     async ({ stdin, stdout }) => {
       stdout.resume();
       await pipeline(opts.body, stdin);
-    },
+    }
   );
 
   if (code !== 0) {
-    throw new Error(`${opts.clientBinary} exited with ${code}: ${stderr.slice(0, 800)}`);
+    throw new Error(
+      `${opts.clientBinary} exited with ${code}: ${stderr.slice(0, 800)}`
+    );
   }
 }
 
@@ -129,7 +131,7 @@ async function restoreMongo(
     databaseName: string;
     password: string;
     rootUser: string;
-  },
+  }
 ): Promise<void> {
   const script =
     "umask 077 && printf 'password: %s\\n' \"$MONGO_PWD\" > /tmp/mr.yaml && " +
@@ -158,18 +160,20 @@ async function restoreMongo(
     async ({ stdin, stdout }) => {
       stdout.resume();
       await pipeline(opts.body, stdin);
-    },
+    }
   );
 
   if (code !== 0) {
-    throw new Error(`mongorestore exited with ${code}: ${stderr.slice(0, 800)}`);
+    throw new Error(
+      `mongorestore exited with ${code}: ${stderr.slice(0, 800)}`
+    );
   }
 }
 
 /** Redis: disposable container converts RDB → AOF on the shared volume. */
 async function restoreRedis(
   client: SshClient,
-  opts: { body: NodeJS.ReadableStream; volume: string },
+  opts: { body: NodeJS.ReadableStream; volume: string }
 ): Promise<void> {
   const helper = `noddle-restore-${Date.now()}`;
 
@@ -191,11 +195,11 @@ async function restoreRedis(
     async ({ stdin, stdout }) => {
       stdout.resume();
       await pipeline(opts.body, stdin);
-    },
+    }
   );
   if (write.code !== 0) {
     throw new Error(
-      `writing the RDB into the volume failed (code ${write.code}): ${write.stderr.slice(0, 500)}`,
+      `writing the RDB into the volume failed (code ${write.code}): ${write.stderr.slice(0, 500)}`
     );
   }
 
@@ -219,7 +223,7 @@ async function restoreRedis(
 
   if (convert.code !== 0) {
     throw new Error(
-      `RDB→AOF conversion failed (code ${convert.code}): ${convert.stderr.slice(0, 500)}`,
+      `RDB→AOF conversion failed (code ${convert.code}): ${convert.stderr.slice(0, 500)}`
     );
   }
 }
@@ -230,7 +234,8 @@ async function restoreRedis(
  */
 const RESTORE_SPECS: Record<DatabaseEngine, RestoreSpec["apply"]> = {
   mariadb: async ({ body, buildClient, containerId, database, password }) => {
-    const databaseName = database.databaseName ?? database.rootUser ?? database.name;
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
     await restoreMysqlFamily(buildClient, {
       body,
       clientBinary: "mariadb",
@@ -241,7 +246,8 @@ const RESTORE_SPECS: Record<DatabaseEngine, RestoreSpec["apply"]> = {
     });
   },
   mongo: async ({ body, buildClient, containerId, database, password }) => {
-    const databaseName = database.databaseName ?? database.rootUser ?? database.name;
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
     await restoreMongo(buildClient, {
       body,
       containerId,
@@ -251,7 +257,8 @@ const RESTORE_SPECS: Record<DatabaseEngine, RestoreSpec["apply"]> = {
     });
   },
   mysql: async ({ body, buildClient, containerId, database, password }) => {
-    const databaseName = database.databaseName ?? database.rootUser ?? database.name;
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
     await restoreMysqlFamily(buildClient, {
       body,
       clientBinary: "mysql",
@@ -262,7 +269,8 @@ const RESTORE_SPECS: Record<DatabaseEngine, RestoreSpec["apply"]> = {
     });
   },
   postgres: async ({ body, buildClient, containerId, database }) => {
-    const databaseName = database.databaseName ?? database.rootUser ?? database.name;
+    const databaseName =
+      database.databaseName ?? database.rootUser ?? database.name;
     await restorePostgres(buildClient, {
       body,
       containerId,

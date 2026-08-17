@@ -1,4 +1,8 @@
-import { CirclesThreeIcon, CubeIcon, ShieldCheckIcon } from "@phosphor-icons/react";
+import {
+  CirclesThreeIcon,
+  CubeIcon,
+  ShieldCheckIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -130,8 +134,10 @@ function ContainersPage() {
           <AlertDescription className="space-y-1">
             {view.unreachable.map((s) => (
               <div key={s.serverId}>
-                <span className="font-medium text-foreground">{s.serverName}</span> did not answer:{" "}
-                {s.reason}
+                <span className="font-medium text-foreground">
+                  {s.serverName}
+                </span>{" "}
+                did not answer: {s.reason}
               </div>
             ))}
           </AlertDescription>
@@ -157,8 +163,8 @@ function ContainersPage() {
           <EmptyHeader>
             <EmptyTitle>Nothing running</EmptyTitle>
             <EmptyDescription>
-              Containers on every connected server show up here, including ones Noddle did not
-              deploy.
+              Containers on every connected server show up here, including ones
+              Noddle did not deploy.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -170,8 +176,8 @@ function ContainersPage() {
           <FrameHeader>
             <FrameTitle>All nodes</FrameTitle>
             <FrameDescription>
-              Every container across every connected server — Swarm services, Noddle's own control
-              plane, and anything else running underneath.
+              Every container across every connected server — Swarm services,
+              Noddle's own control plane, and anything else running underneath.
             </FrameDescription>
           </FrameHeader>
           <FramePanel className="p-0">
@@ -180,9 +186,13 @@ function ContainersPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Container</TableHead>
                   <TableHead className="w-56">Status</TableHead>
-                  <TableHead className="hidden w-32 md:table-cell">Kind</TableHead>
+                  <TableHead className="hidden w-32 md:table-cell">
+                    Kind
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Image</TableHead>
-                  <TableHead className="hidden w-40 md:table-cell">Server</TableHead>
+                  <TableHead className="hidden w-40 md:table-cell">
+                    Server
+                  </TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -211,7 +221,9 @@ function ContainersPage() {
                     </TableCell>
                     <TableCell
                       className={
-                        row.state === "running" ? "text-sm" : "text-muted-foreground text-sm"
+                        row.state === "running"
+                          ? "text-sm"
+                          : "text-muted-foreground text-sm"
                       }
                     >
                       {row.status}
@@ -226,7 +238,11 @@ function ContainersPage() {
                       {row.serverName}
                     </TableCell>
                     <TableCell>
-                      <ContainerActions onError={handleError} role={known} row={row} />
+                      <ContainerActions
+                        onError={handleError}
+                        role={known}
+                        row={row}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

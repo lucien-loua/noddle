@@ -23,7 +23,9 @@ const SECRET_KEY = devStack().s3.secretAccessKey;
 const BUCKET = devStack().s3.bucket;
 
 const runtime =
-  globalThis.Bun === undefined ? `Node ${process.version}` : `Bun ${globalThis.Bun.version}`;
+  globalThis.Bun === undefined
+    ? `Node ${process.version}`
+    : `Bun ${globalThis.Bun.version}`;
 
 let pass = 0;
 let fail = 0;
@@ -218,5 +220,7 @@ try {
   }
 }
 
-console.log(`\n\u001B[1m${runtime} — passed ${pass}, failed ${fail}\u001B[0m\n`);
+console.log(
+  `\n\u001B[1m${runtime} — passed ${pass}, failed ${fail}\u001B[0m\n`
+);
 process.exit(fail === 0 ? 0 : 1);

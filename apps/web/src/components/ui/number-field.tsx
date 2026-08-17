@@ -28,7 +28,7 @@ const numberFieldGroupVariants = cva(
         sm: "h-8",
       },
     },
-  },
+  }
 );
 
 const numberFieldButtonVariants = cva(
@@ -44,7 +44,7 @@ const numberFieldButtonVariants = cva(
         sm: "px-2.5 [&_svg:not([class*='size-'])]:size-3.5",
       },
     },
-  },
+  }
 );
 
 const numberFieldInputVariants = cva(
@@ -60,7 +60,7 @@ const numberFieldInputVariants = cva(
         sm: "px-2 py-0.5",
       },
     },
-  },
+  }
 );
 
 function NumberField({
@@ -68,7 +68,8 @@ function NumberField({
   className,
   size = "default",
   ...props
-}: NumberFieldPrimitive.Root.Props & VariantProps<typeof numberFieldGroupVariants>) {
+}: NumberFieldPrimitive.Root.Props &
+  VariantProps<typeof numberFieldGroupVariants>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const sizeValue = size ?? "default";
@@ -99,10 +100,13 @@ function NumberFieldGroup({
   className,
   size: sizeProp,
   ...props
-}: NumberFieldPrimitive.Group.Props & Partial<VariantProps<typeof numberFieldGroupVariants>>) {
+}: NumberFieldPrimitive.Group.Props &
+  Partial<VariantProps<typeof numberFieldGroupVariants>>) {
   const context = useContext(NumberFieldContext);
   if (!context) {
-    throw new Error("NumberFieldGroup must be used within a NumberField component.");
+    throw new Error(
+      "NumberFieldGroup must be used within a NumberField component."
+    );
   }
   const size = sizeProp ?? context.size;
 
@@ -126,13 +130,19 @@ function NumberFieldDecrement({
   }) {
   const context = useContext(NumberFieldContext);
   if (!context) {
-    throw new Error("NumberFieldDecrement must be used within a NumberField component.");
+    throw new Error(
+      "NumberFieldDecrement must be used within a NumberField component."
+    );
   }
   const size = sizeProp ?? context.size;
 
   return (
     <NumberFieldPrimitive.Decrement
-      className={cn(numberFieldButtonVariants({ size }), "rounded-s-4xl", className)}
+      className={cn(
+        numberFieldButtonVariants({ size }),
+        "rounded-s-4xl",
+        className
+      )}
       data-slot="number-field-decrement"
       {...props}
     >
@@ -152,13 +162,19 @@ function NumberFieldIncrement({
   }) {
   const context = useContext(NumberFieldContext);
   if (!context) {
-    throw new Error("NumberFieldIncrement must be used within a NumberField component.");
+    throw new Error(
+      "NumberFieldIncrement must be used within a NumberField component."
+    );
   }
   const size = sizeProp ?? context.size;
 
   return (
     <NumberFieldPrimitive.Increment
-      className={cn(numberFieldButtonVariants({ size }), "rounded-e-4xl", className)}
+      className={cn(
+        numberFieldButtonVariants({ size }),
+        "rounded-e-4xl",
+        className
+      )}
       data-slot="number-field-increment"
       {...props}
     >
@@ -171,10 +187,13 @@ function NumberFieldInput({
   className,
   size: sizeProp,
   ...props
-}: NumberFieldPrimitive.Input.Props & Partial<VariantProps<typeof numberFieldInputVariants>>) {
+}: NumberFieldPrimitive.Input.Props &
+  Partial<VariantProps<typeof numberFieldInputVariants>>) {
   const context = useContext(NumberFieldContext);
   if (!context) {
-    throw new Error("NumberFieldInput must be used within a NumberField component.");
+    throw new Error(
+      "NumberFieldInput must be used within a NumberField component."
+    );
   }
   const size = sizeProp ?? context.size;
 
@@ -197,7 +216,7 @@ function NumberFieldScrubArea({
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
-      "NumberFieldScrubArea must be used within a NumberField component for accessibility.",
+      "NumberFieldScrubArea must be used within a NumberField component for accessibility."
     );
   }
 

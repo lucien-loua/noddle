@@ -4,7 +4,9 @@ const MAX_DOMAIN_LENGTH = 253;
 function randomHex(byteCount: number): string {
   const bytes = new Uint8Array(byteCount);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    ""
+  );
 }
 
 /** Turn a server address into an sslip.io label segment. */
@@ -13,7 +15,9 @@ export function slugServerHost(host: string): string {
 }
 
 function truncateAppLabel(appName: string): string {
-  return appName.length > MAX_APP_LABEL ? appName.slice(0, MAX_APP_LABEL) : appName;
+  return appName.length > MAX_APP_LABEL
+    ? appName.slice(0, MAX_APP_LABEL)
+    : appName;
 }
 
 /**
@@ -35,7 +39,10 @@ export function formatTestDomain(opts: {
   return domain;
 }
 
-export function generateTestDomain(opts: { appName: string; serverHost: string }): string {
+export function generateTestDomain(opts: {
+  appName: string;
+  serverHost: string;
+}): string {
   const hash = randomHex(3);
   return formatTestDomain({ ...opts, hash });
 }

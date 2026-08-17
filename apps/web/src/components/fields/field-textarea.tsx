@@ -3,7 +3,11 @@ import { useCallback, useId } from "react";
 
 import { FieldShell, fieldDisplayState } from "@/components/fields/field-shell";
 import { useFieldContext } from "@/components/fields/lib/context";
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 
 type TextareaFieldProps = Omit<
   ComponentProps<typeof InputGroupTextarea>,
@@ -35,7 +39,7 @@ export function FieldTextarea({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => field.handleChange(e.target.value),
-    [field],
+    [field]
   );
 
   return (
@@ -60,7 +64,9 @@ export function FieldTextarea({
           value={field.state.value}
           {...textareaProps}
         />
-        {addonEnd ? <InputGroupAddon align="block-end">{addonEnd}</InputGroupAddon> : null}
+        {addonEnd ? (
+          <InputGroupAddon align="block-end">{addonEnd}</InputGroupAddon>
+        ) : null}
       </InputGroup>
     </FieldShell>
   );

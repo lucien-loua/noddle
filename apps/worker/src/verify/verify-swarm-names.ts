@@ -21,7 +21,13 @@ import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
-import { connect, disconnect, dockerClient, exec, execArgv } from "@noddle/ssh-executor";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  exec,
+  execArgv,
+} from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -65,12 +71,18 @@ let ssh: Awaited<ReturnType<typeof connect>> | undefined;
  * next database start on existing data (the trap already paid on
  * `verify-backup`).
  */
-async function sweepLeftovers(client: Awaited<ReturnType<typeof connect>>): Promise<void> {
+async function sweepLeftovers(
+  client: Awaited<ReturnType<typeof connect>>
+): Promise<void> {
   const docker = dockerClient(client);
   const services = await docker.listServices();
   for (const svc of services) {
     const name = svc.Spec?.Name;
-    if (name && (name.startsWith(`ndb-${SHARED_NAME}-`) || name === `noddle-db-${SHARED_NAME}`)) {
+    if (
+      name &&
+      (name.startsWith(`ndb-${SHARED_NAME}-`) ||
+        name === `noddle-db-${SHARED_NAME}`)
+    ) {
       // biome-ignore lint/performance/noAwaitInLoops: intentional sequential cleanup
       await removeService(docker, name);
     }
@@ -85,7 +97,7 @@ async function sweepLeftovers(client: Awaited<ReturnType<typeof connect>>): Prom
        [ -z "$left" ] && exit 0
        for v in $left; do sudo docker volume rm "$v" >/dev/null 2>&1 || true; done
        sleep 1
-     done; exit 0`,
+     done; exit 0`
   );
 }
 
@@ -144,7 +156,10 @@ try {
     throw new Error("server insertion failed");
   }
 
-  const [project] = await db.insert(projects).values({ name: "dup-proj" }).returning();
+  const [project] = await db
+    .insert(projects)
+    .values({ name: "dup-proj" })
+    .returning();
 
   const ctx = verifyCtx({ appKey, db });
   const route = { networkName: NETWORK };
@@ -155,7 +170,9 @@ try {
   // row is inserted with placeholders, then completed once the id is known.
   // The password requires it (the AAD binds it to the row) and so does the
   // Swarm name (it carries 8 hex digits).
-  const makeDatabase = async (envName: string): Promise<{ id: string; password: string }> => {
+  const makeDatabase = async (
+    envName: string
+  ): Promise<{ id: string; password: string }> => {
     const [environment] = await db
       .insert(environments)
       .values({ name: envName, projectId: project?.id ?? "" })
@@ -183,7 +200,7 @@ try {
         rootPasswordEncrypted: encryptSecret(
           password,
           appKey,
-          secretContext.databasePassword(row.id),
+          secretContext.databasePassword(row.id)
         ),
         swarmName: newDatabaseSwarmName(row),
       })
@@ -233,7 +250,7 @@ try {
 
   const vols = await exec(
     ssh,
-    `sudo docker volume ls -q | grep -E '^ndb-${SHARED_NAME}-' | sort | tr '\\n' ' '`,
+    `sudo docker volume ls -q | grep -E '^ndb-${SHARED_NAME}-' | sort | tr '\\n' ' '`
   );
   const volNames = vols.stdout.trim().split(/\s+/).filter(Boolean);
   if (volNames.length === 2) {
@@ -251,8 +268,8 @@ try {
     psql(
       prodName,
       prod.password,
-      "CREATE TABLE marker (who text); INSERT INTO marker VALUES ('production');",
-    ),
+      "CREATE TABLE marker (who text); INSERT INTO marker VALUES ('production');"
+    )
   );
   if (wrote.code === 0) {
     ok("write into the production database");
@@ -265,8 +282,8 @@ try {
     psql(
       stagingName,
       staging.password,
-      "SELECT count(*) FROM information_schema.tables WHERE table_name='marker';",
-    ),
+      "SELECT count(*) FROM information_schema.tables WHERE table_name='marker';"
+    )
   );
   const count = seen.stdout.trim();
   if (seen.code === 0 && count === "0") {
@@ -274,12 +291,17 @@ try {
   } else if (seen.code === 0 && count === "1") {
     ko("SAME VOLUME: staging sees the production table");
   } else {
-    ko(`staging read impossible (code ${seen.code}): ${seen.stderr.slice(0, 200)}`);
+    ko(
+      `staging read impossible (code ${seen.code}): ${seen.stderr.slice(0, 200)}`
+    );
   }
 
   // And symmetrically: each responds correctly with ITS OWN password, which
   // rules out having queried the same instance twice.
-  const wrongKey = await execArgv(ssh, psql(stagingName, prod.password, "SELECT 1;"));
+  const wrongKey = await execArgv(
+    ssh,
+    psql(stagingName, prod.password, "SELECT 1;")
+  );
   if (wrongKey.code === 0) {
     ko("staging accepts the production password — same instance?");
   } else {

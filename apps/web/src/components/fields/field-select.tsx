@@ -46,12 +46,12 @@ export function FieldSelect({
   // `SelectValue`. The description only lives in the menu.
   const items = useMemo(
     () => Object.fromEntries(options.map((o) => [o.value, o.label])),
-    [options],
+    [options]
   );
 
   const handleChange = useCallback(
     (value: string | null) => field.handleChange(value ?? ""),
-    [field],
+    [field]
   );
 
   return (

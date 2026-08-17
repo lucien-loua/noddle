@@ -23,7 +23,17 @@ const hmrPort = Number(process.env.VITE_HMR_PORT ?? 24_678);
 const viteOrigin = `http://127.0.0.1:${vitePort}`;
 
 const vite = Bun.spawn(
-  ["bun", "x", "vite", "dev", "--host", "127.0.0.1", "--port", String(vitePort), "--strictPort"],
+  [
+    "bun",
+    "x",
+    "vite",
+    "dev",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(vitePort),
+    "--strictPort",
+  ],
   {
     cwd: webRoot,
     env: {
@@ -32,7 +42,7 @@ const vite = Bun.spawn(
     },
     stderr: "inherit",
     stdout: "inherit",
-  },
+  }
 );
 
 function waitForVite(): Promise<void> {
@@ -84,7 +94,7 @@ function proxyToVite(request: Request): Promise<Response> {
         headers: res.headers,
         status: res.status,
         statusText: res.statusText,
-      }),
+      })
   );
 }
 
@@ -104,7 +114,7 @@ const server = Bun.serve<TerminalSocketData>({
 });
 
 process.stdout.write(
-  `noddle dashboard (dev) on http://127.0.0.1:${server.port} → vite :${vitePort}, hmr :${hmrPort}\n`,
+  `noddle dashboard (dev) on http://127.0.0.1:${server.port} → vite :${vitePort}, hmr :${hmrPort}\n`
 );
 
 function shutdown() {

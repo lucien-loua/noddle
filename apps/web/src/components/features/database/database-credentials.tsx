@@ -3,7 +3,10 @@ import { useCallback, useState } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
 import { ChangeDatabasePasswordDialog } from "@/components/features/database/change-password-dialog";
-import { RevealToggleButton, useReveal } from "@/components/features/database/reveal-secret";
+import {
+  RevealToggleButton,
+  useReveal,
+} from "@/components/features/database/reveal-secret";
 import { Button } from "@/components/ui/button";
 import {
   Frame,
@@ -63,8 +66,9 @@ export function DatabaseCredentials({
       <FrameHeader>
         <FrameTitle>Internal credentials</FrameTitle>
         <FrameDescription>
-          Reachable from any service on the overlay network — never from the internet. Attaching the
-          database to a service writes this connection string into its environment for you.
+          Reachable from any service on the overlay network — never from the
+          internet. Attaching the database to a service writes this connection
+          string into its environment for you.
         </FrameDescription>
       </FrameHeader>
       <FramePanel>
@@ -75,14 +79,18 @@ export function DatabaseCredentials({
           </p>
         ) : null}
         {credentials.isError ? (
-          <p className="text-destructive text-sm">Could not read the credentials.</p>
+          <p className="text-destructive text-sm">
+            Could not read the credentials.
+          </p>
         ) : null}
         {data ? (
           <ItemGroup className="grid gap-2 sm:grid-cols-2">
             {/* Redis has NEITHER a user NOR a named database: showing "—"
                 twice would suggest information is missing, when there
                 simply isn't any. The block follows the engine. */}
-            {data.user ? <CredentialItem label="User" value={data.user} /> : null}
+            {data.user ? (
+              <CredentialItem label="User" value={data.user} />
+            ) : null}
             {data.databaseName ? (
               <CredentialItem label="Database name" value={data.databaseName} />
             ) : null}
@@ -100,7 +108,11 @@ export function DatabaseCredentials({
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <RevealToggleButton noun="password" onClick={toggle} revealed={revealed} />
+                <RevealToggleButton
+                  noun="password"
+                  onClick={toggle}
+                  revealed={revealed}
+                />
                 {/* Copyable even while hidden: you copy to PASTE elsewhere,
                     not to read — showing it isn't a prerequisite. */}
                 <CopyButton label="database password" value={data.password} />
@@ -155,7 +167,9 @@ function CredentialItem({ label, value }: { label: string; value: string }) {
     <Item variant="muted">
       <ItemContent className="min-w-0">
         <ItemTitle>{label}</ItemTitle>
-        <ItemDescription className="break-all font-mono">{value}</ItemDescription>
+        <ItemDescription className="break-all font-mono">
+          {value}
+        </ItemDescription>
       </ItemContent>
       <ItemActions>
         <CopyButton label={label.toLowerCase()} value={value} />

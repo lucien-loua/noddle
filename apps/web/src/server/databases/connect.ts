@@ -33,13 +33,16 @@ function defaultIdentifier(serviceName: string): string {
  * already-dense body past the complexity ceiling.
  */
 async function createDatabaseRows(
-  data: ConnectDatabaseInput,
+  data: ConnectDatabaseInput
 ): Promise<{ databaseId: string; name: string }> {
   let project = await db.query.projects.findFirst({
     where: eq(projects.name, data.projectName),
   });
   if (!project) {
-    const [created] = await db.insert(projects).values({ name: data.projectName }).returning();
+    const [created] = await db
+      .insert(projects)
+      .values({ name: data.projectName })
+      .returning();
     if (!created) {
       throw new Error("could not create project");
     }
@@ -47,7 +50,10 @@ async function createDatabaseRows(
   }
 
   let environment = await db.query.environments.findFirst({
-    where: and(eq(environments.projectId, project.id), eq(environments.name, data.environmentName)),
+    where: and(
+      eq(environments.projectId, project.id),
+      eq(environments.name, data.environmentName)
+    ),
   });
   if (!environment) {
     environment = await insertProjectEnvironment({
@@ -62,14 +68,18 @@ async function createDatabaseRows(
   const [database] = await db
     .insert(databases)
     .values({
-      databaseName: hasNamedDatabase ? (data.databaseName ?? defaultIdentifier(data.name)) : null,
+      databaseName: hasNamedDatabase
+        ? (data.databaseName ?? defaultIdentifier(data.name))
+        : null,
       description: data.description ?? null,
       engine: data.engine,
       environmentId: environment.id,
       image: data.image ?? DEFAULT_DATABASE_IMAGE[data.engine],
       name: data.name,
       rootPasswordEncrypted: "placeholder",
-      rootUser: hasNamedDatabase ? (data.rootUser ?? DEFAULT_DATABASE_USER[data.engine]) : null,
+      rootUser: hasNamedDatabase
+        ? (data.rootUser ?? DEFAULT_DATABASE_USER[data.engine])
+        : null,
       serverId: data.serverId,
       swarmName: "placeholder",
     })
@@ -84,7 +94,7 @@ async function createDatabaseRows(
       rootPasswordEncrypted: encryptSecret(
         password,
         env.appKey,
-        secretContext.databasePassword(database.id),
+        secretContext.databasePassword(database.id)
       ),
       swarmName: newDatabaseSwarmName(database),
     })

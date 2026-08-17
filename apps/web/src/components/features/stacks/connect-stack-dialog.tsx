@@ -1,5 +1,8 @@
 import { domainSchema } from "@noddle/shared/validation/service";
-import { composeServiceKeySchema, connectStackBaseSchema } from "@noddle/shared/validation/stack";
+import {
+  composeServiceKeySchema,
+  connectStackBaseSchema,
+} from "@noddle/shared/validation/stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
@@ -46,14 +49,14 @@ const connectStackFormSchema = connectStackBaseSchema
       .string()
       .refine(
         (v) => v === "" || domainSchema.safeParse(v).success,
-        "Enter a valid domain, or leave empty.",
+        "Enter a valid domain, or leave empty."
       ),
     port: z.number().int().min(1).max(65_535).nullable(),
     publicService: z
       .string()
       .refine(
         (v) => v === "" || composeServiceKeySchema.safeParse(v).success,
-        "Enter a valid service key, or leave empty.",
+        "Enter a valid service key, or leave empty."
       ),
   })
   .refine((v) => !v.publicService || v.port !== null, {
@@ -130,7 +133,7 @@ export function ConnectStackDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form],
+    [form]
   );
 
   const noServers = servers.length === 0;
@@ -141,16 +144,17 @@ export function ConnectStackDialog({
         <DialogHeader>
           <DialogTitle>Connect a Compose stack</DialogTitle>
           <DialogDescription>
-            Noddle clones the repository, builds every service that has a <code>build:</code>, and
-            lays the whole thing down with <code>docker stack deploy</code> on the chosen server.
+            Noddle clones the repository, builds every service that has a{" "}
+            <code>build:</code>, and lays the whole thing down with{" "}
+            <code>docker stack deploy</code> on the chosen server.
           </DialogDescription>
         </DialogHeader>
 
         {noServers ? (
           <Alert variant="destructive">
             <AlertDescription>
-              No servers registered. Add one before connecting a stack — it needs a machine to build
-              and run on.
+              No servers registered. Add one before connecting a stack — it
+              needs a machine to build and run on.
             </AlertDescription>
           </Alert>
         ) : (
@@ -175,7 +179,13 @@ export function ConnectStackDialog({
                   )}
 
                   <form.AppField name="name">
-                    {(f) => <f.FieldText label="Stack name" placeholder="my-app" required />}
+                    {(f) => (
+                      <f.FieldText
+                        label="Stack name"
+                        placeholder="my-app"
+                        required
+                      />
+                    )}
                   </form.AppField>
 
                   <form.AppField name="serverId">
@@ -190,7 +200,9 @@ export function ConnectStackDialog({
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
                         itemToStringLabel={(server) => server.name}
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
-                        itemToStringValue={(server) => `${server.name} · ${server.host}`}
+                        itemToStringValue={(server) =>
+                          `${server.name} · ${server.host}`
+                        }
                         label="Server"
                         placeholder="Search servers…"
                         // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
@@ -232,12 +244,18 @@ export function ConnectStackDialog({
                 <FieldSet>
                   <FieldLegend variant="label">Public access</FieldLegend>
                   <p className="text-muted-foreground text-sm">
-                    A stack exposes at most one service to the web. Left empty, nothing is published
-                    — the stack runs without being reachable from outside.
+                    A stack exposes at most one service to the web. Left empty,
+                    nothing is published — the stack runs without being
+                    reachable from outside.
                   </p>
 
                   <form.AppField name="publicService">
-                    {(f) => <f.FieldText label="Service to expose" placeholder="web" />}
+                    {(f) => (
+                      <f.FieldText
+                        label="Service to expose"
+                        placeholder="web"
+                      />
+                    )}
                   </form.AppField>
 
                   <div className="grid grid-cols-[1fr_2fr] gap-4">
@@ -245,7 +263,12 @@ export function ConnectStackDialog({
                       {(f) => <f.FieldNumber label="Port" min={1} />}
                     </form.AppField>
                     <form.AppField name="domain">
-                      {(f) => <f.FieldText label="Domain" placeholder="my-app.example.com" />}
+                      {(f) => (
+                        <f.FieldText
+                          label="Domain"
+                          placeholder="my-app.example.com"
+                        />
+                      )}
                     </form.AppField>
                   </div>
                 </FieldSet>
@@ -262,7 +285,9 @@ export function ConnectStackDialog({
 
             <DialogFooter>
               <Button disabled={connect.isPending} type="submit">
-                {connect.isPending ? <Spinner data-icon="inline-start" /> : null}
+                {connect.isPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : null}
                 Connect
               </Button>
             </DialogFooter>

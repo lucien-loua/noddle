@@ -8,7 +8,12 @@
  */
 import { auditLog, databases, servers, services } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { execArgv, openExecPty, openShell, quoteArg } from "@noddle/ssh-executor";
+import {
+  execArgv,
+  openExecPty,
+  openShell,
+  quoteArg,
+} from "@noddle/ssh-executor";
 import type { PtySession, SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
@@ -63,7 +68,7 @@ async function requireTerminalPermission(
   session: Session,
   permission: Permission,
   target: { id: string; name: string },
-  meta: { forwardedFor: string | null; userAgent: string | null },
+  meta: { forwardedFor: string | null; userAgent: string | null }
 ): Promise<boolean> {
   const allowed = can(roleOf(session), permission.resource, permission.action);
   try {
@@ -82,13 +87,15 @@ async function requireTerminalPermission(
   } catch (error) {
     // Same policy as permission.server: never block a shell on audit I/O.
     process.stderr.write(
-      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`,
+      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
   }
   return allowed;
 }
 
-export async function sessionFromCookie(cookie: string | null): Promise<Session | null> {
+export async function sessionFromCookie(
+  cookie: string | null
+): Promise<Session | null> {
   if (!cookie) {
     return null;
   }
@@ -115,9 +122,19 @@ function parseDims(params: Record<string, string>): {
   };
 }
 
-async function findContainerId(client: SshClient, swarmName: string): Promise<string | null> {
+async function findContainerId(
+  client: SshClient,
+  swarmName: string
+): Promise<string | null> {
   const filter = `label=${SWARM_SERVICE_LABEL}=${swarmName}`;
-  const result = await execArgv(client, ["docker", "ps", "-q", "-l", "--filter", filter]);
+  const result = await execArgv(client, [
+    "docker",
+    "ps",
+    "-q",
+    "-l",
+    "--filter",
+    filter,
+  ]);
   const id = result.stdout.trim().split("\n")[0]?.trim() ?? "";
   if (!(id && CONTAINER_ID.test(id))) {
     return null;
@@ -135,14 +152,22 @@ interface AuditMeta {
 }
 
 function dockerExecCommand(containerId: string, shell: string): string {
-  return ["docker", "exec", "-it", "-w", "/", quoteArg(containerId), quoteArg(shell)].join(" ");
+  return [
+    "docker",
+    "exec",
+    "-it",
+    "-w",
+    "/",
+    quoteArg(containerId),
+    quoteArg(shell),
+  ].join(" ");
 }
 
 async function openSshTerminal(
   session: Session,
   params: Record<string, string>,
   dims: { cols: number; rows: number },
-  meta: AuditMeta,
+  meta: AuditMeta
 ): Promise<TerminalOpenResult> {
   const { serverId } = params;
   if (!(serverId && UUID.test(serverId))) {
@@ -158,7 +183,7 @@ async function openSshTerminal(
     session,
     { action: "shell", resource: "server" },
     { id: server.id, name: server.name },
-    meta,
+    meta
   );
   if (!allowed) {
     return { message: "forbidden", ok: false, status: 403 };
@@ -183,13 +208,13 @@ async function openContainerExec(
     server: typeof servers.$inferSelect;
     shell: string;
     swarmName: string;
-  },
+  }
 ): Promise<TerminalOpenResult> {
   const allowed = await requireTerminalPermission(
     session,
     { action: "shell", resource: "container" },
     { id: opts.id, name: opts.label },
-    opts.meta,
+    opts.meta
   );
   if (!allowed) {
     return { message: "forbidden", ok: false, status: 403 };
@@ -205,7 +230,11 @@ async function openContainerExec(
         status: 404,
       };
     }
-    const pty = await openExecPty(ssh, dockerExecCommand(containerId, opts.shell), opts.dims);
+    const pty = await openExecPty(
+      ssh,
+      dockerExecCommand(containerId, opts.shell),
+      opts.dims
+    );
     return { label: opts.label, ok: true, pty, ssh };
   } catch (error) {
     ssh.end();
@@ -217,7 +246,7 @@ async function openContainerTerminal(
   session: Session,
   params: Record<string, string>,
   dims: { cols: number; rows: number },
-  meta: AuditMeta,
+  meta: AuditMeta
 ): Promise<TerminalOpenResult> {
   const { target, id } = params;
   if (!(id && UUID.test(id))) {
@@ -270,7 +299,9 @@ async function openContainerTerminal(
  * Authenticate + open the remote PTY. Called from the WebSocket `open`
  * handler after upgrade.
  */
-export async function openTerminalSession(data: TerminalSocketData): Promise<TerminalOpenResult> {
+export async function openTerminalSession(
+  data: TerminalSocketData
+): Promise<TerminalOpenResult> {
   const session = await sessionFromCookie(data.cookie);
   if (!session) {
     return { message: "not authenticated", ok: false, status: 401 };
@@ -294,7 +325,7 @@ export type TerminalClientFrame =
   | { type: "stdin"; data: string };
 
 export function parseClientMessage(
-  raw: string | Buffer,
+  raw: string | Buffer
 ): TerminalClientFrame | { type: "raw"; data: string | Buffer } {
   if (typeof raw !== "string") {
     return { data: raw, type: "raw" };

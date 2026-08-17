@@ -18,7 +18,10 @@ export const notificationUrlSchema = z
   .string()
   .min(1)
   .max(1024)
-  .refine((v) => HTTP_OR_HTTPS_URL.test(v), "expected an http:// or https:// URL");
+  .refine(
+    (v) => HTTP_OR_HTTPS_URL.test(v),
+    "expected an http:// or https:// URL"
+  );
 
 /**
  * Discord and Slack ONLY serve https: an `http` URL for them isn't an
@@ -47,7 +50,9 @@ export const notificationChannelSchema = z
   })
   .refine(hostedChannelIsHttps, HOSTED_HTTPS_MESSAGE);
 
-export type NotificationChannelInput = z.infer<typeof notificationChannelSchema>;
+export type NotificationChannelInput = z.infer<
+  typeof notificationChannelSchema
+>;
 
 /**
  * Editing an existing channel. The URL is optional: it never comes back
@@ -65,6 +70,8 @@ export const notificationChannelUpdateSchema = z
   })
   .refine(hostedChannelIsHttps, HOSTED_HTTPS_MESSAGE);
 
-export type NotificationChannelUpdate = z.infer<typeof notificationChannelUpdateSchema>;
+export type NotificationChannelUpdate = z.infer<
+  typeof notificationChannelUpdateSchema
+>;
 
 export const notificationChannelIdSchema = z.object({ channelId: z.uuid() });

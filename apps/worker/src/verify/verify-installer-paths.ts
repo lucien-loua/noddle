@@ -39,13 +39,16 @@ await runVerify("installer script paths", () => {
   // Guards the guard. Without a floor, the day the pattern stops matching this
   // suite checks nothing and still reports success — the exact failure shape
   // it exists to catch.
-  check(`install.sh invokes at least two scripts (found ${invoked.length})`, invoked.length >= 2);
+  check(
+    `install.sh invokes at least two scripts (found ${invoked.length})`,
+    invoked.length >= 2
+  );
 
   for (const path of invoked) {
     check(
       `${path} exists`,
       path !== undefined && existsSync(resolveInvocation(path)),
-      "referenced by installer/install.sh",
+      "referenced by installer/install.sh"
     );
   }
 });

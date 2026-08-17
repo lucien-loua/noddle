@@ -41,11 +41,17 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-export function canTransition(from: ResourceStatus, to: ResourceStatus): boolean {
+export function canTransition(
+  from: ResourceStatus,
+  to: ResourceStatus
+): boolean {
   return TRANSITIONS[from].includes(to);
 }
 
-export function assertTransition(from: ResourceStatus, to: ResourceStatus): void {
+export function assertTransition(
+  from: ResourceStatus,
+  to: ResourceStatus
+): void {
   if (!canTransition(from, to)) {
     throw new IllegalTransitionError(from, to);
   }
@@ -59,7 +65,7 @@ export interface StatusPatch {
 function patch(
   from: ResourceStatus | null | undefined,
   to: ResourceStatus,
-  lastError?: string | null,
+  lastError?: string | null
 ): StatusPatch {
   if (from) {
     assertTransition(from, to);
@@ -86,11 +92,17 @@ export function markStopped(from?: ResourceStatus | null): StatusPatch {
   return patch(from, "stopped", null);
 }
 
-export function markCrashed(from: ResourceStatus | null | undefined, reason: string): StatusPatch {
+export function markCrashed(
+  from: ResourceStatus | null | undefined,
+  reason: string
+): StatusPatch {
   return patch(from, "crashed", reason);
 }
 
-export function markFailed(from: ResourceStatus | null | undefined, reason: string): StatusPatch {
+export function markFailed(
+  from: ResourceStatus | null | undefined,
+  reason: string
+): StatusPatch {
   // "Failed" while deleting keeps deleting + lastError (teardown stuck).
   if (from === "deleting") {
     return { lastError: reason, status: "deleting" };
@@ -103,7 +115,10 @@ export function markDeleting(from?: ResourceStatus | null): StatusPatch {
 }
 
 /** True when a row has been deleting with a recorded error (stuck). */
-export function isStuckDeleting(row: { lastError: string | null; status: string }): boolean {
+export function isStuckDeleting(row: {
+  lastError: string | null;
+  status: string;
+}): boolean {
   return row.status === "deleting" && row.lastError !== null;
 }
 

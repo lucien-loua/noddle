@@ -22,7 +22,9 @@ interface SettingsListContextValue {
   isEmpty: boolean;
 }
 
-const SettingsListContext = createContext<SettingsListContextValue | null>(null);
+const SettingsListContext = createContext<SettingsListContextValue | null>(
+  null
+);
 
 function useSettingsList(): SettingsListContextValue {
   const value = use(SettingsListContext);
@@ -32,12 +34,24 @@ function useSettingsList(): SettingsListContextValue {
   return value;
 }
 
-function SettingsListRoot({ children, isEmpty }: { children: ReactNode; isEmpty: boolean }) {
+function SettingsListRoot({
+  children,
+  isEmpty,
+}: {
+  children: ReactNode;
+  isEmpty: boolean;
+}) {
   const value = useMemo(() => ({ isEmpty }), [isEmpty]);
   return <SettingsListContext value={value}>{children}</SettingsListContext>;
 }
 
-function SettingsListEmpty({ children, className }: { children: ReactNode; className?: string }) {
+function SettingsListEmpty({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   const { isEmpty } = useSettingsList();
   if (!isEmpty) {
     return null;

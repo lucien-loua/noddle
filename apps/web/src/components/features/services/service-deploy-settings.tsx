@@ -28,7 +28,10 @@ import { updateServiceSettings } from "@/server/services";
 
 type ConfirmKind = "deploy" | "rebuild" | "reload" | "start" | "stop";
 
-const CONFIRM_COPY: Record<ConfirmKind, { description: string; title: string }> = {
+const CONFIRM_COPY: Record<
+  ConfirmKind,
+  { description: string; title: string }
+> = {
   deploy: {
     description: "Are you sure you want to deploy this application?",
     title: "Deploy",
@@ -81,7 +84,8 @@ function DeployToggle({
 }) {
   const id = useId();
   const save = useMutation({
-    mutationFn: (next: boolean) => updateServiceSettings({ data: { serviceId, ...patch(next) } }),
+    mutationFn: (next: boolean) =>
+      updateServiceSettings({ data: { serviceId, ...patch(next) } }),
     onError: (e: Error) =>
       toast.add({
         description: errorMessage(e, `${label} was not changed`),
@@ -93,14 +97,21 @@ function DeployToggle({
 
   const isDisabled = disabled || save.isPending;
 
-  const handleChange = useCallback((next: boolean) => save.mutate(next), [save]);
+  const handleChange = useCallback(
+    (next: boolean) => save.mutate(next),
+    [save]
+  );
 
   return (
     <FieldLabel
       className="has-[>[data-slot=field]]:w-fit has-[>[data-slot=field]]:rounded-4xl *:data-[slot=field]:h-9 *:data-[slot=field]:px-3 *:data-[slot=field]:py-0"
       htmlFor={id}
     >
-      <Field className="w-fit" data-disabled={isDisabled || undefined} orientation="horizontal">
+      <Field
+        className="w-fit"
+        data-disabled={isDisabled || undefined}
+        orientation="horizontal"
+      >
         <FieldTitle>{label}</FieldTitle>
         <Switch
           checked={checked}
@@ -124,7 +135,11 @@ function StartStopButton({
   stopped: boolean;
 }) {
   return (
-    <Button disabled={busy} onClick={onClick} variant={stopped ? "outline" : "destructive"}>
+    <Button
+      disabled={busy}
+      onClick={onClick}
+      variant={stopped ? "outline" : "destructive"}
+    >
       {stopped ? (
         <PlayIcon data-icon="inline-start" weight="fill" />
       ) : (
@@ -217,7 +232,9 @@ function DeployActionBar({
         <Button
           disabled={deployDisabled}
           onClick={handlers.onDeploy}
-          title={hasSource ? undefined : "Set a source on General before deploying"}
+          title={
+            hasSource ? undefined : "Set a source on General before deploying"
+          }
         >
           {deployPending ? <Spinner data-icon="inline-start" /> : null}
           <RocketLaunchIcon data-icon="inline-start" weight="fill" />
@@ -226,7 +243,11 @@ function DeployActionBar({
       ) : null}
 
       {showLifecycle && lifecycle.showRestart ? (
-        <Button disabled={actionsBusy} onClick={handlers.onReload} variant="outline">
+        <Button
+          disabled={actionsBusy}
+          onClick={handlers.onReload}
+          variant="outline"
+        >
           <ArrowClockwiseIcon data-icon="inline-start" weight="fill" />
           Reload
         </Button>
@@ -236,7 +257,9 @@ function DeployActionBar({
         <Button
           disabled={deployDisabled}
           onClick={handlers.onRebuild}
-          title={hasSource ? undefined : "Set a source on General before rebuilding"}
+          title={
+            hasSource ? undefined : "Set a source on General before rebuilding"
+          }
           variant="outline"
         >
           <HammerIcon data-icon="inline-start" weight="fill" />
@@ -259,9 +282,13 @@ function DeployActionBar({
         </Button>
       ) : null}
 
-      {canDeploy ? <DeployToggles busy={actionsBusy} onSaved={onSaved} service={service} /> : null}
+      {canDeploy ? (
+        <DeployToggles busy={actionsBusy} onSaved={onSaved} service={service} />
+      ) : null}
 
-      {pending && !deployAllowed ? <Spinner className="text-muted-foreground" /> : null}
+      {pending && !deployAllowed ? (
+        <Spinner className="text-muted-foreground" />
+      ) : null}
     </DeploySettingsToolbar>
   );
 }
@@ -298,7 +325,9 @@ export function ServiceDeploySettings({
 
   const pending = pendingAction !== null || service.status === "deploying";
   const deployAllowed =
-    canDeploy && service.status !== "deleting" && service.status !== "deploying";
+    canDeploy &&
+    service.status !== "deleting" &&
+    service.status !== "deploying";
   const hasSource =
     service.sourceType === "docker_image"
       ? Boolean(service.dockerImage)
@@ -325,7 +354,7 @@ export function ServiceDeploySettings({
   const requestReload = useCallback(() => setConfirm("reload"), []);
   const requestStartStop = useCallback(
     () => setConfirm(lifecycle.stopped ? "start" : "stop"),
-    [lifecycle.stopped],
+    [lifecycle.stopped]
   );
 
   const handleConfirmed = useCallback(() => {
@@ -344,7 +373,10 @@ export function ServiceDeploySettings({
 
   const copy = confirm ? CONFIRM_COPY[confirm] : null;
 
-  if (!(deployAllowed || showLifecycle || onTerminal) && service.status === "deleting") {
+  if (
+    !(deployAllowed || showLifecycle || onTerminal) &&
+    service.status === "deleting"
+  ) {
     return null;
   }
 

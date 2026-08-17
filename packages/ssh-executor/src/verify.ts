@@ -10,7 +10,15 @@ import { join } from "node:path";
 
 import { devTarget } from "@noddle/testing/dev-target";
 
-import { connect, disconnect, dockerClient, exec, execArgv, execStream, quoteArg } from "#index";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  exec,
+  execArgv,
+  execStream,
+  quoteArg,
+} from "#index";
 import type { ServerCredentials } from "#index";
 
 /** Digest recorded ON the VM, to compare against the one recomputed here. */
@@ -20,7 +28,9 @@ const WHITESPACE = /\s+/;
 const TARGET = devTarget();
 
 const runtime =
-  globalThis.Bun === undefined ? `Node ${process.version}` : `Bun ${globalThis.Bun.version}`;
+  globalThis.Bun === undefined
+    ? `Node ${process.version}`
+    : `Bun ${globalThis.Bun.version}`;
 
 let pass = 0;
 let fail = 0;
@@ -49,7 +59,8 @@ const creds: ServerCredentials = {
   const quoted = quoteArg(nasty);
   // Once escaped, the string must be a single word for the shell: no `;`
   // or `|` should come out unprotected.
-  const reopens = quoted.slice(1, -1).includes("'") && !quoted.includes(`'\\''`);
+  const reopens =
+    quoted.slice(1, -1).includes("'") && !quoted.includes(`'\\''`);
   if (quoted.startsWith("'") && quoted.endsWith("'") && !reopens) {
     ok("quoteArg neutralizes an injection");
   } else {
@@ -112,20 +123,24 @@ try {
   const REMOTE_BLOB = "/tmp/noddle-execstream-probe.bin";
   await exec(
     client,
-    `head -c 8388608 /dev/urandom > ${REMOTE_BLOB} && sha256sum ${REMOTE_BLOB}`,
+    `head -c 8388608 /dev/urandom > ${REMOTE_BLOB} && sha256sum ${REMOTE_BLOB}`
   ).then((r) => {
     remoteDigest = r.stdout.trim().split(WHITESPACE)[0] ?? "";
   });
 
-  const streamed = await execStream(client, `cat ${REMOTE_BLOB}`, async ({ stdout }) => {
-    const hash = createHash("sha256");
-    let bytes = 0;
-    for await (const chunk of stdout) {
-      bytes += (chunk as Buffer).length;
-      hash.update(chunk as Buffer);
+  const streamed = await execStream(
+    client,
+    `cat ${REMOTE_BLOB}`,
+    async ({ stdout }) => {
+      const hash = createHash("sha256");
+      let bytes = 0;
+      for await (const chunk of stdout) {
+        bytes += (chunk as Buffer).length;
+        hash.update(chunk as Buffer);
+      }
+      return { bytes, digest: hash.digest("hex") };
     }
-    return { bytes, digest: hash.digest("hex") };
-  });
+  );
 
   if (streamed.value.bytes === 8_388_608) {
     ok(`execStream: ${streamed.value.bytes} bytes transferred`);
@@ -133,9 +148,13 @@ try {
     ko(`execStream: ${streamed.value.bytes} bytes, expected 8388608`);
   }
   if (streamed.value.digest === remoteDigest) {
-    ok(`execStream: identical sha256 end to end (${remoteDigest.slice(0, 16)}…)`);
+    ok(
+      `execStream: identical sha256 end to end (${remoteDigest.slice(0, 16)}…)`
+    );
   } else {
-    ko(`execStream: DIFFERENT sha256 — ${streamed.value.digest} vs ${remoteDigest}`);
+    ko(
+      `execStream: DIFFERENT sha256 — ${streamed.value.digest} vs ${remoteDigest}`
+    );
   }
   if (streamed.code === 0) {
     ok("execStream: exit code 0 recorded after the stream");
@@ -157,14 +176,16 @@ try {
         bytes += (chunk as Buffer).length;
       }
       return bytes;
-    },
+    }
   );
   if (truncated.value > 0 && truncated.code === 3) {
     ok(
-      `execStream: ${truncated.value} bytes received AND code ${truncated.code} — a truncated dump is detectable`,
+      `execStream: ${truncated.value} bytes received AND code ${truncated.code} — a truncated dump is detectable`
     );
   } else {
-    ko(`execStream: bytes=${truncated.value} code=${truncated.code}, expected >0 and 3`);
+    ko(
+      `execStream: bytes=${truncated.value} code=${truncated.code}, expected >0 and 3`
+    );
   }
 
   // ?? 9. Standard input — the restore path ??????????????????????????????????
@@ -188,7 +209,7 @@ try {
       stdin.end();
       await collected;
       return out.trim();
-    },
+    }
   );
   if (pushed.value === expectedIn) {
     ok("execStream: 1 MiB pushed via stdin, sha256 confirmed remotely");
@@ -202,7 +223,9 @@ try {
   const docker = dockerClient(client);
   const version = await docker.version();
   if (version?.Version) {
-    ok(`dockerode via SSH: Docker ${version.Version} (API ${version.ApiVersion})`);
+    ok(
+      `dockerode via SSH: Docker ${version.Version} (API ${version.ApiVersion})`
+    );
   } else {
     ko("dockerode: empty version response");
   }
@@ -215,8 +238,11 @@ try {
 
   const spike = services.find((s) => s.Spec?.Name === "spike-app");
   if (spike) {
-    const state = (spike as { UpdateStatus?: { State?: string } }).UpdateStatus?.State;
-    ok(`dockerode: UpdateStatus.State = ${state ?? "(none)"} — readable without parsing text`);
+    const state = (spike as { UpdateStatus?: { State?: string } }).UpdateStatus
+      ?.State;
+    ok(
+      `dockerode: UpdateStatus.State = ${state ?? "(none)"} — readable without parsing text`
+    );
   }
 } catch (error) {
   ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
@@ -229,5 +255,7 @@ try {
   }
 }
 
-console.log(`\n\u001B[1m${runtime} — passed ${pass}, failed ${fail}\u001B[0m\n`);
+console.log(
+  `\n\u001B[1m${runtime} — passed ${pass}, failed ${fail}\u001B[0m\n`
+);
 process.exit(fail === 0 ? 0 : 1);

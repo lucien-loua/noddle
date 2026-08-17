@@ -91,7 +91,11 @@ export function ProjectRowActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button aria-label={`Actions for ${name}`} size="icon-xs" variant="ghost">
+            <Button
+              aria-label={`Actions for ${name}`}
+              size="icon-xs"
+              variant="ghost"
+            >
               <DotsThreeIcon weight="regular" />
             </Button>
           }
@@ -116,10 +120,19 @@ export function ProjectRowActions({
       </DropdownMenu>
 
       {dialog === "rename" ? (
-        <ProjectFormDialog existing={{ description, name, projectId }} onOpenChange={close} open />
+        <ProjectFormDialog
+          existing={{ description, name, projectId }}
+          onOpenChange={close}
+          open
+        />
       ) : null}
       {dialog === "delete" ? (
-        <DeleteProjectDialog name={name} onOpenChange={close} open projectId={projectId} />
+        <DeleteProjectDialog
+          name={name}
+          onOpenChange={close}
+          open
+          projectId={projectId}
+        />
       ) : null}
     </>
   );
@@ -204,14 +217,16 @@ function ProjectFormDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form],
+    [form]
   );
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{existing ? `Rename ${existing.name}` : "Create a project"}</DialogTitle>
+          <DialogTitle>
+            {existing ? `Rename ${existing.name}` : "Create a project"}
+          </DialogTitle>
           <DialogDescription>
             {existing
               ? "Only the label changes — nothing is redeployed."
@@ -236,7 +251,9 @@ function ProjectFormDialog({
               </form.AppField>
               {save.isError ? (
                 <Alert variant="destructive">
-                  <AlertDescription>{errorMessage(save.error, "could not save")}</AlertDescription>
+                  <AlertDescription>
+                    {errorMessage(save.error, "could not save")}
+                  </AlertDescription>
                 </Alert>
               ) : null}
             </FieldGroup>
@@ -286,8 +303,8 @@ function DeleteProjectDialog({
         <DialogHeader>
           <DialogTitle>Delete {name}?</DialogTitle>
           <DialogDescription>
-            Only possible while it is empty — remove its services, stacks and databases first. Its
-            environments go with it.
+            Only possible while it is empty — remove its services, stacks and
+            databases first. Its environments go with it.
           </DialogDescription>
         </DialogHeader>
         {error ? (
@@ -296,7 +313,11 @@ function DeleteProjectDialog({
           </Alert>
         ) : null}
         <DialogFooter>
-          <Button disabled={remove.isPending} onClick={handleConfirm} variant="destructive">
+          <Button
+            disabled={remove.isPending}
+            onClick={handleConfirm}
+            variant="destructive"
+          >
             {remove.isPending ? <Spinner data-icon="inline-start" /> : null}
             Delete project
           </Button>

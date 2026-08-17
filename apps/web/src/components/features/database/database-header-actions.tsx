@@ -19,7 +19,10 @@ import type { DatabaseRow } from "@/server/databases";
 
 type ConfirmKind = "restart" | "start" | "stop";
 
-const CONFIRM_COPY: Record<ConfirmKind, { description: string; title: string }> = {
+const CONFIRM_COPY: Record<
+  ConfirmKind,
+  { description: string; title: string }
+> = {
   restart: {
     description:
       "Are you sure you want to restart this database? The container is stopped and started again without changing its data.",
@@ -91,7 +94,7 @@ export function DatabaseHeaderActions({
   const requestRestart = useCallback(() => setConfirm("restart"), []);
   const requestStartStop = useCallback(
     () => setConfirm(lifecycle.stopped ? "start" : "stop"),
-    [lifecycle.stopped],
+    [lifecycle.stopped]
   );
 
   const handleConfirmed = useCallback(() => {
@@ -114,7 +117,11 @@ export function DatabaseHeaderActions({
     <>
       <DatabaseActionsToolbar>
         {showLifecycle && lifecycle.showRestart ? (
-          <Button disabled={actionsBusy} onClick={requestRestart} variant="outline">
+          <Button
+            disabled={actionsBusy}
+            onClick={requestRestart}
+            variant="outline"
+          >
             <ArrowClockwiseIcon data-icon="inline-start" weight="fill" />
             Restart
           </Button>

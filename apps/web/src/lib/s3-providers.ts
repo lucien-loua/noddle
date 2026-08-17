@@ -90,5 +90,7 @@ export const S3_PROVIDERS: S3Provider[] = [
 ];
 
 export function findProvider(id: string): S3Provider {
-  return S3_PROVIDERS.find((p) => p.id === id) ?? (S3_PROVIDERS[0] as S3Provider);
+  return (
+    S3_PROVIDERS.find((p) => p.id === id) ?? (S3_PROVIDERS[0] as S3Provider)
+  );
 }

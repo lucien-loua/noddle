@@ -64,14 +64,15 @@ const build: BuildOptions = {
 
 const deps: WorkerDeps = { build, ctx, route };
 
-const { enqueue: enqueueDeploy, queue: deployQueue } = createDeployQueue(connection);
+const { enqueue: enqueueDeploy, queue: deployQueue } =
+  createDeployQueue(connection);
 
 const recoveredVolume = await recoverStaleVolumeBackups(ctx);
 const recoveredDatabase = await recoverStaleDatabaseBackups(ctx);
 const recovered = recoveredVolume + recoveredDatabase;
 if (recovered > 0) {
   process.stderr.write(
-    `recovered ${recovered} stale backup(s) stuck in running (${recoveredDatabase} database, ${recoveredVolume} volume)\n`,
+    `recovered ${recovered} stale backup(s) stuck in running (${recoveredDatabase} database, ${recoveredVolume} volume)\n`
   );
 }
 
@@ -144,7 +145,7 @@ const deployWorker = new Worker<DeployJobData>(
     // A deployment lasts minutes: without this, BullMQ thinks it's dead and
     // relaunches it in parallel with itself.
     lockDuration: 30 * 60 * 1000,
-  },
+  }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,9 +162,10 @@ const running = await Promise.all(
     startSchedule(spec, {
       connection,
       deps: { ctx, enqueue: enqueueDeploy, route },
-      onFailed: (queue, message) => process.stderr.write(`${queue}: ${message}\n`),
-    }),
-  ),
+      onFailed: (queue, message) =>
+        process.stderr.write(`${queue}: ${message}\n`),
+    })
+  )
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -175,7 +177,10 @@ deployWorker.on("failed", (job, err) => {
 async function shutdown(): Promise<void> {
   // Clean shutdown: a deployment in progress runs to completion rather than
   // being cut off in the middle of a Swarm rollout.
-  await Promise.all([deployWorker.close(), ...running.map((schedule) => schedule.close())]);
+  await Promise.all([
+    deployWorker.close(),
+    ...running.map((schedule) => schedule.close()),
+  ]);
   await logBus.close();
   await connection.quit();
 }

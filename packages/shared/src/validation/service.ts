@@ -15,7 +15,7 @@ export const serviceNameSchema = z
   .max(48)
   .regex(
     /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
-    "lowercase letters, digits and dashes; cannot start or end with a dash",
+    "lowercase letters, digits and dashes; cannot start or end with a dash"
   );
 
 export const gitRepoUrlSchema = z
@@ -24,7 +24,7 @@ export const gitRepoUrlSchema = z
   .max(512)
   .refine(
     (v) => HTTPS_URL.test(v) || GIT_SSH_URL.test(v),
-    "expected an https:// URL or git@host:path",
+    "expected an https:// URL or git@host:path"
   );
 
 export const gitBranchSchema = z
@@ -33,7 +33,10 @@ export const gitBranchSchema = z
   .max(255)
   // Git's own restrictions: no space, no `..`, no `~^:?*[`, no ending in
   // `.lock`. An invalid branch would make the clone fail.
-  .refine((v) => !BRANCH_FORBIDDEN_CHARS.test(v), "character not allowed in a branch name")
+  .refine(
+    (v) => !BRANCH_FORBIDDEN_CHARS.test(v),
+    "character not allowed in a branch name"
+  )
   .refine((v) => !v.includes(".."), "`..` is not allowed in a branch name")
   .refine((v) => !v.endsWith(".lock"), "a branch name cannot end with .lock");
 
@@ -43,10 +46,13 @@ export const publishDirectorySchema = z
   .max(512)
   .regex(
     /^(?:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)?$/,
-    "expected a relative path such as dist or build/out",
+    "expected a relative path such as dist or build/out"
   );
 
-const optionalPublishDirectory = z.union([z.literal(""), publishDirectorySchema]);
+const optionalPublishDirectory = z.union([
+  z.literal(""),
+  publishDirectorySchema,
+]);
 
 /**
  * Build context inside the repo, for a monorepo. Unlike the publish
@@ -58,9 +64,12 @@ export const buildPathSchema = z
   .max(512)
   .regex(
     /^(?:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)?$/,
-    "expected a relative path such as apps/web",
+    "expected a relative path such as apps/web"
   )
-  .refine((v) => !v.split("/").includes(".."), "`..` is not allowed in a build path");
+  .refine(
+    (v) => !v.split("/").includes(".."),
+    "`..` is not allowed in a build path"
+  );
 
 /**
  * One glob per entry, matched against the files a push touched. An empty
@@ -74,7 +83,10 @@ export const domainSchema = z
   .string()
   .min(1)
   .max(253)
-  .regex(/^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/, "invalid domain name");
+  .regex(
+    /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/,
+    "invalid domain name"
+  );
 
 export const gitSourceTypeSchema = z.enum(["git", "github", "gitlab"]);
 
@@ -214,7 +226,10 @@ export const routePathSchema = z.union([
   z
     .string()
     .max(512)
-    .regex(/^\/[a-zA-Z0-9/._-]*$/, "path must start with / and contain only safe characters"),
+    .regex(
+      /^\/[a-zA-Z0-9/._-]*$/,
+      "path must start with / and contain only safe characters"
+    ),
 ]);
 
 const optionalInternalPath = z.union([
@@ -224,7 +239,7 @@ const optionalInternalPath = z.union([
     .max(512)
     .regex(
       /^\/[a-zA-Z0-9/._-]*$/,
-      "internal path must start with / and contain only safe characters",
+      "internal path must start with / and contain only safe characters"
     ),
 ]);
 
@@ -233,7 +248,7 @@ const domainTlsRefine = (
     certificateType: z.infer<typeof certificateTypeSchema>;
     https: boolean;
   },
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ) => {
   if (!value.https && value.certificateType === "letsencrypt") {
     ctx.addIssue({
@@ -254,7 +269,8 @@ const serviceDomainFieldsSchema = z.object({
   stripPath: z.boolean(),
 });
 
-export const serviceDomainsSchema = serviceDomainFieldsSchema.superRefine(domainTlsRefine);
+export const serviceDomainsSchema =
+  serviceDomainFieldsSchema.superRefine(domainTlsRefine);
 
 export const createServiceDomainSchema = serviceDomainFieldsSchema
   .extend({ serviceId: z.uuid() })
@@ -303,9 +319,13 @@ export type ServiceDomainsInput = z.infer<typeof serviceDomainsSchema>;
 
 export type CertificateTypeInput = z.infer<typeof certificateTypeSchema>;
 
-export type CreateServiceDomainInput = z.infer<typeof createServiceDomainSchema>;
+export type CreateServiceDomainInput = z.infer<
+  typeof createServiceDomainSchema
+>;
 
-export type UpdateServiceDomainInput = z.infer<typeof updateServiceDomainSchema>;
+export type UpdateServiceDomainInput = z.infer<
+  typeof updateServiceDomainSchema
+>;
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 
@@ -313,17 +333,25 @@ export type ServiceProviderInput = z.infer<typeof serviceProviderSchema>;
 
 export type ServiceGitProviderInput = z.infer<typeof serviceGitProviderSchema>;
 
-export type ServiceDockerProviderInput = z.infer<typeof serviceDockerProviderSchema>;
+export type ServiceDockerProviderInput = z.infer<
+  typeof serviceDockerProviderSchema
+>;
 
 export type GitSourceType = z.infer<typeof gitSourceTypeSchema>;
 
 export type ServiceSourceType = z.infer<typeof serviceSourceTypeSchema>;
 
-export function isGitSourceType(sourceType: string): sourceType is GitSourceType {
-  return sourceType === "git" || sourceType === "github" || sourceType === "gitlab";
+export function isGitSourceType(
+  sourceType: string
+): sourceType is GitSourceType {
+  return (
+    sourceType === "git" || sourceType === "github" || sourceType === "gitlab"
+  );
 }
 
-export type UpdateServiceSettingsInput = z.infer<typeof updateServiceSettingsSchema>;
+export type UpdateServiceSettingsInput = z.infer<
+  typeof updateServiceSettingsSchema
+>;
 
 export const deployRequestSchema = z.object({
   /** Absent = HEAD of the configured branch. */

@@ -37,8 +37,9 @@ try {
     process.stdout.write(`  bucket ${s3.bucket} ready\n`);
   } else {
     throw new Error(
-      `could not create the ${s3.bucket} bucket on ${s3.endpoint}: ` +
-        (error instanceof Error ? error.message : String(error)),
+      `could not create the ${s3.bucket} bucket on ${s3.endpoint}: ${
+        error instanceof Error ? error.message : String(error)
+      }`, { cause: error }
     );
   }
 }

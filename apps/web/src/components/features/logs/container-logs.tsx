@@ -65,7 +65,11 @@ const LEVEL_OPTIONS: { label: string; value: "all" | TerminalLogLevel }[] = [
   { label: "Error", value: "error" },
 ];
 
-function emptyPlaceholder(name: string, live: boolean, hasText: boolean): string {
+function emptyPlaceholder(
+  name: string,
+  live: boolean,
+  hasText: boolean
+): string {
   if (hasText) {
     return "No logs match these filters.";
   }
@@ -75,7 +79,11 @@ function emptyPlaceholder(name: string, live: boolean, hasText: boolean): string
   return "No logs yet.";
 }
 
-function filterLines(lines: Line[], level: "all" | TerminalLogLevel, search: string): Line[] {
+function filterLines(
+  lines: Line[],
+  level: "all" | TerminalLogLevel,
+  search: string
+): Line[] {
   let next = lines;
   if (level !== "all") {
     next = next.filter((line) => classifyLogLevel(line.text) === level);
@@ -87,7 +95,11 @@ function filterLines(lines: Line[], level: "all" | TerminalLogLevel, search: str
   return next;
 }
 
-export function ContainerLogs({ generation, name, streamUrl }: ContainerLogsProps) {
+export function ContainerLogs({
+  generation,
+  name,
+  streamUrl,
+}: ContainerLogsProps) {
   const [text, setText] = useState("");
   const [live, setLive] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -154,10 +166,13 @@ export function ContainerLogs({ generation, name, streamUrl }: ContainerLogsProp
 
   const blocks = useMemo(
     () => filterLines(parse(text, classifyPlain), level, search),
-    [level, search, text],
+    [level, search, text]
   );
 
-  const plaintext = useMemo(() => blocks.map((line) => line.text).join("\n"), [blocks]);
+  const plaintext = useMemo(
+    () => blocks.map((line) => line.text).join("\n"),
+    [blocks]
+  );
 
   return (
     <LogView
@@ -244,7 +259,11 @@ export function ContainerLogs({ generation, name, streamUrl }: ContainerLogsProp
                 {blocks.length === 1 ? "1 line" : `${blocks.length} lines`}
               </ButtonGroupText>
               <Button onClick={handlePauseToggle} size="sm" variant="outline">
-                {paused ? <PlayIcon weight="fill" /> : <PauseIcon weight="fill" />}
+                {paused ? (
+                  <PlayIcon weight="fill" />
+                ) : (
+                  <PauseIcon weight="fill" />
+                )}
                 {paused ? "Resume" : "Pause"}
                 {paused && buffer.length > 0 ? ` (${buffer.length})` : null}
               </Button>

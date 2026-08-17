@@ -22,7 +22,10 @@ import { FieldGroup } from "@/components/ui/field";
 import { InputGroupButton } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
-import { changeDatabasePassword, getDatabaseCredentials } from "@/server/databases";
+import {
+  changeDatabasePassword,
+  getDatabaseCredentials,
+} from "@/server/databases";
 
 const changePasswordFormSchema = changeDatabasePasswordSchema.pick({
   password: true,
@@ -73,7 +76,9 @@ export function ChangeDatabasePasswordDialog({
           return;
         }
       }
-      throw new Error("still applying — the engine has not confirmed the new password yet");
+      throw new Error(
+        "still applying — the engine has not confirmed the new password yet"
+      );
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries();
@@ -103,7 +108,7 @@ export function ChangeDatabasePasswordDialog({
   const handleSubmit = useCallback(() => form.handleSubmit(), [form]);
   const regenerate = useCallback(
     () => form.setFieldValue("password", generateDatabasePassword()),
-    [form],
+    [form]
   );
 
   return (
@@ -112,7 +117,8 @@ export function ChangeDatabasePasswordDialog({
         <DialogHeader>
           <DialogTitle>Change password</DialogTitle>
           <DialogDescription>
-            Applied to the running {databaseName} engine right away, then stored for Noddle to use.
+            Applied to the running {databaseName} engine right away, then stored
+            for Noddle to use.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -138,8 +144,9 @@ export function ChangeDatabasePasswordDialog({
 
             <Alert>
               <AlertDescription>
-                Services already attached to this database keep the old connection string. Re-attach
-                them, or update their environment variables, or they will stop connecting.
+                Services already attached to this database keep the old
+                connection string. Re-attach them, or update their environment
+                variables, or they will stop connecting.
               </AlertDescription>
             </Alert>
 

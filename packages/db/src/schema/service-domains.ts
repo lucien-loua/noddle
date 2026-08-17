@@ -1,14 +1,27 @@
-import { boolean, index, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
 import { services } from "#schema/services";
 
-export const certificateType = pgEnum("certificate_type", ["none", "letsencrypt"]);
+export const certificateType = pgEnum("certificate_type", [
+  "none",
+  "letsencrypt",
+]);
 
 export const serviceDomains = pgTable(
   "service_domains",
   {
-    certificateType: certificateType("certificate_type").notNull().default("none"),
+    certificateType: certificateType("certificate_type")
+      .notNull()
+      .default("none"),
     createdAt,
     host: text("host").notNull(),
     https: boolean("https").notNull().default(false),
@@ -29,5 +42,5 @@ export const serviceDomains = pgTable(
     // Traefik routes by Host — two services must not claim the same name.
     uniqueIndex("service_domains_host_idx").on(t.host),
     uniqueIndex("service_domains_service_host_idx").on(t.serviceId, t.host),
-  ],
+  ]
 );

@@ -32,7 +32,10 @@ export function ServiceCard({
   const status = serviceLabel(service.status);
   const canDeploy = useCan(role, "service", "deploy");
 
-  const handleSelect = useCallback(() => onOpen(service.id), [onOpen, service.id]);
+  const handleSelect = useCallback(
+    () => onOpen(service.id),
+    [onOpen, service.id]
+  );
 
   const deploy = useMutation({
     mutationFn: () => triggerDeploy({ data: { serviceId: service.id } }),
@@ -71,7 +74,9 @@ export function ServiceCard({
       secondary={
         <>
           {service.serverName}
-          {service.domains.length > 0 ? ` · ${service.domains.map((d) => d.host).join(", ")}` : ""}
+          {service.domains.length > 0
+            ? ` · ${service.domains.map((d) => d.host).join(", ")}`
+            : ""}
           {service.lastError ? (
             <span className="block text-destructive" role="status">
               {service.lastError}
@@ -211,7 +216,10 @@ export function DatabaseCard({
 }) {
   const status = serviceLabel(database.status);
   const canAttach = useCan(role, "database", "attach");
-  const handleSelect = useCallback(() => onOpen(database.id), [database.id, onOpen]);
+  const handleSelect = useCallback(
+    () => onOpen(database.id),
+    [database.id, onOpen]
+  );
 
   return (
     <ResourceRow

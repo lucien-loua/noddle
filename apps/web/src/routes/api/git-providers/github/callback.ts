@@ -86,7 +86,7 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
             run: async () => {
               const created = await exchangeManifestCode(
                 code,
-                provider.github?.url ?? "https://github.com",
+                provider.github?.url ?? "https://github.com"
               );
               await saveCreatedApp(state, created);
             },
@@ -107,7 +107,7 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
           }
           return new Response(
             `Could not finish creating the GitHub App, and the code cannot be reused. Start the connection again.\n\n${detail}`,
-            { headers: { "content-type": "text/plain" }, status: 400 },
+            { headers: { "content-type": "text/plain" }, status: 400 }
           );
         }
 
@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/git-providers/github/callback")({
           app?.htmlUrl
             ? `${app.htmlUrl}/installations/new`
             : new URL("/git-providers", request.url).toString(),
-          303,
+          303
         );
       },
     },

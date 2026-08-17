@@ -1,9 +1,21 @@
-import { boolean, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
 import { sshKeys } from "#schema/ssh-keys";
 
-export const serverStatus = pgEnum("server_status", ["pending", "connected", "unreachable"]);
+export const serverStatus = pgEnum("server_status", [
+  "pending",
+  "connected",
+  "unreachable",
+]);
 
 /**
  * Swarm role — orthogonal to `isSelf`.
@@ -92,5 +104,7 @@ export const servers = pgTable(
     totalMemoryMb: integer("total_memory_mb"),
     updatedAt,
   },
-  (t) => [uniqueIndex("servers_host_port_user_idx").on(t.host, t.sshPort, t.sshUser)],
+  (t) => [
+    uniqueIndex("servers_host_port_user_idx").on(t.host, t.sshPort, t.sshUser),
+  ]
 );

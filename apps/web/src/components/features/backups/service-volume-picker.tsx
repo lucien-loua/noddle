@@ -45,10 +45,14 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
     enabled: props.enabled && props.serviceId !== undefined,
   });
 
-  const serviceVolumes = props.serviceId === undefined ? props.volumes : (internalQuery.data ?? []);
-  const isLoading = props.serviceId === undefined ? props.isLoading : internalQuery.isLoading;
-  const isError = props.serviceId === undefined ? props.isError : internalQuery.isError;
-  const queryError = props.serviceId === undefined ? props.error : internalQuery.error;
+  const serviceVolumes =
+    props.serviceId === undefined ? props.volumes : (internalQuery.data ?? []);
+  const isLoading =
+    props.serviceId === undefined ? props.isLoading : internalQuery.isLoading;
+  const isError =
+    props.serviceId === undefined ? props.isError : internalQuery.isError;
+  const queryError =
+    props.serviceId === undefined ? props.error : internalQuery.error;
 
   return (
     <Field>
@@ -69,7 +73,9 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
       {isLoading || isError ? null : (
         <Combobox
           items={serviceVolumes}
-          itemToStringLabel={(v: ServiceVolumeRow) => `${v.volumeName} → ${v.mountPath}`}
+          itemToStringLabel={(v: ServiceVolumeRow) =>
+            `${v.volumeName} → ${v.mountPath}`
+          }
           itemToStringValue={(v: ServiceVolumeRow) => v.volumeName}
           onValueChange={(next) => {
             if (next) {
@@ -85,7 +91,10 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
               {(v: ServiceVolumeRow) => (
                 <ComboboxItem key={v.volumeName} value={v}>
                   <code className="text-xs">{v.volumeName}</code>
-                  <span className="text-muted-foreground"> → {v.mountPath}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    → {v.mountPath}
+                  </span>
                 </ComboboxItem>
               )}
             </ComboboxList>
@@ -93,8 +102,8 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
         </Combobox>
       )}
       <FieldDescription>
-        Choose the volume to backup. If you do not see the volume here, you can type the volume name
-        manually below.
+        Choose the volume to backup. If you do not see the volume here, you can
+        type the volume name manually below.
       </FieldDescription>
     </Field>
   );

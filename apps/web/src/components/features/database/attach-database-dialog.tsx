@@ -71,8 +71,8 @@ export function AttachDatabaseDialog({
         <DialogHeader>
           <DialogTitle>Attach to a service</DialogTitle>
           <DialogDescription>
-            The connection string is written as an environment variable of the chosen service — it
-            is never shown here.
+            The connection string is written as an environment variable of the
+            chosen service — it is never shown here.
           </DialogDescription>
         </DialogHeader>
 
@@ -151,15 +151,15 @@ function AttachBody({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form],
+    [form]
   );
 
   if (done) {
     return (
       <Alert>
         <AlertDescription>
-          Attached: <code>{done}</code> is now in the service environment variables, ready for the
-          next deploy.
+          Attached: <code>{done}</code> is now in the service environment
+          variables, ready for the next deploy.
         </AlertDescription>
       </Alert>
     );
@@ -200,12 +200,20 @@ function AttachBody({
           </form.AppField>
 
           <form.AppField name="envVarKey">
-            {(f) => <f.FieldText addonStart={<CodeIcon />} label="Variable name" required />}
+            {(f) => (
+              <f.FieldText
+                addonStart={<CodeIcon />}
+                label="Variable name"
+                required
+              />
+            )}
           </form.AppField>
 
           {attach.isError ? (
             <Alert variant="destructive">
-              <AlertDescription>{errorMessage(attach.error, "could not attach")}</AlertDescription>
+              <AlertDescription>
+                {errorMessage(attach.error, "could not attach")}
+              </AlertDescription>
             </Alert>
           ) : null}
         </FieldGroup>

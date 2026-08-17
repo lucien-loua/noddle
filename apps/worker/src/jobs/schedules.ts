@@ -56,9 +56,11 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     id: "backup-sweep",
     queue: "noddle-backup-sweep",
     run: async ({ ctx, enqueue }) => {
-      await sweepBackups(ctx, (backupId) => enqueue({ backupId, kind: "backup" }));
+      await sweepBackups(ctx, (backupId) =>
+        enqueue({ backupId, kind: "backup" })
+      );
       await sweepVolumeBackups(ctx, (volumeBackupId) =>
-        enqueue({ kind: "volume-backup", volumeBackupId }),
+        enqueue({ kind: "volume-backup", volumeBackupId })
       );
     },
   }),

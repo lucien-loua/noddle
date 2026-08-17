@@ -35,5 +35,5 @@ export const s3Destinations = pgTable(
     secretAccessKeyEncrypted: text("secret_access_key_encrypted").notNull(),
     updatedAt,
   },
-  (t) => [uniqueIndex("s3_destinations_name_idx").on(t.name)],
+  (t) => [uniqueIndex("s3_destinations_name_idx").on(t.name)]
 );

@@ -74,7 +74,9 @@ function ObjectsListBody({
   if (isError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{errorMessage(error, "could not list objects")}</AlertDescription>
+        <AlertDescription>
+          {errorMessage(error, "could not list objects")}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -98,8 +100,12 @@ function ObjectsListBody({
         <TableBody>
           {rows.map((obj) => (
             <TableRow key={obj.key}>
-              <TableCell className="max-w-70 truncate font-mono text-xs">{obj.key}</TableCell>
-              <TableCell className="text-xs tabular-nums">{byteSize(obj.sizeBytes)}</TableCell>
+              <TableCell className="max-w-70 truncate font-mono text-xs">
+                {obj.key}
+              </TableCell>
+              <TableCell className="text-xs tabular-nums">
+                {byteSize(obj.sizeBytes)}
+              </TableCell>
               <TableCell className="text-muted-foreground text-xs">
                 {obj.lastModified ? relativeTime(obj.lastModified) : "—"}
               </TableCell>
@@ -138,7 +144,9 @@ export function RestoreFromS3Dialog({
 }) {
   const copy = copyFor(subject.kind);
   const [firstDestination] = destinations;
-  const [destinationId, setDestinationId] = useState(firstDestination ? firstDestination.id : "");
+  const [destinationId, setDestinationId] = useState(
+    firstDestination ? firstDestination.id : ""
+  );
   const [volumeName, setVolumeName] = useState(defaultVolumeName ?? "");
 
   useEffect(() => {
@@ -211,7 +219,9 @@ export function RestoreFromS3Dialog({
                   placeholder="hello-data-abc123"
                   value={volumeName}
                 />
-                <FieldDescription>The name of the Docker volume to restore into.</FieldDescription>
+                <FieldDescription>
+                  The name of the Docker volume to restore into.
+                </FieldDescription>
               </Field>
             </>
           ) : null}

@@ -21,7 +21,12 @@ import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
-import { collectMetrics, cpuPercent, parseDiskUsage, parseHostFacts } from "#metrics";
+import {
+  collectMetrics,
+  cpuPercent,
+  parseDiskUsage,
+  parseHostFacts,
+} from "#metrics";
 import { seedSshKey, verifyCtx } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;
@@ -70,7 +75,9 @@ function humanToBytes(size: string): number {
     TB: 1e12,
     kB: 1e3,
   };
-  return Number.parseFloat(match[1] as string) * (scale[match[2] as string] ?? 1);
+  return (
+    Number.parseFloat(match[1] as string) * (scale[match[2] as string] ?? 1)
+  );
 }
 
 /**
@@ -103,7 +110,9 @@ console.log(`\n\u001B[1mResource collection — VM ${TARGET.host}\u001B[0m`);
 
 try {
   // ── 1. Parsing, no network ──────────────────────────────────────────────
-  const parsed = parseHostFacts("0.14 2 2002136 1587628 19682557952 7499407360");
+  const parsed = parseHostFacts(
+    "0.14 2 2002136 1587628 19682557952 7499407360"
+  );
   if (
     parsed &&
     parsed.cpuCount === 2 &&
@@ -195,10 +204,14 @@ try {
     sample.cpuCount >= 1 &&
     sample.cpuLoad1 >= 0;
   if (coherent) {
-    const memPct = Math.round((sample.memoryUsedBytes / sample.memoryTotalBytes) * 100);
-    const diskPct = Math.round((sample.diskUsedBytes / sample.diskTotalBytes) * 100);
+    const memPct = Math.round(
+      (sample.memoryUsedBytes / sample.memoryTotalBytes) * 100
+    );
+    const diskPct = Math.round(
+      (sample.diskUsedBytes / sample.diskTotalBytes) * 100
+    );
     ok(
-      `coherent values: ${sample.cpuCount} cores, load ${sample.cpuLoad1}, mem ${memPct} %, disk ${diskPct} %`,
+      `coherent values: ${sample.cpuCount} cores, load ${sample.cpuLoad1}, mem ${memPct} %, disk ${diskPct} %`
     );
   } else {
     ko(`incoherent values: ${JSON.stringify(sample)}`);
@@ -248,16 +261,30 @@ try {
 
   const pairs: [string, number, number][] = [
     ["Images", disk.imageBytes, cliBytes.get("Images") ?? Number.NaN],
-    ["Containers", disk.containerBytes, cliBytes.get("Containers") ?? Number.NaN],
+    [
+      "Containers",
+      disk.containerBytes,
+      cliBytes.get("Containers") ?? Number.NaN,
+    ],
     ["Volumes", disk.volumeBytes, cliBytes.get("Local Volumes") ?? Number.NaN],
-    ["Build Cache", disk.buildCacheBytes, cliBytes.get("Build Cache") ?? Number.NaN],
+    [
+      "Build Cache",
+      disk.buildCacheBytes,
+      cliBytes.get("Build Cache") ?? Number.NaN,
+    ],
   ];
   // 1 %: the CLI rounds to four significant digits, no more.
-  const drift = pairs.map(([, stored, shown]) => Math.abs(stored - shown) / Math.max(shown, 1));
+  const drift = pairs.map(
+    ([, stored, shown]) => Math.abs(stored - shown) / Math.max(shown, 1)
+  );
   if (drift.every((d) => d < 0.01)) {
-    ok(`stored bytes agree with the CLI (max drift ${(Math.max(...drift) * 100).toFixed(2)} %)`);
+    ok(
+      `stored bytes agree with the CLI (max drift ${(Math.max(...drift) * 100).toFixed(2)} %)`
+    );
   } else {
-    ko(`CLI/API divergence: ${pairs.map(([n, s, c]) => `${n} ${s}≠${c}`).join(", ")}`);
+    ko(
+      `CLI/API divergence: ${pairs.map(([n, s, c]) => `${n} ${s}≠${c}`).join(", ")}`
+    );
   }
 
   // Reclaimable is a SEPARATE fact from size: conflating them would promise
@@ -268,7 +295,7 @@ try {
     disk.imageCount > 0
   ) {
     ok(
-      `reclaimable bounded by size: ${disk.imageCount} images, ${disk.imageReclaimableBytes} / ${disk.imageBytes} B`,
+      `reclaimable bounded by size: ${disk.imageCount} images, ${disk.imageReclaimableBytes} / ${disk.imageBytes} B`
     );
   } else {
     ko(`incoherent reclaimable: ${JSON.stringify(disk)}`);
@@ -370,7 +397,7 @@ try {
   // blamed the code when the fault was staging.
   await exec(
     managerSsh,
-    `docker service create --detach --name ${probeName} --constraint node.role==manager --restart-condition any alpine:3 sleep 3600`,
+    `docker service create --detach --name ${probeName} --constraint node.role==manager --restart-condition any alpine:3 sleep 3600`
   );
   // The container only exists when the task STARTS, not when the command
   // returns — the same trap as stack volumes, where grepping 3 seconds too
@@ -380,7 +407,7 @@ try {
     // biome-ignore lint/performance/noAwaitInLoops: polling, sequential by nature
     const seen = await exec(
       managerSsh,
-      `docker ps -q --filter label=com.docker.swarm.service.name=${probeName}`,
+      `docker ps -q --filter label=com.docker.swarm.service.name=${probeName}`
     );
     probeUp = seen.stdout.trim().length > 0;
     if (!probeUp) {
@@ -395,7 +422,10 @@ try {
     throw new Error(`probe container ${probeName} never appeared`);
   }
 
-  const [proj] = await db.insert(projects).values({ name: "metrics-probe" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "metrics-probe" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })

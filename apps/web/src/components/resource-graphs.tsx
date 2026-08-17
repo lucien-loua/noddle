@@ -53,7 +53,7 @@ export interface GappedPoint {
  */
 export function withGaps<T extends { sampledAt: string }>(
   points: T[],
-  value: (p: T) => number,
+  value: (p: T) => number
 ): GappedPoint[] {
   const out: GappedPoint[] = [];
 
@@ -163,7 +163,10 @@ export function Sparkline<T extends { sampledAt: string }>({
   });
 
   return (
-    <div className={cn("h-full min-h-16 w-full overflow-hidden rounded-md", shade)} ref={ref}>
+    <div
+      className={cn("h-full min-h-16 w-full overflow-hidden rounded-md", shade)}
+      ref={ref}
+    >
       <Chart
         ariaLabel={`${label} over the last ${windowHours} ${windowHours === 1 ? "hour" : "hours"}`}
         definition={definition}
@@ -341,7 +344,8 @@ export function ResourceGraphs({
       ) : (
         <FramePanel>
           <FrameDescription>
-            No samples in the last {windowHours} {windowHours === 1 ? "hour" : "hours"}.
+            No samples in the last {windowHours}{" "}
+            {windowHours === 1 ? "hour" : "hours"}.
           </FrameDescription>
         </FramePanel>
       )}

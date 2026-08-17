@@ -23,15 +23,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { InputGroupButton } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
 import type { ServiceDomainRow, ServiceRow } from "@/server/dashboard";
-import { createServiceDomain, updateServiceDomain } from "@/server/service-domains";
+import {
+  createServiceDomain,
+  updateServiceDomain,
+} from "@/server/service-domains";
 
 const CERTIFICATE_OPTIONS = [
   {
@@ -40,7 +52,8 @@ const CERTIFICATE_OPTIONS = [
     value: "letsencrypt",
   },
   {
-    description: "TLS without automatic provisioning — bring your own certificate in Traefik",
+    description:
+      "TLS without automatic provisioning — bring your own certificate in Traefik",
     label: "None",
     value: "none",
   },
@@ -135,7 +148,7 @@ export function ServiceDomainDialog({
       generateTestDomain({
         appName: service.name,
         serverHost: service.serverHost,
-      }),
+      })
     );
   }, [form, service.name, service.serverHost]);
 
@@ -145,7 +158,8 @@ export function ServiceDomainDialog({
         <DialogHeader>
           <DialogTitle>Domain</DialogTitle>
           <DialogDescription>
-            Public hostname, path routing, TLS, and the container port Traefik forwards to.
+            Public hostname, path routing, TLS, and the container port Traefik
+            forwards to.
           </DialogDescription>
         </DialogHeader>
 
@@ -168,7 +182,8 @@ export function ServiceDomainDialog({
                         <DiceFiveIcon />
                       </TooltipTrigger>
                       <TooltipContent>
-                        Generate a free sslip.io domain for testing — no DNS setup required.
+                        Generate a free sslip.io domain for testing — no DNS
+                        setup required.
                       </TooltipContent>
                     </Tooltip>
                   }
@@ -206,7 +221,10 @@ export function ServiceDomainDialog({
                       Remove the public path prefix before forwarding.
                     </FieldDescription>
                   </div>
-                  <Switch checked={f.state.value} onCheckedChange={f.handleChange} />
+                  <Switch
+                    checked={f.state.value}
+                    onCheckedChange={f.handleChange}
+                  />
                 </Field>
               )}
             </form.AppField>
@@ -228,7 +246,8 @@ export function ServiceDomainDialog({
                   <div className="flex flex-1 flex-col gap-1">
                     <FieldLabel className="font-medium">HTTPS</FieldLabel>
                     <FieldDescription>
-                      Serve this hostname over TLS. Redeploy to apply routing changes.
+                      Serve this hostname over TLS. Redeploy to apply routing
+                      changes.
                     </FieldDescription>
                   </div>
                   <Switch

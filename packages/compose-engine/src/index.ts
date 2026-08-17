@@ -74,7 +74,10 @@ export interface InjectOptions {
  * Noddle builds — not just the public one — because a healthy, zero-downtime
  * rollout is the guarantee Noddle sells.
  */
-export function injectDeployConfig(doc: ComposeFile, opts: InjectOptions): void {
+export function injectDeployConfig(
+  doc: ComposeFile,
+  opts: InjectOptions
+): void {
   const services = doc.services ?? {};
 
   for (const key of opts.builtKeys) {

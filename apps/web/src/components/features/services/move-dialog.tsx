@@ -58,8 +58,11 @@ export function MoveServiceDialog({
     enabled: open && Boolean(projectId),
   });
   const targetEnvironments = useMemo(
-    () => (environmentsQuery.data ?? []).filter((env) => env.id !== currentEnvironmentId),
-    [environmentsQuery.data, currentEnvironmentId],
+    () =>
+      (environmentsQuery.data ?? []).filter(
+        (env) => env.id !== currentEnvironmentId
+      ),
+    [environmentsQuery.data, currentEnvironmentId]
   );
 
   useEffect(() => {
@@ -89,10 +92,13 @@ export function MoveServiceDialog({
   });
 
   const handleMove = useCallback(() => move.mutate(), [move]);
-  const handleProjectChange = useCallback((next: unknown) => setProjectId(next as string), []);
+  const handleProjectChange = useCallback(
+    (next: unknown) => setProjectId(next as string),
+    []
+  );
   const handleEnvironmentChange = useCallback(
     (next: unknown) => setEnvironmentId(next as string),
-    [],
+    []
   );
 
   return (
@@ -101,8 +107,8 @@ export function MoveServiceDialog({
         <DialogHeader>
           <DialogTitle>Move {serviceName}</DialogTitle>
           <DialogDescription>
-            Only its record changes project and environment. The running container, its server and
-            its webhook URL stay exactly as they are.
+            Only its record changes project and environment. The running
+            container, its server and its webhook URL stay exactly as they are.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -110,7 +116,9 @@ export function MoveServiceDialog({
             <Field>
               <FieldLabel htmlFor="move-project">Project</FieldLabel>
               <Select
-                items={Object.fromEntries(groups.map((g) => [g.projectId, g.project]))}
+                items={Object.fromEntries(
+                  groups.map((g) => [g.projectId, g.project])
+                )}
                 onValueChange={handleProjectChange}
                 value={projectId}
               >
@@ -141,7 +149,9 @@ export function MoveServiceDialog({
                 </Alert>
               ) : (
                 <Select
-                  items={Object.fromEntries(targetEnvironments.map((env) => [env.id, env.name]))}
+                  items={Object.fromEntries(
+                    targetEnvironments.map((env) => [env.id, env.name])
+                  )}
                   onValueChange={handleEnvironmentChange}
                   value={environmentId}
                 >
@@ -169,7 +179,10 @@ export function MoveServiceDialog({
           </FieldGroup>
         </DialogBody>
         <DialogFooter>
-          <Button disabled={!environmentId || move.isPending} onClick={handleMove}>
+          <Button
+            disabled={!environmentId || move.isPending}
+            onClick={handleMove}
+          >
             {move.isPending ? <Spinner data-icon="inline-start" /> : null}
             Move service
           </Button>

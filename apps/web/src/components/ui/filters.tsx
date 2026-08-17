@@ -2,7 +2,12 @@
 "use no memo";
 
 import { useRender } from "@base-ui/react/use-render";
-import { CheckIcon, PlusIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
+import {
+  CheckIcon,
+  PlusIcon,
+  WarningCircleIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import {
@@ -40,7 +45,11 @@ import {
 } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // i18n Configuration Interface
@@ -302,7 +311,9 @@ function FilterInput<T = unknown>({
       }
 
       setIsValid(valid);
-      setValidationMessage(valid ? "" : customMessage || getValidationMessage());
+      setValidationMessage(
+        valid ? "" : customMessage || getValidationMessage()
+      );
     } else {
       // Reset validation state for empty values or no validation
       setIsValid(true);
@@ -319,9 +330,15 @@ function FilterInput<T = unknown>({
     if (
       !(
         isValid ||
-        ["Tab", "Escape", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
-          e.key,
-        )
+        [
+          "Tab",
+          "Escape",
+          "Enter",
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+        ].includes(e.key)
       )
     ) {
       setIsValid(true);
@@ -338,7 +355,7 @@ function FilterInput<T = unknown>({
         "w-36",
         context.size === "sm" && "h-8!",
         context.size === "lg" && "h-10!",
-        className,
+        className
       )}
     >
       {field?.prefix && (
@@ -348,10 +365,15 @@ function FilterInput<T = unknown>({
       )}
       <InputGroupInput
         aria-describedby={
-          !isValid && validationMessage ? `${field?.key || "input"}-error` : undefined
+          !isValid && validationMessage
+            ? `${field?.key || "input"}-error`
+            : undefined
         }
         aria-invalid={!isValid}
-        className={cn(context.size === "sm" && "h-8! text-xs", context.size === "lg" && "h-10!")}
+        className={cn(
+          context.size === "sm" && "h-8! text-xs",
+          context.size === "lg" && "h-10!"
+        )}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         ref={inputRef}
@@ -393,7 +415,13 @@ function FilterRemoveButton({
   return (
     <Button
       className={className}
-      size={context.size === "sm" ? "icon-sm" : context.size === "lg" ? "icon-lg" : "icon"}
+      size={
+        context.size === "sm"
+          ? "icon-sm"
+          : (context.size === "lg"
+            ? "icon-lg"
+            : "icon")
+      }
       variant="outline"
       {...props}
     >
@@ -448,13 +476,18 @@ export interface FilterFieldGroup<T = unknown> {
 }
 
 // Union type for both flat and grouped field configurations
-export type FilterFieldsConfig<T = unknown> = FilterFieldConfig<T>[] | FilterFieldGroup<T>[];
+export type FilterFieldsConfig<T = unknown> =
+  | FilterFieldConfig<T>[]
+  | FilterFieldGroup<T>[];
 
 export interface FilterFieldConfig<T = unknown> {
   allowCustomValues?: boolean;
   className?: string;
   customRenderer?: (props: CustomRendererProps<T>) => React.ReactNode;
-  customValueRenderer?: (values: T[], options: FilterOption<T>[]) => React.ReactNode;
+  customValueRenderer?: (
+    values: T[],
+    options: FilterOption<T>[]
+  ) => React.ReactNode;
   // Default operator to use when creating a filter for this field
   defaultOperator?: string;
   fields?: FilterFieldConfig<T>[];
@@ -470,7 +503,9 @@ export interface FilterFieldConfig<T = unknown> {
   // query) or to run server-side search (filter by the query). When both
   // `options` and `loadOptions` are provided, `options` seeds the initial view
   // and the value->label cache while `loadOptions` supplies live results.
-  loadOptions?: (query: string) => FilterOption<T>[] | Promise<FilterOption<T>[]>;
+  loadOptions?: (
+    query: string
+  ) => FilterOption<T>[] | Promise<FilterOption<T>[]>;
   max?: number;
   maxSelections?: number;
   menuPopupClassName?: string;
@@ -496,21 +531,27 @@ export interface FilterFieldConfig<T = unknown> {
   step?: number;
   suffix?: string | React.ReactNode;
   type?: "select" | "multiselect" | "text" | "custom" | "separator";
-  validation?: (value: unknown) => boolean | { valid: boolean; message?: string };
+  validation?: (
+    value: unknown
+  ) => boolean | { valid: boolean; message?: string };
   // Controlled values support for this field
   value?: T[];
 }
 
 // Helper functions to handle both flat and grouped field configurations
 const isFieldGroup = <T = unknown,>(
-  item: FilterFieldConfig<T> | FilterFieldGroup<T>,
-): item is FilterFieldGroup<T> => "fields" in item && Array.isArray(item.fields);
+  item: FilterFieldConfig<T> | FilterFieldGroup<T>
+): item is FilterFieldGroup<T> =>
+  "fields" in item && Array.isArray(item.fields);
 
 // Helper function to check if a FilterFieldConfig is a group-level configuration
-const isGroupLevelField = <T = unknown,>(field: FilterFieldConfig<T>): boolean =>
-  Boolean(field.group && field.fields);
+const isGroupLevelField = <T = unknown,>(
+  field: FilterFieldConfig<T>
+): boolean => Boolean(field.group && field.fields);
 
-const flattenFields = <T = unknown,>(fields: FilterFieldsConfig<T>): FilterFieldConfig<T>[] =>
+const flattenFields = <T = unknown,>(
+  fields: FilterFieldsConfig<T>
+): FilterFieldConfig<T>[] =>
   fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
     if (isFieldGroup(item)) {
       return [...acc, ...item.fields];
@@ -523,7 +564,7 @@ const flattenFields = <T = unknown,>(fields: FilterFieldsConfig<T>): FilterField
   }, []);
 
 const getFieldsMap = <T = unknown,>(
-  fields: FilterFieldsConfig<T>,
+  fields: FilterFieldsConfig<T>
 ): Record<string, FilterFieldConfig<T>> => {
   const flatFields = flattenFields(fields);
   return flatFields.reduce(
@@ -534,7 +575,7 @@ const getFieldsMap = <T = unknown,>(
       }
       return acc;
     },
-    {} as Record<string, FilterFieldConfig<T>>,
+    {} as Record<string, FilterFieldConfig<T>>
   );
 };
 
@@ -564,7 +605,7 @@ interface ResolvedFieldOptions<T = unknown> {
 const fieldOptionCaches = new WeakMap<object, Map<unknown, FilterOption>>();
 
 const getFieldOptionCache = <T = unknown,>(
-  field: FilterFieldConfig<T>,
+  field: FilterFieldConfig<T>
 ): Map<T, FilterOption<T>> => {
   let cache = fieldOptionCaches.get(field as object);
   if (!cache) {
@@ -581,7 +622,7 @@ const getFieldOptionCache = <T = unknown,>(
 function useFieldOptions<T = unknown>(
   field: FilterFieldConfig<T>,
   searchInput: string,
-  enabled: boolean,
+  enabled: boolean
 ): ResolvedFieldOptions<T> {
   const isAsync = typeof field.loadOptions === "function";
 
@@ -656,9 +697,11 @@ function useFieldOptions<T = unknown>(
   const resolveSelected = useCallback(
     (values: T[]): FilterOption<T>[] => {
       const cache = getFieldOptionCache(field);
-      return values.map((value) => cache.get(value) ?? { label: String(value), value });
+      return values.map(
+        (value) => cache.get(value) ?? { label: String(value), value }
+      );
     },
-    [field],
+    [field]
   );
 
   if (!isAsync) {
@@ -737,13 +780,14 @@ const createOperatorsFromI18n = (i18n: FilterI18nConfig): OperatorSets => ({
 // compiling the moment the linter turns the type alias into an interface —
 // which it does. The narrow type is the accurate one anyway; nothing indexes
 // this with a string that is not one of the four field kinds.
-export const DEFAULT_OPERATORS: OperatorSets = createOperatorsFromI18n(DEFAULT_I18N);
+export const DEFAULT_OPERATORS: OperatorSets =
+  createOperatorsFromI18n(DEFAULT_I18N);
 
 // Helper function to get operators for a field
 const getOperatorsForField = <T = unknown,>(
   field: FilterFieldConfig<T>,
   values: T[],
-  i18n: FilterI18nConfig,
+  i18n: FilterI18nConfig
 ): FilterOperator[] => {
   if (field.operators) {
     return field.operators;
@@ -794,7 +838,7 @@ function FilterOperatorDropdown<T = unknown>({
   const context = useFilterContext();
   const operators = useMemo(
     () => getOperatorsForField(field, values, context.i18n),
-    [field, values, context.i18n],
+    [field, values, context.i18n]
   );
 
   // Find the operator label, with fallback to formatted operator name
@@ -819,7 +863,7 @@ function FilterOperatorDropdown<T = unknown>({
         {operators.map((op) => (
           <DropdownMenuItem
             className={cn(
-              "flex items-center justify-between data-highlighted:bg-accent data-highlighted:text-accent-foreground",
+              "flex items-center justify-between data-highlighted:bg-accent data-highlighted:text-accent-foreground"
             )}
             key={op.value}
             onClick={() => onChange(op.value)}
@@ -828,7 +872,7 @@ function FilterOperatorDropdown<T = unknown>({
             <CheckIcon
               className={cn(
                 "ms-auto text-primary",
-                op.value === operator ? "opacity-100" : "opacity-0",
+                op.value === operator ? "opacity-100" : "opacity-0"
               )}
               weight="regular"
             />
@@ -881,7 +925,9 @@ function SelectOptionsPopover<T = unknown>({
 
   useEffect(() => {
     if (highlightedIndex >= 0 && open) {
-      const element = document.getElementById(`${baseId}-item-${highlightedIndex}`);
+      const element = document.getElementById(
+        `${baseId}-item-${highlightedIndex}`
+      );
       element?.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex, open, baseId]);
@@ -895,7 +941,8 @@ function SelectOptionsPopover<T = unknown>({
   } = useFieldOptions(field, searchInput, inline || open);
 
   const isMultiSelect = field.type === "multiselect" || values.length > 1;
-  const effectiveValues = (field.value === undefined ? values : (field.value as T[])) || [];
+  const effectiveValues =
+    (field.value === undefined ? values : (field.value as T[])) || [];
 
   // Static fields read their list verbatim (unchanged legacy behavior). Async
   // fields resolve selected values from the value->label cache and take the
@@ -905,7 +952,8 @@ function SelectOptionsPopover<T = unknown>({
     : field.options?.filter((opt) => effectiveValues.includes(opt.value)) || [];
   const unselectedOptions = isAsync
     ? resolvedOptions.filter((opt) => !effectiveValues.includes(opt.value))
-    : field.options?.filter((opt) => !effectiveValues.includes(opt.value)) || [];
+    : field.options?.filter((opt) => !effectiveValues.includes(opt.value)) ||
+      [];
 
   // Filter options based on search input (client-side for static lists; async
   // loaders have already filtered by the query).
@@ -913,12 +961,12 @@ function SelectOptionsPopover<T = unknown>({
   const filteredUnselectedOptions = isAsync
     ? unselectedOptions
     : unselectedOptions.filter((opt) =>
-        opt.label.toLowerCase().includes(searchInput.toLowerCase()),
+        opt.label.toLowerCase().includes(searchInput.toLowerCase())
       );
 
   const allFilteredOptions = useMemo(
     () => [...filteredSelectedOptions, ...filteredUnselectedOptions],
-    [filteredSelectedOptions, filteredUnselectedOptions],
+    [filteredSelectedOptions, filteredUnselectedOptions]
   );
 
   const handleClose = () => {
@@ -932,11 +980,16 @@ function SelectOptionsPopover<T = unknown>({
     const isSelected = effectiveValues.includes(option.value);
     const next = isSelected
       ? (effectiveValues.filter((v) => v !== option.value) as T[])
-      : isMultiSelect
+      : (isMultiSelect
         ? ([...effectiveValues, option.value] as T[])
-        : ([option.value] as T[]);
+        : ([option.value] as T[]));
 
-    if (!isSelected && isMultiSelect && field.maxSelections && next.length > field.maxSelections) {
+    if (
+      !isSelected &&
+      isMultiSelect &&
+      field.maxSelections &&
+      next.length > field.maxSelections
+    ) {
       return;
     }
 
@@ -961,7 +1014,7 @@ function SelectOptionsPopover<T = unknown>({
         checked={isSelected}
         className={cn(
           "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
-          option.className,
+          option.className
         )}
         data-highlighted={isHighlighted || undefined}
         id={itemId}
@@ -987,7 +1040,9 @@ function SelectOptionsPopover<T = unknown>({
         <>
           <Input
             aria-activedescendant={
-              highlightedIndex >= 0 ? `${baseId}-item-${highlightedIndex}` : undefined
+              highlightedIndex >= 0
+                ? `${baseId}-item-${highlightedIndex}`
+                : undefined
             }
             aria-autocomplete="list"
             aria-controls={`${baseId}-listbox`}
@@ -996,7 +1051,7 @@ function SelectOptionsPopover<T = unknown>({
             className={cn(
               "h-8 rounded-none border-0 border-input bg-transparent! px-2 text-sm shadow-none",
               "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
-              open && "placeholder:text-foreground",
+              open && "placeholder:text-foreground"
             )}
             onBlur={() => open && inputRef.current?.focus()}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -1006,14 +1061,14 @@ function SelectOptionsPopover<T = unknown>({
                 e.preventDefault();
                 if (allFilteredOptions.length > 0) {
                   setHighlightedIndex((prev) =>
-                    prev < allFilteredOptions.length - 1 ? prev + 1 : 0,
+                    prev < allFilteredOptions.length - 1 ? prev + 1 : 0
                   );
                 }
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 if (allFilteredOptions.length > 0) {
                   setHighlightedIndex((prev) =>
-                    prev > 0 ? prev - 1 : allFilteredOptions.length - 1,
+                    prev > 0 ? prev - 1 : allFilteredOptions.length - 1
                   );
                 }
               } else if (e.key === "ArrowLeft") {
@@ -1023,12 +1078,14 @@ function SelectOptionsPopover<T = unknown>({
                 e.preventDefault();
                 const option = allFilteredOptions[highlightedIndex];
                 if (option) {
-                  const isSelected = effectiveValues.includes(option.value as T);
+                  const isSelected = effectiveValues.includes(
+                    option.value as T
+                  );
                   const next = isSelected
                     ? (effectiveValues.filter((v) => v !== option.value) as T[])
-                    : isMultiSelect
+                    : (isMultiSelect
                       ? ([...effectiveValues, option.value] as T[])
-                      : ([option.value] as T[]);
+                      : ([option.value] as T[]));
 
                   if (
                     !isSelected &&
@@ -1051,7 +1108,9 @@ function SelectOptionsPopover<T = unknown>({
               }
               e.stopPropagation();
             }}
-            placeholder={context.i18n.placeholders.searchField(field.label || "")}
+            placeholder={context.i18n.placeholders.searchField(
+              field.label || ""
+            )}
             ref={inputRef}
             role="combobox"
             value={searchInput}
@@ -1071,7 +1130,8 @@ function SelectOptionsPopover<T = unknown>({
             </div>
           ) : isAsync && error ? (
             <div className="py-2 text-center text-muted-foreground text-sm">
-              {context.i18n.errorLoadingOptions ?? DEFAULT_I18N.errorLoadingOptions}
+              {context.i18n.errorLoadingOptions ??
+                DEFAULT_I18N.errorLoadingOptions}
             </div>
           ) : allFilteredOptions.length === 0 ? (
             <div className="py-2 text-center text-muted-foreground text-sm">
@@ -1088,20 +1148,26 @@ function SelectOptionsPopover<T = unknown>({
               {/* Selected items */}
               {filteredSelectedOptions.length > 0 && (
                 <DropdownMenuGroup className="px-1">
-                  {filteredSelectedOptions.map((option, index) => renderOptionItem(option, index))}
+                  {filteredSelectedOptions.map((option, index) =>
+                    renderOptionItem(option, index)
+                  )}
                 </DropdownMenuGroup>
               )}
 
               {/* Separator */}
-              {filteredSelectedOptions.length > 0 && filteredUnselectedOptions.length > 0 && (
-                <DropdownMenuSeparator className="mx-0" />
-              )}
+              {filteredSelectedOptions.length > 0 &&
+                filteredUnselectedOptions.length > 0 && (
+                  <DropdownMenuSeparator className="mx-0" />
+                )}
 
               {/* Available items */}
               {filteredUnselectedOptions.length > 0 && (
                 <DropdownMenuGroup className="px-1">
                   {filteredUnselectedOptions.map((option, index) =>
-                    renderOptionItem(option, index + filteredSelectedOptions.length),
+                    renderOptionItem(
+                      option,
+                      index + filteredSelectedOptions.length
+                    )
                   )}
                 </DropdownMenuGroup>
               )}
@@ -1133,7 +1199,7 @@ function SelectOptionsPopover<T = unknown>({
               {field.customValueRenderer ? (
                 field.customValueRenderer(
                   values,
-                  isAsync ? resolveSelected(values) : field.options || [],
+                  isAsync ? resolveSelected(values) : field.options || []
                 )
               ) : (
                 <>
@@ -1146,16 +1212,19 @@ function SelectOptionsPopover<T = unknown>({
                   )}
                   {selectedOptions.length === 1
                     ? selectedOptions[0]?.label
-                    : selectedOptions.length > 1
+                    : (selectedOptions.length > 1
                       ? `${selectedOptions.length} ${context.i18n.selectedCount}`
-                      : context.i18n.select}
+                      : context.i18n.select)}
                 </>
               )}
             </div>
           </Button>
         }
       />
-      <DropdownMenuContent align="start" className={cn("w-50 px-0", field.className)}>
+      <DropdownMenuContent
+        align="start"
+        className={cn("w-50 px-0", field.className)}
+      >
         {renderMenuContent()}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -1197,10 +1266,14 @@ function FilterValueSelector<T = unknown>({
   }
 
   if (field.type === "select" || field.type === "multiselect") {
-    return <SelectOptionsPopover field={field} onChange={onChange} values={values} />;
+    return (
+      <SelectOptionsPopover field={field} onChange={onChange} values={values} />
+    );
   }
 
-  return <SelectOptionsPopover field={field} onChange={onChange} values={values} />;
+  return (
+    <SelectOptionsPopover field={field} onChange={onChange} values={values} />
+  );
 }
 export interface Filter<T = unknown> {
   field: string;
@@ -1236,23 +1309,26 @@ export const FiltersContent = <T = unknown,>({
         filters.map((filter) => {
           if (filter.id === filterId) {
             const updatedFilter = { ...filter, ...updates };
-            if (updates.operator === "empty" || updates.operator === "not_empty") {
+            if (
+              updates.operator === "empty" ||
+              updates.operator === "not_empty"
+            ) {
               updatedFilter.values = [] as T[];
             }
             return updatedFilter;
           }
           return filter;
-        }),
+        })
       );
     },
-    [filters, onChange],
+    [filters, onChange]
   );
 
   const removeFilter = useCallback(
     (filterId: string) => {
       onChange(filters.filter((filter) => filter.id !== filterId));
     },
-    [filters, onChange],
+    [filters, onChange]
   );
 
   return (
@@ -1262,7 +1338,7 @@ export const FiltersContent = <T = unknown,>({
           size: context.size,
           variant: context.variant,
         }),
-        context.className,
+        context.className
       )}
     >
       {filters.map((filter) => {
@@ -1380,7 +1456,9 @@ function FilterSubmenuContent<T = unknown>({
 
   useEffect(() => {
     if (highlightedIndex >= 0 && isActive) {
-      const element = document.getElementById(`${baseId}-item-${highlightedIndex}`);
+      const element = document.getElementById(
+        `${baseId}-item-${highlightedIndex}`
+      );
       element?.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex, isActive, baseId]);
@@ -1407,7 +1485,14 @@ function FilterSubmenuContent<T = unknown>({
         return option.label.toLowerCase().includes(searchInput.toLowerCase());
       }) || []
     );
-  }, [isAsync, resolvedOptions, resolveSelected, field.options, searchInput, currentValues]);
+  }, [
+    isAsync,
+    resolvedOptions,
+    resolveSelected,
+    field.options,
+    searchInput,
+    currentValues,
+  ]);
 
   const renderOptionItem = (option: FilterOption<T>, index: number) => {
     const isSelected = currentValues.includes(option.value);
@@ -1420,7 +1505,7 @@ function FilterSubmenuContent<T = unknown>({
         checked={isSelected}
         className={cn(
           "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
-          option.className,
+          option.className
         )}
         data-highlighted={isHighlighted || undefined}
         id={itemId}
@@ -1452,7 +1537,9 @@ function FilterSubmenuContent<T = unknown>({
         <>
           <Input
             aria-activedescendant={
-              highlightedIndex >= 0 ? `${baseId}-item-${highlightedIndex}` : undefined
+              highlightedIndex >= 0
+                ? `${baseId}-item-${highlightedIndex}`
+                : undefined
             }
             aria-autocomplete="list"
             aria-controls={`${baseId}-listbox`}
@@ -1461,7 +1548,7 @@ function FilterSubmenuContent<T = unknown>({
             className={cn(
               "h-8 rounded-none border-0 bg-transparent! px-1.75 text-sm shadow-none",
               "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
-              isActive && "placeholder:text-foreground",
+              isActive && "placeholder:text-foreground"
             )}
             onBlur={() => isActive && inputRef.current?.focus()}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -1471,12 +1558,16 @@ function FilterSubmenuContent<T = unknown>({
               if (e.key === "ArrowDown") {
                 e.preventDefault();
                 if (filteredOptions.length > 0) {
-                  setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+                  setHighlightedIndex((prev) =>
+                    prev < filteredOptions.length - 1 ? prev + 1 : 0
+                  );
                 }
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 if (filteredOptions.length > 0) {
-                  setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : filteredOptions.length - 1
+                  );
                 }
               } else if (e.key === "ArrowLeft") {
                 e.preventDefault();
@@ -1485,7 +1576,10 @@ function FilterSubmenuContent<T = unknown>({
                 e.preventDefault();
                 const option = filteredOptions[highlightedIndex];
                 if (option) {
-                  onToggle(option.value as T, currentValues.includes(option.value));
+                  onToggle(
+                    option.value as T,
+                    currentValues.includes(option.value)
+                  );
                   if (!isMultiSelect) {
                     onBack?.();
                   }
@@ -1517,12 +1611,16 @@ function FilterSubmenuContent<T = unknown>({
               if (e.key === "ArrowDown") {
                 e.preventDefault();
                 if (filteredOptions.length > 0) {
-                  setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+                  setHighlightedIndex((prev) =>
+                    prev < filteredOptions.length - 1 ? prev + 1 : 0
+                  );
                 }
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 if (filteredOptions.length > 0) {
-                  setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+                  setHighlightedIndex((prev) =>
+                    prev > 0 ? prev - 1 : filteredOptions.length - 1
+                  );
                 }
               } else if (e.key === "ArrowLeft") {
                 e.preventDefault();
@@ -1531,7 +1629,10 @@ function FilterSubmenuContent<T = unknown>({
                 e.preventDefault();
                 const option = filteredOptions[highlightedIndex];
                 if (option) {
-                  onToggle(option.value as T, currentValues.includes(option.value));
+                  onToggle(
+                    option.value as T,
+                    currentValues.includes(option.value)
+                  );
                   if (!isMultiSelect) {
                     onBack?.();
                   }
@@ -1567,7 +1668,9 @@ function FilterSubmenuContent<T = unknown>({
           ) : (
             <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
               <DropdownMenuGroup>
-                {filteredOptions.map((option, index) => renderOptionItem(option, index))}
+                {filteredOptions.map((option, index) =>
+                  renderOptionItem(option, index)
+                )}
               </DropdownMenuGroup>
             </ScrollArea>
           )}
@@ -1599,7 +1702,9 @@ export function Filters<T = unknown>({
   const [activeMenu, setActiveMenu] = useState<string>("root");
   const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [lastAddedFilterId, setLastAddedFilterId] = useState<string | null>(null);
+  const [lastAddedFilterId, setLastAddedFilterId] = useState<string | null>(
+    null
+  );
   const rootInputRef = useRef<HTMLInputElement>(null);
   const rootId = useId();
 
@@ -1638,7 +1743,9 @@ export function Filters<T = unknown>({
 
   useEffect(() => {
     if (highlightedIndex >= 0 && addFilterOpen) {
-      const element = document.getElementById(`${rootId}-item-${highlightedIndex}`);
+      const element = document.getElementById(
+        `${rootId}-item-${highlightedIndex}`
+      );
       element?.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex, addFilterOpen, rootId]);
@@ -1651,7 +1758,9 @@ export function Filters<T = unknown>({
 
   // Track which filter instance is being built in the current Add Filter menu session
   // Maps fieldKey -> unique filterId created during this open session
-  const [sessionFilterIds, setSessionFilterIds] = useState<Record<string, string>>({});
+  const [sessionFilterIds, setSessionFilterIds] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     if (lastAddedFilterId) {
@@ -1670,7 +1779,7 @@ export function Filters<T = unknown>({
       placeholders: { ...DEFAULT_I18N.placeholders, ...i18n?.placeholders },
       validation: { ...DEFAULT_I18N.validation, ...i18n?.validation },
     }),
-    [i18n],
+    [i18n]
   );
 
   const fieldsMap = useMemo(() => getFieldsMap(fields), [fields]);
@@ -1681,23 +1790,26 @@ export function Filters<T = unknown>({
         filters.map((filter) => {
           if (filter.id === filterId) {
             const updatedFilter = { ...filter, ...updates };
-            if (updates.operator === "empty" || updates.operator === "not_empty") {
+            if (
+              updates.operator === "empty" ||
+              updates.operator === "not_empty"
+            ) {
               updatedFilter.values = [] as T[];
             }
             return updatedFilter;
           }
           return filter;
-        }),
+        })
       );
     },
-    [filters, onChange],
+    [filters, onChange]
   );
 
   const removeFilter = useCallback(
     (filterId: string) => {
       onChange(filters.filter((filter) => filter.id !== filterId));
     },
-    [filters, onChange],
+    [filters, onChange]
   );
 
   const addFilter = useCallback(
@@ -1705,16 +1817,21 @@ export function Filters<T = unknown>({
       const field = fieldsMap[fieldKey];
       if (field?.key) {
         const defaultOperator =
-          field.defaultOperator || (field.type === "multiselect" ? "is_any_of" : "is");
+          field.defaultOperator ||
+          (field.type === "multiselect" ? "is_any_of" : "is");
         const defaultValues: unknown[] = field.type === "text" ? [""] : [];
-        const newFilter = createFilter<T>(fieldKey, defaultOperator, defaultValues as T[]);
+        const newFilter = createFilter<T>(
+          fieldKey,
+          defaultOperator,
+          defaultValues as T[]
+        );
         setLastAddedFilterId(newFilter.id);
         onChange([...filters, newFilter]);
         setAddFilterOpen(false);
         setMenuSearchInput("");
       }
     },
-    [fieldsMap, filters, onChange],
+    [fieldsMap, filters, onChange]
   );
 
   const selectableFields = useMemo(() => {
@@ -1733,9 +1850,11 @@ export function Filters<T = unknown>({
   const filteredFields = useMemo(
     () =>
       selectableFields.filter(
-        (f) => !menuSearchInput || f.label?.toLowerCase().includes(menuSearchInput.toLowerCase()),
+        (f) =>
+          !menuSearchInput ||
+          f.label?.toLowerCase().includes(menuSearchInput.toLowerCase())
       ),
-    [selectableFields, menuSearchInput],
+    [selectableFields, menuSearchInput]
   );
 
   useEffect(() => {
@@ -1764,12 +1883,14 @@ export function Filters<T = unknown>({
       trigger,
       variant,
     }),
-    [variant, size, radius, mergedI18n, className, trigger, allowMultiple],
+    [variant, size, radius, mergedI18n, className, trigger, allowMultiple]
   );
 
   return (
     <FilterContext.Provider value={contextValue}>
-      <div className={cn(filtersContainerVariants({ size, variant }), className)}>
+      <div
+        className={cn(filtersContainerVariants({ size, variant }), className)}
+      >
         {selectableFields.length > 0 && (
           <DropdownMenu
             onOpenChange={(open) => {
@@ -1784,21 +1905,28 @@ export function Filters<T = unknown>({
             open={addFilterOpen}
           >
             <DropdownMenuTrigger render={triggerButton} />
-            <DropdownMenuContent align="start" className={cn("w-55", menuPopupClassName)}>
+            <DropdownMenuContent
+              align="start"
+              className={cn("w-55", menuPopupClassName)}
+            >
               {showSearchInput && (
                 <>
                   <div className="relative">
                     <Input
                       aria-activedescendant={
-                        highlightedIndex >= 0 ? `${rootId}-item-${highlightedIndex}` : undefined
+                        highlightedIndex >= 0
+                          ? `${rootId}-item-${highlightedIndex}`
+                          : undefined
                       }
                       aria-controls={`${rootId}-listbox`}
                       className={cn(
                         "h-8 rounded-none border-0 bg-transparent! px-1.75 text-sm shadow-none",
                         "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
-                        activeMenu === "root" && "placeholder:text-foreground",
+                        activeMenu === "root" && "placeholder:text-foreground"
                       )}
-                      onBlur={() => activeMenu === "root" && rootInputRef.current?.focus()}
+                      onBlur={() =>
+                        activeMenu === "root" && rootInputRef.current?.focus()
+                      }
                       onChange={(e) => setMenuSearchInput(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       onFocus={() => setActiveMenu("root")}
@@ -1807,14 +1935,14 @@ export function Filters<T = unknown>({
                           e.preventDefault();
                           if (filteredFields.length > 0) {
                             setHighlightedIndex((prev) =>
-                              prev < filteredFields.length - 1 ? prev + 1 : 0,
+                              prev < filteredFields.length - 1 ? prev + 1 : 0
                             );
                           }
                         } else if (e.key === "ArrowUp") {
                           e.preventDefault();
                           if (filteredFields.length > 0) {
                             setHighlightedIndex((prev) =>
-                              prev > 0 ? prev - 1 : filteredFields.length - 1,
+                              prev > 0 ? prev - 1 : filteredFields.length - 1
                             );
                           }
                         } else if (
@@ -1824,7 +1952,8 @@ export function Filters<T = unknown>({
                           const field = filteredFields[highlightedIndex];
                           const hasSubMenu =
                             field &&
-                            (field.type === "select" || field.type === "multiselect") &&
+                            (field.type === "select" ||
+                              field.type === "multiselect") &&
                             fieldHasOptions(field);
 
                           if (e.key === "ArrowRight" && hasSubMenu) {
@@ -1843,7 +1972,8 @@ export function Filters<T = unknown>({
                           const field = filteredFields[highlightedIndex];
                           if (field?.key) {
                             const hasSubMenu =
-                              (field.type === "select" || field.type === "multiselect") &&
+                              (field.type === "select" ||
+                                field.type === "multiselect") &&
                               fieldHasOptions(field);
                             if (hasSubMenu) {
                               if (openSubMenu === field.key) {
@@ -1899,7 +2029,8 @@ export function Filters<T = unknown>({
                         const isHighlighted = highlightedIndex === index;
                         const itemId = `${rootId}-item-${index}`;
                         const hasSubMenu =
-                          (field.type === "select" || field.type === "multiselect") &&
+                          (field.type === "select" ||
+                            field.type === "multiselect") &&
                           fieldHasOptions(field);
 
                         if (hasSubMenu) {
@@ -1938,7 +2069,10 @@ export function Filters<T = unknown>({
                                 {field.icon}
                                 <span>{field.label}</span>
                               </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="w-50" side="inline-end">
+                              <DropdownMenuSubContent
+                                className="w-50"
+                                side="inline-end"
+                              >
                                 <FilterSubmenuContent
                                   currentValues={currentValues}
                                   field={field}
@@ -1958,13 +2092,17 @@ export function Filters<T = unknown>({
                                   onToggle={(value, isSelected) => {
                                     if (isMultiSelect) {
                                       const nextValues = isSelected
-                                        ? (currentValues.filter((v) => v !== value) as T[])
+                                        ? (currentValues.filter(
+                                            (v) => v !== value
+                                          ) as T[])
                                         : ([...currentValues, value] as T[]);
 
                                       if (sessionFilter) {
                                         if (nextValues.length === 0) {
                                           onChange(
-                                            filters.filter((f) => f.id !== sessionFilter.id),
+                                            filters.filter(
+                                              (f) => f.id !== sessionFilter.id
+                                            )
                                           );
                                           setSessionFilterIds((prev) => ({
                                             ...prev,
@@ -1975,15 +2113,15 @@ export function Filters<T = unknown>({
                                             filters.map((f) =>
                                               f.id === sessionFilter.id
                                                 ? { ...f, values: nextValues }
-                                                : f,
-                                            ),
+                                                : f
+                                            )
                                           );
                                         }
                                       } else {
                                         const newFilter = createFilter<T>(
                                           fieldKey,
                                           field.defaultOperator || "is_any_of",
-                                          nextValues,
+                                          nextValues
                                         );
                                         onChange([...filters, newFilter]);
                                         setSessionFilterIds((prev) => ({
@@ -1995,7 +2133,7 @@ export function Filters<T = unknown>({
                                       const newFilter = createFilter<T>(
                                         fieldKey,
                                         field.defaultOperator || "is",
-                                        [value] as T[],
+                                        [value] as T[]
                                       );
                                       setLastAddedFilterId(newFilter.id);
                                       onChange([...filters, newFilter]);
@@ -2075,7 +2213,7 @@ export function Filters<T = unknown>({
 export const createFilter = <T = unknown,>(
   field: string,
   operator?: string,
-  values: T[] = [],
+  values: T[] = []
 ): Filter<T> => ({
   field,
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
@@ -2087,7 +2225,7 @@ export const createFilterGroup = <T = unknown,>(
   id: string,
   label: string,
   fields: FilterFieldConfig<T>[],
-  initialFilters: Filter<T>[] = [],
+  initialFilters: Filter<T>[] = []
 ): FilterGroup<T> => ({
   fields,
   filters: initialFilters,

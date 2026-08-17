@@ -27,7 +27,14 @@ import { join } from "node:path";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
-import { databases, environments, projects, servers, services, stacks } from "@noddle/db/schema";
+import {
+  databases,
+  environments,
+  projects,
+  servers,
+  services,
+  stacks,
+} from "@noddle/db/schema";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
@@ -62,18 +69,18 @@ let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
 const volumeExists = async (
   client: Awaited<ReturnType<typeof connect>>,
-  name: string,
+  name: string
 ): Promise<boolean> => {
   const res = await exec(
     client,
-    `sudo docker volume ls -q | grep -Fx ${JSON.stringify(name)} || true`,
+    `sudo docker volume ls -q | grep -Fx ${JSON.stringify(name)} || true`
   );
   return res.stdout.trim() === name;
 };
 
 const serviceExists = async (
   client: Awaited<ReturnType<typeof connect>>,
-  name: string,
+  name: string
 ): Promise<boolean> => {
   const list = await dockerClient(client).listServices({
     filters: JSON.stringify({ name: [name] }),
@@ -83,7 +90,7 @@ const serviceExists = async (
 
 const secretExists = async (
   client: Awaited<ReturnType<typeof connect>>,
-  name: string,
+  name: string
 ): Promise<boolean> => {
   const list = (await dockerClient(client).listSecrets({
     filters: JSON.stringify({ name: [name] }),
@@ -117,7 +124,10 @@ try {
     throw new Error("server insertion failed");
   }
 
-  const [proj] = await db.insert(projects).values({ name: "teardown" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "teardown" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -150,7 +160,7 @@ try {
       rootPasswordEncrypted: encryptSecret(
         password,
         appKey,
-        secretContext.databasePassword(row.id),
+        secretContext.databasePassword(row.id)
       ),
       swarmName: dbSwarmName,
     })
@@ -159,7 +169,10 @@ try {
   console.log("    (provisioning the database…)");
   await provisionDatabase(ctx, route, row.id);
 
-  if ((await serviceExists(ssh, dbSwarmName)) && (await volumeExists(ssh, dbSwarmName))) {
+  if (
+    (await serviceExists(ssh, dbSwarmName)) &&
+    (await volumeExists(ssh, dbSwarmName))
+  ) {
     ok("database provisioned: service AND volume present");
   } else {
     ko("the database wasn't provisioned correctly");
@@ -203,14 +216,19 @@ try {
 
     const blocker = await serverRemovalBlocker(ctx, worker?.id ?? "");
     if (blocker?.includes("still hosts") && blocker.includes("database")) {
-      ok(`a server that hosts something is refused ("${blocker.slice(0, 44)}…")`);
+      ok(
+        `a server that hosts something is refused ("${blocker.slice(0, 44)}…")`
+      );
     } else {
       ko(`unexpected reason: ${blocker ?? "no refusal"}`);
     }
 
     // And once EMPTY, it passes. Without this assertion, a guard that
     // refuses ALL THE TIME would be indistinguishable from a correct one.
-    await db.update(databases).set({ serverId: srv.id }).where(eq(databases.id, row.id));
+    await db
+      .update(databases)
+      .set({ serverId: srv.id })
+      .where(eq(databases.id, row.id));
     const after = await serverRemovalBlocker(ctx, worker?.id ?? "");
     if (after === null) {
       ok("the same server, once empty, is no longer refused");

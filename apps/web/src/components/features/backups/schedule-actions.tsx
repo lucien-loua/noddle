@@ -46,7 +46,9 @@ export function ScheduleActions({
           }
         />
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={onRestoreS3}>{restoreLabel}</DropdownMenuItem>
+          <DropdownMenuItem onClick={onRestoreS3}>
+            {restoreLabel}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </ButtonGroup>

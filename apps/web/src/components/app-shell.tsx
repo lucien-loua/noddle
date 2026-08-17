@@ -13,7 +13,12 @@ import {
   StackIcon,
   UsersIcon,
 } from "@phosphor-icons/react";
-import { Link, useRouteContext, useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  Link,
+  useRouteContext,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
@@ -72,7 +77,11 @@ function NavItem({
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton isActive={active} render={<Link to={to} />} tooltip={label}>
+      <SidebarMenuButton
+        isActive={active}
+        render={<Link to={to} />}
+        tooltip={label}
+      >
         {/* `undefined` and not "duotone": the default lives in one place,
             the icon context in `__root`. */}
         <Icon weight={active ? "fill" : undefined} />
@@ -82,7 +91,14 @@ function NavItem({
   );
 }
 
-export function AppShell({ actions, breadcrumb, children, email, role, title }: Props) {
+export function AppShell({
+  actions,
+  breadcrumb,
+  children,
+  email,
+  role,
+  title,
+}: Props) {
   // From the ROOT context: the sidebar's persisted state, resolved before
   // the first paint so a collapsed sidebar does not render open and then
   // snap shut.
@@ -110,7 +126,10 @@ export function AppShell({ actions, breadcrumb, children, email, role, title }: 
     // the card must stay planted on screen and scroll from the inside.
     // Otherwise the whole page scrolls and the card — its rounded corners,
     // its header — drifts upward.
-    <SidebarProvider className="h-svh overflow-hidden" defaultOpen={sidebarOpen}>
+    <SidebarProvider
+      className="h-svh overflow-hidden"
+      defaultOpen={sidebarOpen}
+    >
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>
@@ -137,7 +156,12 @@ export function AppShell({ actions, breadcrumb, children, email, role, title }: 
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                <NavItem active={onDashboard} icon={HouseIcon} label="Overview" to="/" />
+                <NavItem
+                  active={onDashboard}
+                  icon={HouseIcon}
+                  label="Overview"
+                  to="/"
+                />
                 <NavItem
                   active={pathname.startsWith("/deployments")}
                   icon={SquaresFourIcon}
@@ -260,8 +284,12 @@ export function AppShell({ actions, breadcrumb, children, email, role, title }: 
             beneath it. */}
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ms-1" size="icon" />
-          {breadcrumb ?? <h1 className="font-medium text-sm tracking-tight">{title}</h1>}
-          <div className="ms-auto flex min-w-0 items-center gap-2">{actions}</div>
+          {breadcrumb ?? (
+            <h1 className="font-medium text-sm tracking-tight">{title}</h1>
+          )}
+          <div className="ms-auto flex min-w-0 items-center gap-2">
+            {actions}
+          </div>
         </header>
         {/* `scroll-fade` is driven by scroll position: the gradient only
             appears if there's still something to scroll toward on that

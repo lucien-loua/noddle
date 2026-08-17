@@ -9,23 +9,26 @@ function runLogLines(
   startMessages: [string, string],
   completedMessages: [string, string, string],
   failedLabel: string,
-  runningMessage: string,
+  runningMessage: string
 ): TerminalLogLine[] {
   const start = formatLogStamp(backup.createdAt);
   const end = formatLogStamp(backup.finishedAt ?? backup.createdAt);
-  const texts: string[] = [`${start} ${startMessages[0]}`, `${start} ${startMessages[1]}`];
+  const texts: string[] = [
+    `${start} ${startMessages[0]}`,
+    `${start} ${startMessages[1]}`,
+  ];
 
   if (backup.status === "completed") {
     texts.push(
       `${end} ${completedMessages[0]}`,
       `${end} ${completedMessages[1]}`,
       `${end} Object: ${backup.objectKey} (${byteSize(backup.sizeBytes)})`,
-      completedMessages[2],
+      completedMessages[2]
     );
   } else if (backup.status === "failed") {
     texts.push(
       `${end} ❌ Error: ${failedLabel}`,
-      `Error: ${backup.errorMessage ?? "unknown error"}`,
+      `Error: ${backup.errorMessage ?? "unknown error"}`
     );
   } else if (backup.status === "running") {
     texts.push(`${start} ${runningMessage}`);
@@ -46,7 +49,7 @@ export function databaseRunLogs(backup: BackupRunRow): TerminalLogLine[] {
       "Backup done ✅",
     ],
     "Backup failed",
-    "Starting backup and upload to S3...",
+    "Starting backup and upload to S3..."
   );
 }
 
@@ -54,8 +57,12 @@ export function volumeRunLogs(backup: BackupRunRow): TerminalLogLine[] {
   return runLogLines(
     backup,
     ["Starting volume backup...", "Executing tar on the Docker volume..."],
-    ["Uploading archive to S3...", "✅ Volume backup uploaded successfully", "Backup done ✅"],
+    [
+      "Uploading archive to S3...",
+      "✅ Volume backup uploaded successfully",
+      "Backup done ✅",
+    ],
     "Volume backup failed",
-    "Uploading archive to S3...",
+    "Uploading archive to S3..."
   );
 }

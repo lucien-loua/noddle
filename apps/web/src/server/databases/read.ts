@@ -1,10 +1,16 @@
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { databases } from "@noddle/db/schema";
-import type { DatabaseExtraMount, DatabaseSwarmSettings } from "@noddle/db/schema";
+import type {
+  DatabaseExtraMount,
+  DatabaseSwarmSettings,
+} from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
-import { loadDatabaseDashboardRows, toDatabaseRow } from "@/lib/database-rows.server";
+import {
+  loadDatabaseDashboardRows,
+  toDatabaseRow,
+} from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -41,7 +47,7 @@ export const getDatabaseDashboard = createServerFn({ method: "GET" }).handler(
   async (): Promise<DatabaseRow[]> => {
     await requireSession();
     return loadDatabaseDashboardRows();
-  },
+  }
 );
 
 export const getDatabase = createServerFn({ method: "GET" })

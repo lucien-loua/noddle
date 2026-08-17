@@ -1,4 +1,9 @@
-import { serverDiskUsage, serverMetrics, servers, serviceMetrics } from "@noddle/db/schema";
+import {
+  serverDiskUsage,
+  serverMetrics,
+  servers,
+  serviceMetrics,
+} from "@noddle/db/schema";
 import {
   databaseMetricsRequestSchema,
   serviceMetricsRequestSchema,
@@ -46,7 +51,10 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
       // biome-ignore lint/performance/noAwaitInLoops: one machine at a time, deliberately
       const rows = await db.query.serverMetrics.findMany({
         orderBy: asc(serverMetrics.sampledAt),
-        where: and(eq(serverMetrics.serverId, machine.id), gte(serverMetrics.sampledAt, since)),
+        where: and(
+          eq(serverMetrics.serverId, machine.id),
+          gte(serverMetrics.sampledAt, since)
+        ),
       });
 
       const points: MetricPoint[] = rows.map((r) => ({
@@ -57,8 +65,10 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
         // converting it here keeps every component from redoing the
         // division — so only one place could ever get the denominator
         // wrong.
-        diskUsedRatio: r.diskTotalBytes > 0 ? r.diskUsedBytes / r.diskTotalBytes : 0,
-        memoryUsedRatio: r.memoryTotalBytes > 0 ? r.memoryUsedBytes / r.memoryTotalBytes : 0,
+        diskUsedRatio:
+          r.diskTotalBytes > 0 ? r.diskUsedBytes / r.diskTotalBytes : 0,
+        memoryUsedRatio:
+          r.memoryTotalBytes > 0 ? r.memoryUsedBytes / r.memoryTotalBytes : 0,
         networkInBytes: r.networkInBytes,
         networkOutBytes: r.networkOutBytes,
         sampledAt: r.sampledAt.toISOString(),
@@ -73,7 +83,7 @@ export const getServerMetrics = createServerFn({ method: "GET" }).handler(
       });
     }
     return out;
-  },
+  }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,13 +121,16 @@ export interface ServiceSeries {
 
 /** The raw rows shaped for display. Shared by both reads: two copies would
  *  eventually diverge on `memoryUsedRatio`'s denominator. */
-function seriesFrom(rows: (typeof serviceMetrics.$inferSelect)[]): ServiceSeries {
+function seriesFrom(
+  rows: (typeof serviceMetrics.$inferSelect)[]
+): ServiceSeries {
   const points: ServicePoint[] = rows.map((r) => ({
     blockReadBytes: r.blockReadBytes,
     blockWriteBytes: r.blockWriteBytes,
     cpuPercent: r.cpuPercent,
     memoryUsedBytes: r.memoryUsedBytes,
-    memoryUsedRatio: r.memoryLimitBytes > 0 ? r.memoryUsedBytes / r.memoryLimitBytes : null,
+    memoryUsedRatio:
+      r.memoryLimitBytes > 0 ? r.memoryUsedBytes / r.memoryLimitBytes : null,
     networkInBytes: r.networkInBytes,
     networkOutBytes: r.networkOutBytes,
     sampledAt: r.sampledAt.toISOString(),
@@ -141,7 +154,7 @@ export const getServiceMetrics = createServerFn({ method: "GET" })
       orderBy: asc(serviceMetrics.sampledAt),
       where: and(
         eq(serviceMetrics.serviceId, data.serviceId),
-        gte(serviceMetrics.sampledAt, since),
+        gte(serviceMetrics.sampledAt, since)
       ),
     });
 
@@ -167,7 +180,7 @@ export const getDatabaseMetrics = createServerFn({ method: "GET" })
       orderBy: asc(serviceMetrics.sampledAt),
       where: and(
         eq(serviceMetrics.databaseId, data.databaseId),
-        gte(serviceMetrics.sampledAt, since),
+        gte(serviceMetrics.sampledAt, since)
       ),
     });
 
@@ -178,7 +191,11 @@ export const getDatabaseMetrics = createServerFn({ method: "GET" })
 // disk breakdown
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type DiskCategoryKey = "buildCache" | "containers" | "images" | "volumes";
+export type DiskCategoryKey =
+  | "buildCache"
+  | "containers"
+  | "images"
+  | "volumes";
 
 export interface DiskCategory {
   bytes: number;
@@ -265,5 +282,5 @@ export const getServerDiskUsage = createServerFn({ method: "GET" }).handler(
       });
     }
     return out;
-  },
+  }
 );

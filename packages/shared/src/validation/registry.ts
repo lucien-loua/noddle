@@ -9,7 +9,10 @@ import { REGISTRY_HOST } from "./common.ts";
 export const registrySchema = z.object({
   /** Absent = creation. Present = updating THIS registry. */
   id: z.uuid().optional(),
-  imagePrefix: z.string().max(128, "Keep the prefix under 128 characters.").default(""),
+  imagePrefix: z
+    .string()
+    .max(128, "Keep the prefix under 128 characters.")
+    .default(""),
   name: z
     .string()
     .min(1, "Give this registry a name.")
@@ -33,7 +36,7 @@ export const registrySchema = z.object({
     // for a given field, it doesn't stop at the first one.
     .refine(
       (v) => v === "" || REGISTRY_HOST.test(v),
-      "Enter a hostname such as ghcr.io, without http:// or a path",
+      "Enter a hostname such as ghcr.io, without http:// or a path"
     ),
   username: z
     .string()

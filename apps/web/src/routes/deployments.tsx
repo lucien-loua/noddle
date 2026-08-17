@@ -1,5 +1,10 @@
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 
@@ -7,7 +12,12 @@ import { AppShell } from "@/components/app-shell";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Frame,
   FrameDescription,
@@ -15,7 +25,11 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -49,7 +63,10 @@ export const Route = createFileRoute("/deployments")({
   },
   component: DeploymentsPage,
   loader: async ({ context }) => {
-    const [dashboard, log] = await Promise.all([getDashboardGroups(), getDeploymentLog()]);
+    const [dashboard, log] = await Promise.all([
+      getDashboardGroups(),
+      getDeploymentLog(),
+    ]);
     return { dashboard, email: context.email, log, role: context.role };
   },
 });
@@ -61,7 +78,10 @@ function DeploymentsPage() {
   const [status, setStatus] = useState("all");
   const [type, setType] = useState<TypeFilter>("all");
 
-  const statuses = useMemo(() => [...new Set(log.map((d) => d.status))].sort(), [log]);
+  const statuses = useMemo(
+    () => [...new Set(log.map((d) => d.status))].sort(),
+    [log]
+  );
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -88,10 +108,16 @@ function DeploymentsPage() {
 
   const handleSearchChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value),
-    [],
+    []
   );
-  const handleStatusChange = useCallback((next: unknown) => setStatus(next as string), []);
-  const handleTypeChange = useCallback((next: unknown) => setType(next as TypeFilter), []);
+  const handleStatusChange = useCallback(
+    (next: unknown) => setStatus(next as string),
+    []
+  );
+  const handleTypeChange = useCallback(
+    (next: unknown) => setType(next as TypeFilter),
+    []
+  );
 
   const filtering = search.trim() !== "" || status !== "all" || type !== "all";
   const clearFilters = useCallback(() => {
@@ -115,8 +141,8 @@ function DeploymentsPage() {
             </Badge>
           </FrameTitle>
           <FrameDescription>
-            Every application and compose deployment, most recent first. Creating a service happens
-            in its environment, not here.
+            Every application and compose deployment, most recent first.
+            Creating a service happens in its environment, not here.
           </FrameDescription>
         </FrameHeader>
 
@@ -193,7 +219,9 @@ function DeploymentsPage() {
         {visible.length === 0 ? (
           <FramePanel>
             <Empty>
-              <EmptyTitle>{filtering ? "No deployments match" : "No deployments yet"}</EmptyTitle>
+              <EmptyTitle>
+                {filtering ? "No deployments match" : "No deployments yet"}
+              </EmptyTitle>
               <EmptyDescription>
                 {filtering
                   ? "No deployment matches this search and these filters."

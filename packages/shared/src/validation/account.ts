@@ -7,7 +7,12 @@ import { z } from "zod";
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
 
-export const accountRoleNameSchema = z.enum(["owner", "admin", "deployer", "viewer"]);
+export const accountRoleNameSchema = z.enum([
+  "owner",
+  "admin",
+  "deployer",
+  "viewer",
+]);
 
 /**
  * Sign-in does NOT re-apply the length policy: it only checks that something
@@ -41,7 +46,10 @@ export const adminSetupSchema = z
   .object({
     confirmPassword: z.string().min(1, "Repeat the password."),
     email: z.email(),
-    name: z.string().min(1, "Enter your name.").max(64, "Keep the name under 64 characters."),
+    name: z
+      .string()
+      .min(1, "Enter your name.")
+      .max(64, "Keep the name under 64 characters."),
     password: z
       .string()
       .min(MIN_PASSWORD_LENGTH, `At least ${MIN_PASSWORD_LENGTH} characters.`)

@@ -42,7 +42,7 @@ export function EnvVarPanel({
       setError(null);
       save.mutate(draft, { onSuccess: () => onSaved?.() });
     },
-    [onSaved, save],
+    [onSaved, save]
   );
 
   if (!vars.data) {

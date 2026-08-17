@@ -38,11 +38,19 @@ function selectBuildMethod(state: { values: { buildMethod: string } }) {
   return state.values.buildMethod;
 }
 
-function buildMethodValue(method: ServiceRow["buildMethod"]): ServiceBuildInput["buildMethod"] {
+function buildMethodValue(
+  method: ServiceRow["buildMethod"]
+): ServiceBuildInput["buildMethod"] {
   return method === "dockerfile" ? "dockerfile" : "railpack";
 }
 
-export function ServiceBuild({ canEdit, service }: { canEdit: boolean; service: ServiceRow }) {
+export function ServiceBuild({
+  canEdit,
+  service,
+}: {
+  canEdit: boolean;
+  service: ServiceRow;
+}) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -83,14 +91,21 @@ export function ServiceBuild({ canEdit, service }: { canEdit: boolean; service: 
     <Frame variant="ghost">
       <FrameHeader>
         <FrameTitle>Build type</FrameTitle>
-        <FrameDescription>How the next Deploy turns the repository into an image.</FrameDescription>
+        <FrameDescription>
+          How the next Deploy turns the repository into an image.
+        </FrameDescription>
       </FrameHeader>
       <FramePanel>
         <FieldGroup>
           <FieldSet>
             <FieldLegend variant="label">Method</FieldLegend>
             <form.AppField name="buildMethod">
-              {(f) => <f.FieldRadio disabled={!canEdit} options={[...BUILD_OPTIONS]} />}
+              {(f) => (
+                <f.FieldRadio
+                  disabled={!canEdit}
+                  options={[...BUILD_OPTIONS]}
+                />
+              )}
             </form.AppField>
           </FieldSet>
 
@@ -121,7 +136,12 @@ export function ServiceBuild({ canEdit, service }: { canEdit: boolean; service: 
 
       {canEdit ? (
         <FrameFooter className="flex-row justify-end">
-          <Button disabled={save.isPending} onClick={handleSubmit} size="sm" variant="outline">
+          <Button
+            disabled={save.isPending}
+            onClick={handleSubmit}
+            size="sm"
+            variant="outline"
+          >
             {save.isPending ? <Spinner data-icon="inline-start" /> : null}
             Save
           </Button>

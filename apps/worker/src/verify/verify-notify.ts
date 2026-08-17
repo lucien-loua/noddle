@@ -65,7 +65,11 @@ async function addChannel(opts: {
   await db
     .update(notificationChannels)
     .set({
-      urlEncrypted: encryptSecret(opts.url, appKey, secretContext.notificationChannel(id)),
+      urlEncrypted: encryptSecret(
+        opts.url,
+        appKey,
+        secretContext.notificationChannel(id)
+      ),
     })
     .where(eq(notificationChannels.id, id));
   return id;
@@ -91,7 +95,9 @@ try {
     type: "deploy_failed",
   });
   if (hits === 1) {
-    ok("a failure reaches the active channel, and only it (disabled channel ignored)");
+    ok(
+      "a failure reaches the active channel, and only it (disabled channel ignored)"
+    );
   } else {
     ko(`${hits} send(s), expected 1`);
   }
@@ -166,7 +172,11 @@ try {
   await db
     .update(notificationChannels)
     .set({
-      urlEncrypted: encryptSecret(receiver, appKey, secretContext.notificationChannel(broken)),
+      urlEncrypted: encryptSecret(
+        receiver,
+        appKey,
+        secretContext.notificationChannel(broken)
+      ),
     })
     .where(eq(notificationChannels.id, broken));
   await notify(ctx, { resource: "api", type: "deploy_failed" });

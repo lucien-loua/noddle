@@ -1,4 +1,10 @@
-import { databases, deployments, services, stackDeployments, stacks } from "@noddle/db/schema";
+import {
+  databases,
+  deployments,
+  services,
+  stackDeployments,
+  stacks,
+} from "@noddle/db/schema";
 import type { deploymentTrigger } from "@noddle/db/schema";
 import { markDeploying } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
@@ -10,7 +16,7 @@ type DeploymentTrigger = (typeof deploymentTrigger.enumValues)[number];
 
 export async function queueServiceDeploy(
   serviceId: string,
-  opts: { commitSha?: string | null; trigger: DeploymentTrigger },
+  opts: { commitSha?: string | null; trigger: DeploymentTrigger }
 ): Promise<{ deploymentId: string }> {
   const service = await db.query.services.findFirst({
     where: eq(services.id, serviceId),
@@ -32,7 +38,10 @@ export async function queueServiceDeploy(
     throw new Error("could not create deployment");
   }
 
-  await db.update(services).set(markDeploying(null)).where(eq(services.id, service.id));
+  await db
+    .update(services)
+    .set(markDeploying(null))
+    .where(eq(services.id, service.id));
 
   await enqueueDeploy({ deploymentId: created.id, kind: "deploy" });
   return { deploymentId: created.id };
@@ -40,7 +49,7 @@ export async function queueServiceDeploy(
 
 export async function queueStackDeploy(
   stackId: string,
-  opts: { commitSha?: string | null; trigger: DeploymentTrigger },
+  opts: { commitSha?: string | null; trigger: DeploymentTrigger }
 ): Promise<{ stackDeploymentId: string }> {
   const stack = await db.query.stacks.findFirst({
     where: eq(stacks.id, stackId),
@@ -62,7 +71,10 @@ export async function queueStackDeploy(
     throw new Error("could not create stack deployment");
   }
 
-  await db.update(stacks).set(markDeploying(null)).where(eq(stacks.id, stack.id));
+  await db
+    .update(stacks)
+    .set(markDeploying(null))
+    .where(eq(stacks.id, stack.id));
 
   await enqueueDeploy({ kind: "deploy-stack", stackDeploymentId: created.id });
   return { stackDeploymentId: created.id };
@@ -74,7 +86,12 @@ export async function queueStackDeploy(
  * so the grid doesn't sit on "Never deployed" while the job is already
  * in flight.
  */
-export async function queueDatabaseProvision(databaseId: string): Promise<void> {
-  await db.update(databases).set(markDeploying(null)).where(eq(databases.id, databaseId));
+export async function queueDatabaseProvision(
+  databaseId: string
+): Promise<void> {
+  await db
+    .update(databases)
+    .set(markDeploying(null))
+    .where(eq(databases.id, databaseId));
   await enqueueDeploy({ databaseId, kind: "provision-database" });
 }

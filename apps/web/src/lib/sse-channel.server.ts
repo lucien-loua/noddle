@@ -41,7 +41,7 @@ const SSE_FLUSH_PAD = `: ${" ".repeat(4096)}\n\n`;
 
 export function sseChannel(
   request: Request,
-  source: (channel: SseChannel) => SseSourceResult | Promise<SseSourceResult>,
+  source: (channel: SseChannel) => SseSourceResult | Promise<SseSourceResult>
 ): Response {
   const encoder = new TextEncoder();
 
@@ -73,7 +73,9 @@ export function sseChannel(
         }
         try {
           controller.enqueue(
-            encoder.encode(`event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`),
+            encoder.encode(
+              `event: ${message.type}\ndata: ${JSON.stringify(message)}\n\n`
+            )
           );
         } catch {
           finish();

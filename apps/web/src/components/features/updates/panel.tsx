@@ -147,8 +147,8 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
 
         {inFlight ? (
           <FrameDescription role="status">
-            Updating. The dashboard restarts partway through, so this page will stop responding for
-            a moment — it comes back on its own.
+            Updating. The dashboard restarts partway through, so this page will
+            stop responding for a moment — it comes back on its own.
           </FrameDescription>
         ) : null}
 

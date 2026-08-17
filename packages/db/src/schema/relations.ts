@@ -23,15 +23,18 @@ export const projectsRelations = relations(projects, ({ many }) => ({
   environments: many(environments),
 }));
 
-export const environmentsRelations = relations(environments, ({ one, many }) => ({
-  databases: many(databases),
-  project: one(projects, {
-    fields: [environments.projectId],
-    references: [projects.id],
-  }),
-  services: many(services),
-  stacks: many(stacks),
-}));
+export const environmentsRelations = relations(
+  environments,
+  ({ one, many }) => ({
+    databases: many(databases),
+    project: one(projects, {
+      fields: [environments.projectId],
+      references: [projects.id],
+    }),
+    services: many(services),
+    stacks: many(stacks),
+  })
+);
 
 export const serversRelations = relations(servers, ({ many }) => ({
   databases: many(databases),
@@ -104,20 +107,26 @@ export const stacksRelations = relations(stacks, ({ one, many }) => ({
   }),
 }));
 
-export const stackDeploymentsRelations = relations(stackDeployments, ({ one, many }) => ({
-  logs: many(stackDeploymentLogs),
-  stack: one(stacks, {
-    fields: [stackDeployments.stackId],
-    references: [stacks.id],
-  }),
-}));
+export const stackDeploymentsRelations = relations(
+  stackDeployments,
+  ({ one, many }) => ({
+    logs: many(stackDeploymentLogs),
+    stack: one(stacks, {
+      fields: [stackDeployments.stackId],
+      references: [stacks.id],
+    }),
+  })
+);
 
-export const stackDeploymentLogsRelations = relations(stackDeploymentLogs, ({ one }) => ({
-  deployment: one(stackDeployments, {
-    fields: [stackDeploymentLogs.stackDeploymentId],
-    references: [stackDeployments.id],
-  }),
-}));
+export const stackDeploymentLogsRelations = relations(
+  stackDeploymentLogs,
+  ({ one }) => ({
+    deployment: one(stackDeployments, {
+      fields: [stackDeploymentLogs.stackDeploymentId],
+      references: [stackDeployments.id],
+    }),
+  })
+);
 
 export const databasesRelations = relations(databases, ({ many, one }) => ({
   backupConfigs: many(backupConfigs),
@@ -132,17 +141,20 @@ export const databasesRelations = relations(databases, ({ many, one }) => ({
   }),
 }));
 
-export const backupConfigsRelations = relations(backupConfigs, ({ one, many }) => ({
-  backups: many(backups),
-  database: one(databases, {
-    fields: [backupConfigs.databaseId],
-    references: [databases.id],
-  }),
-  destination: one(s3Destinations, {
-    fields: [backupConfigs.destinationId],
-    references: [s3Destinations.id],
-  }),
-}));
+export const backupConfigsRelations = relations(
+  backupConfigs,
+  ({ one, many }) => ({
+    backups: many(backups),
+    database: one(databases, {
+      fields: [backupConfigs.databaseId],
+      references: [databases.id],
+    }),
+    destination: one(s3Destinations, {
+      fields: [backupConfigs.destinationId],
+      references: [s3Destinations.id],
+    }),
+  })
+);
 
 // The backup job needs the server that holds the volume and the engine to
 // choose its dumper: it loads the database WITH its server from this
@@ -162,17 +174,20 @@ export const backupsRelations = relations(backups, ({ one }) => ({
   }),
 }));
 
-export const volumeBackupConfigsRelations = relations(volumeBackupConfigs, ({ one, many }) => ({
-  backups: many(volumeBackups),
-  destination: one(s3Destinations, {
-    fields: [volumeBackupConfigs.destinationId],
-    references: [s3Destinations.id],
-  }),
-  service: one(services, {
-    fields: [volumeBackupConfigs.serviceId],
-    references: [services.id],
-  }),
-}));
+export const volumeBackupConfigsRelations = relations(
+  volumeBackupConfigs,
+  ({ one, many }) => ({
+    backups: many(volumeBackups),
+    destination: one(s3Destinations, {
+      fields: [volumeBackupConfigs.destinationId],
+      references: [s3Destinations.id],
+    }),
+    service: one(services, {
+      fields: [volumeBackupConfigs.serviceId],
+      references: [services.id],
+    }),
+  })
+);
 
 export const volumeBackupsRelations = relations(volumeBackups, ({ one }) => ({
   config: one(volumeBackupConfigs, {
@@ -189,36 +204,48 @@ export const volumeBackupsRelations = relations(volumeBackups, ({ one }) => ({
   }),
 }));
 
-export const gitProvidersRelations = relations(gitProviders, ({ one, many }) => ({
-  github: one(githubProviders, {
-    fields: [gitProviders.id],
-    references: [githubProviders.gitProviderId],
-  }),
-  gitlab: one(gitlabProviders, {
-    fields: [gitProviders.id],
-    references: [gitlabProviders.gitProviderId],
-  }),
-  repositoryHooks: many(gitlabRepositoryHooks),
-  services: many(services),
-}));
+export const gitProvidersRelations = relations(
+  gitProviders,
+  ({ one, many }) => ({
+    github: one(githubProviders, {
+      fields: [gitProviders.id],
+      references: [githubProviders.gitProviderId],
+    }),
+    gitlab: one(gitlabProviders, {
+      fields: [gitProviders.id],
+      references: [gitlabProviders.gitProviderId],
+    }),
+    repositoryHooks: many(gitlabRepositoryHooks),
+    services: many(services),
+  })
+);
 
-export const githubProvidersRelations = relations(githubProviders, ({ one }) => ({
-  gitProvider: one(gitProviders, {
-    fields: [githubProviders.gitProviderId],
-    references: [gitProviders.id],
-  }),
-}));
+export const githubProvidersRelations = relations(
+  githubProviders,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [githubProviders.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);
 
-export const gitlabProvidersRelations = relations(gitlabProviders, ({ one }) => ({
-  gitProvider: one(gitProviders, {
-    fields: [gitlabProviders.gitProviderId],
-    references: [gitProviders.id],
-  }),
-}));
+export const gitlabProvidersRelations = relations(
+  gitlabProviders,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [gitlabProviders.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);
 
-export const gitlabRepositoryHooksRelations = relations(gitlabRepositoryHooks, ({ one }) => ({
-  gitProvider: one(gitProviders, {
-    fields: [gitlabRepositoryHooks.gitProviderId],
-    references: [gitProviders.id],
-  }),
-}));
+export const gitlabRepositoryHooksRelations = relations(
+  gitlabRepositoryHooks,
+  ({ one }) => ({
+    gitProvider: one(gitProviders, {
+      fields: [gitlabRepositoryHooks.gitProviderId],
+      references: [gitProviders.id],
+    }),
+  })
+);

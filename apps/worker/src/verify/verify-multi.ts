@@ -17,7 +17,13 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
-import { connect, disconnect, dockerClient, exec, quoteArg } from "@noddle/ssh-executor";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  exec,
+  quoteArg,
+} from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -64,7 +70,9 @@ await db.delete(deployments);
 await db.delete(services);
 await db.delete(environments);
 await db.delete(projects);
-await db.delete(servers).where(inArray(servers.host, [MANAGER.host, WORKER.host]));
+await db
+  .delete(servers)
+  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
 
 try {
   // ── staging: both servers in the DB ─────────────────────────────────────
@@ -114,7 +122,9 @@ try {
   if (provisioned?.status === "connected" && provisioned.dockerVersion) {
     ok(`worker provisioned: Docker ${provisioned.dockerVersion}`);
   } else {
-    ko(`provisioning: status ${provisioned?.status}, error ${provisioned?.lastError ?? "—"}`);
+    ko(
+      `provisioning: status ${provisioned?.status}, error ${provisioned?.lastError ?? "—"}`
+    );
   }
 
   // Replayed: the second run must be a silent no-op, not a second
@@ -136,9 +146,13 @@ try {
   }[];
   const workerNodes = nodes.filter((n) => n.Spec?.Role === "worker");
   if (nodes.length >= 2 && workerNodes.length >= 1) {
-    ok(`cluster of ${nodes.length} nodes seen from the manager (${workerNodes.length} worker)`);
+    ok(
+      `cluster of ${nodes.length} nodes seen from the manager (${workerNodes.length} worker)`
+    );
   } else {
-    ko(`unexpected cluster: ${nodes.length} node(s), ${workerNodes.length} worker(s)`);
+    ko(
+      `unexpected cluster: ${nodes.length} node(s), ${workerNodes.length} worker(s)`
+    );
   }
 
   // ── source repo on the WORKER, not the manager ──────────────────────────
@@ -155,7 +169,7 @@ try {
         `printf '%s' '{"name":"multi","scripts":{"start":"node s.js"}}' > package.json && ` +
         `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("multi hello")).listen(p)' > s.js && ` +
         "git init -q -b main . && git config user.email e@x && git config user.name e && " +
-        "git add -A && git commit -q -m init",
+        "git add -A && git commit -q -m init"
     );
     ok("source repo created on the worker (not the manager)");
   } finally {
@@ -165,7 +179,10 @@ try {
   await removeService(managerDocker, SERVICE_NAME);
 
   // ── service pinned to the worker ────────────────────────────────────────
-  const [proj] = await db.insert(projects).values({ name: "multi" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "multi" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -221,7 +238,9 @@ try {
   if (running && workerNode && running.NodeID === workerNode.ID) {
     ok("the task runs on the WORKER NODE — the placement constraint holds");
   } else {
-    ko(`task on node ${running?.NodeID ?? "?"}, expected ${workerNode?.ID ?? "?"}`);
+    ko(
+      `task on node ${running?.NodeID ?? "?"}, expected ${workerNode?.ID ?? "?"}`
+    );
   }
 
   // ── HTTP across the overlay network, from the manager ───────────────────
@@ -238,8 +257,15 @@ try {
     // biome-ignore lint/performance/noAwaitInLoops: intentional retry; Traefik's Swarm provider polls every 15s
     const result = await execFileAsync(
       "curl",
-      ["-fsS", "--max-time", "10", "-H", `Host: ${domain}`, `http://${MANAGER.host}/`],
-      { timeout: 12_000 },
+      [
+        "-fsS",
+        "--max-time",
+        "10",
+        "-H",
+        `Host: ${domain}`,
+        `http://${MANAGER.host}/`,
+      ],
+      { timeout: 12_000 }
     ).catch(() => null);
     if (result?.stdout.trim()) {
       body = result.stdout.trim();

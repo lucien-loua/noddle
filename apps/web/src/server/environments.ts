@@ -1,4 +1,10 @@
-import { databases, environments, projects, services, stacks } from "@noddle/db/schema";
+import {
+  databases,
+  environments,
+  projects,
+  services,
+  stacks,
+} from "@noddle/db/schema";
 import {
   createEnvironmentSchema,
   duplicateEnvironmentSchema,
@@ -9,7 +15,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, eq, ne } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
-import { copyEnvironment, loadEnvironmentForDuplicate } from "@/lib/duplicate-environment.server";
+import {
+  copyEnvironment,
+  loadEnvironmentForDuplicate,
+} from "@/lib/duplicate-environment.server";
 import { assertNotDefaultEnvironment } from "@/lib/environment-guard";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
@@ -56,12 +65,16 @@ export const createEnvironment = createServerFn({ method: "POST" })
     const guarded = await runGuarded({
       // Loads the parent Project — it must exist — but the object recorded
       // is the Environment that comes out of `run`.
-      load: () => db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
+      load: () =>
+        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
       notFoundMessage: "project not found",
       permission: { action: "create", resource: "service" },
       run: async () => {
         const existing = await db.query.environments.findFirst({
-          where: and(eq(environments.projectId, data.projectId), eq(environments.name, data.name)),
+          where: and(
+            eq(environments.projectId, data.projectId),
+            eq(environments.name, data.name)
+          ),
         });
         if (existing) {
           throw new Error(`"${data.name}" already exists in this project`);
@@ -95,7 +108,7 @@ export const renameEnvironment = createServerFn({ method: "POST" })
           where: and(
             eq(environments.projectId, environment.projectId),
             eq(environments.name, data.name),
-            ne(environments.id, environment.id),
+            ne(environments.id, environment.id)
           ),
         });
         if (existing) {
@@ -109,7 +122,7 @@ export const renameEnvironment = createServerFn({ method: "POST" })
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 /**
@@ -148,15 +161,17 @@ export const deleteEnvironment = createServerFn({ method: "POST" })
         ]);
         if (service || stack || database) {
           throw new Error(
-            "this environment still has services, stacks or databases — remove them first",
+            "this environment still has services, stacks or databases — remove them first"
           );
         }
 
-        await db.delete(environments).where(eq(environments.id, environment.id));
+        await db
+          .delete(environments)
+          .where(eq(environments.id, environment.id));
         return { ok: true as const };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 /**
@@ -198,5 +213,5 @@ export const duplicateEnvironment = createServerFn({ method: "POST" })
           id: result.environmentId,
           name: result.environmentName,
         }),
-      }),
+      })
   );

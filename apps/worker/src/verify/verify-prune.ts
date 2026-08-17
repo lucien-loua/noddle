@@ -62,7 +62,12 @@ import {
   services,
 } from "@noddle/db/schema";
 import type { RegistryConfig } from "@noddle/registry";
-import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  execArgv,
+} from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -152,7 +157,16 @@ async function seedJunk(client: SshClient): Promise<void> {
   await docker(client, "tag", "alpine:3", KEPT);
 
   await docker(client, "run", "--name", DEAD_CONTAINER, ORPHAN, "true");
-  await docker(client, "run", "-d", "--name", LIVE_CONTAINER, KEPT, "sleep", "900");
+  await docker(
+    client,
+    "run",
+    "-d",
+    "--name",
+    LIVE_CONTAINER,
+    KEPT,
+    "sleep",
+    "900"
+  );
 
   // A volume WITH content: "still listed" doesn't distinguish an intact
   // volume from one recreated empty.
@@ -166,7 +180,7 @@ async function seedJunk(client: SshClient): Promise<void> {
     "alpine:3",
     "sh",
     "-c",
-    `printf '%s' '${CANARY}' > /data/canary`,
+    `printf '%s' '${CANARY}' > /data/canary`
   );
 }
 
@@ -244,7 +258,10 @@ try {
     throw new Error("server insertion failed");
   }
 
-  const [proj] = await db.insert(projects).values({ name: "prune" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "prune" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -308,15 +325,18 @@ try {
     ok("the reachable node is pruned, the dead node is flagged");
   } else {
     ko(
-      `${partial.nodes.length} node(s) pruned, ${partial.skipped.length} skipped` +
-        (partial.skipped[0] ? ` — ${partial.skipped[0].reason}` : ""),
+      `${partial.nodes.length} node(s) pruned, ${partial.skipped.length} skipped${
+        partial.skipped[0] ? ` — ${partial.skipped[0].reason}` : ""
+      }`
     );
   }
 
   if (partial.reconciledFully === false && partial.reconciled.length === 0) {
     ok("a node without a response suspends the ENTIRE reconciliation");
   } else {
-    ko(`reconciliation ran despite a silent node (${partial.reconciled.length} row(s))`);
+    ko(
+      `reconciliation ran despite a silent node (${partial.reconciled.length} row(s))`
+    );
   }
 
   // The assertion that gives the previous one meaning: the image is REALLY
@@ -349,7 +369,9 @@ try {
 
   const afterRunning = await runningContainers(ssh);
   if (afterRunning.join("\n") === beforeRunning.join("\n")) {
-    ok(`no running container moved (${afterRunning.length}, control plane included)`);
+    ok(
+      `no running container moved (${afterRunning.length}, control plane included)`
+    );
   } else {
     ko(`running containers changed: ${beforeRunning} → ${afterRunning}`);
   }
@@ -362,7 +384,7 @@ try {
     `${VOLUME}:/data`,
     "alpine:3",
     "cat",
-    "/data/canary",
+    "/data/canary"
   );
   if (canary.stdout === CANARY) {
     ok("the named volume and ITS CONTENT survive");
@@ -385,7 +407,7 @@ try {
   const [node] = partial.nodes;
   if (node && node.bytesReclaimed > 0 && node.imagesDeleted > 0) {
     ok(
-      `${node.imagesDeleted} image(s) removed, ${(node.bytesReclaimed / 1e6).toFixed(1)} MB reclaimed`,
+      `${node.imagesDeleted} image(s) removed, ${(node.bytesReclaimed / 1e6).toFixed(1)} MB reclaimed`
     );
   } else {
     ko(`prune had no effect: ${JSON.stringify(node)}`);
@@ -397,13 +419,17 @@ try {
   const disk = await db.query.serverDiskUsage.findFirst({
     where: eq(serverDiskUsage.serverId, server.id),
   });
-  if (disk && disk.imageBytes < beforeImageBytes && disk.imageCount < beforeImageCount) {
+  if (
+    disk &&
+    disk.imageBytes < beforeImageBytes &&
+    disk.imageCount < beforeImageCount
+  ) {
     ok(
-      `usage is recorded right after (${beforeImageCount} → ${disk.imageCount} images, ${(beforeImageBytes / 1e9).toFixed(2)} → ${(disk.imageBytes / 1e9).toFixed(2)} GB)`,
+      `usage is recorded right after (${beforeImageCount} → ${disk.imageCount} images, ${(beforeImageBytes / 1e9).toFixed(2)} → ${(disk.imageBytes / 1e9).toFixed(2)} GB)`
     );
   } else {
     ko(
-      `no reading after the prune, or no decrease (${disk?.imageCount}/${disk?.imageBytes} vs ${beforeImageCount}/${beforeImageBytes})`,
+      `no reading after the prune, or no decrease (${disk?.imageCount}/${disk?.imageBytes} vs ${beforeImageCount}/${beforeImageBytes})`
     );
   }
 
@@ -465,7 +491,9 @@ try {
   if (clean.length === 2 && latest && latest.imageReclaimableBytes === 0) {
     ok("a machine with nothing to reclaim still produces a reading");
   } else {
-    ko(`${clean.length} reading(s), reclaimable images = ${latest?.imageReclaimableBytes}`);
+    ko(
+      `${clean.length} reading(s), reclaimable images = ${latest?.imageReclaimableBytes}`
+    );
   }
 } catch (error) {
   ko(`exception: ${error instanceof Error ? error.message : String(error)}`);

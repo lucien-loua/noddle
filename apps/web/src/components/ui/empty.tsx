@@ -11,7 +11,7 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
         // thickness. Without `border`, the three screens that used this
         // component displayed a floating title with no frame.
         "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed p-12 text-center text-balance",
-        className,
+        className
       )}
       data-slot="empty"
       {...props}
@@ -41,7 +41,7 @@ const emptyMediaVariants = cva(
         icon: "flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground [&_svg:not([class*='size-'])]:size-5",
       },
     },
-  },
+  }
 );
 
 function EmptyMedia({
@@ -62,7 +62,10 @@ function EmptyMedia({
 function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("font-heading font-medium text-lg tracking-tight", className)}
+      className={cn(
+        "font-heading font-medium text-lg tracking-tight",
+        className
+      )}
       data-slot="empty-title"
       {...props}
     />
@@ -74,7 +77,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
     <div
       className={cn(
         "text-muted-foreground text-sm/relaxed [&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4",
-        className,
+        className
       )}
       data-slot="empty-description"
       {...props}
@@ -87,7 +90,7 @@ function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       className={cn(
         "flex w-full min-w-0 max-w-sm flex-col items-center gap-4 text-balance text-sm",
-        className,
+        className
       )}
       data-slot="empty-content"
       {...props}
@@ -95,4 +98,11 @@ function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle };
+export {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+};

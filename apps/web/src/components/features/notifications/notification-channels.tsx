@@ -40,7 +40,12 @@ import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
-import { addChannel, deleteChannel, testChannel, updateChannel } from "@/server/notifications";
+import {
+  addChannel,
+  deleteChannel,
+  testChannel,
+  updateChannel,
+} from "@/server/notifications";
 import type { ChannelRow } from "@/server/notifications";
 
 const KINDS: { label: string; value: ChannelRow["kind"] }[] = [
@@ -70,7 +75,11 @@ export function NotificationChannels({
 }) {
   const known = role && role in roles ? (role as RoleName) : null;
   const canManage = useCan(known, "notification", "manage");
-  const { data: rows, isEmpty, refresh } = useResourceList(queries.channels, initial);
+  const {
+    data: rows,
+    isEmpty,
+    refresh,
+  } = useResourceList(queries.channels, initial);
 
   const handleOpen = useCallback(() => onOpenChange(true), [onOpenChange]);
 
@@ -81,7 +90,11 @@ export function NotificationChannels({
           other would compete — on top of pushing the empty state off
           screen. */}
       {canManage ? (
-        <AddChannelDialog onDone={refresh} onOpenChange={onOpenChange} open={open} />
+        <AddChannelDialog
+          onDone={refresh}
+          onOpenChange={onOpenChange}
+          open={open}
+        />
       ) : null}
 
       <SettingsList isEmpty={isEmpty}>
@@ -94,8 +107,8 @@ export function NotificationChannels({
           <SettingsList.EmptyHeader>
             <SettingsList.EmptyTitle>No channels</SettingsList.EmptyTitle>
             <SettingsList.EmptyDescription>
-              Without a channel, a deploy reverted by the watch is only visible if someone opens the
-              dashboard.
+              Without a channel, a deploy reverted by the watch is only visible
+              if someone opens the dashboard.
             </SettingsList.EmptyDescription>
           </SettingsList.EmptyHeader>
           {canManage ? (
@@ -107,8 +120,8 @@ export function NotificationChannels({
 
         <SettingsList.Body>
           <p className="mb-4 text-muted-foreground text-sm">
-            Noddle alerts you when a deploy fails, when the watch takes over, or when a backup
-            breaks.
+            Noddle alerts you when a deploy fails, when the watch takes over, or
+            when a backup breaks.
           </p>
           <ItemGroup>
             {rows.map((channel) => (
@@ -168,7 +181,9 @@ function ChannelLine({
           {channel.name}
           <Badge variant="outline">{KIND_LABEL[channel.kind]}</Badge>
           {channel.enabled ? null : <Badge variant="outline">muted</Badge>}
-          {channel.notifySuccess ? <Badge variant="outline">success included</Badge> : null}
+          {channel.notifySuccess ? (
+            <Badge variant="outline">success included</Badge>
+          ) : null}
         </ItemTitle>
         <ItemDescription>
           <ChannelState channel={channel} />
@@ -177,14 +192,29 @@ function ChannelLine({
 
       {canManage ? (
         <ItemActions>
-          <Button disabled={test.isPending} onClick={handleTest} size="sm" variant="outline">
+          <Button
+            disabled={test.isPending}
+            onClick={handleTest}
+            size="sm"
+            variant="outline"
+          >
             {test.isPending ? <Spinner /> : null}
             Test
           </Button>
-          <Button disabled={toggle.isPending} onClick={handleToggle} size="sm" variant="outline">
+          <Button
+            disabled={toggle.isPending}
+            onClick={handleToggle}
+            size="sm"
+            variant="outline"
+          >
             {channel.enabled ? "Mute" : "Unmute"}
           </Button>
-          <Button disabled={remove.isPending} onClick={handleRemove} size="sm" variant="ghost">
+          <Button
+            disabled={remove.isPending}
+            onClick={handleRemove}
+            size="sm"
+            variant="ghost"
+          >
             Delete
           </Button>
         </ItemActions>
@@ -203,7 +233,11 @@ function ChannelLine({
  */
 function ChannelState({ channel }: { channel: ChannelRow }) {
   if (channel.lastError) {
-    return <span className="truncate text-destructive text-xs">Failing — {channel.lastError}</span>;
+    return (
+      <span className="truncate text-destructive text-xs">
+        Failing — {channel.lastError}
+      </span>
+    );
   }
   if (channel.lastSuccessAt) {
     return (
@@ -268,7 +302,7 @@ function AddChannelDialog({
       event.preventDefault();
       form.handleSubmit();
     },
-    [form],
+    [form]
   );
 
   return (
@@ -278,8 +312,8 @@ function AddChannelDialog({
           <DialogHeader>
             <DialogTitle>Add a channel</DialogTitle>
             <DialogDescription>
-              The URL is encrypted at rest and never shown again — whoever holds it can post in the
-              channel.
+              The URL is encrypted at rest and never shown again — whoever holds
+              it can post in the channel.
             </DialogDescription>
           </DialogHeader>
 
@@ -296,7 +330,11 @@ function AddChannelDialog({
                     {/* `role="radiogroup"`: three plain buttons told no one
                         that they were mutually exclusive, nor which one was
                         selected. */}
-                    <div aria-labelledby="kindLabel" className="flex gap-1" role="radiogroup">
+                    <div
+                      aria-labelledby="kindLabel"
+                      className="flex gap-1"
+                      role="radiogroup"
+                    >
                       {KINDS.map((option) => (
                         <KindButton
                           active={field.state.value === option.value}
@@ -343,9 +381,14 @@ function AddChannelDialog({
                       // `checked` can be `"indeterminate"`; the field only
                       // knows about the boolean.
                       // biome-ignore lint/performance/noJsxPropsBind: adapts the type of `onCheckedChange` to the field
-                      onCheckedChange={(checked) => field.handleChange(checked === true)}
+                      onCheckedChange={(checked) =>
+                        field.handleChange(checked === true)
+                      }
                     />
-                    <Label className="font-normal text-sm" htmlFor="notifySuccess">
+                    <Label
+                      className="font-normal text-sm"
+                      htmlFor="notifySuccess"
+                    >
                       Also notify on successful deploys
                     </Label>
                   </div>
@@ -354,7 +397,9 @@ function AddChannelDialog({
 
               {add.isError ? (
                 <Alert variant="destructive">
-                  <AlertDescription>{errorMessage(add.error, "channel rejected")}</AlertDescription>
+                  <AlertDescription>
+                    {errorMessage(add.error, "channel rejected")}
+                  </AlertDescription>
                 </Alert>
               ) : null}
             </FieldGroup>

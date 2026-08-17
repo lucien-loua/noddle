@@ -51,7 +51,7 @@ let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 /** What SWARM says, not what our DB says. */
 async function swarmState(
   docker: ReturnType<typeof dockerClient>,
-  name: string,
+  name: string
 ): Promise<{ replicas: number | null; taskIds: string[] }> {
   const list = (await docker.listServices({
     filters: JSON.stringify({ name: [name] }),
@@ -64,7 +64,9 @@ async function swarmState(
   })) as unknown as { ID?: string; Status?: { State?: string } }[];
   return {
     replicas: found?.Spec?.Mode?.Replicated?.Replicas ?? null,
-    taskIds: tasks.filter((t) => t.Status?.State === "running").map((t) => t.ID ?? ""),
+    taskIds: tasks
+      .filter((t) => t.Status?.State === "running")
+      .map((t) => t.ID ?? ""),
   };
 }
 
@@ -73,7 +75,7 @@ async function waitForRunningTasks(
   docker: ReturnType<typeof dockerClient>,
   name: string,
   target: number,
-  seconds = 90,
+  seconds = 90
 ): Promise<string[]> {
   const deadline = Date.now() + seconds * 1000;
   let last: string[] = [];
@@ -104,7 +106,7 @@ try {
       `printf '%s' '{"name":"l","scripts":{"start":"node s.js"}}' > package.json && ` +
       `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("lifecycle")).listen(p)' > s.js && ` +
       "git init -q -b main . 2>/dev/null; git config user.email e@x && git config user.name e && " +
-      "git add -A && git commit -q -m v1",
+      "git add -A && git commit -q -m v1"
   );
 
   await db.delete(deployments);
@@ -129,7 +131,10 @@ try {
     throw new Error("server insert failed");
   }
 
-  const [proj] = await db.insert(projects).values({ name: "lifecycle" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "lifecycle" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -250,7 +255,9 @@ try {
   if (after === before) {
     ko("the task is the SAME — restart recreated nothing");
   } else {
-    ok(`restarted: task changed (${before.slice(0, 10)} → ${after.slice(0, 10)})`);
+    ok(
+      `restarted: task changed (${before.slice(0, 10)} → ${after.slice(0, 10)})`
+    );
   }
 
   const afterRestart = await db.query.services.findFirst({

@@ -78,7 +78,10 @@ function summarize(event: NotificationEvent): string {
  * `webhook` gets Noddle's raw form, the one that wires up to something
  * else: structured, not formatted for display.
  */
-export function buildPayload(kind: NotificationKind, event: NotificationEvent): unknown {
+export function buildPayload(
+  kind: NotificationKind,
+  event: NotificationEvent
+): unknown {
   const failure = isFailure(event.type);
 
   if (kind === "discord") {
@@ -87,7 +90,9 @@ export function buildPayload(kind: NotificationKind, event: NotificationEvent): 
         {
           color: failure ? COLOR_FAILURE : COLOR_SUCCESS,
           description: event.detail ?? undefined,
-          fields: event.url ? [{ inline: false, name: "Dashboard", value: event.url }] : undefined,
+          fields: event.url
+            ? [{ inline: false, name: "Dashboard", value: event.url }]
+            : undefined,
           title: `${LABELS[event.type]} — ${event.resource}`,
         },
       ],
@@ -123,7 +128,7 @@ export function buildPayload(kind: NotificationKind, event: NotificationEvent): 
  */
 export async function deliver(
   target: NotificationTarget,
-  event: NotificationEvent,
+  event: NotificationEvent
 ): Promise<DeliveryResult> {
   const body = JSON.stringify(buildPayload(target.kind, event));
 

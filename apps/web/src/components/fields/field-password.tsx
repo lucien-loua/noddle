@@ -13,7 +13,13 @@ import {
 
 type PasswordFieldProps = Omit<
   ComponentProps<typeof InputGroupInput>,
-  "aria-describedby" | "aria-invalid" | "id" | "onChange" | "required" | "type" | "value"
+  | "aria-describedby"
+  | "aria-invalid"
+  | "id"
+  | "onChange"
+  | "required"
+  | "type"
+  | "value"
 > & {
   addonStart?: ReactNode;
   /** Placed AFTER the eye, in the same `InputGroupAddon` — a "regenerate"
@@ -42,7 +48,7 @@ export function FieldPassword({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value),
-    [field],
+    [field]
   );
   const handleReveal = useCallback(() => setRevealed((v) => !v), []);
 
@@ -57,7 +63,9 @@ export function FieldPassword({
       required={required}
     >
       <InputGroup>
-        {addonStart ? <InputGroupAddon align="inline-start">{addonStart}</InputGroupAddon> : null}
+        {addonStart ? (
+          <InputGroupAddon align="inline-start">{addonStart}</InputGroupAddon>
+        ) : null}
         <InputGroupInput
           aria-describedby={invalid ? errorId : undefined}
           aria-invalid={invalid}

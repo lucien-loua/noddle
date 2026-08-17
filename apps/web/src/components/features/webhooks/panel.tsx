@@ -30,7 +30,12 @@ interface Props {
 
 const origin = typeof window === "undefined" ? "" : window.location.origin;
 
-export function WebhookPanel({ canManage, generateWebhook, getWebhook, queryKey }: Props) {
+export function WebhookPanel({
+  canManage,
+  generateWebhook,
+  getWebhook,
+  queryKey,
+}: Props) {
   const queryClient = useQueryClient();
   const status = useQuery({ queryFn: getWebhook, queryKey });
 
@@ -70,7 +75,8 @@ export function WebhookPanel({ canManage, generateWebhook, getWebhook, queryKey 
             />
             {status.data?.configured ? null : (
               <FieldDescription>
-                Generate a webhook URL to deploy automatically on every GitHub or GitLab push.
+                Generate a webhook URL to deploy automatically on every GitHub
+                or GitLab push.
               </FieldDescription>
             )}
           </Field>
@@ -108,7 +114,12 @@ function WebhookManageButton({
   }
 
   return (
-    <InputGroupButton disabled={generatePending} onClick={onGenerate} size="xs" variant="outline">
+    <InputGroupButton
+      disabled={generatePending}
+      onClick={onGenerate}
+      size="xs"
+      variant="outline"
+    >
       {generatePending ? <Spinner data-icon="inline-start" /> : null}
       Generate
     </InputGroupButton>

@@ -25,7 +25,8 @@ await runVerify("service source type", () => {
     const p = gitSourcePatch(forge, connected, { buildMethod: "railpack" });
     check(
       `${forge} keeps the connection and the forge's repository name`,
-      p.gitProviderId === connected.gitProviderId && p.gitRepoFullName === "group/sub/app",
+      p.gitProviderId === connected.gitProviderId &&
+        p.gitRepoFullName === "group/sub/app"
     );
     check(`${forge} records its own source type`, p.sourceType === forge);
   }
@@ -35,25 +36,27 @@ await runVerify("service source type", () => {
   check(
     "the git tab drops the connection",
     byUrl.gitProviderId === null,
-    "a service would keep cloning through a forge the screen no longer shows",
+    "a service would keep cloning through a forge the screen no longer shows"
   );
   check(
     "the git tab drops the forge's repository name with it",
     byUrl.gitRepoFullName === null,
-    "a stale name would match another repository's pushes",
+    "a stale name would match another repository's pushes"
   );
   check("the git tab keeps the URL the user typed", byUrl.gitRepoUrl !== null);
 
   // Coming back from the Docker tab.
   check(
     "an image build method is reset when a git source is saved",
-    gitSourcePatch("git", connected, { buildMethod: "image" }).buildMethod === "railpack",
-    "the service would deploy a git source as though it were a published image",
+    gitSourcePatch("git", connected, { buildMethod: "image" }).buildMethod ===
+      "railpack",
+    "the service would deploy a git source as though it were a published image"
   );
   for (const buildMethod of ["railpack", "dockerfile"] as const) {
     check(
       `${buildMethod} is left alone`,
-      gitSourcePatch("git", connected, { buildMethod }).buildMethod === undefined,
+      gitSourcePatch("git", connected, { buildMethod }).buildMethod ===
+        undefined
     );
   }
 
@@ -62,10 +65,10 @@ await runVerify("service source type", () => {
     "the docker tab forces the image method and source type",
     docker.buildMethod === "image" &&
       docker.sourceType === "docker_image" &&
-      docker.dockerImage === "nginx:alpine",
+      docker.dockerImage === "nginx:alpine"
   );
   check(
     "the docker tab writes nothing about a git source",
-    docker.gitRepoUrl === undefined && docker.gitProviderId === undefined,
+    docker.gitRepoUrl === undefined && docker.gitProviderId === undefined
   );
 });

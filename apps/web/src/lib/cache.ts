@@ -8,13 +8,17 @@
  */
 import type { QueryClient } from "@tanstack/react-query";
 
-import { databaseBackupSubject, volumeBackupSubject } from "@/lib/backup-subject";
+import {
+  databaseBackupSubject,
+  volumeBackupSubject,
+} from "@/lib/backup-subject";
 import type { BackupSubject } from "@/lib/backup-subject";
 import { queries } from "@/lib/queries";
 import type { EnvVarTarget } from "@/server/env-vars";
 
 export const cache = {
-  accounts: (qc: QueryClient) => qc.invalidateQueries({ queryKey: queries.accounts().queryKey }),
+  accounts: (qc: QueryClient) =>
+    qc.invalidateQueries({ queryKey: queries.accounts().queryKey }),
 
   /** Prefer `backupConfigsFor` — subject is the stable invalidation key. */
   backupConfigs: (qc: QueryClient, databaseId: string) =>
@@ -34,7 +38,8 @@ export const cache = {
   backups: (qc: QueryClient, databaseId: string, configId: string) =>
     cache.backupRunsFor(qc, databaseBackupSubject(databaseId), configId),
 
-  channels: (qc: QueryClient) => qc.invalidateQueries({ queryKey: queries.channels().queryKey }),
+  channels: (qc: QueryClient) =>
+    qc.invalidateQueries({ queryKey: queries.channels().queryKey }),
 
   database: (qc: QueryClient, databaseId: string) =>
     qc.invalidateQueries({
@@ -47,7 +52,11 @@ export const cache = {
   envVars: (qc: QueryClient, target: EnvVarTarget) =>
     qc.invalidateQueries({ queryKey: queries.envVars(target).queryKey }),
 
-  environmentScope: (qc: QueryClient, projectId: string, environmentId: string) =>
+  environmentScope: (
+    qc: QueryClient,
+    projectId: string,
+    environmentId: string
+  ) =>
     qc.invalidateQueries({
       queryKey: queries.environmentScope(projectId, environmentId).queryKey,
     }),
@@ -58,14 +67,16 @@ export const cache = {
   registryOptions: (qc: QueryClient) =>
     qc.invalidateQueries({ queryKey: queries.registryOptions().queryKey }),
 
-  servers: (qc: QueryClient) => qc.invalidateQueries({ queryKey: queries.servers().queryKey }),
+  servers: (qc: QueryClient) =>
+    qc.invalidateQueries({ queryKey: queries.servers().queryKey }),
 
   service: (qc: QueryClient, serviceId: string) =>
     qc.invalidateQueries({
       queryKey: queries.service(serviceId).queryKey,
     }),
 
-  sshKeys: (qc: QueryClient) => qc.invalidateQueries({ queryKey: queries.sshKeys().queryKey }),
+  sshKeys: (qc: QueryClient) =>
+    qc.invalidateQueries({ queryKey: queries.sshKeys().queryKey }),
 
   /** Prefer `backupConfigsFor` with a volume `BackupSubject`. */
   volumeBackupConfigs: (qc: QueryClient, serviceId: string) =>

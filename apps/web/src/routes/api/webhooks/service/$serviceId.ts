@@ -28,7 +28,7 @@ function serviceTarget(serviceId: string) {
     const secret = decryptSecret(
       service.webhookSecretEncrypted,
       env.appKey,
-      secretContext.webhookSecret(serviceId),
+      secretContext.webhookSecret(serviceId)
     );
     if (!verifyWebhookSignature(request.headers, rawBody, secret)) {
       return { refused: { message: "invalid signature", status: 401 } };

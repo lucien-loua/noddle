@@ -20,7 +20,12 @@ import {
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
-import { connect, disconnect, dockerClient, execArgv } from "@noddle/ssh-executor";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  execArgv,
+} from "@noddle/ssh-executor";
 import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
@@ -59,7 +64,12 @@ const ko = (m: string) => {
 const appKey = randomBytes(32);
 const db = createDatabase({ url: DB_URL });
 const { privateKey } = TARGET;
-const sshKeyId = await seedSshKey(db, appKey, "verify-backup-schedule", privateKey);
+const sshKeyId = await seedSshKey(
+  db,
+  appKey,
+  "verify-backup-schedule",
+  privateKey
+);
 
 let ssh: Awaited<ReturnType<typeof connect>> | undefined;
 
@@ -127,7 +137,7 @@ try {
       secretAccessKeyEncrypted: encryptSecret(
         S3_SECRET,
         appKey,
-        secretContext.backupDestination(dest.id),
+        secretContext.backupDestination(dest.id)
       ),
     })
     .where(eq(s3Destinations.id, dest.id));
@@ -143,7 +153,10 @@ try {
     `for i in $(seq 1 20); do docker volume rm ${legacyDatabaseServiceName(NAME)} >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0`,
   ]);
 
-  const [proj] = await db.insert(projects).values({ name: "planif-probe" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "planif-probe" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -175,7 +188,7 @@ try {
       rootPasswordEncrypted: encryptSecret(
         randomBytes(24).toString("hex"),
         appKey,
-        secretContext.databasePassword(database.id),
+        secretContext.databasePassword(database.id)
       ),
     })
     .where(eq(databases.id, database.id));
@@ -328,7 +341,10 @@ try {
   }
 } finally {
   if (ssh) {
-    await removeService(dockerClient(ssh), legacyDatabaseServiceName(NAME)).catch(() => {
+    await removeService(
+      dockerClient(ssh),
+      legacyDatabaseServiceName(NAME)
+    ).catch(() => {
       // cleanup must not mask a real failure
     });
     disconnect(ssh);

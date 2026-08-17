@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { environmentNameSchema, projectNameSchema } from "./project.ts";
-import { domainSchema, gitBranchSchema, gitRepoUrlSchema, serviceNameSchema } from "./service.ts";
+import {
+  domainSchema,
+  gitBranchSchema,
+  gitRepoUrlSchema,
+  serviceNameSchema,
+} from "./service.ts";
 
 /** Same constraint as a compose service name on the worker side: what
  *  follows becomes `${stackName}_${key}` as a Swarm service name. */
@@ -15,7 +20,10 @@ const composeFilePathSchema = z
   .string()
   .min(1)
   .max(255)
-  .regex(/^(?!\/)(?!.*\.\.)[\w./-]+$/, "expected a relative path, without escaping the repository")
+  .regex(
+    /^(?!\/)(?!.*\.\.)[\w./-]+$/,
+    "expected a relative path, without escaping the repository"
+  )
   .default("docker-compose.yml");
 
 /**
@@ -47,7 +55,7 @@ export const connectStackSchema = connectStackBaseSchema.refine(
   {
     message: "a port is required to expose a service",
     path: ["port"],
-  },
+  }
 );
 
 export type ConnectStackInput = z.infer<typeof connectStackSchema>;

@@ -6,7 +6,7 @@ type DetailTabNavigate = (opts: NavigateOptions) => Promise<void> | void;
 export function useDetailTabChange<T extends string>(
   navigate: DetailTabNavigate,
   defaultTab: T,
-  opts?: { preserveSearch?: boolean },
+  opts?: { preserveSearch?: boolean }
 ) {
   return useCallback(
     (value: string) => {
@@ -23,6 +23,6 @@ export function useDetailTabChange<T extends string>(
         search: { tab } as NavigateOptions["search"],
       });
     },
-    [defaultTab, navigate, opts?.preserveSearch],
+    [defaultTab, navigate, opts?.preserveSearch]
   );
 }

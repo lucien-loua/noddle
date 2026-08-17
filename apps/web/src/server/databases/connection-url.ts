@@ -9,7 +9,7 @@ export function connectionString(
   password: string,
   rootUser: string | null,
   databaseName: string | null,
-  portOverride?: number,
+  portOverride?: number
 ): string {
   return connectionUrlFor(engine, {
     databaseName,
@@ -25,7 +25,7 @@ export function maskedConnectionString(
   host: string,
   rootUser: string | null,
   databaseName: string | null,
-  portOverride?: number,
+  portOverride?: number
 ): string {
   return connectionUrlFor(engine, {
     databaseName,

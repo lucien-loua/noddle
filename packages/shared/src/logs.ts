@@ -63,7 +63,12 @@ export function decodeLogMessage(raw: string): LogMessage | null {
 }
 
 /** Statuses after which no more lines will arrive. */
-const TERMINAL_STATUSES = new Set(["succeeded", "failed", "rolled_back", "reverted_by_watch"]);
+const TERMINAL_STATUSES = new Set([
+  "succeeded",
+  "failed",
+  "rolled_back",
+  "reverted_by_watch",
+]);
 
 export function isTerminalStatus(status: string): boolean {
   return TERMINAL_STATUSES.has(status);

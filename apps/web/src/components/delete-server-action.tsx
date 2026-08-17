@@ -25,7 +25,8 @@ export function DeleteServerAction({
   const [open, setOpen] = useState(false);
 
   const remove = useMutation({
-    mutationFn: (confirmName: string) => deleteServer({ data: { confirmName, serverId } }),
+    mutationFn: (confirmName: string) =>
+      deleteServer({ data: { confirmName, serverId } }),
     onError: (e: Error) => {
       setOpen(false);
       onError(errorMessage(e, "removal failed"));
@@ -34,7 +35,10 @@ export function DeleteServerAction({
   });
 
   const handleOpen = useCallback(() => setOpen(true), []);
-  const handleConfirm = useCallback((typed: string) => remove.mutate(typed), [remove]);
+  const handleConfirm = useCallback(
+    (typed: string) => remove.mutate(typed),
+    [remove]
+  );
 
   if (!canDelete) {
     return null;
@@ -50,9 +54,9 @@ export function DeleteServerAction({
         confirmLabel="Remove server"
         description={
           <>
-            The machine leaves the Swarm cluster and Noddle forgets it. Refused if it is the Swarm
-            manager, or still hosts a service, a stack or a database.{" "}
-            <strong>This cannot be undone.</strong>
+            The machine leaves the Swarm cluster and Noddle forgets it. Refused
+            if it is the Swarm manager, or still hosts a service, a stack or a
+            database. <strong>This cannot be undone.</strong>
           </>
         }
         onConfirm={handleConfirm}

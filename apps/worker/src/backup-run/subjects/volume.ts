@@ -20,7 +20,7 @@ export const ALPINE_IMAGE = "alpine:3";
 export function assertSafeVolumeName(value: string): void {
   if (!SAFE_VOLUME_NAME.test(value)) {
     throw new Error(
-      `volume name is not safe for shell use: "${value}" — letters, digits, underscore, dot and hyphen only`,
+      `volume name is not safe for shell use: "${value}" — letters, digits, underscore, dot and hyphen only`
     );
   }
 }
@@ -35,31 +35,41 @@ export function resolveVolumeName(backup: {
     backup.config?.volumeName ||
     parseVolumeNameFromObjectKey(backup.objectKey);
   if (!name) {
-    throw new Error("volume name is missing on this backup row — cannot resolve Docker volume");
+    throw new Error(
+      "volume name is missing on this backup row — cannot resolve Docker volume"
+    );
   }
   return name;
 }
 
 export async function ensureAlpineImage(client: SshClient): Promise<void> {
-  const inspect = await exec(client, `docker image inspect ${quoteArg(ALPINE_IMAGE)}`);
+  const inspect = await exec(
+    client,
+    `docker image inspect ${quoteArg(ALPINE_IMAGE)}`
+  );
   if (inspect.code === 0) {
     return;
   }
   const pull = await exec(client, `docker pull ${quoteArg(ALPINE_IMAGE)}`);
   if (pull.code !== 0) {
-    throw new Error(`could not pull ${ALPINE_IMAGE} on this server: ${pull.stderr.slice(0, 500)}`);
+    throw new Error(
+      `could not pull ${ALPINE_IMAGE} on this server: ${pull.stderr.slice(0, 500)}`
+    );
   }
 }
 
-async function ensureVolumeExists(client: SshClient, volumeName: string): Promise<void> {
+async function ensureVolumeExists(
+  client: SshClient,
+  volumeName: string
+): Promise<void> {
   const { code, stderr } = await execStream(
     client,
     `docker volume inspect ${quoteArg(volumeName)}`,
-    async () => {},
+    async () => {}
   );
   if (code !== 0) {
     throw new Error(
-      `docker volume ${volumeName} not found on this server: ${stderr.slice(0, 300)}`,
+      `docker volume ${volumeName} not found on this server: ${stderr.slice(0, 300)}`
     );
   }
 }
@@ -167,7 +177,7 @@ export const volumeSweepSubject: BackupSweepSubject<VolumeConfig> = {
     const row = await ctx.db.query.volumeBackups.findFirst({
       where: and(
         eq(volumeBackups.configId, configId),
-        inArray(volumeBackups.status, ["queued", "running"]),
+        inArray(volumeBackups.status, ["queued", "running"])
       ),
     });
     return row !== undefined;
@@ -175,7 +185,10 @@ export const volumeSweepSubject: BackupSweepSubject<VolumeConfig> = {
   findLastCompletedAt: async (ctx, configId) => {
     const last = await ctx.db.query.volumeBackups.findFirst({
       orderBy: desc(volumeBackups.createdAt),
-      where: and(eq(volumeBackups.configId, configId), eq(volumeBackups.status, "completed")),
+      where: and(
+        eq(volumeBackups.configId, configId),
+        eq(volumeBackups.status, "completed")
+      ),
     });
     return last?.createdAt ?? null;
   },
@@ -190,7 +203,7 @@ export const volumeSweepSubject: BackupSweepSubject<VolumeConfig> = {
           resolved,
           service: config.service,
           volumeName: config.volumeName,
-        }),
+        })
       )
       .returning();
     return created ?? null;
@@ -210,7 +223,10 @@ export const volumePruneSubject: BackupPruneSubject = {
   findExcessRuns: async (ctx, configId, keepLatestCount) => {
     const kept = await ctx.db.query.volumeBackups.findMany({
       orderBy: desc(volumeBackups.createdAt),
-      where: and(eq(volumeBackups.configId, configId), eq(volumeBackups.status, "completed")),
+      where: and(
+        eq(volumeBackups.configId, configId),
+        eq(volumeBackups.status, "completed")
+      ),
     });
     return kept.slice(keepLatestCount);
   },
@@ -243,19 +259,21 @@ export const volumeRecoverSubject: BackupRecoverSubject = {
 
 export async function sweepVolumeBackupConfigs(
   ctx: DeployContext,
-  enqueue: (volumeBackupId: string) => Promise<unknown>,
+  enqueue: (volumeBackupId: string) => Promise<unknown>
 ) {
   return await sweepBackupConfigs(volumeSweepSubject, ctx, enqueue);
 }
 
 export async function pruneVolumeBackups(
   ctx: DeployContext,
-  opts: { configId: string | null; serviceId: string },
+  opts: { configId: string | null; serviceId: string }
 ) {
   return await pruneBackupRuns(volumePruneSubject, ctx, opts);
 }
 
-export async function recoverStaleVolumeBackups(ctx: DeployContext): Promise<number> {
+export async function recoverStaleVolumeBackups(
+  ctx: DeployContext
+): Promise<number> {
   const { recoverStaleBackupRuns } = await import("#backup-run/recover");
   return await recoverStaleBackupRuns(volumeRecoverSubject, ctx);
 }

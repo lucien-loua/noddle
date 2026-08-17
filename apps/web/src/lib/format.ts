@@ -85,7 +85,10 @@ export function byteSize(bytes: number, base: 1000 | 1024 = 1024): string {
     return "—";
   }
   const units = base === 1000 ? DECIMAL_UNITS : BINARY_UNITS;
-  const exp = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+  const exp = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(base)),
+    units.length - 1
+  );
   const value = bytes / base ** exp;
   return `${value.toFixed(exp === 0 ? 0 : 1)} ${units[exp]}`;
 }
@@ -99,7 +102,9 @@ export function serviceLabel(status: string): { label: string; tone: Tone } {
 }
 
 /** A status's tone, translated into a `Badge` variant. */
-export function badgeVariant(tone: Tone): "destructive" | "outline" | "secondary" {
+export function badgeVariant(
+  tone: Tone
+): "destructive" | "outline" | "secondary" {
   if (tone === "danger") {
     return "destructive";
   }
@@ -180,7 +185,9 @@ export function duration(startIso: string, endIso: string | null): string {
   if (!endIso) {
     return "—";
   }
-  const seconds = Math.round((Date.parse(endIso) - Date.parse(startIso)) / 1000);
+  const seconds = Math.round(
+    (Date.parse(endIso) - Date.parse(startIso)) / 1000
+  );
   if (seconds < MINUTE) {
     return `${seconds}s`;
   }
@@ -210,7 +217,9 @@ export function errorMessage(err: unknown, fallback: string): string {
   }
   try {
     const issues = JSON.parse(raw) as { message?: string }[];
-    const messages = issues.map((i) => i.message).filter((m): m is string => Boolean(m));
+    const messages = issues
+      .map((i) => i.message)
+      .filter((m): m is string => Boolean(m));
     return messages.length > 0 ? messages.join(" · ") : fallback;
   } catch {
     // A message that starts with `[` without being JSON: we return it as-is

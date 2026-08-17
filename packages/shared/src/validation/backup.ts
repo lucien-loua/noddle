@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { HTTP_OR_HTTPS_URL, LEADING_SLASHES, TRAILING_SLASHES } from "./common.ts";
+import {
+  HTTP_OR_HTTPS_URL,
+  LEADING_SLASHES,
+  TRAILING_SLASHES,
+} from "./common.ts";
 
 /**
  * AWS's rules, not ours: 3 to 63 characters, lowercase, digits, dots and
@@ -14,7 +18,7 @@ export const bucketNameSchema = z
   .max(63, "Keep the bucket name under 63 characters.")
   .regex(
     /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/,
-    "Lowercase letters, digits, dots and dashes; start and end alphanumeric.",
+    "Lowercase letters, digits, dots and dashes; start and end alphanumeric."
   );
 
 /**
@@ -28,7 +32,9 @@ export const objectPrefixSchema = z
   .max(256, "Keep the prefix under 256 characters.")
   .regex(/^[a-zA-Z0-9!\-_.*'()/]*$/, "only characters safe for an S3 key")
   .refine((v) => !v.includes(".."), "`..` is not allowed in a prefix")
-  .transform((v) => v.replace(LEADING_SLASHES, "").replace(TRAILING_SLASHES, ""));
+  .transform((v) =>
+    v.replace(LEADING_SLASHES, "").replace(TRAILING_SLASHES, "")
+  );
 
 /**
  * Wire format for an S3 destination (create or update).
@@ -50,7 +56,10 @@ export const s3DestinationSchema = z.object({
     .string()
     .min(1, "Enter the S3 service URL.")
     .max(512, "Keep the endpoint under 512 characters.")
-    .refine((v) => HTTP_OR_HTTPS_URL.test(v), "Enter an http:// or https:// URL."),
+    .refine(
+      (v) => HTTP_OR_HTTPS_URL.test(v),
+      "Enter an http:// or https:// URL."
+    ),
   // True everywhere except on Amazon's own S3: `bucket.host` doesn't
   // resolve for RustFS, MinIO or an instance reached by IP.
   forcePathStyle: z.boolean().default(true),
@@ -73,7 +82,9 @@ export const s3DestinationSchema = z.object({
     .min(1, "Enter a region.")
     .max(64, "Keep the region under 64 characters.")
     .default("us-east-1"),
-  secretAccessKey: z.string().max(256, "Keep the secret access key under 256 characters."),
+  secretAccessKey: z
+    .string()
+    .max(256, "Keep the secret access key under 256 characters."),
 });
 
 /** Creation: same fields, but a secret is required (nothing to keep yet). */
@@ -82,7 +93,7 @@ export const s3DestinationCreateSchema = s3DestinationSchema.refine(
   {
     message: "A secret access key is required.",
     path: ["secretAccessKey"],
-  },
+  }
 );
 
 export const destinationIdSchema = z.object({ id: z.uuid() });
@@ -143,7 +154,9 @@ export const updateBackupConfigSchema = backupConfigInputSchema
   .omit({ databaseId: true })
   .extend({ configId: z.uuid() });
 
-export type UpdateBackupConfigRequest = z.infer<typeof updateBackupConfigSchema>;
+export type UpdateBackupConfigRequest = z.infer<
+  typeof updateBackupConfigSchema
+>;
 
 export const backupConfigIdSchema = z.object({ configId: z.uuid() });
 
@@ -179,7 +192,8 @@ export const restoreRequestSchema = z
     if (fromRun === fromObject) {
       ctx.addIssue({
         code: "custom",
-        message: "provide either backupId, or destinationId and objectKey together",
+        message:
+          "provide either backupId, or destinationId and objectKey together",
       });
     }
   });

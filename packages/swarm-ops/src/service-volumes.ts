@@ -17,7 +17,9 @@ interface ContainerMount {
   Type?: string;
 }
 
-function mountsFromServiceSpec(mounts: SwarmMount[] | undefined): ServiceVolumeMount[] {
+function mountsFromServiceSpec(
+  mounts: SwarmMount[] | undefined
+): ServiceVolumeMount[] {
   if (!mounts) {
     return [];
   }
@@ -55,13 +57,15 @@ function mountsFromTaskTemplate(taskTemplate: unknown): ServiceVolumeMount[] {
     return [];
   }
   const mounts =
-    "Mounts" in containerSpec ? (containerSpec.Mounts as SwarmMount[] | undefined) : undefined;
+    "Mounts" in containerSpec
+      ? (containerSpec.Mounts as SwarmMount[] | undefined)
+      : undefined;
   return mountsFromServiceSpec(mounts);
 }
 
 async function mountsFromRunningTask(
   docker: DockerApi,
-  serviceName: string,
+  serviceName: string
 ): Promise<ServiceVolumeMount[]> {
   const tasks = (await docker.listTasks({
     filters: JSON.stringify({ service: [serviceName] }),
@@ -92,7 +96,7 @@ async function mountsFromRunningTask(
  */
 export async function listServiceVolumeMounts(
   docker: DockerApi,
-  serviceName: string,
+  serviceName: string
 ): Promise<ServiceVolumeMount[]> {
   const list = await docker.listServices({
     filters: JSON.stringify({ name: [serviceName] }),
@@ -102,6 +106,6 @@ export async function listServiceVolumeMounts(
   const taskMounts = await mountsFromRunningTask(docker, serviceName);
 
   return dedupeMounts([...specMounts, ...taskMounts]).sort((a, b) =>
-    a.volumeName.localeCompare(b.volumeName),
+    a.volumeName.localeCompare(b.volumeName)
   );
 }

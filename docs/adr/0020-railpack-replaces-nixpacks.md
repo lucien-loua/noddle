@@ -10,10 +10,10 @@ Railpack does **not** generate a Dockerfile — it builds the LLB graph and hand
 
 What this buys, each a rule that no longer exists:
 
-| Nixpacks                                                                        | Railpack                                                                                           |
-| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `--apt`/`--pkgs` wipe the nix overlays; no way to inject a package via the CLI  | `RAILPACK_BUILD_APT_PACKAGES` / `RAILPACK_DEPLOY_APT_PACKAGES`, `"..."` extends the generated list |
-| defaults to Node 18, removed from nixpkgs as EOL — a silent repo does not build | resolves 24.18.1 for a silent repo; `FALLBACK_NODE_VERSION` deleted                                |
+| Nixpacks | Railpack |
+| --- | --- |
+| `--apt`/`--pkgs` wipe the nix overlays; no way to inject a package via the CLI | `RAILPACK_BUILD_APT_PACKAGES` / `RAILPACK_DEPLOY_APT_PACKAGES`, `"..."` extends the generated list |
+| defaults to Node 18, removed from nixpkgs as EOL — a silent repo does not build | resolves 24.18.1 for a silent repo; `FALLBACK_NODE_VERSION` deleted |
 
 The cost, and it is the one to remember: **the base image inverted.** Measured under the non-login `sh -c` a HEALTHCHECK runs in, Railpack's Debian 12 base has **no curl and no wget**, while `node` IS on PATH via `/mise/shims` — the exact opposite of `nixpacks:ubuntu`. The deploy healthcheck is a curl probe, so `build-engine` forces `curl` into every image Noddle builds from source. Guarded by `verify-build-dir`. Without it no task converges and it reads as a Traefik routing bug.
 

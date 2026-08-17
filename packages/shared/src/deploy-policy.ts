@@ -41,7 +41,10 @@ export const DeployPolicy = {
 
 /** CMD-SHELL curl probe used by single-service and Compose public paths. */
 export function httpHealthcheckTest(port: number): string[] {
-  return ["CMD-SHELL", `curl -fsS -o /dev/null http://127.0.0.1:${port}/ || exit 1`];
+  return [
+    "CMD-SHELL",
+    `curl -fsS -o /dev/null http://127.0.0.1:${port}/ || exit 1`,
+  ];
 }
 
 /** Dockerode / Engine API shapes (durations in nanoseconds). */

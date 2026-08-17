@@ -6,9 +6,21 @@ import {
   ensureCappedBuilder,
   fetchSource,
 } from "@noddle/build-engine";
-import { injectDeployConfig, parseCompose, SAFE_COMPOSE_KEY } from "@noddle/compose-engine";
-import type { ComposeBuildSpec, ComposeFile, ComposeService } from "@noddle/compose-engine";
-import { stackDeploymentLogs, stackDeployments, stacks } from "@noddle/db/schema";
+import {
+  injectDeployConfig,
+  parseCompose,
+  SAFE_COMPOSE_KEY,
+} from "@noddle/compose-engine";
+import type {
+  ComposeBuildSpec,
+  ComposeFile,
+  ComposeService,
+} from "@noddle/compose-engine";
+import {
+  stackDeploymentLogs,
+  stackDeployments,
+  stacks,
+} from "@noddle/db/schema";
 import { markCrashed, settle } from "@noddle/shared/lifecycle";
 import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
@@ -28,7 +40,11 @@ import type { DeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
 import type { LogSink } from "#log-sink";
 import { BUILD_ROOT } from "#runtime-context";
-import type { BuildOptions, DeployContext, RouteOptions } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+} from "#runtime-context";
 
 /** Relative file path, with no escape from the cloned directory. */
 const SAFE_RELATIVE_PATH = /^(?!\/)(?!.*\.\.)[\w./-]+$/;
@@ -61,7 +77,7 @@ async function writeAndDeployStack(
     managerClient: SshClient;
     stackName: string;
     stream?: { onStderr: (s: string) => void; onStdout: (s: string) => void };
-  },
+  }
 ): Promise<DeployStackResult> {
   const { createDockerApi, managerClient, stackName, doc } = opts;
   const stream = opts.stream ?? {
@@ -79,7 +95,7 @@ async function writeAndDeployStack(
     filters: JSON.stringify({ name: [stackName] }),
   });
   const existing = new Set(
-    existingList.map((s) => s.Spec?.Name).filter((n): n is string => Boolean(n)),
+    existingList.map((s) => s.Spec?.Name).filter((n): n is string => Boolean(n))
   );
 
   const tmpPath = `/tmp/noddle-stack-${randomUUID()}.yml`;
@@ -88,12 +104,22 @@ async function writeAndDeployStack(
   try {
     const result = await execArgv(
       managerClient,
-      ["sudo", "docker", "stack", "deploy", "--resolve-image", "never", "-c", tmpPath, stackName],
-      stream,
+      [
+        "sudo",
+        "docker",
+        "stack",
+        "deploy",
+        "--resolve-image",
+        "never",
+        "-c",
+        tmpPath,
+        stackName,
+      ],
+      stream
     );
     if (result.code !== 0) {
       throw new Error(
-        `docker stack deploy failed (code ${result.code})\n${(result.stderr || result.stdout).trim()}`,
+        `docker stack deploy failed (code ${result.code})\n${(result.stderr || result.stdout).trim()}`
       );
     }
 
@@ -172,9 +198,14 @@ async function buildComposeServices(opts: {
 // Full deployment: clone, build, rollout
 // ─────────────────────────────────────────────────────────────────────────────
 
-type StackDeploymentRow = NonNullable<Awaited<ReturnType<typeof loadStackDeploymentForRun>>>;
+type StackDeploymentRow = NonNullable<
+  Awaited<ReturnType<typeof loadStackDeploymentForRun>>
+>;
 
-function loadStackDeploymentForRun(ctx: DeployContext, stackDeploymentId: string) {
+function loadStackDeploymentForRun(
+  ctx: DeployContext,
+  stackDeploymentId: string
+) {
   return ctx.db.query.stackDeployments.findFirst({
     where: eq(stackDeployments.id, stackDeploymentId),
     with: { stack: { with: { server: true } } },
@@ -192,7 +223,7 @@ async function buildAndDeployStack(
   deployment: StackDeploymentRow,
   sink: LogSink,
   stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
-  clients: DeployClients,
+  clients: DeployClients
 ): Promise<void> {
   const { db } = ctx;
   const { stack } = deployment;
@@ -259,7 +290,8 @@ async function buildAndDeployStack(
   //
   // Read on the BUILD connection, never the manager's: it's a fact LOCAL to
   // that node.
-  const placementNodeId = server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
+  const placementNodeId =
+    server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
 
   injectDeployConfig(doc, {
     builtKeys: Object.keys(serviceImages),
@@ -284,7 +316,9 @@ async function buildAndDeployStack(
   const finishedAt = new Date();
 
   if (!accepted) {
-    sink.write("✗ Swarm refused the rollout of at least one service in the stack\n");
+    sink.write(
+      "✗ Swarm refused the rollout of at least one service in the stack\n"
+    );
     await db
       .update(stackDeployments)
       .set({
@@ -313,11 +347,14 @@ export async function runStackDeploy(
   ctx: DeployContext,
   route: RouteOptions,
   build: BuildOptions,
-  data: { stackDeploymentId: string },
+  data: { stackDeploymentId: string }
 ): Promise<void> {
   const { db } = ctx;
 
-  const deployment = await loadStackDeploymentForRun(ctx, data.stackDeploymentId);
+  const deployment = await loadStackDeploymentForRun(
+    ctx,
+    data.stackDeploymentId
+  );
   if (!deployment) {
     throw new Error(`stack deployment not found: ${data.stackDeploymentId}`);
   }
@@ -326,7 +363,9 @@ export async function runStackDeploy(
   const startedAt = new Date();
 
   if (!SAFE_RELATIVE_PATH.test(stack.composeFilePath)) {
-    throw new Error(`compose file path refused: ${JSON.stringify(stack.composeFilePath)}`);
+    throw new Error(
+      `compose file path refused: ${JSON.stringify(stack.composeFilePath)}`
+    );
   }
 
   await db
@@ -346,7 +385,7 @@ export async function runStackDeploy(
     // The connection lives inside `withDeployClients`; a failure to connect
     // is caught the same way as any other failure below.
     await withDeployClients(ctx, stack.server, (clients) =>
-      buildAndDeployStack(ctx, route, deployment, log, stream, clients),
+      buildAndDeployStack(ctx, route, deployment, log, stream, clients)
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -355,7 +394,10 @@ export async function runStackDeploy(
       .update(stackDeployments)
       .set({ errorMessage: message, finishedAt: new Date(), status: "failed" })
       .where(eq(stackDeployments.id, deployment.id));
-    await db.update(stacks).set(markCrashed(null, message)).where(eq(stacks.id, stack.id));
+    await db
+      .update(stacks)
+      .set(markCrashed(null, message))
+      .where(eq(stacks.id, stack.id));
     throw error;
   } finally {
     if (sink) {
@@ -384,7 +426,7 @@ export async function redeployStack(
     sourceDeploymentId: string;
     stackId: string;
     trigger: "rollback" | "watch_revert";
-  },
+  }
 ): Promise<string> {
   const stack = await ctx.db.query.stacks.findFirst({
     where: eq(stacks.id, opts.stackId),
@@ -399,7 +441,7 @@ export async function redeployStack(
   });
   if (!source?.composeSource) {
     throw new Error(
-      `source deployment not found or has no saved compose: ${opts.sourceDeploymentId}`,
+      `source deployment not found or has no saved compose: ${opts.sourceDeploymentId}`
     );
   }
   // Captured here: TypeScript's narrowing of `source.composeSource` above
@@ -421,61 +463,69 @@ export async function redeployStack(
     throw new Error("could not create stack deployment");
   }
 
-  return await withDeployClients(ctx, stack.server, async ({ buildDocker, managerClient }) => {
-    const doc = parseCompose(composeSource, stack.composeFilePath);
-    const services = doc.services ?? {};
-    const serviceImages = (source.serviceImages ?? {}) as Record<string, string>;
-    for (const [key, tag] of Object.entries(serviceImages)) {
-      const svc = services[key];
-      if (svc) {
-        // Rebuilds the object rather than `delete svc.build` — same
-        // reason as in `buildComposeServices`: YAML serialization of a
-        // key set to `undefined` isn't guaranteed to be equivalent to
-        // its absence.
-        const { build: _build, ...rest } = svc;
-        services[key] = { ...rest, image: tag };
+  return await withDeployClients(
+    ctx,
+    stack.server,
+    async ({ buildDocker, managerClient }) => {
+      const doc = parseCompose(composeSource, stack.composeFilePath);
+      const services = doc.services ?? {};
+      const serviceImages = (source.serviceImages ?? {}) as Record<
+        string,
+        string
+      >;
+      for (const [key, tag] of Object.entries(serviceImages)) {
+        const svc = services[key];
+        if (svc) {
+          // Rebuilds the object rather than `delete svc.build` — same
+          // reason as in `buildComposeServices`: YAML serialization of a
+          // key set to `undefined` isn't guaranteed to be equivalent to
+          // its absence.
+          const { build: _build, ...rest } = svc;
+          services[key] = { ...rest, image: tag };
+        }
       }
-    }
 
-    // Unconditional, same reason as in the initial deployment above.
-    const placementNodeId = stack.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
+      // Unconditional, same reason as in the initial deployment above.
+      const placementNodeId =
+        stack.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
 
-    injectDeployConfig(doc, {
-      builtKeys: Object.keys(serviceImages),
-      certResolver: route.certResolver,
-      domains: stack.domain ? [stack.domain] : undefined,
-      networkName: route.networkName,
-      placementNodeId,
-      port: stack.port,
-      publicService: stack.publicService,
-      stackName: stack.swarmName,
-    });
+      injectDeployConfig(doc, {
+        builtKeys: Object.keys(serviceImages),
+        certResolver: route.certResolver,
+        domains: stack.domain ? [stack.domain] : undefined,
+        networkName: route.networkName,
+        placementNodeId,
+        port: stack.port,
+        publicService: stack.publicService,
+        stackName: stack.swarmName,
+      });
 
-    const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
-      createDockerApi: ctx.createDockerApi,
-      doc,
-      managerClient,
-      stackName: stack.swarmName,
-    });
+      const { accepted, swarmUpdateStates } = await writeAndDeployStack(route, {
+        createDockerApi: ctx.createDockerApi,
+        doc,
+        managerClient,
+        stackName: stack.swarmName,
+      });
 
-    const finishedAt = new Date();
-    if (!accepted) {
-      await ctx.db
-        .update(stackDeployments)
-        .set({
-          finishedAt,
-          status: settle("rollback_completed"),
-          swarmUpdateStates,
-        })
-        .where(eq(stackDeployments.id, created.id));
+      const finishedAt = new Date();
+      if (!accepted) {
+        await ctx.db
+          .update(stackDeployments)
+          .set({
+            finishedAt,
+            status: settle("rollback_completed"),
+            swarmUpdateStates,
+          })
+          .where(eq(stackDeployments.id, created.id));
+        return created.id;
+      }
+      await recordAcceptedStack(ctx.db, {
+        deploymentId: created.id,
+        finishedAt,
+        stackId: stack.id,
+        swarmUpdateStates,
+      });
       return created.id;
     }
-    await recordAcceptedStack(ctx.db, {
-      deploymentId: created.id,
-      finishedAt,
-      stackId: stack.id,
-      swarmUpdateStates,
-    });
-    return created.id;
-  });
+  );
 }

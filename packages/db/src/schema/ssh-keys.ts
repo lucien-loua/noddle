@@ -35,5 +35,5 @@ export const sshKeys = pgTable(
   },
   // The name is what's read in the selector of the add form: two "default"
   // keys would be indistinguishable there.
-  (t) => [uniqueIndex("ssh_keys_name_idx").on(t.name)],
+  (t) => [uniqueIndex("ssh_keys_name_idx").on(t.name)]
 );

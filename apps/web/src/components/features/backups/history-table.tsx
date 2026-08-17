@@ -24,7 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { backupKindLabel, backupLabel, badgeVariant, byteSize, duration } from "@/lib/format";
+import {
+  backupKindLabel,
+  backupLabel,
+  badgeVariant,
+  byteSize,
+  duration,
+} from "@/lib/format";
 
 import type { BackupRunRow } from "./run-types";
 
@@ -93,16 +99,25 @@ export function BackupHistoryTable<T extends BackupRunRow>({
           {backups.map((backup) => {
             const status = backupLabel(backup.status);
             const canDelete =
-              canCreate && backup.status !== "queued" && backup.status !== "running";
-            const canRestoreRun = Boolean(canRestore && onRestore) && backup.status === "completed";
+              canCreate &&
+              backup.status !== "queued" &&
+              backup.status !== "running";
+            const canRestoreRun =
+              Boolean(canRestore && onRestore) && backup.status === "completed";
             return (
               <TableRow key={backup.id}>
                 <TableCell>
-                  <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
+                  <Badge variant={badgeVariant(status.tone)}>
+                    {status.label}
+                  </Badge>
                 </TableCell>
-                <TableCell className="text-xs">{backupKindLabel(backup.kind)}</TableCell>
+                <TableCell className="text-xs">
+                  {backupKindLabel(backup.kind)}
+                </TableCell>
                 <TableCell className="text-xs tabular-nums">
-                  {backup.status === "completed" ? byteSize(backup.sizeBytes) : "—"}
+                  {backup.status === "completed"
+                    ? byteSize(backup.sizeBytes)
+                    : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-xs">
                   <RelativeTime iso={backup.createdAt} />
@@ -112,11 +127,19 @@ export function BackupHistoryTable<T extends BackupRunRow>({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button onClick={() => onView(backup)} size="sm" variant="outline">
+                    <Button
+                      onClick={() => onView(backup)}
+                      size="sm"
+                      variant="outline"
+                    >
                       View
                     </Button>
                     {canRestoreRun && onRestore ? (
-                      <Button onClick={() => onRestore(backup)} size="sm" variant="outline">
+                      <Button
+                        onClick={() => onRestore(backup)}
+                        size="sm"
+                        variant="outline"
+                      >
                         Restore
                       </Button>
                     ) : null}

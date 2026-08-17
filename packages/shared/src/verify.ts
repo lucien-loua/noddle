@@ -3,7 +3,11 @@
 //   node packages/shared/src/verify.ts
 import { ko, ok, runVerify, suite } from "@noddle/testing";
 
-import { formatTestDomain, generateTestDomain, slugServerHost } from "#generate-domain";
+import {
+  formatTestDomain,
+  generateTestDomain,
+  slugServerHost,
+} from "#generate-domain";
 import { adminSetupSchema, signInSchema } from "#validation/account";
 import {
   backupCronSchema,
@@ -76,7 +80,10 @@ function verifyAccountSchemas(): void {
   }
 
   // Sign-in deliberately does NOT re-apply that policy.
-  if (signInSchema.safeParse({ email: "admin@example.com", password: "short" }).success) {
+  if (
+    signInSchema.safeParse({ email: "admin@example.com", password: "short" })
+      .success
+  ) {
     ok("signInSchema accepts any non-empty password");
   } else {
     ko("signInSchema applies a length rule it should not");
@@ -90,7 +97,9 @@ function verifyNameSchemas(): void {
     ["API", false],
     ["mon service", false],
   ];
-  if (cases.every(([v, want]) => serviceNameSchema.safeParse(v).success === want)) {
+  if (
+    cases.every(([v, want]) => serviceNameSchema.safeParse(v).success === want)
+  ) {
     ok("serviceNameSchema accepts and rejects what it should");
   } else {
     ko("inconsistent serviceNameSchema");
@@ -218,7 +227,11 @@ function verifyNameSchemas(): void {
 }
 
 function verifyDatabaseSchemas(): void {
-  const imageOk = ["postgres:17-alpine", "ghcr.io/org/db:1.2.3", "redis@sha256:abcdef0123456789"];
+  const imageOk = [
+    "postgres:17-alpine",
+    "ghcr.io/org/db:1.2.3",
+    "redis@sha256:abcdef0123456789",
+  ];
   const imageKo = ["", "postgres 17", "postgres:17'", "a".repeat(201)];
   if (
     imageOk.every((v) => imageRefSchema.safeParse(v).success) &&
@@ -280,7 +293,11 @@ function verifyS3BucketAndCron(): void {
     ["-noddle", false],
     ["noddle-", false],
   ];
-  if (bucketCases.every(([v, want]) => bucketNameSchema.safeParse(v).success === want)) {
+  if (
+    bucketCases.every(
+      ([v, want]) => bucketNameSchema.safeParse(v).success === want
+    )
+  ) {
     ok("bucketNameSchema applies AWS's naming rules");
   } else {
     ko("inconsistent bucketNameSchema");

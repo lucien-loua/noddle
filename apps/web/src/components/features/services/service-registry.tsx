@@ -66,7 +66,7 @@ export function ServiceRegistry({
       }
       save.mutate(next === BUILT_IN ? null : next);
     },
-    [save],
+    [save]
   );
 
   const rows = options.data ?? [];

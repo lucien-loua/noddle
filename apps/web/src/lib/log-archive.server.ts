@@ -12,7 +12,9 @@ import { db } from "@/lib/db.server";
  */
 const MAX_TAIL_BYTES = 1024 * 1024;
 
-export async function readArchive(deploymentId: string): Promise<string | null> {
+export async function readArchive(
+  deploymentId: string
+): Promise<string | null> {
   // Service or stack: same pointer mechanism, two tables. We look first
   // on the service side, the common case.
   const [serviceRow] = await db

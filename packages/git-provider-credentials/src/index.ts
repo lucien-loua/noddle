@@ -45,7 +45,7 @@ export interface GithubProviderRow {
 export function githubAppFromRow(
   appKey: Buffer,
   gitProviderId: string,
-  row: GithubProviderRow | null | undefined,
+  row: GithubProviderRow | null | undefined
 ): { appId: string; privateKeyPem: string; url: string } {
   if (!(row?.appId && row.privateKeyEncrypted)) {
     throw new Error("the GitHub App was never created");
@@ -55,7 +55,7 @@ export function githubAppFromRow(
     privateKeyPem: decryptSecret(
       row.privateKeyEncrypted,
       appKey,
-      secretContext.gitProvider(gitProviderId, "private_key"),
+      secretContext.gitProvider(gitProviderId, "private_key")
     ),
     url: row.url,
   };
@@ -72,13 +72,15 @@ export function githubAppWithInstallation(
   appKey: Buffer,
   gitProviderId: string,
   name: string,
-  row: GithubProviderRow | null | undefined,
+  row: GithubProviderRow | null | undefined
 ): GithubApp {
   if (!(row?.appId && row.privateKeyEncrypted)) {
     throw new Error(`${name}: the GitHub App was never created`);
   }
   if (!row.installationId) {
-    throw new Error(`${name}: the App exists but is not installed on any account yet`);
+    throw new Error(
+      `${name}: the App exists but is not installed on any account yet`
+    );
   }
   return {
     ...githubAppFromRow(appKey, gitProviderId, row),
@@ -104,7 +106,7 @@ export function gitlabAppFromRow(
   appKey: Buffer,
   gitProviderId: string,
   name: string,
-  row: GitlabProviderRow | null | undefined,
+  row: GitlabProviderRow | null | undefined
 ): GitlabApp {
   if (!(row?.applicationId && row.secretEncrypted && row.redirectUri)) {
     throw new Error(`${name}: the GitLab application is not set up`);
@@ -115,7 +117,7 @@ export function gitlabAppFromRow(
     secret: decryptSecret(
       row.secretEncrypted,
       appKey,
-      secretContext.gitProvider(gitProviderId, "client_secret"),
+      secretContext.gitProvider(gitProviderId, "client_secret")
     ),
     url: row.url,
   };
@@ -126,7 +128,7 @@ export async function saveGitlabTokens(
   db: Database,
   appKey: Buffer,
   gitProviderId: string,
-  tokens: { accessToken: string; expiresAt: number; refreshToken: string },
+  tokens: { accessToken: string; expiresAt: number; refreshToken: string }
 ): Promise<void> {
   await db
     .update(gitlabProviders)
@@ -134,13 +136,13 @@ export async function saveGitlabTokens(
       accessTokenEncrypted: encryptSecret(
         tokens.accessToken,
         appKey,
-        secretContext.gitProvider(gitProviderId, "access_token"),
+        secretContext.gitProvider(gitProviderId, "access_token")
       ),
       expiresAt: new Date(tokens.expiresAt),
       refreshTokenEncrypted: encryptSecret(
         tokens.refreshToken,
         appKey,
-        secretContext.gitProvider(gitProviderId, "refresh_token"),
+        secretContext.gitProvider(gitProviderId, "refresh_token")
       ),
     })
     .where(eq(gitlabProviders.gitProviderId, gitProviderId));
@@ -164,7 +166,7 @@ async function loadProvider(db: Database, gitProviderId: string) {
 export async function githubAppCredentials(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<{ appId: string; privateKeyPem: string; url: string }> {
   const provider = await loadProvider(db, gitProviderId);
   return githubAppFromRow(appKey, gitProviderId, provider.github);
@@ -173,25 +175,35 @@ export async function githubAppCredentials(
 export async function githubAppFor(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<GithubApp> {
   const provider = await loadProvider(db, gitProviderId);
   if (provider.providerType !== "github") {
     throw new Error(`${provider.name} is not a GitHub connection`);
   }
-  return githubAppWithInstallation(appKey, gitProviderId, provider.name, provider.github);
+  return githubAppWithInstallation(
+    appKey,
+    gitProviderId,
+    provider.name,
+    provider.github
+  );
 }
 
 export async function gitlabAppFor(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<{ app: GitlabApp; row: GitlabProviderRow }> {
   const provider = await loadProvider(db, gitProviderId);
   if (provider.providerType !== "gitlab") {
     throw new Error(`${provider.name} is not a GitLab connection`);
   }
-  const app = gitlabAppFromRow(appKey, gitProviderId, provider.name, provider.gitlab);
+  const app = gitlabAppFromRow(
+    appKey,
+    gitProviderId,
+    provider.name,
+    provider.gitlab
+  );
   // Non-null: `gitlabAppFromRow` refuses a missing row before this.
   return { app, row: provider.gitlab as GitlabProviderRow };
 }
@@ -207,7 +219,7 @@ export async function gitlabAppFor(
 export async function gitlabAccessToken(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<{ token: string; url: string }> {
   const { app, row } = await gitlabAppFor(db, appKey, gitProviderId);
 
@@ -219,14 +231,16 @@ export async function gitlabAccessToken(
       token: decryptSecret(
         row.accessTokenEncrypted,
         appKey,
-        secretContext.gitProvider(gitProviderId, "access_token"),
+        secretContext.gitProvider(gitProviderId, "access_token")
       ),
       url: app.url,
     };
   }
 
   if (!row.refreshTokenEncrypted) {
-    throw new Error("this GitLab connection was never authorised — connect it again");
+    throw new Error(
+      "this GitLab connection was never authorised — connect it again"
+    );
   }
 
   const refreshed = await refreshTokens(
@@ -234,8 +248,8 @@ export async function gitlabAccessToken(
     decryptSecret(
       row.refreshTokenEncrypted,
       appKey,
-      secretContext.gitProvider(gitProviderId, "refresh_token"),
-    ),
+      secretContext.gitProvider(gitProviderId, "refresh_token")
+    )
   );
   await saveGitlabTokens(db, appKey, gitProviderId, refreshed);
   return { token: refreshed.accessToken, url: app.url };
@@ -250,17 +264,19 @@ export async function gitlabAccessToken(
 export async function gitlabWebhookSecret(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<string> {
   const provider = await loadProvider(db, gitProviderId);
   const encrypted = provider.gitlab?.webhookSecretEncrypted;
   if (!encrypted) {
-    throw new Error(`${provider.name} has no webhook secret — reconnect it to arm autodeploy`);
+    throw new Error(
+      `${provider.name} has no webhook secret — reconnect it to arm autodeploy`
+    );
   }
   return decryptSecret(
     encrypted,
     appKey,
-    secretContext.gitProvider(gitProviderId, "webhook_secret"),
+    secretContext.gitProvider(gitProviderId, "webhook_secret")
   );
 }
 
@@ -294,7 +310,7 @@ export interface GitProviderAdapter {
 export async function providerFor(
   db: Database,
   appKey: Buffer,
-  gitProviderId: string,
+  gitProviderId: string
 ): Promise<GitProviderAdapter> {
   const provider = await loadProvider(db, gitProviderId);
 
@@ -318,7 +334,12 @@ export async function providerFor(
 
   const app = () =>
     Promise.resolve(
-      githubAppWithInstallation(appKey, gitProviderId, provider.name, provider.github),
+      githubAppWithInstallation(
+        appKey,
+        gitProviderId,
+        provider.name,
+        provider.github
+      )
     );
   return {
     branches: async (fullName) => await githubBranches(await app(), fullName),

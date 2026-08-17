@@ -1,7 +1,11 @@
 import { databases, services } from "@noddle/db/schema";
 import { markRunning, markStopped } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
-import { restartService, scaleService, waitForRunningTask } from "@noddle/swarm-ops";
+import {
+  restartService,
+  scaleService,
+  waitForRunningTask,
+} from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { withDeployClients } from "#job-run";
@@ -20,7 +24,7 @@ export type LifecycleAction = "restart" | "start" | "stop";
 export async function runLifecycle(
   ctx: DeployContext,
   serviceId: string,
-  action: LifecycleAction,
+  action: LifecycleAction
 ): Promise<void> {
   const service = await ctx.db.query.services.findFirst({
     where: eq(services.id, serviceId),
@@ -39,11 +43,17 @@ export async function runLifecycle(
     if (action === "restart") {
       applied = await restartService(managerDocker, name);
     } else {
-      applied = await scaleService(managerDocker, name, action === "stop" ? 0 : 1);
+      applied = await scaleService(
+        managerDocker,
+        name,
+        action === "stop" ? 0 : 1
+      );
     }
 
     if (!applied) {
-      throw new Error(`service ${name} not found on the Swarm cluster — deploy it first`);
+      throw new Error(
+        `service ${name} not found on the Swarm cluster — deploy it first`
+      );
     }
 
     // Stop is a spec write and feels instant. Start/restart wait until a
@@ -88,7 +98,7 @@ export async function runLifecycle(
 export async function runDatabaseLifecycle(
   ctx: DeployContext,
   databaseId: string,
-  action: LifecycleAction,
+  action: LifecycleAction
 ): Promise<void> {
   const database = await ctx.db.query.databases.findFirst({
     where: eq(databases.id, databaseId),
@@ -105,12 +115,16 @@ export async function runDatabaseLifecycle(
     if (action === "restart") {
       applied = await restartService(managerDocker, name);
     } else {
-      applied = await scaleService(managerDocker, name, action === "stop" ? 0 : 1);
+      applied = await scaleService(
+        managerDocker,
+        name,
+        action === "stop" ? 0 : 1
+      );
     }
 
     if (!applied) {
       throw new Error(
-        `database service ${name} not found on the Swarm cluster — provision it first`,
+        `database service ${name} not found on the Swarm cluster — provision it first`
       );
     }
 

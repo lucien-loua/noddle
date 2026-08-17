@@ -20,14 +20,18 @@ const IN_FLIGHT_DEPLOYMENT = new Set(["queued", "building", "deploying"]);
 
 function resolveStatus(
   service: ServiceRow,
-  pendingAction: LifecycleAction | null,
+  pendingAction: LifecycleAction | null
 ): { label: string; tone: Tone } {
   if (pendingAction) {
     return { label: PENDING_LABEL[pendingAction], tone: "busy" };
   }
 
   const deployment = service.lastDeployment;
-  if (deployment && !deployment.finishedAt && IN_FLIGHT_DEPLOYMENT.has(deployment.status)) {
+  if (
+    deployment &&
+    !deployment.finishedAt &&
+    IN_FLIGHT_DEPLOYMENT.has(deployment.status)
+  ) {
     return deploymentLabel(deployment.status);
   }
 
@@ -48,7 +52,7 @@ export function ServiceStatusLine({
     Boolean(
       service.lastDeployment &&
       !service.lastDeployment.finishedAt &&
-      IN_FLIGHT_DEPLOYMENT.has(service.lastDeployment.status),
+      IN_FLIGHT_DEPLOYMENT.has(service.lastDeployment.status)
     );
   const tone = pending ? "busy" : status.tone;
 
@@ -67,7 +71,9 @@ export function ServiceStatusLine({
         </>
       ) : null}
       <span aria-hidden>·</span>
-      <span className="shrink-0">{BUILD_METHOD_LABEL[service.buildMethod]}</span>
+      <span className="shrink-0">
+        {BUILD_METHOD_LABEL[service.buildMethod]}
+      </span>
       <span aria-hidden>·</span>
       <span className="truncate">{service.serverName}</span>
     </p>

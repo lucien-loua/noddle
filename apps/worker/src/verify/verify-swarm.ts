@@ -49,7 +49,10 @@ const ko = (m: string) => {
     port: 3000,
     serviceName: SERVICE,
   });
-  if (withDomain[`traefik.http.services.${SERVICE}.loadbalancer.server.port`] === "3000") {
+  if (
+    withDomain[`traefik.http.services.${SERVICE}.loadbalancer.server.port`] ===
+    "3000"
+  ) {
     ok("labels: loadbalancer.server.port present (required in Swarm)");
   } else {
     ko("labels: port missing");
@@ -102,7 +105,9 @@ try {
   ) {
     ok(`healthy update → completed, image ${updated.runningImage}`);
   } else {
-    ko(`unexpected healthy update: ${updated.updateState} / ${updated.runningImage}`);
+    ko(
+      `unexpected healthy update: ${updated.updateState} / ${updated.runningImage}`
+    );
   }
 
   // ── 3. THE test: broken image, rollback detected ───────────────────────────
@@ -110,15 +115,21 @@ try {
   const broken = await deployService(docker, { ...base, image: BROKEN });
 
   if (broken.updateState === "rollback_completed") {
-    ok("broken image → Swarm rolled back, and the API says so: rollback_completed");
+    ok(
+      "broken image → Swarm rolled back, and the API says so: rollback_completed"
+    );
   } else {
     ko(`expected state rollback_completed, got ${broken.updateState}`);
   }
 
   if (isDeployAccepted(broken.updateState)) {
-    ko("DANGER: the deployment is considered accepted even though it was rolled back");
+    ko(
+      "DANGER: the deployment is considered accepted even though it was rolled back"
+    );
   } else {
-    ok("isDeployAccepted refuses the rollback — no false green on the dashboard");
+    ok(
+      "isDeployAccepted refuses the rollback — no false green on the dashboard"
+    );
   }
 
   if (broken.runningImage === HEALTHY_B) {

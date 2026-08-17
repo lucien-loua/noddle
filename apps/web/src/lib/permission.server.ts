@@ -1,5 +1,8 @@
 import { auditLog } from "@noddle/db/schema";
-import { getRequestHeaders, setResponseStatus } from "@tanstack/react-start/server";
+import {
+  getRequestHeaders,
+  setResponseStatus,
+} from "@tanstack/react-start/server";
 
 import type { Session } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
@@ -33,7 +36,9 @@ function roleOf(session: Session): string | null {
  * found, confirm-name mismatch). Successes are written by `runGuarded`
  * once the act has finished, and by nothing else.
  */
-export async function requirePermission(permission: Permission): Promise<Session> {
+export async function requirePermission(
+  permission: Permission
+): Promise<Session> {
   const session = await requireSession();
   const allowed = can(roleOf(session), permission.resource, permission.action);
 
@@ -43,7 +48,7 @@ export async function requirePermission(permission: Permission): Promise<Session
     await record(session, permission, "denied");
     setResponseStatus(403);
     throw new ForbiddenError(
-      `Action refused: your role does not allow "${permission.action}" on ${permission.resource}.`,
+      `Action refused: your role does not allow "${permission.action}" on ${permission.resource}.`
     );
   }
   return session;
@@ -126,7 +131,9 @@ export async function runGuarded<TRow = undefined, TResult = void>(opts: {
   if (opts.confirmName) {
     const expected = opts.confirmName.expected(row);
     if (opts.confirmName.typed !== expected) {
-      throw new Error(`the name you typed does not match "${expected}" — cancelled`);
+      throw new Error(
+        `the name you typed does not match "${expected}" — cancelled`
+      );
     }
   }
 
@@ -156,15 +163,22 @@ export async function runGuarded<TRow = undefined, TResult = void>(opts: {
  * Deliberately narrow: `envVar: read` stays logged, because reading the
  * variables amounts to reading production secrets.
  */
-function isSelfConsultation(permission: Permission, outcome: "allowed" | "denied"): boolean {
-  return outcome === "allowed" && permission.resource === "audit" && permission.action === "read";
+function isSelfConsultation(
+  permission: Permission,
+  outcome: "allowed" | "denied"
+): boolean {
+  return (
+    outcome === "allowed" &&
+    permission.resource === "audit" &&
+    permission.action === "read"
+  );
 }
 
 async function record(
   session: Session,
   permission: Permission,
   outcome: "allowed" | "denied",
-  target?: { resourceId: string | null; resourceName: string | null },
+  target?: { resourceId: string | null; resourceName: string | null }
 ): Promise<void> {
   if (isSelfConsultation(permission, outcome)) {
     return;
@@ -174,7 +188,9 @@ async function record(
   try {
     const headers = getRequestHeaders();
     ipAddress =
-      headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? headers.get("x-real-ip") ?? null;
+      headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      headers.get("x-real-ip") ??
+      null;
     userAgent = headers.get("user-agent") ?? null;
   } catch {
     // outside a request context: the line is written anyway
@@ -195,7 +211,7 @@ async function record(
     });
   } catch (error) {
     process.stderr.write(
-      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`,
+      `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
   }
 }

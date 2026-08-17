@@ -8,18 +8,28 @@ import { eq } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";
 
-async function connectAsRow(ctx: DeployContext, row: typeof servers.$inferSelect) {
+async function connectAsRow(
+  ctx: DeployContext,
+  row: typeof servers.$inferSelect
+) {
   return await connect(await credentialsFor(ctx.db, ctx.appKey, row));
 }
 
-async function markFailed(ctx: DeployContext, serverId: string, message: string): Promise<void> {
+async function markFailed(
+  ctx: DeployContext,
+  serverId: string,
+  message: string
+): Promise<void> {
   await ctx.db
     .update(servers)
     .set({ lastError: message, status: "unreachable" })
     .where(eq(servers.id, serverId));
 }
 
-export async function provisionServer(ctx: DeployContext, serverId: string): Promise<void> {
+export async function provisionServer(
+  ctx: DeployContext,
+  serverId: string
+): Promise<void> {
   const server = await ctx.db.query.servers.findFirst({
     where: eq(servers.id, serverId),
   });
@@ -31,7 +41,11 @@ export async function provisionServer(ctx: DeployContext, serverId: string): Pro
     where: eq(servers.role, "manager"),
   });
   if (!manager) {
-    await markFailed(ctx, serverId, "no Swarm manager registered — has the installer run?");
+    await markFailed(
+      ctx,
+      serverId,
+      "no Swarm manager registered — has the installer run?"
+    );
     throw new Error("no Swarm manager registered");
   }
 
@@ -46,11 +60,20 @@ export async function provisionServer(ctx: DeployContext, serverId: string): Pro
       await exec(client, "curl -fsSL https://get.docker.com | sudo sh");
     }
 
-    await execArgv(client, ["sudo", "usermod", "-aG", "docker", server.sshUser]);
+    await execArgv(client, [
+      "sudo",
+      "usermod",
+      "-aG",
+      "docker",
+      server.sshUser,
+    ]);
     disconnect(client);
     client = await connectAsRow(ctx, server);
 
-    const swarmState = await exec(client, "sudo docker info --format '{{.Swarm.LocalNodeState}}'");
+    const swarmState = await exec(
+      client,
+      "sudo docker info --format '{{.Swarm.LocalNodeState}}'"
+    );
 
     if (swarmState.stdout.trim() !== "active") {
       managerClient = await connectAsRow(ctx, manager);
@@ -75,7 +98,7 @@ export async function provisionServer(ctx: DeployContext, serverId: string): Pro
       ]);
       if (join.code !== 0) {
         throw new Error(
-          `could not join the Swarm cluster: ${join.stderr.trim() || join.stdout.trim()}`,
+          `could not join the Swarm cluster: ${join.stderr.trim() || join.stdout.trim()}`
         );
       }
     }
@@ -104,7 +127,9 @@ export async function provisionServer(ctx: DeployContext, serverId: string): Pro
         lastError: null,
         status: "connected",
         swarmNodeId: await getSwarmNodeId(docker),
-        totalMemoryMb: info.MemTotal ? Math.round(info.MemTotal / 1024 / 1024) : null,
+        totalMemoryMb: info.MemTotal
+          ? Math.round(info.MemTotal / 1024 / 1024)
+          : null,
       })
       .where(eq(servers.id, server.id));
   } catch (error) {

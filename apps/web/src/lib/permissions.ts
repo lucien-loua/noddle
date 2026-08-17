@@ -187,7 +187,8 @@ export const ROLE_ORDER: RoleName[] = ["viewer", "deployer", "admin", "owner"];
 
 export type Statement = typeof statement;
 export type PermissionResource = keyof Statement;
-export type PermissionAction<R extends PermissionResource> = Statement[R][number];
+export type PermissionAction<R extends PermissionResource> =
+  Statement[R][number];
 
 /** A permission: a resource and one of ITS actions, not just any action. */
 export type Permission = {
@@ -204,7 +205,7 @@ export type Permission = {
 export function can(
   role: RoleName | string | null | undefined,
   resource: PermissionResource,
-  action: string,
+  action: string
 ): boolean {
   if (!(role && role in roles)) {
     return false;
@@ -215,7 +216,10 @@ export function can(
 }
 
 /** True when every product role is granted this permission. */
-export function isPermissionUniversal(resource: PermissionResource, action: string): boolean {
+export function isPermissionUniversal(
+  resource: PermissionResource,
+  action: string
+): boolean {
   return ROLE_ORDER.every((role) => can(role, resource, action));
 }
 

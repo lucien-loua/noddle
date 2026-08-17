@@ -48,7 +48,9 @@ export interface RolloutResult {
  * both paths already hold an image tag and decrypted env — only the
  * provenance of that tag differs (just-built vs history).
  */
-export async function rolloutService(input: RolloutInput): Promise<RolloutResult> {
+export async function rolloutService(
+  input: RolloutInput
+): Promise<RolloutResult> {
   const placementNodeId = input.portable
     ? undefined
     : await placementFor({
@@ -90,7 +92,9 @@ export async function rolloutService(input: RolloutInput): Promise<RolloutResult
   const accepted = isDeployAccepted(outcome.updateState);
   return {
     accepted,
-    nodeId: accepted ? await readRunningNodeId(input.managerDocker, input.serviceName) : null,
+    nodeId: accepted
+      ? await readRunningNodeId(input.managerDocker, input.serviceName)
+      : null,
     updateMessage: outcome.updateMessage,
     updateState: outcome.updateState,
   };

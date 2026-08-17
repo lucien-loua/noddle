@@ -96,7 +96,7 @@ export function parseEnvPaste(text: string): EnvPair[] {
 export function shouldInterceptEnvPaste(
   text: string,
   field: "key" | "value",
-  currentKey: string,
+  currentKey: string
 ): boolean {
   const pairs = parseEnvPaste(text);
   if (pairs.length === 0) {

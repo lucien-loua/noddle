@@ -10,7 +10,13 @@ import {
   FocusModalHeader,
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
-import { backupKindLabel, backupLabel, badgeVariant, byteSize, duration } from "@/lib/format";
+import {
+  backupKindLabel,
+  backupLabel,
+  badgeVariant,
+  byteSize,
+  duration,
+} from "@/lib/format";
 
 import type { BackupRunRow } from "./run-types";
 
@@ -48,9 +54,13 @@ export function BackupRunDetailDialog<T extends BackupRunRow>({
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <FocusModalTitle>{title}</FocusModalTitle>
-                  {runMeta ? <FocusModalDescription>{runMeta}</FocusModalDescription> : null}
+                  {runMeta ? (
+                    <FocusModalDescription>{runMeta}</FocusModalDescription>
+                  ) : null}
                 </div>
-                <Badge variant={badgeVariant(status.tone)}>{status.label}</Badge>
+                <Badge variant={badgeVariant(status.tone)}>
+                  {status.label}
+                </Badge>
                 <ButtonGroup>
                   <ButtonGroupText>
                     {lines.length === 1 ? "1 line" : `${lines.length} lines`}
@@ -62,9 +72,13 @@ export function BackupRunDetailDialog<T extends BackupRunRow>({
             <FocusModalBody className="flex min-h-0 flex-col overflow-hidden p-0">
               <div className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
                 {lines.length === 0 ? (
-                  <span className="text-muted-foreground text-sm">No logs for this run.</span>
+                  <span className="text-muted-foreground text-sm">
+                    No logs for this run.
+                  </span>
                 ) : (
-                  lines.map((line) => <TerminalLogs.Line key={line.id} line={line} />)
+                  lines.map((line) => (
+                    <TerminalLogs.Line key={line.id} line={line} />
+                  ))
                 )}
               </div>
             </FocusModalBody>

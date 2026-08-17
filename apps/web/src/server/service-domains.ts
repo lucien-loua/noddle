@@ -87,12 +87,15 @@ export const createServiceDomain = createServerFn({ method: "POST" })
           throw new Error("could not create domain");
         }
         if (data.port !== service.port) {
-          await db.update(services).set({ port: data.port }).where(eq(services.id, service.id));
+          await db
+            .update(services)
+            .set({ port: data.port })
+            .where(eq(services.id, service.id));
         }
         return { id: created.id };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 export const updateServiceDomain = createServerFn({ method: "POST" })
@@ -120,7 +123,7 @@ export const updateServiceDomain = createServerFn({ method: "POST" })
         id: row.service.id,
         name: row.service.name,
       }),
-    }),
+    })
   );
 
 const GENERATED_HOST_ATTEMPTS = 8;
@@ -141,7 +144,7 @@ export const generateServiceDomainHost = createServerFn({ method: "POST" })
           generateTestDomain({
             appName: service.name,
             serverHost: service.server.host,
-          }),
+          })
         );
         const taken = await db.query.serviceDomains.findMany({
           where: inArray(serviceDomains.host, candidates),
@@ -150,13 +153,13 @@ export const generateServiceDomainHost = createServerFn({ method: "POST" })
         const host = candidates.find((candidate) => !takenHosts.has(candidate));
         if (!host) {
           throw new Error(
-            "could not find an unused test domain — try again or enter a host manually",
+            "could not find an unused test domain — try again or enter a host manually"
           );
         }
         return { host };
       },
       target: ({ row }) => ({ id: row.id, name: row.name }),
-    }),
+    })
   );
 
 export const deleteServiceDomain = createServerFn({ method: "POST" })
@@ -167,12 +170,14 @@ export const deleteServiceDomain = createServerFn({ method: "POST" })
       notFoundMessage: "domain not found",
       permission: { action: "deploy", resource: "service" },
       run: async ({ row: domainRow }) => {
-        await db.delete(serviceDomains).where(eq(serviceDomains.id, domainRow.id));
+        await db
+          .delete(serviceDomains)
+          .where(eq(serviceDomains.id, domainRow.id));
         return { ok: true as const };
       },
       target: ({ row }) => ({
         id: row.service.id,
         name: row.service.name,
       }),
-    }),
+    })
   );

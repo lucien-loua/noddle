@@ -3,7 +3,12 @@ import { useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/ui/frame";
+import {
+  Frame,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
@@ -72,7 +77,11 @@ function toolchainHealthy(report: ServerToolReport): boolean {
 }
 
 /** Why there is no report — the three reasons are not the same thing. */
-function unreadable(fetching: boolean, reachable: boolean, error: unknown): string {
+function unreadable(
+  fetching: boolean,
+  reachable: boolean,
+  error: unknown
+): string {
   if (fetching) {
     return "Asking the machine…";
   }
@@ -145,7 +154,12 @@ export function ServerToolchain({
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Installed tools</FrameTitle>
         <div className="flex flex-wrap items-center gap-2">
-          <Button disabled={check.isFetching} onClick={handleCheck} size="sm" variant="outline">
+          <Button
+            disabled={check.isFetching}
+            onClick={handleCheck}
+            size="sm"
+            variant="outline"
+          >
             {check.isFetching ? <Spinner data-icon="inline-start" /> : null}
             {report ? "Re-check" : "Check"}
           </Button>
@@ -156,7 +170,12 @@ export function ServerToolchain({
               report at all, which is exactly when a machine may be the
               thing that is broken. */}
           {canSetup && !(report && toolchainHealthy(report)) ? (
-            <Button disabled={setup.isPending} onClick={handleSetup} size="sm" variant="outline">
+            <Button
+              disabled={setup.isPending}
+              onClick={handleSetup}
+              size="sm"
+              variant="outline"
+            >
               {setup.isPending ? <Spinner data-icon="inline-start" /> : null}
               Run setup
             </Button>
@@ -169,8 +188,16 @@ export function ServerToolchain({
       {report ? (
         <>
           <ToolRow name="Docker" version={report.docker} />
-          <ToolRow hint={railpackHint(report)} name="Railpack" version={report.railpack} />
-          <ToolRow hint={swarmHint(report)} name="Swarm" version={report.swarm} />
+          <ToolRow
+            hint={railpackHint(report)}
+            name="Railpack"
+            version={report.railpack}
+          />
+          <ToolRow
+            hint={swarmHint(report)}
+            name="Swarm"
+            version={report.swarm}
+          />
         </>
       ) : (
         <FramePanel className="text-muted-foreground text-sm">

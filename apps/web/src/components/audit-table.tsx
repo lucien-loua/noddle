@@ -48,7 +48,8 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
         <EmptyHeader>
           <EmptyTitle>Nothing recorded yet</EmptyTitle>
           <EmptyDescription>
-            Every attempt to change something — allowed or denied — is recorded here.
+            Every attempt to change something — allowed or denied — is recorded
+            here.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -60,8 +61,9 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
       <FrameHeader>
         <FrameTitle>Audit log</FrameTitle>
         <FrameDescription>
-          Every attempt to change something, allowed or denied. Recorded when the request is
-          authorised, so an entry means it was <em>attempted</em>, not that it finished.
+          Every attempt to change something, allowed or denied. Recorded when
+          the request is authorised, so an entry means it was <em>attempted</em>
+          , not that it finished.
         </FrameDescription>
       </FrameHeader>
       <FramePanel className="p-0">
@@ -87,7 +89,9 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
                 <TableCell className="font-medium">
                   <span className="block">{e.actorEmail}</span>
                   {e.role ? (
-                    <span className="block text-muted-foreground text-xs">{e.role}</span>
+                    <span className="block text-muted-foreground text-xs">
+                      {e.role}
+                    </span>
                   ) : null}
                 </TableCell>
                 <TableCell className="font-mono text-xs">
@@ -97,7 +101,9 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
                   {/* A denial isn't a failure — it's the product doing its
                       job. `outline` rather than `destructive`, which would
                       mean "something is broken". */}
-                  <Badge variant={e.outcome === "denied" ? "outline" : "secondary"}>
+                  <Badge
+                    variant={e.outcome === "denied" ? "outline" : "secondary"}
+                  >
                     {e.outcome === "denied" ? "Denied" : "Allowed"}
                   </Badge>
                 </TableCell>

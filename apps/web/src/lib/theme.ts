@@ -11,7 +11,8 @@ const EDITABLE_TAG = /^(INPUT|TEXTAREA|SELECT)$/;
  */
 export function applyTheme(theme: Theme): void {
   const dark =
-    theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+    theme === "dark" ||
+    (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", dark);
 }
 

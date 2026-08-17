@@ -55,7 +55,7 @@ export type BuildSpecField = (typeof BUILD_SPEC_FIELDS)[number];
  * name — and cannot forget the rest.
  */
 export function buildSpecOf<T extends Record<BuildSpecField, unknown>>(
-  service: T,
+  service: T
 ): Pick<T, BuildSpecField> {
   const spec = {} as Pick<T, BuildSpecField>;
   for (const field of BUILD_SPEC_FIELDS) {

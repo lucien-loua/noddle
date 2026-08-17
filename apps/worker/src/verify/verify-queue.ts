@@ -11,7 +11,13 @@
 import { randomBytes } from "node:crypto";
 
 import { createDatabase } from "@noddle/db";
-import { deployments, environments, projects, servers, services } from "@noddle/db/schema";
+import {
+  deployments,
+  environments,
+  projects,
+  servers,
+  services,
+} from "@noddle/db/schema";
 import { DEPLOY_QUEUE_NAME, deployJobSchema } from "@noddle/deploy-contract";
 import { devStack } from "@noddle/testing/dev-stack";
 import { Queue } from "bullmq";
@@ -35,7 +41,9 @@ const ko = (m: string) => {
   console.log(`  [31m✗[0m ${m}`);
 };
 
-const appKey = APP_KEY_B64 ? Buffer.from(APP_KEY_B64, "base64") : randomBytes(32);
+const appKey = APP_KEY_B64
+  ? Buffer.from(APP_KEY_B64, "base64")
+  : randomBytes(32);
 const db = createDatabase({ url: DB_URL });
 const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 const queue = new Queue(DEPLOY_QUEUE_NAME, { connection });
@@ -45,7 +53,7 @@ try {
     db,
     appKey,
     "verify-queue",
-    "-----BEGIN OPENSSH PRIVATE KEY-----\nx\n-----END-----",
+    "-----BEGIN OPENSSH PRIVATE KEY-----\nx\n-----END-----"
   );
   const [srv] = await db
     .insert(servers)
@@ -57,7 +65,10 @@ try {
     })
     .returning();
 
-  const [proj] = await db.insert(projects).values({ name: "queue" }).returning();
+  const [proj] = await db
+    .insert(projects)
+    .values({ name: "queue" })
+    .returning();
   const [env] = await db
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
@@ -81,7 +92,10 @@ try {
     .returning();
   ok("service and pending deployment created");
 
-  await queue.add("deploy", deployJobSchema.parse({ deploymentId: dep?.id ?? "", kind: "deploy" }));
+  await queue.add(
+    "deploy",
+    deployJobSchema.parse({ deploymentId: dep?.id ?? "", kind: "deploy" })
+  );
   ok("job dropped into the queue");
 
   // The worker must pick it up and write a result. We wait for a TERMINAL

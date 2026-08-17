@@ -7,7 +7,12 @@ import {
   resolveBuildDir,
 } from "@noddle/build-engine";
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import { deploymentLogs, deployments, servers, services } from "@noddle/db/schema";
+import {
+  deploymentLogs,
+  deployments,
+  servers,
+  services,
+} from "@noddle/db/schema";
 import type { DomainRoute } from "@noddle/proxy-config";
 import { pushImage, registryImageTag } from "@noddle/registry";
 import type { RegistryConfig } from "@noddle/registry";
@@ -26,9 +31,15 @@ import { createLogSink } from "#log-sink";
 import { notify } from "#notify";
 import { resolveRegistry } from "#registry";
 import { BUILD_ROOT } from "#runtime-context";
-import type { BuildOptions, DeployContext, RouteOptions } from "#runtime-context";
+import type {
+  BuildOptions,
+  DeployContext,
+  RouteOptions,
+} from "#runtime-context";
 
-type RunDeployment = NonNullable<Awaited<ReturnType<typeof loadDeploymentForRun>>>;
+type RunDeployment = NonNullable<
+  Awaited<ReturnType<typeof loadDeploymentForRun>>
+>;
 
 function loadDeploymentForRun(ctx: DeployContext, deploymentId: string) {
   return ctx.db.query.deployments.findFirst({
@@ -58,7 +69,7 @@ function routeHosts(
     internalPath: string | null;
     path: string;
     stripPath: boolean;
-  }[],
+  }[]
 ): DomainRoute[] {
   return domains.map((d) => ({
     certificateType: d.certificateType,
@@ -79,7 +90,7 @@ function routeHosts(
 async function sourceCredentials(
   ctx: DeployContext,
   service: RunDeployment["service"],
-  sink: Awaited<ReturnType<typeof createLogSink>>,
+  sink: Awaited<ReturnType<typeof createLogSink>>
 ): Promise<{ deployKey: string | null; repoUrl: string | null }> {
   const repoUrl = await providerCloneUrl(ctx, service);
   if (repoUrl) {
@@ -98,7 +109,7 @@ async function sourceCredentials(
     deployKey: decryptSecret(
       service.deployKey.privateKeyEncrypted,
       ctx.appKey,
-      secretContext.sshKey(service.deployKey.id),
+      secretContext.sshKey(service.deployKey.id)
     ),
     repoUrl: null,
   };
@@ -111,13 +122,16 @@ async function buildAndPushImage(
   registry: RegistryConfig | undefined,
   buildClient: DeployClients["buildClient"],
   sink: Awaited<ReturnType<typeof createLogSink>>,
-  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
+  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void }
 ): Promise<void> {
   if (service.cleanCache) {
     sink.write("▸ cache disabled for this build\n");
   }
 
-  const buildDir = resolveBuildDir(`${BUILD_ROOT}/${service.id}`, service.buildPath);
+  const buildDir = resolveBuildDir(
+    `${BUILD_ROOT}/${service.id}`,
+    service.buildPath
+  );
   if (service.buildPath) {
     sink.write(`▸ build context: ${service.buildPath}\n`);
   }
@@ -169,7 +183,7 @@ async function buildAndDeployService(
   deployment: RunDeployment,
   sink: Awaited<ReturnType<typeof createLogSink>>,
   stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
-  clients: DeployClients,
+  clients: DeployClients
 ): Promise<void> {
   const { db } = ctx;
   const { service } = deployment;
@@ -188,7 +202,9 @@ async function buildAndDeployService(
     sink.write(`▸ image ${imageTag}\n`);
   } else {
     if (!service.gitRepoUrl) {
-      throw new Error("service has no git repository: this source_type is not supported here");
+      throw new Error(
+        "service has no git repository: this source_type is not supported here"
+      );
     }
 
     // The cap is derived from the server's memory MINUS what the control
@@ -236,12 +252,23 @@ async function buildAndDeployService(
     .where(eq(deployments.id, deployment.id));
 
   if (!publishedImage) {
-    await buildAndPushImage(service, imageTag, registry, buildClient, sink, stream);
+    await buildAndPushImage(
+      service,
+      imageTag,
+      registry,
+      buildClient,
+      sink,
+      stream
+    );
   }
 
   const env: Record<string, string> = {};
   for (const v of service.envVars) {
-    env[v.key] = decryptSecret(v.valueEncrypted, ctx.appKey, secretContext.envVar(v.id));
+    env[v.key] = decryptSecret(
+      v.valueEncrypted,
+      ctx.appKey,
+      secretContext.envVar(v.id)
+    );
   }
 
   sink.write("▸ Swarm rollout\n");
@@ -267,7 +294,7 @@ async function buildAndDeployService(
   // deployment while the old version is still serving.
   if (!outcome.accepted) {
     sink.write(
-      `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`,
+      `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`
     );
     await db
       .update(deployments)
@@ -278,7 +305,10 @@ async function buildAndDeployService(
         swarmUpdateState: outcome.updateState,
       })
       .where(eq(deployments.id, deployment.id));
-    await db.update(services).set({ status: "crashed" }).where(eq(services.id, service.id));
+    await db
+      .update(services)
+      .set({ status: "crashed" })
+      .where(eq(services.id, service.id));
     await notify(ctx, {
       detail: outcome.updateMessage ?? undefined,
       resource: service.name,
@@ -306,7 +336,7 @@ export async function runDeploy(
   ctx: DeployContext,
   route: RouteOptions,
   build: BuildOptions,
-  data: { deploymentId: string },
+  data: { deploymentId: string }
 ): Promise<void> {
   const { db } = ctx;
 
@@ -346,13 +376,23 @@ export async function runDeploy(
     // The connection lives inside `withDeployClients`; a failure to connect
     // is caught the same way as any other failure below.
     await withDeployClients(ctx, service.server, (clients) =>
-      buildAndDeployService(ctx, route, registry, deployment, log, stream, clients),
+      buildAndDeployService(
+        ctx,
+        route,
+        registry,
+        deployment,
+        log,
+        stream,
+        clients
+      )
     );
   } catch (error) {
     // `check` folds the failing command's stderr into the message, and git
     // echoes the clone URL in several of its errors. This one is persisted
     // and notified, so it does not pass through the sink's redaction.
-    const message = redactUrlCredentials(error instanceof Error ? error.message : String(error));
+    const message = redactUrlCredentials(
+      error instanceof Error ? error.message : String(error)
+    );
     sink?.write(`✗ ${message}\n`);
     await db
       .update(deployments)
@@ -362,7 +402,10 @@ export async function runDeploy(
         status: "failed",
       })
       .where(eq(deployments.id, deployment.id));
-    await db.update(services).set(markFailed(null, message)).where(eq(services.id, service.id));
+    await db
+      .update(services)
+      .set(markFailed(null, message))
+      .where(eq(services.id, service.id));
     await notify(ctx, {
       detail: message,
       resource: service.name,
@@ -372,7 +415,9 @@ export async function runDeploy(
   } finally {
     if (sink) {
       const { byteSize, storageUrl } = await sink.close();
-      await db.insert(deploymentLogs).values({ byteSize, deploymentId: deployment.id, storageUrl });
+      await db
+        .insert(deploymentLogs)
+        .values({ byteSize, deploymentId: deployment.id, storageUrl });
     }
   }
 }
@@ -385,7 +430,7 @@ export async function redeployImage(
     serviceId: string;
     imageTag: string;
     trigger: "rollback" | "watch_revert";
-  },
+  }
 ): Promise<string> {
   const service = await ctx.db.query.services.findFirst({
     where: eq(services.id, opts.serviceId),
@@ -404,7 +449,10 @@ export async function redeployImage(
 
   const origin = await ctx.db.query.deployments.findFirst({
     orderBy: desc(deployments.createdAt),
-    where: and(eq(deployments.serviceId, service.id), eq(deployments.imageTag, opts.imageTag)),
+    where: and(
+      eq(deployments.serviceId, service.id),
+      eq(deployments.imageTag, opts.imageTag)
+    ),
   });
 
   const [created] = await ctx.db
@@ -418,56 +466,67 @@ export async function redeployImage(
     })
     .returning();
 
-  return await withDeployClients(ctx, service.server, async ({ buildDocker, managerDocker }) => {
-    const env: Record<string, string> = {};
-    for (const v of service.envVars) {
-      env[v.key] = decryptSecret(v.valueEncrypted, ctx.appKey, secretContext.envVar(v.id));
-    }
+  return await withDeployClients(
+    ctx,
+    service.server,
+    async ({ buildDocker, managerDocker }) => {
+      const env: Record<string, string> = {};
+      for (const v of service.envVars) {
+        env[v.key] = decryptSecret(
+          v.valueEncrypted,
+          ctx.appKey,
+          secretContext.envVar(v.id)
+        );
+      }
 
-    const swarmName = swarmServiceName(service);
-    const outcome = await rolloutService({
-      buildDocker,
-      certResolver: route.certResolver,
-      domainRoutes: routeHosts(service.domains),
-      env,
-      image: opts.imageTag,
-      managerDocker,
-      networkName: route.networkName,
-      port: service.port,
-      registry,
-      serviceName: swarmName,
-      swarmNodeId: service.server.swarmNodeId,
-    });
+      const swarmName = swarmServiceName(service);
+      const outcome = await rolloutService({
+        buildDocker,
+        certResolver: route.certResolver,
+        domainRoutes: routeHosts(service.domains),
+        env,
+        image: opts.imageTag,
+        managerDocker,
+        networkName: route.networkName,
+        port: service.port,
+        registry,
+        serviceName: swarmName,
+        swarmNodeId: service.server.swarmNodeId,
+      });
 
-    const finishedAt = new Date();
-    if (!outcome.accepted) {
-      await ctx.db
-        .update(deployments)
-        .set({
-          finishedAt,
-          nodeId: outcome.nodeId,
-          status: "rolled_back",
-          swarmUpdateState: outcome.updateState,
-        })
-        .where(eq(deployments.id, created?.id ?? ""));
-      return created?.id ?? "";
+      const finishedAt = new Date();
+      if (!outcome.accepted) {
+        await ctx.db
+          .update(deployments)
+          .set({
+            finishedAt,
+            nodeId: outcome.nodeId,
+            status: "rolled_back",
+            swarmUpdateState: outcome.updateState,
+          })
+          .where(eq(deployments.id, created?.id ?? ""));
+        return created?.id ?? "";
+      }
+      if (!created) {
+        return "";
+      }
+      await recordAcceptedService(ctx.db, {
+        deploymentId: created.id,
+        finishedAt,
+        nodeId: outcome.nodeId,
+        serviceId: service.id,
+        swarmUpdateState: outcome.updateState,
+      });
+      return created.id;
     }
-    if (!created) {
-      return "";
-    }
-    await recordAcceptedService(ctx.db, {
-      deploymentId: created.id,
-      finishedAt,
-      nodeId: outcome.nodeId,
-      serviceId: service.id,
-      swarmUpdateState: outcome.updateState,
-    });
-    return created.id;
-  });
+  );
 }
 
 /** Reads back the server's memory to size the cap. Idempotent. */
-export async function refreshServerFacts(ctx: DeployContext, serverId: string): Promise<void> {
+export async function refreshServerFacts(
+  ctx: DeployContext,
+  serverId: string
+): Promise<void> {
   const server = await ctx.db.query.servers.findFirst({
     where: eq(servers.id, serverId),
   });
@@ -489,7 +548,9 @@ export async function refreshServerFacts(ctx: DeployContext, serverId: string): 
         dockerApiMinVersion: version.MinAPIVersion ?? null,
         dockerVersion: version.Version ?? null,
         status: "connected",
-        totalMemoryMb: info.MemTotal ? Math.round(info.MemTotal / 1024 / 1024) : null,
+        totalMemoryMb: info.MemTotal
+          ? Math.round(info.MemTotal / 1024 / 1024)
+          : null,
       })
       .where(eq(servers.id, server.id));
   } finally {

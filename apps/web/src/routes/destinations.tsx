@@ -31,9 +31,13 @@ export const Route = createFileRoute("/destinations")({
 
 function DestinationsPage() {
   const { destinations: initial, email, role } = Route.useLoaderData();
-  const known: RoleName | null = role && role in roles ? (role as RoleName) : null;
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
   const canEdit = useCan(known, "backup", "create");
-  const { data: destinations, isEmpty } = useResourceList(queries.destinations, initial);
+  const { data: destinations, isEmpty } = useResourceList(
+    queries.destinations,
+    initial
+  );
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DestinationRow | null>(null);
@@ -45,7 +49,11 @@ function DestinationsPage() {
 
   return (
     <AppShell
-      actions={canEdit && !isEmpty ? <Button onClick={handleOpen}>Add destination</Button> : null}
+      actions={
+        canEdit && !isEmpty ? (
+          <Button onClick={handleOpen}>Add destination</Button>
+        ) : null
+      }
       email={email}
       role={role}
       title="S3 destinations"

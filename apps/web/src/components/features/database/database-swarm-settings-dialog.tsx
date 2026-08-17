@@ -10,7 +10,12 @@ import { useCallback, useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   FocusModal,
   FocusModalContent,
@@ -123,7 +128,9 @@ function parseLabels(raw: string): Record<string, string> {
   return out;
 }
 
-function formatLabels(labels: Record<string, string> | null | undefined): string {
+function formatLabels(
+  labels: Record<string, string> | null | undefined
+): string {
   if (!labels) {
     return "";
   }
@@ -183,7 +190,8 @@ export function DatabaseSwarmSettingsDialog({
           <div className="min-w-0">
             <FocusModalTitle>Swarm Settings</FocusModalTitle>
             <FocusModalDescription>
-              Placement and network overrides can break logs, monitoring, and backups.
+              Placement and network overrides can break logs, monitoring, and
+              backups.
             </FocusModalDescription>
           </div>
         </FocusModalHeader>
@@ -196,14 +204,16 @@ export function DatabaseSwarmSettingsDialog({
                     "rounded-lg px-3 py-2 text-left transition-colors",
                     section === item.id
                       ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   )}
                   key={item.id}
                   onClick={() => setSection(item.id)}
                   type="button"
                 >
                   <div className="font-medium text-sm">{item.label}</div>
-                  <div className="text-muted-foreground text-xs">{item.description}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {item.description}
+                  </div>
                 </button>
               ))}
             </nav>
@@ -375,7 +385,13 @@ function FormActions({
         </p>
       ) : null}
       <div className="flex items-center justify-end gap-2">
-        <Button disabled={isPending} onClick={onClear} size="sm" type="button" variant="ghost">
+        <Button
+          disabled={isPending}
+          onClick={onClear}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
           Clear
         </Button>
         <Button disabled={isPending} onClick={onSave} size="sm" type="button">
@@ -542,11 +558,17 @@ function HealthCheckForm({
   value: NonNullable<DatabaseSwarmSettings["healthCheck"]> | null;
 }) {
   const [test, setTest] = useState((value?.Test ?? []).join("\n"));
-  const [interval, setIntervalNs] = useState(value?.Interval == null ? "" : String(value.Interval));
-  const [timeout, setTimeoutNs] = useState(value?.Timeout == null ? "" : String(value.Timeout));
-  const [retries, setRetries] = useState(value?.Retries == null ? "" : String(value.Retries));
+  const [interval, setIntervalNs] = useState(
+    value?.Interval == null ? "" : String(value.Interval)
+  );
+  const [timeout, setTimeoutNs] = useState(
+    value?.Timeout == null ? "" : String(value.Timeout)
+  );
+  const [retries, setRetries] = useState(
+    value?.Retries == null ? "" : String(value.Retries)
+  );
   const [startPeriod, setStartPeriod] = useState(
-    value?.StartPeriod == null ? "" : String(value.StartPeriod),
+    value?.StartPeriod == null ? "" : String(value.StartPeriod)
   );
 
   return (
@@ -582,7 +604,11 @@ function HealthCheckForm({
         <NsField label="Interval" onChange={setIntervalNs} value={interval} />
         <NsField label="Timeout" onChange={setTimeoutNs} value={timeout} />
         <LabeledInput label="Retries" onChange={setRetries} value={retries} />
-        <NsField label="Start period" onChange={setStartPeriod} value={startPeriod} />
+        <NsField
+          label="Start period"
+          onChange={setStartPeriod}
+          value={startPeriod}
+        />
       </FieldGroup>
     </SectionShell>
   );
@@ -601,14 +627,18 @@ function RestartPolicyForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["restartPolicy"]> | null;
 }) {
-  const [condition, setCondition] = useState<"" | "any" | "none" | "on-failure">(
-    value?.Condition ?? "",
+  const [condition, setCondition] = useState<
+    "" | "any" | "none" | "on-failure"
+  >(value?.Condition ?? "");
+  const [delay, setDelay] = useState(
+    value?.Delay == null ? "" : String(value.Delay)
   );
-  const [delay, setDelay] = useState(value?.Delay == null ? "" : String(value.Delay));
   const [maxAttempts, setMaxAttempts] = useState(
-    value?.MaxAttempts == null ? "" : String(value.MaxAttempts),
+    value?.MaxAttempts == null ? "" : String(value.MaxAttempts)
   );
-  const [window, setWindow] = useState(value?.Window == null ? "" : String(value.Window));
+  const [window, setWindow] = useState(
+    value?.Window == null ? "" : String(value.Window)
+  );
 
   return (
     <SectionShell
@@ -630,7 +660,9 @@ function RestartPolicyForm({
       <FieldGroup>
         <LabeledSelect
           label="Condition"
-          onValueChange={(v) => setCondition((v ?? "") as "" | "any" | "none" | "on-failure")}
+          onValueChange={(v) =>
+            setCondition((v ?? "") as "" | "any" | "none" | "on-failure")
+          }
           placeholder="Select restart condition"
           value={condition || undefined}
         >
@@ -639,7 +671,11 @@ function RestartPolicyForm({
           <SelectItem value="any">any</SelectItem>
         </LabeledSelect>
         <NsField label="Delay" onChange={setDelay} value={delay} />
-        <LabeledInput label="Max Attempts" onChange={setMaxAttempts} value={maxAttempts} />
+        <LabeledInput
+          label="Max Attempts"
+          onChange={setMaxAttempts}
+          value={maxAttempts}
+        />
         <NsField label="Window" onChange={setWindow} value={window} />
       </FieldGroup>
     </SectionShell>
@@ -659,9 +695,11 @@ function PlacementForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["placement"]> | null;
 }) {
-  const [constraints, setConstraints] = useState((value?.Constraints ?? []).join("\n"));
+  const [constraints, setConstraints] = useState(
+    (value?.Constraints ?? []).join("\n")
+  );
   const [maxReplicas, setMaxReplicas] = useState(
-    value?.MaxReplicas == null ? "" : String(value.MaxReplicas),
+    value?.MaxReplicas == null ? "" : String(value.MaxReplicas)
   );
 
   return (
@@ -684,8 +722,8 @@ function PlacementForm({
       saveLabel="Save Placement"
     >
       <p className="mb-4 text-muted-foreground text-sm">
-        Overriding placement can move the task off the node that holds the named volume — the
-        database may start empty with no error.
+        Overriding placement can move the task off the node that holds the named
+        volume — the database may start empty with no error.
       </p>
       <FieldGroup>
         <LabeledTextarea
@@ -696,7 +734,11 @@ function PlacementForm({
           rows={4}
           value={constraints}
         />
-        <LabeledInput label="Max replicas per node" onChange={setMaxReplicas} value={maxReplicas} />
+        <LabeledInput
+          label="Max replicas per node"
+          onChange={setMaxReplicas}
+          value={maxReplicas}
+        />
       </FieldGroup>
     </SectionShell>
   );
@@ -721,11 +763,17 @@ function UpdateConfigForm({
     | null;
 }) {
   const [parallelism, setParallelism] = useState(
-    value?.Parallelism == null ? "" : String(value.Parallelism),
+    value?.Parallelism == null ? "" : String(value.Parallelism)
   );
-  const [delay, setDelay] = useState(value?.Delay == null ? "" : String(value.Delay));
-  const [failureAction, setFailureAction] = useState(value?.FailureAction ?? "");
-  const [monitor, setMonitor] = useState(value?.Monitor == null ? "" : String(value.Monitor));
+  const [delay, setDelay] = useState(
+    value?.Delay == null ? "" : String(value.Delay)
+  );
+  const [failureAction, setFailureAction] = useState(
+    value?.FailureAction ?? ""
+  );
+  const [monitor, setMonitor] = useState(
+    value?.Monitor == null ? "" : String(value.Monitor)
+  );
   const [order, setOrder] = useState(value?.Order ?? "");
 
   return (
@@ -738,7 +786,10 @@ function UpdateConfigForm({
           Delay: parseOptionalInt(delay),
           ...(failureAction
             ? {
-                FailureAction: failureAction as "continue" | "pause" | "rollback",
+                FailureAction: failureAction as
+                  | "continue"
+                  | "pause"
+                  | "rollback",
               }
             : {}),
           Monitor: parseOptionalInt(monitor),
@@ -756,13 +807,19 @@ function UpdateConfigForm({
                       ? failureAction
                       : undefined,
                 },
-              },
+              }
         );
       }}
-      saveLabel={kind === "update" ? "Save Update Config" : "Save Rollback Config"}
+      saveLabel={
+        kind === "update" ? "Save Update Config" : "Save Rollback Config"
+      }
     >
       <FieldGroup>
-        <LabeledInput label="Parallelism" onChange={setParallelism} value={parallelism} />
+        <LabeledInput
+          label="Parallelism"
+          onChange={setParallelism}
+          value={parallelism}
+        />
         <NsField label="Delay" onChange={setDelay} value={delay} />
         <LabeledSelect
           label="Failure action"
@@ -772,7 +829,9 @@ function UpdateConfigForm({
         >
           <SelectItem value="pause">pause</SelectItem>
           <SelectItem value="continue">continue</SelectItem>
-          {kind === "update" ? <SelectItem value="rollback">rollback</SelectItem> : null}
+          {kind === "update" ? (
+            <SelectItem value="rollback">rollback</SelectItem>
+          ) : null}
         </LabeledSelect>
         <NsField label="Monitor" onChange={setMonitor} value={monitor} />
         <LabeledSelect
@@ -805,7 +864,9 @@ function ModeForm({
   const initialKind = value?.Global ? "global" : "replicated";
   const [kind, setKind] = useState<"global" | "replicated">(initialKind);
   const [replicas, setReplicas] = useState(
-    value?.Replicated?.Replicas == null ? "1" : String(value.Replicated.Replicas),
+    value?.Replicated?.Replicas == null
+      ? "1"
+      : String(value.Replicated.Replicas)
   );
 
   return (
@@ -837,7 +898,11 @@ function ModeForm({
           <SelectItem value="global">Global</SelectItem>
         </LabeledSelect>
         {kind === "replicated" ? (
-          <LabeledInput label="Replicas" onChange={setReplicas} value={replicas} />
+          <LabeledInput
+            label="Replicas"
+            onChange={setReplicas}
+            value={replicas}
+          />
         ) : null}
       </FieldGroup>
     </SectionShell>
@@ -857,7 +922,10 @@ function NetworkForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["networks"]> | null;
 }) {
-  const initial = useMemo(() => (value ?? []).map((n) => n.Target).join("\n"), [value]);
+  const initial = useMemo(
+    () => (value ?? []).map((n) => n.Target).join("\n"),
+    [value]
+  );
   const [targets, setTargets] = useState(initial);
 
   return (
@@ -941,7 +1009,9 @@ function StopGraceForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: number | null;
 }) {
-  const [raw, setRaw] = useState(value === null || value === undefined ? "" : String(value));
+  const [raw, setRaw] = useState(
+    value === null || value === undefined ? "" : String(value)
+  );
 
   return (
     <SectionShell

@@ -37,7 +37,7 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
         const password = decryptSecret(
           database.rootPasswordEncrypted,
           env.appKey,
-          secretContext.databasePassword(database.id),
+          secretContext.databasePassword(database.id)
         );
         const host = database.swarmName;
 
@@ -47,7 +47,7 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
             host,
             password,
             database.rootUser,
-            database.databaseName,
+            database.databaseName
           ),
           databaseName: database.databaseName ?? database.rootUser,
           externalConnectionUrl: database.externalPort
@@ -57,7 +57,7 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
                 password,
                 database.rootUser,
                 database.databaseName,
-                database.externalPort,
+                database.externalPort
               )
             : null,
           host,
@@ -65,7 +65,7 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
             database.engine,
             host,
             database.rootUser,
-            database.databaseName,
+            database.databaseName
           ),
           maskedExternalConnectionUrl: database.externalPort
             ? maskedConnectionString(
@@ -73,7 +73,7 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
                 database.server.host,
                 database.rootUser,
                 database.databaseName,
-                database.externalPort,
+                database.externalPort
               )
             : null,
           password,
@@ -81,5 +81,5 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
           user: database.rootUser,
         };
       },
-    }),
+    })
   );

@@ -34,13 +34,13 @@ interface DatabaseBackupRun extends BackupRunRow {
 async function buildDumpCommand(
   ctx: DeployContext,
   client: SshClient,
-  run: DatabaseBackupRun,
+  run: DatabaseBackupRun
 ): Promise<string> {
   const { database } = run;
   const password = decryptSecret(
     database.rootPasswordEncrypted,
     ctx.appKey,
-    secretContext.databasePassword(database.id),
+    secretContext.databasePassword(database.id)
   );
   const spec = dumpSpecFor(database.engine);
   const dumpDatabaseName = run.config?.databaseName ?? database.databaseName;
@@ -139,14 +139,20 @@ export const databaseSweepSubject: BackupSweepSubject<DatabaseConfig> = {
   configSchedule: (config) => config.schedule,
   findInFlight: async (ctx, configId) => {
     const row = await ctx.db.query.backups.findFirst({
-      where: and(eq(backups.configId, configId), inArray(backups.status, ["queued", "running"])),
+      where: and(
+        eq(backups.configId, configId),
+        inArray(backups.status, ["queued", "running"])
+      ),
     });
     return row !== undefined;
   },
   findLastCompletedAt: async (ctx, configId) => {
     const last = await ctx.db.query.backups.findFirst({
       orderBy: desc(backups.createdAt),
-      where: and(eq(backups.configId, configId), eq(backups.status, "completed")),
+      where: and(
+        eq(backups.configId, configId),
+        eq(backups.status, "completed")
+      ),
     });
     return last?.createdAt ?? null;
   },
@@ -161,7 +167,7 @@ export const databaseSweepSubject: BackupSweepSubject<DatabaseConfig> = {
           databaseName: config.databaseName,
           kind: "scheduled",
           resolved,
-        }),
+        })
       )
       .returning();
     return created ?? null;
@@ -181,7 +187,10 @@ export const databasePruneSubject: BackupPruneSubject = {
   findExcessRuns: async (ctx, configId, keepLatestCount) => {
     const kept = await ctx.db.query.backups.findMany({
       orderBy: desc(backups.createdAt),
-      where: and(eq(backups.configId, configId), eq(backups.status, "completed")),
+      where: and(
+        eq(backups.configId, configId),
+        eq(backups.status, "completed")
+      ),
     });
     return kept.slice(keepLatestCount);
   },
@@ -214,19 +223,21 @@ export const databaseRecoverSubject: BackupRecoverSubject = {
 
 export async function sweepDatabaseBackups(
   ctx: DeployContext,
-  enqueue: (backupId: string) => Promise<unknown>,
+  enqueue: (backupId: string) => Promise<unknown>
 ) {
   return await sweepBackupConfigs(databaseSweepSubject, ctx, enqueue);
 }
 
 export async function pruneDatabaseBackups(
   ctx: DeployContext,
-  opts: { configId: string | null; databaseId: string },
+  opts: { configId: string | null; databaseId: string }
 ) {
   return await pruneBackupRuns(databasePruneSubject, ctx, opts);
 }
 
-export async function recoverStaleDatabaseBackups(ctx: DeployContext): Promise<number> {
+export async function recoverStaleDatabaseBackups(
+  ctx: DeployContext
+): Promise<number> {
   const { recoverStaleBackupRuns } = await import("#backup-run/recover");
   return await recoverStaleBackupRuns(databaseRecoverSubject, ctx);
 }

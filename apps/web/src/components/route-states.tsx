@@ -1,4 +1,8 @@
-import { ArrowClockwiseIcon, PlugsIcon, WarningIcon } from "@phosphor-icons/react";
+import {
+  ArrowClockwiseIcon,
+  PlugsIcon,
+  WarningIcon,
+} from "@phosphor-icons/react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useCallback } from "react";
@@ -48,7 +52,9 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>This screen could not load</EmptyTitle>
-          <EmptyDescription>{errorMessage(error, "Unknown error")}</EmptyDescription>
+          <EmptyDescription>
+            {errorMessage(error, "Unknown error")}
+          </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button onClick={handleRetry} variant="outline">
@@ -73,10 +79,16 @@ export function RouteNotFound() {
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Page not found</EmptyTitle>
-          <EmptyDescription>This address does not match anything in Noddle.</EmptyDescription>
+          <EmptyDescription>
+            This address does not match anything in Noddle.
+          </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button nativeButton={false} render={<Link to="/" />} variant="outline">
+          <Button
+            nativeButton={false}
+            render={<Link to="/" />}
+            variant="outline"
+          >
             Back to dashboard
           </Button>
         </EmptyContent>

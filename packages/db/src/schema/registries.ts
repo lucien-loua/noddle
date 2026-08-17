@@ -14,5 +14,5 @@ export const registries = pgTable(
     updatedAt,
     username: text("username").notNull(),
   },
-  (t) => [uniqueIndex("registries_name_idx").on(t.name)],
+  (t) => [uniqueIndex("registries_name_idx").on(t.name)]
 );

@@ -2,7 +2,11 @@
 // bun run packages/compose-engine/src/verify.ts
 import { check, expectThrows, runVerify } from "@noddle/testing";
 
-import { injectDeployConfig, listComposeServiceKeys, parseCompose } from "./index.ts";
+import {
+  injectDeployConfig,
+  listComposeServiceKeys,
+  parseCompose,
+} from "./index.ts";
 
 const SAMPLE = `
 services:
@@ -19,9 +23,14 @@ await runVerify("compose-engine", () => {
   check("parses services", Boolean(doc.services?.web && doc.services?.api));
 
   const keys = listComposeServiceKeys(SAMPLE);
-  check("lists service keys", keys.length === 2 && keys.includes("web") && keys.includes("api"));
+  check(
+    "lists service keys",
+    keys.length === 2 && keys.includes("web") && keys.includes("api")
+  );
 
-  expectThrows("rejects YAML without services", () => parseCompose("version: '3'\n", "bad.yml"));
+  expectThrows("rejects YAML without services", () =>
+    parseCompose("version: '3'\n", "bad.yml")
+  );
 
   injectDeployConfig(doc, {
     builtKeys: ["web", "api"],
@@ -39,17 +48,22 @@ await runVerify("compose-engine", () => {
   }
 
   const webDeploy = web.deploy as Record<string, unknown> | undefined;
-  check("injects update_config on built services", Boolean(webDeploy?.update_config));
+  check(
+    "injects update_config on built services",
+    Boolean(webDeploy?.update_config)
+  );
   check(
     "pins placement when node id given",
-    JSON.stringify(webDeploy?.placement).includes("node.id==node-1"),
+    JSON.stringify(webDeploy?.placement).includes("node.id==node-1")
   );
   check(
     "attaches public service to overlay network",
-    Array.isArray(web.networks) && web.networks.includes("noddle"),
+    Array.isArray(web.networks) && web.networks.includes("noddle")
   );
   check(
     "marks overlay network external",
-    Boolean((doc.networks?.noddle as { external?: boolean } | undefined)?.external),
+    Boolean(
+      (doc.networks?.noddle as { external?: boolean } | undefined)?.external
+    )
   );
 });

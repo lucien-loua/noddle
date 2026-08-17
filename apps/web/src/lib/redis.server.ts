@@ -1,4 +1,8 @@
-import { decodeLogMessage, logBufferKey, logChannel } from "@noddle/shared/logs";
+import {
+  decodeLogMessage,
+  logBufferKey,
+  logChannel,
+} from "@noddle/shared/logs";
 import type { LogMessage } from "@noddle/shared/logs";
 import IORedis from "ioredis";
 
@@ -15,7 +19,8 @@ const globalForRedis = globalThis as typeof globalThis & {
 };
 
 export const redis: IORedis =
-  globalForRedis.__noddleRedis ?? new IORedis(env.redisUrl, { maxRetriesPerRequest: null });
+  globalForRedis.__noddleRedis ??
+  new IORedis(env.redisUrl, { maxRetriesPerRequest: null });
 globalForRedis.__noddleRedis = redis;
 
 class LogHub {
@@ -37,7 +42,10 @@ class LogHub {
   }
 
   /** Returns a way to unsubscribe. Call it when the SSE stream closes. */
-  async subscribe(deploymentId: string, listener: LogListener): Promise<() => void> {
+  async subscribe(
+    deploymentId: string,
+    listener: LogListener
+  ): Promise<() => void> {
     const channel = logChannel(deploymentId);
     let set = this.listeners.get(channel);
 
@@ -83,5 +91,6 @@ class LogHub {
   }
 }
 
-export const logHub: LogHub = globalForRedis.__noddleLogHub ?? new LogHub(redis);
+export const logHub: LogHub =
+  globalForRedis.__noddleLogHub ?? new LogHub(redis);
 globalForRedis.__noddleLogHub = logHub;
