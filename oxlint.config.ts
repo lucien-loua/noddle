@@ -51,6 +51,13 @@ export default defineConfig({
         "unicorn/consistent-function-scoping": "off",
         "unicorn/no-array-reduce": "off",
         "unicorn/prefer-query-selector": "off",
+        // All six findings are the combobox's keyboard navigation: which
+        // option is highlighted, scrolling it into view, resetting it when
+        // the filtered list changes. Fixing them means changing focus
+        // behaviour in a file `shadcn add` overwrites, and neither the
+        // keyboard path nor the result can be exercised from here.
+        "react-doctor/no-chain-state-updates": "off",
+        "react-doctor/no-effect-chain": "off",
       },
     },
   ],
