@@ -26,6 +26,8 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { ActiveTabPanel } from "@/lib/resource-detail/active-tab";
+import { DETAIL_TAB_PANEL_CLASS } from "@/lib/resource-detail/constants";
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, getEnvironmentScope } from "@/server/dashboard";
 import { getProjectEnvironments } from "@/server/environments";
@@ -142,6 +144,8 @@ function ProjectEnvironmentPage() {
     [navigate, projectId]
   );
 
+  const view = search.view ?? "resources";
+
   const handleViewChange = useCallback(
     (value: string) => {
       navigate({
@@ -221,29 +225,33 @@ function ProjectEnvironmentPage() {
           // resources scroll, the canvas fills what is left.
           className="flex h-full min-h-0 flex-col gap-3"
           onValueChange={handleViewChange}
-          value={search.view ?? "resources"}
+          value={view}
         >
           <TabRail>
             <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="topology">Topology</TabsTrigger>
           </TabRail>
-          <TabsContent
-            className="scroll-fade no-scrollbar -mx-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2"
-            value="resources"
-          >
-            <ResourceGrid
-              environmentId={current.id}
-              groups={dashboard.groups}
-              initialScope={scope}
-              projectId={projectId}
-              role={known}
-            />
+          {/* Base UI keeps EVERY panel mounted, so without `ActiveTabPanel`
+              the grid stays on screen under the canvas — and keeps polling
+              its scope every two seconds while you look at the graph. */}
+          <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="resources">
+            <ActiveTabPanel active={view} value="resources">
+              <ResourceGrid
+                environmentId={current.id}
+                groups={dashboard.groups}
+                initialScope={scope}
+                projectId={projectId}
+                role={known}
+              />
+            </ActiveTabPanel>
           </TabsContent>
           <TabsContent
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col data-ending-style:hidden"
             value="topology"
           >
-            <EnvironmentTopology scope={liveScope} />
+            <ActiveTabPanel active={view} value="topology">
+              <EnvironmentTopology scope={liveScope} />
+            </ActiveTabPanel>
           </TabsContent>
         </Tabs>
       )}
