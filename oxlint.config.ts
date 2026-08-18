@@ -145,6 +145,22 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Off after reading all 4, each deliberate. Two hold values named
+    // `interval` and `timeout`, so the setters the rule wants — `setInterval`,
+    // `setTimeout` — would shadow the browser globals. One keeps the raw
+    // setter as `setThemeState` because `setTheme` is the wrapper it exports.
+    // The fourth destructures no setter at all: `const [queryClient] =
+    // useState(() => new QueryClient(...))` is the create-once idiom.
+    "react/hook-use-state": "off",
+
+    // Off, and this one was measured the hard way. It asks for
+    // `Math.trunc(Number(x))` where `Number.parseInt(x, 10)` stands — not the
+    // same function: parseInt reads the leading digits, Number wants the whole
+    // string. build-engine compares caps written WITH their unit ("960m"), so
+    // Number() returns NaN, every comparison silently flips, and the bench
+    // went from 15/15 to 14/1. An auto-fix applied this once already.
+    "unicorn/prefer-number-coercion": "off",
+
     // Off after reading all 3: each effect DOES clean up, by closing the
     // EventSource or the WebSocket the listeners are attached to — which
     // discards them with it. The rule looks for a literal removeEventListener
