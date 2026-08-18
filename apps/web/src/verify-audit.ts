@@ -104,7 +104,11 @@ try {
 
   server = Bun.spawn(["bun", "run", "server.ts"], {
     cwd: new URL("..", import.meta.url).pathname,
-    env: { ...process.env, PORT: String(PORT) },
+    // The installer sets this, so a real dashboard always has it. Without
+    // it better-auth answers INVALID_ORIGIN to every auth call — measured:
+    // the `trustedOrigins` fallback in auth.server.ts does NOT cover the
+    // gap, with or without NODE_ENV=development.
+    env: { ...process.env, BETTER_AUTH_URL: BASE, PORT: String(PORT) },
     stderr: "pipe",
     stdout: "pipe",
   });
