@@ -145,6 +145,20 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Off for what it still finds, after fixing the 11 that were real: every
+    // remaining one is either textbook ARIA or a role this repo adds to a
+    // PRESET component from outside, which is the only place it can.
+    //
+    //   `role="img"` on a <span aria-label> is the standard way to give a
+    //   coloured status dot a name — <img> would need a source it has none of.
+    //   `role="navigation"` on <SidebarContent> and `role="listitem"` on
+    //   <Item> are documented in place: ui/ is overwritten by `shadcn add`,
+    //   so the landmark has to be attached from the caller.
+    //
+    // 11 were genuine and are fixed: <p> and <span> live regions became
+    // <output>, each with its display made explicit.
+    "jsx-a11y/prefer-tag-over-role": "off",
+
     // Off after reading all 4, each deliberate. Two hold values named
     // `interval` and `timeout`, so the setters the rule wants — `setInterval`,
     // `setTimeout` — would shadow the browser globals. One keeps the raw

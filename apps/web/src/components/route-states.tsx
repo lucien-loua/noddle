@@ -107,9 +107,9 @@ export function RouteNotFound() {
  */
 export function RoutePending() {
   return (
-    <div className="flex h-svh items-center justify-center" role="status">
+    <output className="flex h-svh items-center justify-center">
       <Spinner />
       <span className="sr-only">Loading</span>
-    </div>
+    </output>
   );
 }
