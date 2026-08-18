@@ -111,15 +111,15 @@ function StatCards({
           value={counts.projects}
         />
       </StatCard>
-      <StatCard icon={CubeIcon} label="Services">
+      <StatCard icon={CubeIcon} label="Resources">
         <StatNumber
-          detail={`${counts.services} app${counts.services === 1 ? "" : "s"} · ${counts.stacks} compose · ${counts.databases} db`}
+          detail={`${counts.services} application${counts.services === 1 ? "" : "s"} · ${counts.stacks} compose · ${counts.databases} database${counts.databases === 1 ? "" : "s"}`}
           value={counts.services + counts.stacks + counts.databases}
         />
       </StatCard>
       <StatCard icon={RocketLaunchIcon} label="Deploys">
         <StatNumber
-          detail={counts.deploys7d === 0 ? "no activity yet" : "last 7 days"}
+          detail={counts.deploys7d === 0 ? "No activity yet" : "Last 7 days"}
           value={counts.deploys7d}
         />
       </StatCard>
@@ -127,7 +127,7 @@ function StatCards({
         {hasStatus ? (
           <StatusSummary counts={statusCounts} />
         ) : (
-          <p className="text-muted-foreground text-sm">no services yet</p>
+          <p className="text-muted-foreground text-sm">No resources yet</p>
         )}
       </StatCard>
     </div>
@@ -321,7 +321,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Service</TableHead>
+                <TableHead>Resource</TableHead>
                 <TableHead>Environment</TableHead>
                 <TableHead>Deployed</TableHead>
                 <TableHead>Status</TableHead>

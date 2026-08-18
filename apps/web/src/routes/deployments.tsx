@@ -242,8 +242,8 @@ function DeploymentsPage() {
                 </EmptyTitle>
                 <EmptyDescription>
                   {filtering
-                    ? "No deployment matches this search and these filters."
-                    : "Deployments from applications and compose appear here. They start from a service, in its environment."}
+                    ? "Try a different search or filter."
+                    : "Deployments from applications and Compose stacks appear here. Start one from a resource, in its environment."}
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
@@ -269,7 +269,7 @@ function DeploymentsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>Service</TableHead>
+                  <TableHead>Resource</TableHead>
                   <TableHead>Project</TableHead>
                   <TableHead>Environment</TableHead>
                   <TableHead>Server</TableHead>

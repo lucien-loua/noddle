@@ -57,7 +57,7 @@ export function CreateServiceMenu({
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button />}>
           <StackIcon data-icon="inline-start" weight="regular" />
-          Create Service
+          Create resource
           <CaretDownIcon data-icon="inline-end" weight="regular" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align={align}>

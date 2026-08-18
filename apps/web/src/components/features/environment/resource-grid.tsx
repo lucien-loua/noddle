@@ -861,8 +861,8 @@ export function ResourceGrid(props: GridProps) {
           items={{
             all: "All types",
             database: "Databases",
-            service: "Services",
-            stack: "Stacks",
+            service: "Applications",
+            stack: "Compose",
           }}
           onValueChange={handleTypeFilterChange}
           value={typeFilter}
@@ -873,8 +873,8 @@ export function ResourceGrid(props: GridProps) {
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="service">Services</SelectItem>
-              <SelectItem value="stack">Stacks</SelectItem>
+              <SelectItem value="service">Applications</SelectItem>
+              <SelectItem value="stack">Compose</SelectItem>
               <SelectItem value="database">Databases</SelectItem>
             </SelectGroup>
           </SelectContent>
@@ -934,7 +934,7 @@ export function ResourceGrid(props: GridProps) {
                 {bulkDeploy.isPending ? (
                   <Spinner data-icon="inline-start" />
                 ) : (
-                  <RocketLaunchIcon data-icon="inline-start" />
+                  <RocketLaunchIcon data-icon="inline-start" weight="regular" />
                 )}
                 Deploy
               </Button>
@@ -963,7 +963,7 @@ export function ResourceGrid(props: GridProps) {
             ) : null}
             {can.delete ? (
               <Button onClick={openBulkDelete} size="sm" variant="destructive">
-                <TrashIcon data-icon="inline-start" />
+                <TrashIcon data-icon="inline-start" weight="regular" />
                 Delete
               </Button>
             ) : null}

@@ -222,11 +222,15 @@ function ProjectCard({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
             <ProjectCount
               icon={CodeIcon}
-              label={services === 1 ? "app" : "apps"}
+              label={services === 1 ? "application" : "applications"}
               value={services}
             />
             <ProjectCount icon={StackIcon} label="compose" value={stacks} />
-            <ProjectCount icon={DatabaseIcon} label="db" value={databases} />
+            <ProjectCount
+              icon={DatabaseIcon}
+              label={databases === 1 ? "database" : "databases"}
+              value={databases}
+            />
           </div>
         ) : null}
       </FramePanel>

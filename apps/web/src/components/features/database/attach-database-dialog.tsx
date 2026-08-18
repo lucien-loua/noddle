@@ -172,7 +172,7 @@ function AttachBody({
           <form.AppField name="serviceId">
             {(f) => (
               <f.FieldCombobox
-                emptyText="No service matches."
+                emptyText="No application matches."
                 items={services}
                 // biome-ignore lint/performance/noJsxPropsBind: inline for type inference from items={services}
                 itemToId={(service) => service.id}
@@ -184,8 +184,8 @@ function AttachBody({
                 itemToStringValue={(service) =>
                   `${service.project} / ${service.environment} · ${service.name}`
                 }
-                label="Service"
-                placeholder="Search services…"
+                label="Application"
+                placeholder="Search applications…"
                 // biome-ignore lint/performance/noJsxPropsBind: inline for type inference
                 renderItem={(service) => (
                   <span className="flex min-w-0 flex-col gap-0.5">

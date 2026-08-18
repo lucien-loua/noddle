@@ -151,7 +151,7 @@ function ProviderRow({
             )}
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-            <Meta label="Services" value={provider.serviceCount} />
+            <Meta label="Applications" value={provider.serviceCount} />
             <Meta
               label="Added"
               value={<RelativeTime iso={provider.createdAt} />}
