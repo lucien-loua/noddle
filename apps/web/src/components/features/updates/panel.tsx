@@ -48,6 +48,63 @@ function Commit({ sha }: { sha: string | null }) {
   return <span className="font-mono text-xs">{sha.slice(0, SHORT)}</span>;
 }
 
+/**
+ * The five notes an update can carry — unreachable, unstamped, failed, in
+ * flight, done. Split out of `UpdatePanel` because they are what made it read
+ * as branchy: five conditionals in a row, none of them about the panel's
+ * structure.
+ */
+function UpdateNotes({
+  data,
+  done,
+  failed,
+  inFlight,
+  running,
+}: {
+  data: UpdateStatus | undefined;
+  done: boolean;
+  failed: string | null;
+  inFlight: boolean;
+  running: string | null;
+}) {
+  return (
+    <>
+      {/* An unreachable machine is a FACT, not a broken page: the rest of
+          the server screen stays useful, and "we don't know" is stated. */}
+      {data?.unreachable ? (
+        <FrameDescription>
+          Could not reach the manager to check for updates: {data.unreachable}
+        </FrameDescription>
+      ) : null}
+
+      {running === null && !data?.unreachable ? (
+        <FrameDescription>
+          {data?.remoteCommit
+            ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way — the installer is idempotent."
+            : "This process was not built by the installer, so it carries no version. Updating from here is only meaningful on an installed machine."}
+        </FrameDescription>
+      ) : null}
+
+      {failed ? (
+        <output className="block text-destructive text-xs">{failed}</output>
+      ) : null}
+
+      {inFlight ? (
+        <FrameDescription role="status">
+          Updating. The dashboard restarts partway through, so this page will
+          stop responding for a moment — it comes back on its own.
+        </FrameDescription>
+      ) : null}
+
+      {done ? (
+        <FrameDescription role="status">
+          Updated. Reload the page to pick up the new dashboard assets.
+        </FrameDescription>
+      ) : null}
+    </>
+  );
+}
+
 export function UpdatePanel({ role }: { role: RoleName | null }) {
   // Courtesy only: `startUpdate` re-checks the permission server-side.
   const canUpdate = useCan(role, "installation", "update");
@@ -123,38 +180,13 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
           </div>
         </dl>
 
-        {/* An unreachable machine is a FACT, not a broken page: the rest of
-            the server screen stays useful, and "we don't know" is stated. */}
-        {data?.unreachable ? (
-          <FrameDescription>
-            Could not reach the manager to check for updates: {data.unreachable}
-          </FrameDescription>
-        ) : null}
-
-        {running === null && !data?.unreachable ? (
-          <FrameDescription>
-            {data?.remoteCommit
-              ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way — the installer is idempotent."
-              : "This process was not built by the installer, so it carries no version. Updating from here is only meaningful on an installed machine."}
-          </FrameDescription>
-        ) : null}
-
-        {failed ? (
-          <output className="block text-destructive text-xs">{failed}</output>
-        ) : null}
-
-        {inFlight ? (
-          <FrameDescription role="status">
-            Updating. The dashboard restarts partway through, so this page will
-            stop responding for a moment — it comes back on its own.
-          </FrameDescription>
-        ) : null}
-
-        {done ? (
-          <FrameDescription role="status">
-            Updated. Reload the page to pick up the new dashboard assets.
-          </FrameDescription>
-        ) : null}
+        <UpdateNotes
+          data={data}
+          done={done}
+          failed={failed}
+          inFlight={inFlight}
+          running={running}
+        />
 
         {/* The log lives on the HOST, so it survives the restart that cuts
             off this page. It's the only reliable account of what happened.
