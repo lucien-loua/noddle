@@ -1060,7 +1060,7 @@ function SelectOptionsPopover<T = unknown>({
         }}
         role="option"
       >
-        {option.icon && option.icon}
+        {option.icon}
         <span className="truncate">{option.label}</span>
       </DropdownMenuCheckboxItem>
     );
@@ -1395,7 +1395,7 @@ export const FiltersContent = <T = unknown,>({
             key={filter.id}
           >
             <ButtonGroupText>
-              {field.icon && field.icon}
+              {field.icon}
               {field.label}
             </ButtonGroupText>
 
@@ -1557,7 +1557,7 @@ function FilterSubmenuContent<T = unknown>({
         }}
         role="option"
       >
-        {option.icon && option.icon}
+        {option.icon}
         <span className="truncate">{option.label}</span>
       </DropdownMenuCheckboxItem>
     );
@@ -2237,7 +2237,7 @@ export function Filters<T = unknown>({
               key={filter.id}
             >
               <ButtonGroupText className="bg-background dark:bg-input/30">
-                {field.icon && field.icon}
+                {field.icon}
                 {field.label}
               </ButtonGroupText>
               <FilterOperatorDropdown<T>
