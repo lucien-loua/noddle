@@ -161,7 +161,7 @@ export const setDatabaseSwarmSettings = createServerFn({ method: "POST" })
           if (value === null) {
             delete next[key as keyof typeof next];
           } else if (value !== undefined) {
-            // biome-ignore lint/suspicious/noExplicitAny: keyed merge of typed slices
+            // oxlint-disable-next-line typescript/no-explicit-any
             (next as any)[key] = value;
           }
         }

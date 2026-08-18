@@ -38,7 +38,7 @@ const SHORT = 12;
  * with build logs: the file on the host must stay the exact byte the
  * machine produced, since it's what gets read back afterward.
  */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: this is precisely the ESC character we're targeting
+// oxlint-disable-next-line no-control-regex -- this is precisely the ESC character we're targeting
 const ANSI = /\u001B\[[0-9;]*m/g;
 
 function Commit({ sha }: { sha: string | null }) {
