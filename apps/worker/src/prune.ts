@@ -148,6 +148,9 @@ async function pruneNode(
   // pass still sees them referenced and reclaims less — a linter reading
   // these as independent awaits is reading the shapes, not the order.
   const containers = await docker.pruneContainers();
+  const containerBytes = containers.SpaceReclaimed ?? 0;
+  const containersDeleted = containers.ContainersDeleted?.length ?? 0;
+
   const images = await docker.pruneImages({
     filters: JSON.stringify({ dangling: { false: true } }),
   });
@@ -156,9 +159,8 @@ async function pruneNode(
     await pruneBuildCache(client, builder);
   }
   return {
-    bytesReclaimed:
-      (containers.SpaceReclaimed ?? 0) + (images.SpaceReclaimed ?? 0),
-    containersDeleted: containers.ContainersDeleted?.length ?? 0,
+    bytesReclaimed: containerBytes + (images.SpaceReclaimed ?? 0),
+    containersDeleted,
     imagesDeleted: images.ImagesDeleted?.length ?? 0,
   };
 }
