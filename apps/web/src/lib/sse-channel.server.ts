@@ -48,17 +48,27 @@ export function sseChannel(
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let closed = false;
-      let heartbeat: ReturnType<typeof setInterval> | undefined;
       let cancel: (() => void) | undefined;
+
+      // Created before `finish`, which clears it. The callback reaches
+      // `finish` only on its first tick — after this body has run.
+      const heartbeat = setInterval(() => {
+        if (closed) {
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode(": ping\n\n"));
+        } catch {
+          finish();
+        }
+      }, SSE_HEARTBEAT_MS);
 
       const finish = () => {
         if (closed) {
           return;
         }
         closed = true;
-        if (heartbeat) {
-          clearInterval(heartbeat);
-        }
+        clearInterval(heartbeat);
         cancel?.();
         try {
           controller.close();
@@ -103,17 +113,6 @@ export function sseChannel(
       };
 
       request.signal.addEventListener("abort", finish);
-
-      heartbeat = setInterval(() => {
-        if (closed) {
-          return;
-        }
-        try {
-          controller.enqueue(encoder.encode(": ping\n\n"));
-        } catch {
-          finish();
-        }
-      }, SSE_HEARTBEAT_MS);
 
       try {
         const maybeCancel = await source(channel);
