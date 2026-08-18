@@ -2,6 +2,7 @@
  * biome-ignore-all lint/performance/noJsxPropsBind: table row actions;
  * per-row handlers need the backup instance from the map callback.
  */
+import type { Icon } from "@phosphor-icons/react";
 import { ClipboardTextIcon } from "@phosphor-icons/react";
 
 import { IconStack } from "@/components/icon-stack";
@@ -39,6 +40,7 @@ export function BackupHistoryTable<T extends BackupRunRow>({
   canCreate,
   canRestore,
   emptyDescription,
+  emptyIcon: EmptyIcon = ClipboardTextIcon,
   emptyTitle,
   onRestore,
   onView,
@@ -48,6 +50,7 @@ export function BackupHistoryTable<T extends BackupRunRow>({
   canCreate: boolean;
   canRestore?: boolean;
   emptyDescription: string;
+  emptyIcon?: Icon;
   emptyTitle: string;
   onRestore?: (backup: T) => void;
   onView: (backup: T) => void;
@@ -58,7 +61,7 @@ export function BackupHistoryTable<T extends BackupRunRow>({
 }) {
   if (!backups) {
     return (
-      <div className="flex flex-1 items-center justify-center py-10">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-10">
         <Spinner />
       </div>
     );
@@ -66,19 +69,17 @@ export function BackupHistoryTable<T extends BackupRunRow>({
 
   if (backups.length === 0) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 p-4">
-        <Empty className="min-h-0 min-w-0 flex-1">
+      <Empty className="min-h-0 flex-1 border-0">
+        <EmptyHeader>
           <EmptyMedia>
             <IconStack>
-              <ClipboardTextIcon className="size-5" />
+              <EmptyIcon className="size-5" />
             </IconStack>
           </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{emptyTitle}</EmptyTitle>
-            <EmptyDescription>{emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
+          <EmptyTitle>{emptyTitle}</EmptyTitle>
+          <EmptyDescription>{emptyDescription}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 

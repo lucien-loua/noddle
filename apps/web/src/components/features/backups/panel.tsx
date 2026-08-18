@@ -111,25 +111,26 @@ export function BackupPanel(props: BackupPanelProps) {
   const listReady = !(configs.isLoading || rows.length === 0);
 
   return (
-    <div className="space-y-3">
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader className="flex-row items-center justify-between gap-3">
-          <div className="min-w-0">
-            <FrameTitle>{copy.title}</FrameTitle>
-            <FrameDescription>{copy.description}</FrameDescription>
-          </div>
-          {showHeaderActions ? (
-            <ScheduleActions
-              canRestore={canRestore}
-              createLabel={copy.createLabel}
-              onCreate={() => setEditor("new")}
-              onRestoreS3={() => setRestoreOpen(true)}
-              restoreLabel={copy.restoreLabel}
-            />
-          ) : null}
-        </FrameHeader>
-        {listReady ? (
-          rows.map((config) => (
+    <>
+      {listReady ? (
+        <Frame className="w-full" variant="ghost">
+          <FrameHeader className="flex-row items-center justify-between gap-3">
+            <div className="min-w-0">
+              <FrameTitle>{copy.title}</FrameTitle>
+              <FrameDescription>{copy.description}</FrameDescription>
+            </div>
+            {showHeaderActions ? (
+              <ScheduleActions
+                canRestore={canRestore}
+                createIcon={copy.emptyIcon}
+                createLabel={copy.createLabel}
+                onCreate={() => setEditor("new")}
+                onRestoreS3={() => setRestoreOpen(true)}
+                restoreLabel={copy.restoreLabel}
+              />
+            ) : null}
+          </FrameHeader>
+          {rows.map((config) => (
             <BackupConfigCard
               canCreate={canCreate}
               config={{
@@ -147,9 +148,11 @@ export function BackupPanel(props: BackupPanelProps) {
               onHistory={() => setHistoryConfig(config)}
               subject={subject}
             />
-          ))
-        ) : (
-          <FramePanel>
+          ))}
+        </Frame>
+      ) : (
+        <Frame className="flex h-full min-h-0 flex-1 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
             <ConfigsListBody
               canCreate={canCreate}
               canRestore={canRestore}
@@ -164,8 +167,8 @@ export function BackupPanel(props: BackupPanelProps) {
               rowCount={rows.length}
             />
           </FramePanel>
-        )}
-      </Frame>
+        </Frame>
+      )}
 
       {/* Two guarded blocks rather than a ternary inside a ternary:
           BackupConfigDialog takes a discriminated union, so the branches
@@ -239,6 +242,6 @@ export function BackupPanel(props: BackupPanelProps) {
           subject={subject}
         />
       ) : null}
-    </div>
+    </>
   );
 }

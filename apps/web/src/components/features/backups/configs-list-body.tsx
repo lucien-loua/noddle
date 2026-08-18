@@ -1,5 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
-import { ArchiveIcon, PlusIcon } from "@phosphor-icons/react";
+import { ArchiveIcon } from "@phosphor-icons/react";
 
 import { IconStack } from "@/components/icon-stack";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function ConfigsListBody({
 }) {
   if (configsLoading) {
     return (
-      <div className="flex justify-center py-10">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-10">
         <Spinner />
       </div>
     );
@@ -48,20 +48,20 @@ export function ConfigsListBody({
 
   if (rowCount === 0) {
     return (
-      <Empty>
-        <EmptyMedia>
-          <IconStack>
-            <EmptyIcon className="size-5" />
-          </IconStack>
-        </EmptyMedia>
+      <Empty className="min-h-0 flex-1 border-0">
         <EmptyHeader>
+          <EmptyMedia>
+            <IconStack>
+              <EmptyIcon className="size-5" />
+            </IconStack>
+          </EmptyMedia>
           <EmptyTitle>{emptyTitle}</EmptyTitle>
           <EmptyDescription>{emptyDescription}</EmptyDescription>
         </EmptyHeader>
         {canCreate ? (
-          <EmptyContent className="flex flex-row flex-wrap gap-2">
+          <EmptyContent className="flex flex-row flex-wrap justify-center gap-2">
             <Button onClick={onCreate}>
-              <PlusIcon data-icon="inline-start" weight="regular" />
+              <EmptyIcon data-icon="inline-start" weight="regular" />
               {createLabel}
             </Button>
             {canRestore ? (

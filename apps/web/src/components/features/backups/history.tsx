@@ -79,6 +79,7 @@ export function BackupHistoryDialog({
             canCreate={canCreate}
             canRestore={canRestore}
             emptyDescription={copy.emptyHistoryDescription}
+            emptyIcon={copy.emptyIcon}
             emptyTitle={copy.emptyHistoryTitle}
             onRestore={onRestore}
             onView={setViewing}

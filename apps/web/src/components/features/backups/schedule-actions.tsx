@@ -1,4 +1,5 @@
-import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import { ArchiveIcon, CaretDownIcon } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -11,12 +12,14 @@ import {
 
 export function ScheduleActions({
   canRestore,
+  createIcon: CreateIcon,
   createLabel,
   onCreate,
   onRestoreS3,
   restoreLabel,
 }: {
   canRestore: boolean;
+  createIcon: Icon;
   createLabel: string;
   onCreate: () => void;
   onRestoreS3: () => void;
@@ -25,7 +28,7 @@ export function ScheduleActions({
   if (!canRestore) {
     return (
       <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" weight="regular" />
+        <CreateIcon data-icon="inline-start" weight="regular" />
         {createLabel}
       </Button>
     );
@@ -34,7 +37,7 @@ export function ScheduleActions({
   return (
     <ButtonGroup>
       <Button onClick={onCreate} size="sm" variant="outline">
-        <PlusIcon data-icon="inline-start" weight="regular" />
+        <CreateIcon data-icon="inline-start" weight="regular" />
         {createLabel}
       </Button>
       <DropdownMenu>
@@ -47,6 +50,7 @@ export function ScheduleActions({
         />
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={onRestoreS3}>
+            <ArchiveIcon data-icon="inline-start" weight="regular" />
             {restoreLabel}
           </DropdownMenuItem>
         </DropdownMenuContent>
