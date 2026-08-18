@@ -433,27 +433,29 @@ try {
     rootPasswordEncrypted: "v1.none",
     serverId: server.id,
   };
-  const [liveDb] = await db
-    .insert(databases)
-    .values({
-      ...common,
-      name: "metrics-live",
-      status: "running",
-      swarmName: probeName,
-    })
-    .returning();
-  // SAME Swarm name, so the same container is there: only STATUS separates
-  // them. That is what makes the "spared" assertion conclusive — otherwise
-  // we would not know if it was spared or simply not found.
-  const [stoppedDb] = await db
-    .insert(databases)
-    .values({
-      ...common,
-      name: "metrics-stopped",
-      status: "stopped",
-      swarmName: probeName,
-    })
-    .returning();
+  // SAME Swarm name for both, so the same container is there: only STATUS
+  // separates them. That is what makes the "spared" assertion conclusive —
+  // otherwise we would not know if it was spared or simply not found.
+  const [[liveDb], [stoppedDb]] = await Promise.all([
+    db
+      .insert(databases)
+      .values({
+        ...common,
+        name: "metrics-live",
+        status: "running",
+        swarmName: probeName,
+      })
+      .returning(),
+    db
+      .insert(databases)
+      .values({
+        ...common,
+        name: "metrics-stopped",
+        status: "stopped",
+        swarmName: probeName,
+      })
+      .returning(),
+  ]);
 
   const third = await collectMetrics(ctx);
   if (third.databases === 1) {

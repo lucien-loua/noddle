@@ -297,10 +297,13 @@ try {
     return row.id;
   };
 
-  const orphanDep = await seedDeployment(ORPHAN);
-  const keptDep = await seedDeployment(KEPT);
-  const portableDep = await seedDeployment(PORTABLE);
-  const alreadyDep = await seedDeployment(VANISHED, true);
+  // Four independent seeds; nothing reads another's row.
+  const [orphanDep, keptDep, portableDep, alreadyDep] = await Promise.all([
+    seedDeployment(ORPHAN),
+    seedDeployment(KEPT),
+    seedDeployment(PORTABLE),
+    seedDeployment(VANISHED, true),
+  ]);
 
   const ctx = verifyCtx({ appKey, db, registry });
 
