@@ -332,27 +332,31 @@ function runLifecycleFor(
  */
 function GridEmpty({ filtered }: { filtered: boolean }) {
   return (
-    <Empty className="min-h-48 flex-1">
-      <EmptyHeader>
-        <EmptyMedia>
-          <IconStack>
-            {filtered ? (
-              <MagnifyingGlassIcon className="size-5" />
-            ) : (
-              <StackIcon className="size-5" />
-            )}
-          </IconStack>
-        </EmptyMedia>
-        <EmptyTitle>
-          {filtered ? "Nothing matches" : "Nothing here yet"}
-        </EmptyTitle>
-        <EmptyDescription>
-          {filtered
-            ? "Try a different search or filter."
-            : "Create a service to get started."}
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <Frame className="min-h-48 flex-1" variant="ghost">
+      <FramePanel className="flex min-h-48 flex-1 flex-col">
+        <Empty className="min-h-48 flex-1 border-0">
+          <EmptyHeader>
+            <EmptyMedia>
+              <IconStack>
+                {filtered ? (
+                  <MagnifyingGlassIcon className="size-5" />
+                ) : (
+                  <StackIcon className="size-5" />
+                )}
+              </IconStack>
+            </EmptyMedia>
+            <EmptyTitle>
+              {filtered ? "Nothing matches" : "Nothing here yet"}
+            </EmptyTitle>
+            <EmptyDescription>
+              {filtered
+                ? "Try a different search or filter."
+                : "Create a service to get started."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </FramePanel>
+    </Frame>
   );
 }
 

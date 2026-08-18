@@ -1,6 +1,7 @@
 import {
   CodeIcon,
   DatabaseIcon,
+  FolderIcon,
   StackIcon,
   TreeStructureIcon,
 } from "@phosphor-icons/react";
@@ -8,13 +9,20 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { IconStack } from "@/components/icon-stack";
 import {
   CreateProjectButton,
   ProjectRowActions,
 } from "@/components/project-actions";
 import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Frame,
   FrameDescription,
@@ -72,13 +80,24 @@ function ProjectsPage() {
       title="Projects"
     >
       {allProjects.length === 0 ? (
-        <Empty className="h-full">
-          <EmptyTitle>No projects yet</EmptyTitle>
-          <EmptyDescription>
-            A project groups environments, and an environment holds your
-            services, stacks and databases.
-          </EmptyDescription>
-        </Empty>
+        <Frame className="h-full" variant="ghost">
+          <FramePanel className="flex h-full min-h-48 flex-col">
+            <Empty className="h-full border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <FolderIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>No projects yet</EmptyTitle>
+                <EmptyDescription>
+                  A project groups environments, and an environment holds your
+                  services, stacks and databases.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </FramePanel>
+        </Frame>
       ) : (
         // Same track as the environment grid: the column count follows the
         // room available, not three breakpoints. `auto-fill` keeps a lone
