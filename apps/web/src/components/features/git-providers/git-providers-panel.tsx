@@ -9,7 +9,6 @@ import {
 } from "@/components/features/services/provider-icons";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Field,
   FieldDescription,
@@ -482,59 +489,61 @@ export function GitProvidersList({
     refresh,
   } = useResourceList(queries.gitProviders, initial);
 
-  return (
-    <SettingsList isEmpty={isEmpty}>
-      <SettingsList.Empty>
-        <SettingsList.EmptyMedia>
-          <IconStack>
-            <PlugsIcon className="size-5" />
-          </IconStack>
-        </SettingsList.EmptyMedia>
-        <SettingsList.EmptyHeader>
-          <SettingsList.EmptyTitle>No connected forges</SettingsList.EmptyTitle>
-          <SettingsList.EmptyDescription>
-            Connect GitHub or GitLab to pick repositories from a list, deploy
-            private ones without managing a key, and get pushes delivered
-            automatically.
-          </SettingsList.EmptyDescription>
-        </SettingsList.EmptyHeader>
-        {onAddGithub && onAddGitlab ? (
-          <SettingsList.EmptyContent>
-            {/* Both spelled out here: with nothing connected, the choice of
-                forge IS the content of this screen. */}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button onClick={onAddGithub}>
-                <GithubIcon />
-                Connect GitHub
-              </Button>
-              <Button onClick={onAddGitlab} variant="outline">
-                <GitlabIcon />
-                Connect GitLab
-              </Button>
-            </div>
-          </SettingsList.EmptyContent>
-        ) : null}
-      </SettingsList.Empty>
-
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader>
-          <FrameTitle>Git providers</FrameTitle>
-          <FrameDescription>
-            Forges Noddle can read repositories from. The credentials belong to
-            your account — they never leave this server, and revoking them on
-            the forge revokes them here.
-          </FrameDescription>
-        </FrameHeader>
-        {rows.map((row) => (
-          <ProviderRow
-            key={row.id}
-            onRemoved={refresh}
-            provider={row}
-            role={role}
-          />
-        ))}
-      </Frame>
-    </SettingsList>
+  return isEmpty ? (
+    <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className="min-h-0 flex-1 border-0">
+          <EmptyHeader>
+            <EmptyMedia>
+              <IconStack>
+                <PlugsIcon className="size-5" />
+              </IconStack>
+            </EmptyMedia>
+            <EmptyTitle>No connected forges</EmptyTitle>
+            <EmptyDescription>
+              Connect GitHub or GitLab to pick repositories from a list, deploy
+              private ones without managing a key, and get pushes delivered
+              automatically.
+            </EmptyDescription>
+          </EmptyHeader>
+          {onAddGithub && onAddGitlab ? (
+            <EmptyContent>
+              {/* Both spelled out here: with nothing connected, the choice of
+                    forge IS the content of this screen. */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button onClick={onAddGithub}>
+                  <GithubIcon />
+                  Connect GitHub
+                </Button>
+                <Button onClick={onAddGitlab} variant="outline">
+                  <GitlabIcon />
+                  Connect GitLab
+                </Button>
+              </div>
+            </EmptyContent>
+          ) : null}
+        </Empty>
+      </FramePanel>
+    </Frame>
+  ) : (
+    <Frame className="w-full" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>Git providers</FrameTitle>
+        <FrameDescription>
+          Forges Noddle can read repositories from. The credentials belong to
+          your account — they never leave this server, and revoking them on the
+          forge revokes them here.
+        </FrameDescription>
+      </FrameHeader>
+      {rows.map((row) => (
+        <ProviderRow
+          key={row.id}
+          onRemoved={refresh}
+          provider={row}
+          role={role}
+        />
+      ))}
+    </Frame>
   );
 }
 

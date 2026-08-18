@@ -7,7 +7,6 @@ import { z } from "zod";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { RevealOnceAlert } from "@/components/features/settings-list/reveal-once";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
@@ -29,11 +28,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { FieldGroup } from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
   FrameHeader,
+  FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
@@ -181,41 +189,43 @@ export function SshKeysList({
     refresh,
   } = useResourceList(queries.sshKeys, initial);
 
-  return (
-    <SettingsList isEmpty={isEmpty}>
-      <SettingsList.Empty>
-        <SettingsList.EmptyMedia>
-          <IconStack>
-            <KeyIcon className="size-5" />
-          </IconStack>
-        </SettingsList.EmptyMedia>
-        <SettingsList.EmptyHeader>
-          <SettingsList.EmptyTitle>No SSH keys</SettingsList.EmptyTitle>
-          <SettingsList.EmptyDescription>
-            A key is how Noddle reaches your machines. Generating one keeps the
-            private half here, encrypted — it never leaves this server.
-          </SettingsList.EmptyDescription>
-        </SettingsList.EmptyHeader>
-        {onAdd ? (
-          <SettingsList.EmptyContent>
-            <Button onClick={onAdd}>Add a key</Button>
-          </SettingsList.EmptyContent>
-        ) : null}
-      </SettingsList.Empty>
-
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader>
-          <FrameTitle>SSH keys</FrameTitle>
-          <FrameDescription>
-            A key is how Noddle reaches your machines, and can read a private
-            repository. It never leaves this server, encrypted at rest.
-          </FrameDescription>
-        </FrameHeader>
-        {rows.map((k) => (
-          <KeyRow key={k.id} onRemoved={refresh} role={role} sshKey={k} />
-        ))}
-      </Frame>
-    </SettingsList>
+  return isEmpty ? (
+    <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className="min-h-0 flex-1 border-0">
+          <EmptyHeader>
+            <EmptyMedia>
+              <IconStack>
+                <KeyIcon className="size-5" />
+              </IconStack>
+            </EmptyMedia>
+            <EmptyTitle>No SSH keys</EmptyTitle>
+            <EmptyDescription>
+              A key is how Noddle reaches your machines. Generating one keeps
+              the private half here, encrypted — it never leaves this server.
+            </EmptyDescription>
+          </EmptyHeader>
+          {onAdd ? (
+            <EmptyContent>
+              <Button onClick={onAdd}>Add a key</Button>
+            </EmptyContent>
+          ) : null}
+        </Empty>
+      </FramePanel>
+    </Frame>
+  ) : (
+    <Frame className="w-full" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>SSH keys</FrameTitle>
+        <FrameDescription>
+          A key is how Noddle reaches your machines, and can read a private
+          repository. It never leaves this server, encrypted at rest.
+        </FrameDescription>
+      </FrameHeader>
+      {rows.map((k) => (
+        <KeyRow key={k.id} onRemoved={refresh} role={role} sshKey={k} />
+      ))}
+    </Frame>
   );
 }
 

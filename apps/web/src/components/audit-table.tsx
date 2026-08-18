@@ -39,20 +39,24 @@ import type { AuditRow } from "@/server/audit";
 export function AuditTable({ entries }: { entries: AuditRow[] }) {
   if (entries.length === 0) {
     return (
-      <Empty className="h-full">
-        <EmptyMedia>
-          <IconStack>
-            <ScrollIcon className="size-5" />
-          </IconStack>
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>Nothing recorded yet</EmptyTitle>
-          <EmptyDescription>
-            Every attempt to change something — allowed or denied — is recorded
-            here.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+        <FramePanel className="flex min-h-0 flex-1 flex-col">
+          <Empty className="min-h-0 flex-1 border-0">
+            <EmptyHeader>
+              <EmptyMedia>
+                <IconStack>
+                  <ScrollIcon className="size-5" />
+                </IconStack>
+              </EmptyMedia>
+              <EmptyTitle>Nothing recorded yet</EmptyTitle>
+              <EmptyDescription>
+                Every attempt to change something — allowed or denied — is
+                recorded here.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </FramePanel>
+      </Frame>
     );
   }
 

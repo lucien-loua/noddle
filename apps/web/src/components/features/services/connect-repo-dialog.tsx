@@ -4,6 +4,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
 import { useCallback, useEffect } from "react";
 
+import { NoServersEmpty } from "@/components/features/servers/no-servers-empty";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -125,12 +126,7 @@ export function ConnectRepoDialog({
         </DialogHeader>
 
         {noServers ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              No servers registered. Add one before creating an application — a
-              service needs a machine to build and run on.
-            </AlertDescription>
-          </Alert>
+          <NoServersEmpty description="An application needs a machine to build and run on." />
         ) : (
           <DialogForm onSubmit={handleSubmit}>
             <DialogBody>

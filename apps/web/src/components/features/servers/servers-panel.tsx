@@ -13,7 +13,6 @@ import { z } from "zod";
 
 import { DeleteServerAction } from "@/components/delete-server-action";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
@@ -35,7 +34,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
 import { cache } from "@/lib/cache";
 import { errorMessage } from "@/lib/format";
@@ -167,43 +181,48 @@ export const ServersList = ({
     [queryClient]
   );
 
-  return (
-    <SettingsList isEmpty={isEmpty}>
-      <SettingsList.Empty>
-        <SettingsList.EmptyMedia>
-          <IconStack>
-            <HardDrivesIcon className="size-5" />
-          </IconStack>
-        </SettingsList.EmptyMedia>
-        <SettingsList.EmptyHeader>
-          <SettingsList.EmptyTitle>No servers yet</SettingsList.EmptyTitle>
-          <SettingsList.EmptyDescription>
-            Noddle deploys onto machines you own. Add one before you can deploy
-            anything.
-          </SettingsList.EmptyDescription>
-        </SettingsList.EmptyHeader>
-        {onAdd ? (
-          <SettingsList.EmptyContent>
-            <Button onClick={onAdd}>Add a server</Button>
-          </SettingsList.EmptyContent>
-        ) : null}
-      </SettingsList.Empty>
-
-      <SettingsList.Frame
-        panel={false}
-        description="Machines Noddle deploys onto. Open one to see its resources, disk and toolchain."
-        title="Servers"
-      >
-        {servers.map((server) => (
-          <ServerRow
-            key={server.id}
-            onRemoved={handleRemoved}
-            role={role}
-            server={server}
-          />
-        ))}
-      </SettingsList.Frame>
-    </SettingsList>
+  return isEmpty ? (
+    <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className="min-h-0 flex-1 border-0">
+          <EmptyHeader>
+            <EmptyMedia>
+              <IconStack>
+                <HardDrivesIcon className="size-5" />
+              </IconStack>
+            </EmptyMedia>
+            <EmptyTitle>No servers yet</EmptyTitle>
+            <EmptyDescription>
+              Noddle deploys onto machines you own. Add one before you can
+              deploy anything.
+            </EmptyDescription>
+          </EmptyHeader>
+          {onAdd ? (
+            <EmptyContent>
+              <Button onClick={onAdd}>Add a server</Button>
+            </EmptyContent>
+          ) : null}
+        </Empty>
+      </FramePanel>
+    </Frame>
+  ) : (
+    <Frame className="w-full" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>Servers</FrameTitle>
+        <FrameDescription>
+          Machines Noddle deploys onto. Open one to see its resources, disk and
+          toolchain.
+        </FrameDescription>
+      </FrameHeader>
+      {servers.map((server) => (
+        <ServerRow
+          key={server.id}
+          onRemoved={handleRemoved}
+          role={role}
+          server={server}
+        />
+      ))}
+    </Frame>
   );
 };
 

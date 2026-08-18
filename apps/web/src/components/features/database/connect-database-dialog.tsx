@@ -14,6 +14,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { DatabaseMark } from "@/components/features/database/database-mark";
+import { NoServersEmpty } from "@/components/features/servers/no-servers-empty";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -321,9 +322,7 @@ export function ConnectDatabaseDialog(props: Props) {
         </DialogHeader>
 
         {noServers ? (
-          <Alert variant="destructive">
-            <AlertDescription>No servers registered.</AlertDescription>
-          </Alert>
+          <NoServersEmpty description="A database needs a machine to run on." />
         ) : (
           /* `min-h-0 flex-1`: the questionnaire's root IS the `<form>`, and
              it's inserted between `DialogContent` and `DialogBody`. Without

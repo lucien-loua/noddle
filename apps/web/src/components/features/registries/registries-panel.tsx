@@ -15,7 +15,6 @@ import type { z } from "zod";
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { useTestAndSave } from "@/components/features/settings-list/hooks/use-test-and-save";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
@@ -36,11 +35,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { FieldGroup } from "@/components/ui/field";
 import {
   Frame,
   FrameDescription,
   FrameHeader,
+  FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
@@ -136,51 +144,51 @@ export function RegistriesList({
     refresh,
   } = useResourceList(queries.registries, initial);
 
-  return (
-    <SettingsList isEmpty={isEmpty}>
-      <SettingsList.Empty>
-        <SettingsList.EmptyMedia>
-          <IconStack>
-            <PackageIcon className="size-5" />
-          </IconStack>
-        </SettingsList.EmptyMedia>
-        <SettingsList.EmptyHeader>
-          <SettingsList.EmptyTitle>
-            No external registries
-          </SettingsList.EmptyTitle>
-          <SettingsList.EmptyDescription>
-            Noddle pushes to its own registry by default. Add one here to push
-            somewhere else, such as ghcr.io or a private registry.
-          </SettingsList.EmptyDescription>
-        </SettingsList.EmptyHeader>
-        {onAdd ? (
-          <SettingsList.EmptyContent>
-            <Button onClick={onAdd}>Add a registry</Button>
-          </SettingsList.EmptyContent>
-        ) : null}
-      </SettingsList.Empty>
-
-      <Frame className="w-full" variant="ghost">
-        <FrameHeader>
-          <FrameTitle>External registries</FrameTitle>
-          <FrameDescription>
-            Where Noddle can push the images it builds. Its own registry stays
-            the default — these are alternatives, and the password never leaves
-            this server.
-          </FrameDescription>
-        </FrameHeader>
-        {rows.map((row) => (
-          <RegistryRow
-            canEdit={canEdit}
-            key={row.id}
-            onEdit={onEdit}
-            onRemoved={refresh}
-            registry={row}
-            role={role}
-          />
-        ))}
-      </Frame>
-    </SettingsList>
+  return isEmpty ? (
+    <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className="min-h-0 flex-1 border-0">
+          <EmptyHeader>
+            <EmptyMedia>
+              <IconStack>
+                <PackageIcon className="size-5" />
+              </IconStack>
+            </EmptyMedia>
+            <EmptyTitle>No external registries</EmptyTitle>
+            <EmptyDescription>
+              Noddle pushes to its own registry by default. Add one here to push
+              somewhere else, such as ghcr.io or a private registry.
+            </EmptyDescription>
+          </EmptyHeader>
+          {onAdd ? (
+            <EmptyContent>
+              <Button onClick={onAdd}>Add a registry</Button>
+            </EmptyContent>
+          ) : null}
+        </Empty>
+      </FramePanel>
+    </Frame>
+  ) : (
+    <Frame className="w-full" variant="ghost">
+      <FrameHeader>
+        <FrameTitle>External registries</FrameTitle>
+        <FrameDescription>
+          Where Noddle can push the images it builds. Its own registry stays the
+          default — these are alternatives, and the password never leaves this
+          server.
+        </FrameDescription>
+      </FrameHeader>
+      {rows.map((row) => (
+        <RegistryRow
+          canEdit={canEdit}
+          key={row.id}
+          onEdit={onEdit}
+          onRemoved={refresh}
+          registry={row}
+          role={role}
+        />
+      ))}
+    </Frame>
   );
 }
 

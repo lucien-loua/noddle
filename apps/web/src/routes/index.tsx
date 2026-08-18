@@ -35,7 +35,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { badgeVariant, deploymentLabel, serviceLabel } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { getAuthState } from "@/server/auth";
 import { getOverview } from "@/server/dashboard";
 import type { Overview } from "@/server/dashboard";
@@ -75,14 +74,7 @@ function OverviewPage() {
       role={role}
       title="Overview"
     >
-      <div
-        className={cn(
-          "flex min-w-0 flex-col gap-6",
-          // `h-full`: AppShell's scroller is not a flex column, so `flex-1`
-          // here would not stretch. Same as the environment grid empty.
-          activity.length === 0 && "h-full"
-        )}
-      >
+      <div className="flex min-w-0 flex-col gap-6">
         <StatCards counts={overview.counts} statusCounts={statusCounts} />
         <AttentionPanel idle={nothingAtAll} rows={attention} />
         <ActivityPanel rows={activity} />
@@ -296,10 +288,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
   const empty = rows.length === 0;
 
   return (
-    <Frame
-      className={empty ? "min-h-0 min-w-0 flex-1" : "min-w-0"}
-      variant="ghost"
-    >
+    <Frame className="min-w-0" variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Recent deployments</FrameTitle>
         <Button
@@ -311,9 +300,9 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
           <ArrowRightIcon data-icon="inline-end" weight="regular" />
         </Button>
       </FrameHeader>
-      <FramePanel className={empty ? "flex min-h-0 flex-1 flex-col" : "p-0"}>
+      <FramePanel className={empty ? undefined : "p-0"}>
         {empty ? (
-          <Empty className="min-h-48 flex-1 border-0">
+          <Empty className="border-0">
             <EmptyTitle>Nothing deployed yet</EmptyTitle>
             <EmptyDescription>
               Connect a repository, a Compose stack or a database to get

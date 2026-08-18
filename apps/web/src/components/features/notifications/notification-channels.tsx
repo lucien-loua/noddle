@@ -6,7 +6,6 @@ import { useCallback, useEffect } from "react";
 import type { z } from "zod";
 
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
@@ -24,7 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup } from "@/components/ui/field";
+import { Frame, FramePanel } from "@/components/ui/frame";
 import {
   Item,
   ItemActions,
@@ -84,7 +92,7 @@ export function NotificationChannels({
   const handleOpen = useCallback(() => onOpenChange(true), [onOpenChange]);
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       {/* Hidden when the list is empty: the empty state already explains
           what a channel is for, and two explanations stacked one above the
           other would compete — on top of pushing the empty state off
@@ -97,29 +105,33 @@ export function NotificationChannels({
         />
       ) : null}
 
-      <SettingsList isEmpty={isEmpty}>
-        <SettingsList.Empty>
-          <SettingsList.EmptyMedia>
-            <IconStack>
-              <BellIcon className="size-5" />
-            </IconStack>
-          </SettingsList.EmptyMedia>
-          <SettingsList.EmptyHeader>
-            <SettingsList.EmptyTitle>No channels</SettingsList.EmptyTitle>
-            <SettingsList.EmptyDescription>
-              Without a channel, a deploy reverted by the watch is only visible
-              if someone opens the dashboard.
-            </SettingsList.EmptyDescription>
-          </SettingsList.EmptyHeader>
-          {canManage ? (
-            <SettingsList.EmptyContent>
-              <Button onClick={handleOpen}>Add channel</Button>
-            </SettingsList.EmptyContent>
-          ) : null}
-        </SettingsList.Empty>
-
-        <SettingsList.Body>
-          <p className="mb-4 text-muted-foreground text-sm">
+      {isEmpty ? (
+        <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <BellIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>No channels</EmptyTitle>
+                <EmptyDescription>
+                  Without a channel, a deploy reverted by the watch is only
+                  visible if someone opens the dashboard.
+                </EmptyDescription>
+              </EmptyHeader>
+              {canManage ? (
+                <EmptyContent>
+                  <Button onClick={handleOpen}>Add channel</Button>
+                </EmptyContent>
+              ) : null}
+            </Empty>
+          </FramePanel>
+        </Frame>
+      ) : (
+        <>
+          <p className="text-muted-foreground text-sm">
             Noddle alerts you when a deploy fails, when the watch takes over, or
             when a backup breaks.
           </p>
@@ -133,8 +145,8 @@ export function NotificationChannels({
               />
             ))}
           </ItemGroup>
-        </SettingsList.Body>
-      </SettingsList>
+        </>
+      )}
     </div>
   );
 }

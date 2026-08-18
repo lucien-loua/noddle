@@ -80,9 +80,9 @@ function ProjectsPage() {
       title="Projects"
     >
       {allProjects.length === 0 ? (
-        <Frame className="h-full" variant="ghost">
-          <FramePanel className="flex h-full min-h-48 flex-col">
-            <Empty className="h-full border-0">
+        <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
               <EmptyHeader>
                 <EmptyMedia>
                   <IconStack>

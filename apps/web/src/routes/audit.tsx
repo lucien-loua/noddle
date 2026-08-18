@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Frame, FramePanel } from "@/components/ui/frame";
 import { getAuditLog } from "@/server/audit";
 import { getAuthState } from "@/server/auth";
 
@@ -50,19 +51,24 @@ export const Route = createFileRoute("/audit")({
 function AuditDenied() {
   return (
     <AppShell title="Audit">
-      <Empty className="h-full">
-        <EmptyMedia>
-          <IconStack>
-            <LockIcon className="size-5" />
-          </IconStack>
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>Not available for your role</EmptyTitle>
-          <EmptyDescription>
-            The audit log is limited to administrators. This visit was recorded.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+        <FramePanel className="flex min-h-0 flex-1 flex-col">
+          <Empty className="min-h-0 flex-1 border-0">
+            <EmptyHeader>
+              <EmptyMedia>
+                <IconStack>
+                  <LockIcon className="size-5" />
+                </IconStack>
+              </EmptyMedia>
+              <EmptyTitle>Not available for your role</EmptyTitle>
+              <EmptyDescription>
+                The audit log is limited to administrators. This visit was
+                recorded.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </FramePanel>
+      </Frame>
     </AppShell>
   );
 }

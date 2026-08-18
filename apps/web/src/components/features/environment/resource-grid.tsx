@@ -332,9 +332,9 @@ function runLifecycleFor(
  */
 function GridEmpty({ filtered }: { filtered: boolean }) {
   return (
-    <Frame className="min-h-48 flex-1" variant="ghost">
-      <FramePanel className="flex min-h-48 flex-1 flex-col">
-        <Empty className="min-h-48 flex-1 border-0">
+    <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className="min-h-0 flex-1 border-0">
           <EmptyHeader>
             <EmptyMedia>
               <IconStack>

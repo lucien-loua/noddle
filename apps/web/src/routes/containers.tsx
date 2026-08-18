@@ -154,20 +154,24 @@ function ContainersPage() {
       ) : null}
 
       {view.containers.length === 0 ? (
-        <Empty className="h-full">
-          <EmptyMedia>
-            <IconStack>
-              <CubeIcon className="size-5" />
-            </IconStack>
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>Nothing running</EmptyTitle>
-            <EmptyDescription>
-              Containers on every connected server show up here, including ones
-              Noddle did not deploy.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <CubeIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>Nothing running</EmptyTitle>
+                <EmptyDescription>
+                  Containers on every connected server show up here, including
+                  ones Noddle did not deploy.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </FramePanel>
+        </Frame>
       ) : (
         // Cards are direct children of the Frame, like every other list:
         // each one IS a panel, so wrapping them in another produced a panel

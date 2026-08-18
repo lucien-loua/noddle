@@ -18,7 +18,6 @@ import type { DestinationFormValues } from "@/components/features/destinations/s
 import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { useRowRemove } from "@/components/features/settings-list/hooks/use-row-remove";
 import { useTestAndSave } from "@/components/features/settings-list/hooks/use-test-and-save";
-import { SettingsList } from "@/components/features/settings-list/settings-list";
 import { useAppForm } from "@/components/fields/lib/form";
 import { IconStack } from "@/components/icon-stack";
 import {
@@ -40,6 +39,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   Field,
   FieldDescription,
   FieldGroup,
@@ -51,6 +58,7 @@ import {
   Frame,
   FrameDescription,
   FrameHeader,
+  FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
@@ -118,27 +126,31 @@ export function S3DestinationPanel({
         open={open}
       />
 
-      <SettingsList isEmpty={isEmpty}>
-        <SettingsList.Empty>
-          <SettingsList.EmptyMedia>
-            <IconStack>
-              <ArchiveIcon className="size-5" />
-            </IconStack>
-          </SettingsList.EmptyMedia>
-          <SettingsList.EmptyHeader>
-            <SettingsList.EmptyTitle>No S3 destination</SettingsList.EmptyTitle>
-            <SettingsList.EmptyDescription>
-              Databases cannot be backed up until Noddle has somewhere to push
-              the dumps. Any S3-compatible store works.
-            </SettingsList.EmptyDescription>
-          </SettingsList.EmptyHeader>
-          {canEdit ? (
-            <SettingsList.EmptyContent>
-              <Button onClick={handleCreate}>Add a destination</Button>
-            </SettingsList.EmptyContent>
-          ) : null}
-        </SettingsList.Empty>
-
+      {isEmpty ? (
+        <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <ArchiveIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>No S3 destination</EmptyTitle>
+                <EmptyDescription>
+                  Databases cannot be backed up until Noddle has somewhere to
+                  push the dumps. Any S3-compatible store works.
+                </EmptyDescription>
+              </EmptyHeader>
+              {canEdit ? (
+                <EmptyContent>
+                  <Button onClick={handleCreate}>Add a destination</Button>
+                </EmptyContent>
+              ) : null}
+            </Empty>
+          </FramePanel>
+        </Frame>
+      ) : (
         <Frame className="w-full" variant="ghost">
           <FrameHeader>
             <FrameTitle>S3 destinations</FrameTitle>
@@ -157,7 +169,7 @@ export function S3DestinationPanel({
             />
           ))}
         </Frame>
-      </SettingsList>
+      )}
     </>
   );
 }

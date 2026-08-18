@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, RocketLaunchIcon } from "@phosphor-icons/react";
 import {
   createFileRoute,
   Link,
@@ -9,6 +9,7 @@ import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { IconStack } from "@/components/icon-stack";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import {
   Empty,
   EmptyContent,
   EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
@@ -132,7 +135,7 @@ function DeploymentsPage() {
           toolbar over its content — not two cards that happen to sit above
           each other. Every panel below is therefore a DIRECT child, which
           is what the join is keyed on. */}
-      <Frame stacked variant="ghost">
+      <Frame className="flex h-full min-h-0 flex-col" stacked variant="ghost">
         <FrameHeader>
           <FrameTitle className="flex items-center gap-2">
             Deployments
@@ -217,16 +220,27 @@ function DeploymentsPage() {
             entirely — this page cannot start a deployment, and saying so
             with a link beats a sentence that leaves you here. */}
         {visible.length === 0 ? (
-          <FramePanel>
-            <Empty>
-              <EmptyTitle>
-                {filtering ? "No deployments match" : "No deployments yet"}
-              </EmptyTitle>
-              <EmptyDescription>
-                {filtering
-                  ? "No deployment matches this search and these filters."
-                  : "Deployments from applications and compose appear here. They start from a service, in its environment."}
-              </EmptyDescription>
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    {filtering ? (
+                      <MagnifyingGlassIcon className="size-5" />
+                    ) : (
+                      <RocketLaunchIcon className="size-5" />
+                    )}
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>
+                  {filtering ? "No deployments match" : "No deployments yet"}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {filtering
+                    ? "No deployment matches this search and these filters."
+                    : "Deployments from applications and compose appear here. They start from a service, in its environment."}
+                </EmptyDescription>
+              </EmptyHeader>
               <EmptyContent>
                 {filtering ? (
                   <Button onClick={clearFilters} variant="outline">

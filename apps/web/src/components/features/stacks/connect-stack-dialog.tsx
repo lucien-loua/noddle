@@ -9,6 +9,7 @@ import type { SubmitEvent } from "react";
 import { useCallback, useEffect } from "react";
 import { z } from "zod";
 
+import { NoServersEmpty } from "@/components/features/servers/no-servers-empty";
 import { useAppForm } from "@/components/fields/lib/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -151,12 +152,7 @@ export function ConnectStackDialog({
         </DialogHeader>
 
         {noServers ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              No servers registered. Add one before connecting a stack — it
-              needs a machine to build and run on.
-            </AlertDescription>
-          </Alert>
+          <NoServersEmpty description="A Compose stack needs a machine to build and run on." />
         ) : (
           <DialogForm onSubmit={handleSubmit}>
             <DialogBody>
