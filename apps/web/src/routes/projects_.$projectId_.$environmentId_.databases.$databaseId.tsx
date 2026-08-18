@@ -5,6 +5,10 @@ import { lazy, useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
+import {
+  AttachDatabaseDialog,
+  DEFAULT_ENV_VAR_KEY,
+} from "@/components/features/database/attach-database-dialog";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
 import { DatabaseHeaderActions } from "@/components/features/database/database-header-actions";
@@ -31,6 +35,7 @@ import { isDetailTab } from "@/lib/resource-detail/parse-tab";
 import { useDetailTabChange } from "@/lib/resource-detail/use-detail-tab";
 import { useLeaveOnDelete } from "@/lib/resource-detail/use-leave-on-delete";
 import { useCan } from "@/lib/use-permission";
+import { getEnvironmentScope } from "@/server/dashboard";
 import { getDatabase } from "@/server/databases";
 
 const BackupTab = lazy(() =>
@@ -85,9 +90,17 @@ export const Route = createFileRoute(
   beforeLoad: resourceDetailBeforeLoad,
   component: DatabaseDetail,
   loader: async ({ context, params }) => {
-    const database = await getDatabase({
-      data: { databaseId: params.databaseId },
-    });
+    // Joined, not sequential: attaching needs the environment's services and
+    // neither read depends on the other.
+    const [database, scope] = await Promise.all([
+      getDatabase({ data: { databaseId: params.databaseId } }),
+      getEnvironmentScope({
+        data: {
+          environmentId: params.environmentId,
+          projectId: params.projectId,
+        },
+      }),
+    ]);
     if (!database) {
       throw notFound();
     }
@@ -95,12 +108,18 @@ export const Route = createFileRoute(
       database,
       email: context.email,
       role: context.role,
+      services: scope.services,
     };
   },
 });
 
 function DatabaseDetail() {
-  const { database: initialDatabase, email, role } = Route.useLoaderData();
+  const {
+    database: initialDatabase,
+    email,
+    role,
+    services,
+  } = Route.useLoaderData();
   const navigate = Route.useNavigate();
   const search = Route.useSearch();
   const queryClient = useQueryClient();
@@ -138,6 +157,7 @@ function DatabaseDetail() {
   // `create` and not `operate`: publishing a port is a CONFIGURATION change
   // that opens up the database, not an action on what's running.
   const canEditConfig = useCan(known, "database", "create");
+  const canAttach = useCan(known, "database", "attach");
   const canShell = useCan(known, "container", "shell");
   const { openTerminal, terminal } = useTerminalDialog();
 
@@ -261,6 +281,15 @@ function DatabaseDetail() {
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="general">
             <DatabaseCredentials
+              action={
+                canAttach ? (
+                  <AttachDatabaseDialog
+                    databaseId={database.id}
+                    defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
+                    services={services}
+                  />
+                ) : null
+              }
               canChangePassword={canEditConfig}
               canRead={canReadSecrets}
               databaseId={database.id}

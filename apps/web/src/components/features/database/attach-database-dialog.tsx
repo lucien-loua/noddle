@@ -1,3 +1,4 @@
+import type { DatabaseEngine } from "@noddle/database-spec";
 import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { CodeIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
@@ -29,6 +30,16 @@ const attachFormSchema = attachDatabaseSchema.pick({
   envVarKey: true,
   serviceId: true,
 });
+
+/** The variable each engine's ecosystem expects. A default, not a rule —
+ *  the dialog lets it be changed before attaching. */
+export const DEFAULT_ENV_VAR_KEY: Record<DatabaseEngine, string> = {
+  mariadb: "DATABASE_URL",
+  mongo: "MONGO_URL",
+  mysql: "DATABASE_URL",
+  postgres: "DATABASE_URL",
+  redis: "REDIS_URL",
+};
 
 interface Props {
   databaseId: string;

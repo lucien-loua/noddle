@@ -3,7 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import { AttachDatabaseDialog } from "@/components/features/database/attach-database-dialog";
+import {
+  AttachDatabaseDialog,
+  DEFAULT_ENV_VAR_KEY,
+} from "@/components/features/database/attach-database-dialog";
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { ResourceRow } from "@/components/resource-row";
 import { Badge } from "@/components/ui/badge";
@@ -195,13 +198,6 @@ export function StackCard({
  * share `DATABASE_URL` because that's the name libraries expect, regardless
  * of dialect.
  */
-const DEFAULT_ENV_VAR_KEY: Record<DatabaseRow["engine"], string> = {
-  mariadb: "DATABASE_URL",
-  mongo: "MONGO_URL",
-  mysql: "DATABASE_URL",
-  postgres: "DATABASE_URL",
-  redis: "REDIS_URL",
-};
 
 export function DatabaseCard({
   database,

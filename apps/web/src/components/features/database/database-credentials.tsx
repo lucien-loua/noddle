@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 
 import { CopyButton } from "@/components/copyable-value";
@@ -27,12 +28,16 @@ import { Spinner } from "@/components/ui/spinner";
 import { queries } from "@/lib/queries";
 
 export function DatabaseCredentials({
+  action,
   canChangePassword,
   canRead,
   databaseId,
   databaseName,
   running,
 }: {
+  /** Rendered beside the description that already promises it. The panel
+   *  stays about credentials and knows nothing about attaching. */
+  action?: ReactNode;
   /** `database: create` — changing a password isn't operating what's
    *  running, it's replacing the identifier used to connect to it. */
   canChangePassword: boolean;
@@ -63,13 +68,16 @@ export function DatabaseCredentials({
 
   return (
     <Frame className="mb-3" variant="ghost">
-      <FrameHeader>
-        <FrameTitle>Internal credentials</FrameTitle>
-        <FrameDescription>
-          Reachable from any service on the overlay network, never from the
-          internet. Attaching the database to a service writes this connection
-          string into its environment for you.
-        </FrameDescription>
+      <FrameHeader className="flex-row items-start justify-between gap-3">
+        <div className="flex flex-col gap-(--frame-panel-header-gap)">
+          <FrameTitle>Internal credentials</FrameTitle>
+          <FrameDescription>
+            Reachable from any service on the overlay network, never from the
+            internet. Attaching the database to a service writes this connection
+            string into its environment for you.
+          </FrameDescription>
+        </div>
+        {action}
       </FrameHeader>
       <FramePanel>
         {credentials.isPending ? (
