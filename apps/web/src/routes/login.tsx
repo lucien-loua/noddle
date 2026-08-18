@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
+import { TAGLINE } from "@/lib/brand";
 import { getAuthState } from "@/server/auth";
 
 const SOURCE_URL = "https://github.com/lucien-loua/noddle";
@@ -101,7 +102,7 @@ function LoginPage() {
 
         <div className="flex flex-col items-start gap-4">
           <p className="max-w-xs text-muted-foreground leading-snug">
-            Deploy from a git repo to your own server.
+            {TAGLINE}
           </p>
           <a
             className="flex items-center gap-2 text-muted-foreground text-sm underline-offset-4 hover:text-foreground hover:underline"

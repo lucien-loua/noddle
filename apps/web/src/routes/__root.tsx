@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
+import { TAGLINE } from "@/lib/brand";
 import { readSidebarOpen } from "@/lib/sidebar-state";
 
 import appCss from "../styles.css?url";
@@ -20,8 +21,11 @@ import appCss from "../styles.css?url";
  * the bundle. The two are kept in sync together.
  */
 /**
- * Two weights, and only two: `duotone` everywhere, `fill` where a glyph
- * marks an active or engaged state.
+ * Three weights, and only three: `duotone` is the default, for a glyph
+ * that stands on its own — a card mark, an empty state, a stat tile.
+ * `regular` for a glyph sharing a line with text inside a control, where
+ * duotone reads muddy at 16px. `fill` where a glyph marks an active or
+ * engaged state, and for the media-shaped lifecycle glyphs (play, stop).
  *
  * Set through the context rather than repeated on every call site — the
  * default is then a single place to change, and any `weight=` left in the
@@ -45,10 +49,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
       { title: "Noddle" },
-      {
-        content: "Deploy from a git repo to a server you own.",
-        name: "description",
-      },
+      { content: TAGLINE, name: "description" },
       { content: "noindex, nofollow", name: "robots" },
     ],
   }),
