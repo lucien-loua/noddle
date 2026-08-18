@@ -1066,148 +1066,159 @@ function SelectOptionsPopover<T = unknown>({
     );
   };
 
-  const renderMenuContent = () => (
-    <>
-      {field.searchable !== false && (
-        <>
-          <Input
-            aria-activedescendant={
-              highlightedIndex >= 0
-                ? `${baseId}-item-${highlightedIndex}`
-                : undefined
-            }
-            aria-autocomplete="list"
-            aria-controls={`${baseId}-listbox`}
-            aria-expanded={true}
-            aria-haspopup="listbox"
-            className={cn(
-              "h-8 rounded-none border-0 border-input bg-transparent! px-2 text-sm shadow-none",
-              "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
-              open && "placeholder:text-foreground"
-            )}
-            onBlur={() => open && inputRef.current?.focus()}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                if (allFilteredOptions.length > 0) {
-                  setHighlightedIndex((prev) =>
-                    prev < allFilteredOptions.length - 1 ? prev + 1 : 0
-                  );
-                }
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                if (allFilteredOptions.length > 0) {
-                  setHighlightedIndex((prev) =>
-                    prev > 0 ? prev - 1 : allFilteredOptions.length - 1
-                  );
-                }
-              } else if (e.key === "ArrowLeft") {
-                e.preventDefault();
-                setOpen(false);
-              } else if (e.key === "Enter" && highlightedIndex >= 0) {
-                e.preventDefault();
-                const option = allFilteredOptions[highlightedIndex];
-                if (option) {
-                  const isSelected = effectiveValues.includes(
-                    option.value as T
-                  );
-                  const next = nextSelection(effectiveValues, option.value, {
-                    isMultiSelect,
-                    isSelected,
-                  });
-
-                  if (
-                    !isSelected &&
-                    isMultiSelect &&
-                    field.maxSelections &&
-                    next.length > field.maxSelections
-                  ) {
-                    return;
-                  }
-
-                  if (field.onValueChange) {
-                    field.onValueChange(next);
-                  } else {
-                    onChange(next);
-                  }
-                  if (!isMultiSelect) {
-                    handleClose();
-                  }
-                }
-              }
-              e.stopPropagation();
-            }}
-            placeholder={context.i18n.placeholders.searchField(
-              field.label || ""
-            )}
-            ref={inputRef}
-            role="combobox"
-            value={searchInput}
-          />
-          <DropdownMenuSeparator />
-        </>
-      )}
-      <div className="relative flex max-h-full">
-        <div
-          className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain"
-          id={`${baseId}-listbox`}
-          role="listbox"
-        >
-          {isAsync && loading && allFilteredOptions.length === 0 ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {context.i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
-            </div>
-          ) : isAsync && error ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {context.i18n.errorLoadingOptions ??
-                DEFAULT_I18N.errorLoadingOptions}
-            </div>
-          ) : allFilteredOptions.length === 0 ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {context.i18n.noResultsFound}
-            </div>
-          ) : field.renderOptionList ? (
-            field.renderOptionList({
-              highlightedIndex,
-              options: allFilteredOptions,
-              renderOption: renderOptionItem,
-            })
-          ) : (
-            <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
-              {/* Selected items */}
-              {filteredSelectedOptions.length > 0 && (
-                <DropdownMenuGroup className="px-1">
-                  {filteredSelectedOptions.map((option, index) =>
-                    renderOptionItem(option, index)
-                  )}
-                </DropdownMenuGroup>
-              )}
-
-              {/* Separator */}
-              {filteredSelectedOptions.length > 0 &&
-                filteredUnselectedOptions.length > 0 && (
-                  <DropdownMenuSeparator className="mx-0" />
-                )}
-
-              {/* Available items */}
-              {filteredUnselectedOptions.length > 0 && (
-                <DropdownMenuGroup className="px-1">
-                  {filteredUnselectedOptions.map((option, index) =>
-                    renderOptionItem(
-                      option,
-                      index + filteredSelectedOptions.length
-                    )
-                  )}
-                </DropdownMenuGroup>
-              )}
-            </ScrollArea>
-          )}
+  const renderMenuContent = () => {
+    // Five display states, resolved before the render instead of as four
+    // ternaries inside one another. The first three share one wrapper.
+    let optionListBody: React.ReactNode;
+    if (isAsync && loading && allFilteredOptions.length === 0) {
+      optionListBody = (
+        <div className="py-2 text-center text-muted-foreground text-sm">
+          {context.i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
         </div>
-      </div>
-    </>
-  );
+      );
+    } else if (isAsync && error) {
+      optionListBody = (
+        <div className="py-2 text-center text-muted-foreground text-sm">
+          {context.i18n.errorLoadingOptions ?? DEFAULT_I18N.errorLoadingOptions}
+        </div>
+      );
+    } else if (allFilteredOptions.length === 0) {
+      optionListBody = (
+        <div className="py-2 text-center text-muted-foreground text-sm">
+          {context.i18n.noResultsFound}
+        </div>
+      );
+    } else if (field.renderOptionList) {
+      optionListBody = field.renderOptionList({
+        highlightedIndex,
+        options: allFilteredOptions,
+        renderOption: renderOptionItem,
+      });
+    } else {
+      optionListBody = (
+        <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
+          {/* Selected items */}
+          {filteredSelectedOptions.length > 0 && (
+            <DropdownMenuGroup className="px-1">
+              {filteredSelectedOptions.map((option, index) =>
+                renderOptionItem(option, index)
+              )}
+            </DropdownMenuGroup>
+          )}
+
+          {/* Separator */}
+          {filteredSelectedOptions.length > 0 &&
+            filteredUnselectedOptions.length > 0 && (
+              <DropdownMenuSeparator className="mx-0" />
+            )}
+
+          {/* Available items */}
+          {filteredUnselectedOptions.length > 0 && (
+            <DropdownMenuGroup className="px-1">
+              {filteredUnselectedOptions.map((option, index) =>
+                renderOptionItem(option, index + filteredSelectedOptions.length)
+              )}
+            </DropdownMenuGroup>
+          )}
+        </ScrollArea>
+      );
+    }
+
+    return (
+      <>
+        {field.searchable !== false && (
+          <>
+            <Input
+              aria-activedescendant={
+                highlightedIndex >= 0
+                  ? `${baseId}-item-${highlightedIndex}`
+                  : undefined
+              }
+              aria-autocomplete="list"
+              aria-controls={`${baseId}-listbox`}
+              aria-expanded={true}
+              aria-haspopup="listbox"
+              className={cn(
+                "h-8 rounded-none border-0 border-input bg-transparent! px-2 text-sm shadow-none",
+                "focus-visible:border-border focus-visible:ring-0 focus-visible:ring-offset-0",
+                open && "placeholder:text-foreground"
+              )}
+              onBlur={() => open && inputRef.current?.focus()}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  if (allFilteredOptions.length > 0) {
+                    setHighlightedIndex((prev) =>
+                      prev < allFilteredOptions.length - 1 ? prev + 1 : 0
+                    );
+                  }
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  if (allFilteredOptions.length > 0) {
+                    setHighlightedIndex((prev) =>
+                      prev > 0 ? prev - 1 : allFilteredOptions.length - 1
+                    );
+                  }
+                } else if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  setOpen(false);
+                } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                  e.preventDefault();
+                  const option = allFilteredOptions[highlightedIndex];
+                  if (option) {
+                    const isSelected = effectiveValues.includes(
+                      option.value as T
+                    );
+                    const next = nextSelection(effectiveValues, option.value, {
+                      isMultiSelect,
+                      isSelected,
+                    });
+
+                    if (
+                      !isSelected &&
+                      isMultiSelect &&
+                      field.maxSelections &&
+                      next.length > field.maxSelections
+                    ) {
+                      return;
+                    }
+
+                    if (field.onValueChange) {
+                      field.onValueChange(next);
+                    } else {
+                      onChange(next);
+                    }
+                    if (!isMultiSelect) {
+                      handleClose();
+                    }
+                  }
+                }
+                e.stopPropagation();
+              }}
+              placeholder={context.i18n.placeholders.searchField(
+                field.label || ""
+              )}
+              ref={inputRef}
+              role="combobox"
+              value={searchInput}
+            />
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <div className="relative flex max-h-full">
+          <div
+            className="flex max-h-[min(var(--available-height),24rem)] w-full scroll-pt-2 scroll-pb-2 flex-col overscroll-contain"
+            id={`${baseId}-listbox`}
+            role="listbox"
+          >
+            {optionListBody}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   if (inline) {
     return <div className="w-full">{renderMenuContent()}</div>;
@@ -1558,6 +1569,45 @@ function FilterSubmenuContent<T = unknown>({
     }
   }, [isActive, filteredOptions.length]);
 
+  // Same five states as the multiselect list above, resolved before the
+  // render rather than as four ternaries inside one another.
+  let optionListBody: React.ReactNode;
+  if (isAsync && loading && filteredOptions.length === 0) {
+    optionListBody = (
+      <div className="py-2 text-center text-muted-foreground text-sm">
+        {i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
+      </div>
+    );
+  } else if (isAsync && error) {
+    optionListBody = (
+      <div className="py-2 text-center text-muted-foreground text-sm">
+        {i18n.errorLoadingOptions ?? DEFAULT_I18N.errorLoadingOptions}
+      </div>
+    );
+  } else if (filteredOptions.length === 0) {
+    optionListBody = (
+      <div className="py-2 text-center text-muted-foreground text-sm">
+        {i18n.noResultsFound}
+      </div>
+    );
+  } else if (field.renderOptionList) {
+    optionListBody = field.renderOptionList({
+      highlightedIndex,
+      options: filteredOptions,
+      renderOption: renderOptionItem,
+    });
+  } else {
+    optionListBody = (
+      <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
+        <DropdownMenuGroup>
+          {filteredOptions.map((option, index) =>
+            renderOptionItem(option, index)
+          )}
+        </DropdownMenuGroup>
+      </ScrollArea>
+    );
+  }
+
   return (
     <div className="flex flex-col" onMouseEnter={onActive}>
       {field.searchable !== false && (
@@ -1674,33 +1724,7 @@ function FilterSubmenuContent<T = unknown>({
           role="listbox"
           tabIndex={field.searchable === false ? 0 : -1}
         >
-          {isAsync && loading && filteredOptions.length === 0 ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {i18n.loadingOptions ?? DEFAULT_I18N.loadingOptions}
-            </div>
-          ) : isAsync && error ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {i18n.errorLoadingOptions ?? DEFAULT_I18N.errorLoadingOptions}
-            </div>
-          ) : filteredOptions.length === 0 ? (
-            <div className="py-2 text-center text-muted-foreground text-sm">
-              {i18n.noResultsFound}
-            </div>
-          ) : field.renderOptionList ? (
-            field.renderOptionList({
-              highlightedIndex,
-              options: filteredOptions,
-              renderOption: renderOptionItem,
-            })
-          ) : (
-            <ScrollArea className="size-full min-h-0 **:data-[slot=scroll-area-scrollbar]:m-0 **:data-[slot=scroll-area-viewport]:h-full **:data-[slot=scroll-area-viewport]:overscroll-contain">
-              <DropdownMenuGroup>
-                {filteredOptions.map((option, index) =>
-                  renderOptionItem(option, index)
-                )}
-              </DropdownMenuGroup>
-            </ScrollArea>
-          )}
+          {optionListBody}
         </div>
       </div>
     </div>
