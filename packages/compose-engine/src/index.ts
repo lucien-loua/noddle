@@ -108,13 +108,15 @@ export function injectDeployConfig(
   }
 
   const swarmName = `${opts.stackName}_${opts.publicService}`;
-  const deploy = { ...pub.deploy } as Record<string, unknown>;
-  deploy.labels = routeLabels({
-    certResolver: opts.certResolver,
-    domains: opts.domains,
-    port: opts.port,
-    serviceName: swarmName,
-  });
+  const deploy = {
+    ...pub.deploy,
+    labels: routeLabels({
+      certResolver: opts.certResolver,
+      domains: opts.domains,
+      port: opts.port,
+      serviceName: swarmName,
+    }),
+  } as Record<string, unknown>;
   pub.deploy = deploy;
 
   // curl is present in most Node/Python

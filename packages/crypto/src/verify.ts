@@ -19,6 +19,15 @@ const isCrypto = (e: unknown) => e instanceof CryptoError;
 const mustThrow = (label: string, fn: () => unknown) =>
   expectThrows(label, fn, isCrypto);
 
+/** Flips the last bit of a base64url part — the tamper the AEAD must catch. */
+function flip(s: string): string {
+  const b = Buffer.from(s, "base64url");
+  const idx = b.length - 1;
+  // oxlint-disable-next-line no-bitwise
+  b[idx] = (b[idx] ?? 0) ^ 0x01;
+  return b.toString("base64url");
+}
+
 function verifyCrypto(): void {
   const KEY = randomBytes(32);
   const OTHER_KEY = randomBytes(32);
@@ -66,14 +75,6 @@ function verifyCrypto(): void {
   );
 
   const parts = box.split(".");
-  const flip = (s: string) => {
-    const b = Buffer.from(s, "base64url");
-    const idx = b.length - 1;
-    // biome-ignore lint/suspicious/noBitwiseOperators: flipping a bit IS the test
-    // oxlint-disable-next-line no-bitwise -- flipping one bit IS the tamper
-    b[idx] = (b[idx] ?? 0) ^ 0x01;
-    return b.toString("base64url");
-  };
   mustThrow("altered ciphertext → rejected", () =>
     decryptSecret(
       [parts[0], parts[1], parts[2], flip(parts[3] ?? "")].join("."),

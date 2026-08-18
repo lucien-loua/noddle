@@ -13,9 +13,10 @@ export interface MemoryDockerState {
   services: MemoryDockerService[];
 }
 
-export function createMemoryDockerApi(
-  state: MemoryDockerState = { services: [] }
-): DockerApi {
+export function createMemoryDockerApi(initial?: MemoryDockerState): DockerApi {
+  // Built here rather than as a default parameter: this object is MUTATED by
+  // the fake, and a literal in the signature reads as if callers shared one.
+  const state: MemoryDockerState = initial ?? { services: [] };
   return {
     createService: (spec: { Name?: string }) => {
       const service: MemoryDockerService = {
