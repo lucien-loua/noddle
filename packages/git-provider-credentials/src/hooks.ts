@@ -174,8 +174,12 @@ export async function reconcileRepositoryHooks(
   db: Database,
   appKey: Buffer
 ): Promise<ReconcileResult> {
-  const wanted = await justified(db);
-  const rows = await db.query.gitlabRepositoryHooks.findMany();
+  // What SHOULD exist and what DOES are read from different tables; asking
+  // for them in turn only makes the reconciliation slower to start.
+  const [wanted, rows] = await Promise.all([
+    justified(db),
+    db.query.gitlabRepositoryHooks.findMany(),
+  ]);
   const result: ReconcileResult = { failed: [], registered: [], removed: [] };
 
   for (const row of rows) {

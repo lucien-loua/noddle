@@ -33,22 +33,26 @@ export async function sweepWatch(
   route: RouteOptions
 ): Promise<SweepResult> {
   const now = new Date();
-  const pending = await ctx.db.query.deployments.findMany({
-    where: and(
-      eq(deployments.status, "succeeded"),
-      isNotNull(deployments.watchUntil),
-      gt(deployments.watchUntil, now)
-    ),
-    with: { service: { with: { server: true } } },
-  });
-  const pendingStacks = await ctx.db.query.stackDeployments.findMany({
-    where: and(
-      eq(stackDeployments.status, "succeeded"),
-      isNotNull(stackDeployments.watchUntil),
-      gt(stackDeployments.watchUntil, now)
-    ),
-    with: { stack: true },
-  });
+  // Two watch lists, no shared input: the sweep runs on a timer, so paying
+  // both round trips in turn delays every watch by the slower one.
+  const [pending, pendingStacks] = await Promise.all([
+    ctx.db.query.deployments.findMany({
+      where: and(
+        eq(deployments.status, "succeeded"),
+        isNotNull(deployments.watchUntil),
+        gt(deployments.watchUntil, now)
+      ),
+      with: { service: { with: { server: true } } },
+    }),
+    ctx.db.query.stackDeployments.findMany({
+      where: and(
+        eq(stackDeployments.status, "succeeded"),
+        isNotNull(stackDeployments.watchUntil),
+        gt(stackDeployments.watchUntil, now)
+      ),
+      with: { stack: true },
+    }),
+  ]);
 
   const reverted: string[] = [];
   const strandedServices: string[] = [];

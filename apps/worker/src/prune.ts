@@ -143,6 +143,10 @@ async function pruneNode(
   client: SshClient,
   docker: DockerApi
 ): Promise<Omit<NodePruneResult, "serverId">> {
+  // Sequential ON PURPOSE, and not parallelisable: removing the stopped
+  // containers is what releases the images below. Run together, the image
+  // pass still sees them referenced and reclaims less — a linter reading
+  // these as independent awaits is reading the shapes, not the order.
   const containers = await docker.pruneContainers();
   const images = await docker.pruneImages({
     filters: JSON.stringify({ dangling: { false: true } }),
