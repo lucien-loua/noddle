@@ -52,54 +52,54 @@ type MenuId =
 
 const MENU: { description: string; id: MenuId; label: string }[] = [
   {
-    description: "Configure health check settings",
+    description: "How Swarm decides the container is alive",
     id: "health-check",
-    label: "Health Check",
+    label: "Health check",
   },
   {
-    description: "Configure restart policy",
+    description: "When a stopped container is started again",
     id: "restart-policy",
-    label: "Restart Policy",
+    label: "Restart policy",
   },
   {
-    description: "Configure placement constraints",
+    description: "Which nodes this database may run on",
     id: "placement",
     label: "Placement",
   },
   {
-    description: "Configure update strategy",
+    description: "How a new version replaces the running one",
     id: "update-config",
-    label: "Update Config",
+    label: "Update config",
   },
   {
-    description: "Configure rollback strategy",
+    description: "How Swarm returns to the previous version",
     id: "rollback-config",
-    label: "Rollback Config",
+    label: "Rollback config",
   },
   {
-    description: "Configure service mode",
+    description: "Replicated with a replica count, or global",
     id: "mode",
     label: "Mode",
   },
   {
-    description: "Configure network attachments",
+    description: "Overlay networks the container joins",
     id: "network",
     label: "Network",
   },
   {
-    description: "Configure service labels",
+    description: "Key/value pairs attached to the Swarm service",
     id: "labels",
     label: "Labels",
   },
   {
-    description: "Configure stop grace period",
+    description: "How long a container may take to shut down",
     id: "stop-grace-period",
-    label: "Stop Grace Period",
+    label: "Stop grace period",
   },
   {
-    description: "Configure endpoint specification",
+    description: "How the port is published outside the overlay",
     id: "endpoint-spec",
-    label: "Endpoint Spec",
+    label: "Endpoint spec",
   },
 ];
 
@@ -542,7 +542,7 @@ function HealthCheckForm({
           },
         });
       }}
-      saveLabel="Save Health Check"
+      saveLabel="Save health check"
     >
       <FieldGroup>
         <LabeledTextarea
@@ -607,7 +607,7 @@ function RestartPolicyForm({
           },
         });
       }}
-      saveLabel="Save Restart Policy"
+      saveLabel="Save restart policy"
     >
       <FieldGroup>
         <LabeledSelect
@@ -624,7 +624,7 @@ function RestartPolicyForm({
         </LabeledSelect>
         <NsField label="Delay" onChange={setDelay} value={delay} />
         <LabeledInput
-          label="Max Attempts"
+          label="Max attempts"
           onChange={setMaxAttempts}
           value={maxAttempts}
         />
@@ -763,7 +763,7 @@ function UpdateConfigForm({
         );
       }}
       saveLabel={
-        kind === "update" ? "Save Update Config" : "Save Rollback Config"
+        kind === "update" ? "Save update config" : "Save rollback config"
       }
     >
       <FieldGroup>
@@ -838,7 +838,7 @@ function ModeForm({
                 },
         });
       }}
-      saveLabel="Save Mode"
+      saveLabel="Save mode"
     >
       <FieldGroup>
         <LabeledSelect
@@ -894,7 +894,7 @@ function NetworkForm({
             .map((Target) => ({ Target })),
         });
       }}
-      saveLabel="Save Network"
+      saveLabel="Save network"
     >
       <FieldGroup>
         <LabeledTextarea
@@ -933,7 +933,7 @@ function LabelsForm({
       onSave={async () => {
         await onSave({ labels: parseLabels(raw) });
       }}
-      saveLabel="Save Labels"
+      saveLabel="Save labels"
     >
       <FieldGroup>
         <LabeledTextarea
@@ -973,7 +973,7 @@ function StopGraceForm({
       onSave={async () => {
         await onSave({ stopGracePeriod: parseOptionalInt(raw) });
       }}
-      saveLabel="Save Stop Grace Period"
+      saveLabel="Save stop grace period"
     >
       <FieldGroup>
         <NsField label="Stop grace period" onChange={setRaw} value={raw} />
@@ -1007,7 +1007,7 @@ function EndpointForm({
           endpointSpec: mode ? { Mode: mode as "dnsrr" | "vip" } : {},
         });
       }}
-      saveLabel="Save Endpoint Spec"
+      saveLabel="Save endpoint spec"
     >
       <FieldGroup>
         <LabeledSelect

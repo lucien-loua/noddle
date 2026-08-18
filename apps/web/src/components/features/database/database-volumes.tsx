@@ -126,7 +126,7 @@ export function DatabaseVolumes({
             variant="outline"
           >
             <PlusIcon data-icon="inline-start" weight="regular" />
-            Add Volume
+            Add volume
           </Button>
         ) : null}
       </FrameHeader>
@@ -134,13 +134,13 @@ export function DatabaseVolumes({
         <ul className="flex flex-col gap-3">
           <li className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3">
             <div className="grid min-w-0 gap-2 sm:grid-cols-3 sm:gap-4">
-              <MountFact label="Mount Type" value="VOLUME" />
-              <MountFact label="Volume Name" value={swarmName} />
-              <MountFact label="Mount Path" value={resolvedPath} />
+              <MountFact label="Mount type" value="Volume" />
+              <MountFact label="Volume name" value={swarmName} />
+              <MountFact label="Mount path" value={resolvedPath} />
             </div>
             {canEdit ? (
               <Button
-                aria-label="Edit primary volume path"
+                aria-label="Edit mount path"
                 onClick={() => setPrimaryOpen(true)}
                 size="icon-sm"
                 type="button"
@@ -158,14 +158,14 @@ export function DatabaseVolumes({
             >
               <div className="grid min-w-0 gap-2 sm:grid-cols-3 sm:gap-4">
                 <MountFact
-                  label="Mount Type"
-                  value={mount.type.toUpperCase()}
+                  label="Mount type"
+                  value={mount.type === "bind" ? "Bind" : "Volume"}
                 />
                 <MountFact
-                  label={mount.type === "bind" ? "Host Path" : "Volume Name"}
+                  label={mount.type === "bind" ? "Host path" : "Volume name"}
                   value={mount.source}
                 />
-                <MountFact label="Mount Path" value={mount.target} />
+                <MountFact label="Mount path" value={mount.target} />
               </div>
               {canEdit ? (
                 <div className="flex shrink-0 gap-1">
@@ -220,7 +220,7 @@ export function DatabaseVolumes({
         onOpenChange={setAddOpen}
         onSaved={invalidate}
         open={addOpen}
-        title="Add Volume"
+        title="Add volume"
       />
 
       <MountDialog
@@ -236,7 +236,7 @@ export function DatabaseVolumes({
         }}
         onSaved={invalidate}
         open={editMount !== null}
-        title="Edit Volume"
+        title="Edit volume"
       />
     </Frame>
   );
@@ -297,7 +297,7 @@ function PrimaryPathDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit primary mount path</DialogTitle>
+          <DialogTitle>Edit mount path</DialogTitle>
           <DialogDescription>
             The volume name stays fixed. Only the path inside the container
             changes. Needed when an image major bump moves the data directory.
@@ -308,7 +308,7 @@ function PrimaryPathDialog({
             <form.AppField name="volumePath">
               {(f) => (
                 <f.FieldText
-                  label="Mount Path"
+                  label="Mount path"
                   placeholder={defaultPath}
                   required
                 />
@@ -406,7 +406,7 @@ function MountDialog({
         <DialogBody>
           <FieldGroup className="gap-4">
             <Field>
-              <FieldLabel>Mount Type</FieldLabel>
+              <FieldLabel>Mount type</FieldLabel>
               <Select
                 onValueChange={(v) =>
                   setType((v as "bind" | "volume") ?? "volume")
@@ -418,15 +418,15 @@ function MountDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="volume">volume</SelectItem>
-                    <SelectItem value="bind">bind</SelectItem>
+                    <SelectItem value="volume">Volume</SelectItem>
+                    <SelectItem value="bind">Bind</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </Field>
             <Field>
               <FieldLabel>
-                {type === "bind" ? "Host Path" : "Volume Name"}
+                {type === "bind" ? "Host path" : "Volume name"}
               </FieldLabel>
               <Input
                 onChange={(e) => setSource(e.target.value)}
@@ -435,7 +435,7 @@ function MountDialog({
               />
             </Field>
             <Field>
-              <FieldLabel>Mount Path</FieldLabel>
+              <FieldLabel>Mount path</FieldLabel>
               <Input
                 onChange={(e) => setTarget(e.target.value)}
                 placeholder="/mnt/extra"
