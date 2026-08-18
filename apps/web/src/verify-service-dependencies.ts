@@ -5,7 +5,6 @@ import { join } from "node:path";
 import {
   databases,
   environments,
-  envVars,
   projects,
   servers,
   serviceDependencies,
@@ -19,15 +18,22 @@ import { db } from "@/lib/db.server";
 
 const WEB_SRC = import.meta.dirname;
 
-/** Shared by every local suite, so the slate is cleared both ways. */
+const PROJECT = "deps-proj";
+const PROBE = "deps-probe";
+
+/**
+ * Removes THIS suite's rows, by name — never `delete(table)`.
+ *
+ * The other local suites clear the shared tables wholesale, and that cost a
+ * real project twice in one session: the bench is run against the same
+ * database a person is using. Deleting the project cascades to its
+ * environments, services, databases and dependencies, so three statements
+ * are enough, and nothing else on the machine is touched.
+ */
 const wipe = async () => {
-  await db.delete(serviceDependencies);
-  await db.delete(envVars);
-  await db.delete(databases);
-  await db.delete(services);
-  await db.delete(environments);
-  await db.delete(projects);
-  await db.delete(servers);
+  await db.delete(projects).where(eq(projects.name, PROJECT));
+  await db.delete(servers).where(eq(servers.name, PROBE));
+  await db.delete(sshKeys).where(eq(sshKeys.name, PROBE));
 };
 
 const edgeCount = async () =>
@@ -39,17 +45,13 @@ cleanup(wipe);
 await runVerify("service dependencies (the topology edge)", async () => {
   const [sshKey] = await db
     .insert(sshKeys)
-    .values({ name: "deps-probe", privateKeyEncrypted: "placeholder" })
-    .onConflictDoUpdate({
-      set: { privateKeyEncrypted: "placeholder" },
-      target: sshKeys.name,
-    })
+    .values({ name: PROBE, privateKeyEncrypted: "placeholder" })
     .returning();
   const [server] = await db
     .insert(servers)
     .values({
       host: "192.0.2.20",
-      name: "deps-probe",
+      name: PROBE,
       role: "manager",
       sshKeyId: sshKey?.id ?? "",
       sshUser: "ubuntu",
@@ -58,7 +60,7 @@ await runVerify("service dependencies (the topology edge)", async () => {
     .returning();
   const [project] = await db
     .insert(projects)
-    .values({ name: "deps-proj" })
+    .values({ name: PROJECT })
     .returning();
   const [environment] = await db
     .insert(environments)
