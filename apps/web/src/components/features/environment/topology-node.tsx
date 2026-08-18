@@ -1,47 +1,37 @@
 "use client";
 
 import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
-import { CodeIcon, GlobeIcon, StackIcon } from "@phosphor-icons/react";
+import {
+  CodeIcon,
+  DatabaseIcon,
+  GlobeIcon,
+  HardDrivesIcon,
+  StackIcon,
+} from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { Position } from "@xyflow/react";
 import type { Node as FlowNodeType, NodeProps } from "@xyflow/react";
 
 import { DatabaseMark } from "@/components/features/database/database-mark";
-import { Handle } from "@/components/xyflow/components/handle";
 import {
-  Node,
-  NodeDescription,
-  NodeHeader,
-  NodeIcon,
-  NodeTitle,
-} from "@/components/xyflow/components/node";
+  Frame,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { Handle } from "@/components/xyflow/components/handle";
 import { dotClass, serviceLabel } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 import type { TopologyNodeData, TopologyTarget } from "./topology-graph";
 
-const KIND_ICON = {
-  service: CodeIcon,
-  stack: StackIcon,
-} as const;
-
-/** Measured on the rendered node, not guessed: dagre spaces ranks from
- *  these, and a wrong height opens gaps the graph does not need. */
+/** Measured on the rendered node: dagre spaces ranks from these, and a wrong
+ *  height opens gaps the graph does not need. */
 export const TOPOLOGY_NODE_WIDTH = 288;
-export const TOPOLOGY_NODE_HEIGHT = 64;
+export const TOPOLOGY_NODE_HEIGHT = 112;
 
-function Mark({ data }: { data: TopologyNodeData }) {
-  if (data.kind === "database" && data.engine) {
-    return <DatabaseMark engine={data.engine} size="sm" />;
-  }
-  if (data.kind === "internet") {
-    return <GlobeIcon className="size-4" weight="regular" />;
-  }
-  const Icon = KIND_ICON[data.kind === "stack" ? "stack" : "service"];
-  return <Icon className="size-4" weight="regular" />;
-}
-
-const LINK_CLASS = "outline-none hover:underline focus-visible:underline";
+const LINK_CLASS =
+  "w-full truncate text-start outline-none after:absolute after:inset-0 hover:underline focus-visible:underline";
 
 /** Three branches rather than a computed path: the router types `to` and its
  *  params together, and a template string forfeits both. */
@@ -86,67 +76,94 @@ function TargetLink({
   );
 }
 
+function Mark({ data }: { data: TopologyNodeData }) {
+  if (data.kind === "database" && data.engine) {
+    return <DatabaseMark engine={data.engine} size="sm" />;
+  }
+  // `size-5` against the mark's `size-6`: a solid glyph reads heavier than a
+  // brand logo inside the same box. Same pairing as the grid card.
+  if (data.kind === "internet") {
+    return <GlobeIcon className="size-5 shrink-0 text-muted-foreground" />;
+  }
+  const Icon = data.kind === "stack" ? StackIcon : CodeIcon;
+  return <Icon className="size-5 shrink-0 text-muted-foreground" />;
+}
+
+/**
+ * One resource on the canvas, in the grid card's own grammar: the header says
+ * WHAT this is, the panel says HOW IT IS DOING, the footer says WHERE IT
+ * LIVES. Written on `Frame` rather than the flow template's `Node`, so a
+ * resource looks the same whichever screen draws it.
+ *
+ * The internet node keeps the header alone: it is the boundary, not a
+ * resource, and it has neither a status nor a server to state.
+ */
 export function TopologyNode({
   data,
 }: NodeProps<FlowNodeType<TopologyNodeData>>) {
   const status = data.status ? serviceLabel(data.status) : null;
-  // `DatabaseMark` is `aria-hidden` on the promise that its caller names the
-  // engine next to it. Written for screen readers only: on 288px the visible
-  // line already carries the status and the server, and adding "PostgreSQL"
-  // truncated the server name away — the mark says the engine to anyone who
-  // can see it.
   const engine =
     data.kind === "database" && data.engine
       ? DATABASE_ENGINE_LABEL[data.engine]
       : null;
 
   return (
-    <Node
-      className="gap-0 py-3 shadow-sm ring-1 ring-border"
-      size="sm"
-      style={{ width: TOPOLOGY_NODE_WIDTH }}
-    >
-      {data.kind === "internet" ? null : (
+    <Frame style={{ width: TOPOLOGY_NODE_WIDTH, backdropFilter: "blur(10px)" }}>
+      {data.hasTarget ? (
         <Handle position={Position.Left} type="target" />
-      )}
+      ) : null}
 
-      <NodeHeader className="grid-cols-[auto_1fr] items-center gap-x-2.5 gap-y-0.5 px-3">
-        <NodeIcon className="row-span-2 size-8 bg-muted">
+      <FrameHeader>
+        <div className="flex items-center gap-2">
           <Mark data={data} />
-          {engine ? <span className="sr-only">{engine}</span> : null}
-        </NodeIcon>
-        <NodeTitle className="min-w-0 truncate text-sm">
-          {data.target ? (
-            <TargetLink label={data.label} target={data.target} />
-          ) : (
-            data.label
-          )}
-        </NodeTitle>
-        <NodeDescription className="flex min-w-0 items-center gap-1.5 text-xs">
-          {status ? (
-            <>
-              <span
-                className={cn(
-                  "size-1.5 shrink-0 rounded-full",
-                  dotClass(status.tone)
-                )}
-              />
-              <span className="shrink-0">{status.label}</span>
-            </>
-          ) : null}
-          {data.detail ? (
-            <span className="truncate text-muted-foreground">
-              {status ? "· " : null}
-              {data.detail}
-            </span>
-          ) : null}
-        </NodeDescription>
-      </NodeHeader>
+          <FrameTitle className="min-w-0 flex-1 truncate">
+            {data.target ? (
+              <TargetLink label={data.label} target={data.target} />
+            ) : (
+              data.label
+            )}
+          </FrameTitle>
+        </div>
+      </FrameHeader>
 
-      {data.kind === "database" ? null : (
+      {status ? (
+        <FramePanel className="flex flex-col gap-3">
+          {/* A dot, not a badge: on a canvas you scan shapes, and a disc in a
+              fixed position reads without being read. The word stays beside
+              it — colour is never the only channel. */}
+          <div className="flex items-center gap-2 text-sm">
+            <span
+              aria-hidden
+              className={`size-2.5 shrink-0 rounded-full ${dotClass(status.tone)}`}
+            />
+            <span className="truncate">{status.label}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-sm">
+            {engine ? (
+              <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <GlobeIcon className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="truncate text-muted-foreground">
+              {engine ?? data.address ?? "No domain"}
+            </span>
+          </div>
+        </FramePanel>
+      ) : null}
+
+      {data.serverName ? (
+        <FrameFooter>
+          <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
+            <HardDrivesIcon aria-hidden className="size-3.5 shrink-0" />
+            <span className="truncate">{data.serverName}</span>
+          </span>
+        </FrameFooter>
+      ) : null}
+
+      {data.hasSource ? (
         <Handle position={Position.Right} type="source" />
-      )}
-    </Node>
+      ) : null}
+    </Frame>
   );
 }
 

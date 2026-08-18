@@ -117,6 +117,31 @@ await runVerify("environment topology (the drawn graph)", () => {
 
   {
     const { nodes } = buildTopology(
+      scope({
+        databases: [database("db")],
+        services: [service("api", 1), service("worker", 0)],
+      }),
+      [{ from: "api", to: "db", toKind: "database" }]
+    );
+    const at = (id: string) => nodes.find((n) => n.id === id)?.data;
+
+    check(
+      "the internet node has a source handle and no target",
+      at(INTERNET_NODE_ID)?.hasSource === true &&
+        at(INTERNET_NODE_ID)?.hasTarget === false
+    );
+    check(
+      "a consumed database has a target handle and no source",
+      at("db")?.hasTarget === true && at("db")?.hasSource === false
+    );
+    check(
+      "a service nothing touches has NO handle at all",
+      at("worker")?.hasSource === false && at("worker")?.hasTarget === false
+    );
+  }
+
+  {
+    const { nodes } = buildTopology(
       scope({ databases: [database("db")], services: [service("api", 1)] }),
       []
     );

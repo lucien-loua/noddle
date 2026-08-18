@@ -15,12 +15,18 @@ export interface TopologyTarget {
 }
 
 export interface TopologyNodeData extends Record<string, unknown> {
-  /** Second line: the server, the engine — never the status, which the dot
-   *  and the badge already carry. */
-  detail: string | null;
+  /** What you read after the status: the hostname it answers on. A database
+   *  has none, and states its engine instead — same rule as the grid card. */
+  address: string | null;
   engine: DatabaseEngine | null;
   kind: TopologyNodeKind;
   label: string;
+  /** Whether an edge actually lands on / leaves this node. A handle that
+   *  anchors nothing draws a connection point that is never used. */
+  hasSource: boolean;
+  hasTarget: boolean;
+  /** Where it lives. `null` on the internet node, which lives nowhere. */
+  serverName: string | null;
   status: string | null;
   target: TopologyTarget | null;
 }
@@ -50,7 +56,7 @@ export interface TopologyScope {
   environmentId: string;
   projectId: string;
   services: {
-    domains: unknown[];
+    domains: { host: string }[];
     id: string;
     name: string;
     serverName: string;
@@ -106,10 +112,13 @@ export function buildTopology(
   if (published.length > 0) {
     nodes.push({
       data: {
-        detail: null,
+        address: null,
         engine: null,
+        hasSource: false,
+        hasTarget: false,
         kind: "internet",
         label: "Internet",
+        serverName: null,
         status: null,
         target: null,
       },
@@ -122,10 +131,13 @@ export function buildTopology(
   for (const service of scope.services) {
     nodes.push({
       data: {
-        detail: service.serverName,
+        address: service.domains[0]?.host ?? null,
         engine: null,
+        hasSource: false,
+        hasTarget: false,
         kind: "service",
         label: service.name,
+        serverName: service.serverName,
         status: service.status,
         target: route("services", service.id),
       },
@@ -138,10 +150,13 @@ export function buildTopology(
   for (const stack of scope.stacks) {
     nodes.push({
       data: {
-        detail: stack.serverName,
+        address: stack.domain,
         engine: null,
+        hasSource: false,
+        hasTarget: false,
         kind: "stack",
         label: stack.name,
+        serverName: stack.serverName,
         status: stack.status,
         target: route("stacks", stack.id),
       },
@@ -154,10 +169,13 @@ export function buildTopology(
   for (const database of scope.databases) {
     nodes.push({
       data: {
-        detail: database.serverName,
+        address: null,
         engine: database.engine,
+        hasSource: false,
+        hasTarget: false,
         kind: "database",
         label: database.name,
+        serverName: database.serverName,
         status: database.status,
         target: route("databases", database.id),
       },
@@ -189,6 +207,15 @@ export function buildTopology(
         type: "edge",
       });
     }
+  }
+
+  // Set LAST, not while building: a node's handles depend on the edges, and
+  // the edges are only complete here.
+  const sources = new Set(edges.map((e) => e.source));
+  const targets = new Set(edges.map((e) => e.target));
+  for (const node of nodes) {
+    node.data.hasSource = sources.has(node.id);
+    node.data.hasTarget = targets.has(node.id);
   }
 
   return { edges, nodes };
