@@ -58,6 +58,22 @@ export default defineConfig({
         // keyboard path nor the result can be exercised from here.
         "react-doctor/no-chain-state-updates": "off",
         "react-doctor/no-effect-chain": "off",
+        // The rest of what shadcn ships here: a JSX default prop, an index
+        // key, a label without a control, a cookie write, a parameter
+        // reassigned, a context value built inline. All upstream's, all
+        // reverted by the next `shadcn add`.
+        "class-methods-use-this": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/label-has-associated-control": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off",
+        "no-param-reassign": "off",
+        "no-shadow": "off",
+        "react-doctor/no-array-index-as-key": "off",
+        "react-doctor/rendering-svg-precision": "off",
+        "react/button-has-type": "off",
+        "react/jsx-no-constructed-context-values": "off",
+        "react/no-object-type-as-default-prop": "off",
+        "unicorn/no-document-cookie": "off",
       },
     },
   ],
