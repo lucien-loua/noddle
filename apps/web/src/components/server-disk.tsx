@@ -134,7 +134,7 @@ export function ServerDiskUsage({
             <EmptyHeader>
               <EmptyTitle>No reading yet</EmptyTitle>
               <EmptyDescription>
-                Docker's disk breakdown is read every ten minutes on every
+                Docker&apos;s disk breakdown is read every ten minutes on every
                 connected server.
               </EmptyDescription>
             </EmptyHeader>

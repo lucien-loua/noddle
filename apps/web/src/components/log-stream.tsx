@@ -81,9 +81,9 @@ function useBuildLogSource(
       onEndRef.current?.(payload.status);
     });
 
-    source.onerror = () => {
+    source.addEventListener("error", () => {
       setLive(false);
-    };
+    });
 
     return () => source.close();
   }, [deploymentId]);

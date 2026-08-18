@@ -143,9 +143,9 @@ export function ContainerLogs({
       source.close();
     });
 
-    source.onerror = () => {
+    source.addEventListener("error", () => {
       setLive(false);
-    };
+    });
 
     return () => source.close();
   }, [generation, since, streamUrl, tail]);
