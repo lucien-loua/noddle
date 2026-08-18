@@ -118,7 +118,7 @@ function ServerDetail() {
           {canShell ? (
             <Button onClick={handleOpenTerminal} size="sm" variant="outline">
               <TerminalIcon weight="regular" />
-              Terminal
+              Open terminal
             </Button>
           ) : null}
           <Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>

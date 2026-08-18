@@ -156,7 +156,7 @@ export function ServiceDomainDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Domain</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit domain" : "Add domain"}</DialogTitle>
           <DialogDescription>
             Public hostname, path routing, TLS, and the container port Traefik
             forwards to.

@@ -118,10 +118,10 @@ export function ConnectRepoDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create</DialogTitle>
+          <DialogTitle>New application</DialogTitle>
           <DialogDescription>
-            Assign a name to your application. The source and build are
-            configured on the next screen, then Deploy.
+            Name it here. Its source and build are configured on the next
+            screen, then you deploy.
           </DialogDescription>
         </DialogHeader>
 

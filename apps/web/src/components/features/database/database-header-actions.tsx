@@ -21,21 +21,24 @@ type ConfirmKind = "restart" | "start" | "stop";
 
 const CONFIRM_COPY: Record<
   ConfirmKind,
-  { description: string; title: string }
+  { confirmLabel: string; description: string; title: string }
 > = {
   restart: {
+    confirmLabel: "Restart",
     description:
-      "Are you sure you want to restart this database? The container is stopped and started again without changing its data.",
-    title: "Restart",
+      "The container is stopped and started again. The data is untouched.",
+    title: "Restart this database?",
   },
   start: {
-    description: "Are you sure you want to start this database?",
-    title: "Start",
+    confirmLabel: "Start",
+    description: "The database starts again on its existing data.",
+    title: "Start this database?",
   },
   stop: {
+    confirmLabel: "Stop",
     description:
-      "Are you sure you want to stop this database? Connected applications will lose access until it is started again.",
-    title: "Stop",
+      "Connected applications lose access until it is started again. Nothing is deleted.",
+    title: "Stop this database?",
   },
 };
 
@@ -145,13 +148,13 @@ export function DatabaseHeaderActions({
         {onTerminal ? (
           <Button onClick={onTerminal} variant="outline">
             <TerminalIcon data-icon="inline-start" weight="regular" />
-            Open Terminal
+            Open terminal
           </Button>
         ) : null}
 
         {del.canDelete ? (
           <Button onClick={del.handleOpen} variant="outline">
-            <TrashIcon data-icon="inline-start" />
+            <TrashIcon data-icon="inline-start" weight="regular" />
             Delete
           </Button>
         ) : null}
@@ -161,6 +164,7 @@ export function DatabaseHeaderActions({
 
       {copy ? (
         <ConfirmActionDialog
+          confirmLabel={copy.confirmLabel}
           description={copy.description}
           onConfirm={handleConfirmed}
           onOpenChange={closeConfirm}

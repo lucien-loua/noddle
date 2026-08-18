@@ -30,29 +30,36 @@ type ConfirmKind = "deploy" | "rebuild" | "reload" | "start" | "stop";
 
 const CONFIRM_COPY: Record<
   ConfirmKind,
-  { description: string; title: string }
+  { confirmLabel: string; description: string; title: string }
 > = {
   deploy: {
-    description: "Are you sure you want to deploy this application?",
-    title: "Deploy",
+    confirmLabel: "Deploy",
+    description:
+      "The image is built and rolled out. The running version keeps serving until the new one is healthy.",
+    title: "Deploy this application?",
   },
   rebuild: {
+    confirmLabel: "Rebuild",
     description:
-      "Are you sure you want to rebuild this application? The latest source is fetched and the image is rebuilt from scratch.",
-    title: "Rebuild",
+      "The latest source is fetched and the image is rebuilt from scratch.",
+    title: "Rebuild this application?",
   },
   reload: {
+    confirmLabel: "Reload",
     description:
-      "Are you sure you want to reload this application? This restarts the running container without rebuilding.",
-    title: "Reload",
+      "The running container is restarted. Nothing is rebuilt and the image does not change.",
+    title: "Reload this application?",
   },
   start: {
-    description: "Are you sure you want to start this application?",
-    title: "Start",
+    confirmLabel: "Start",
+    description: "The application starts again on its current image.",
+    title: "Start this application?",
   },
   stop: {
-    description: "Are you sure you want to stop this application?",
-    title: "Stop",
+    confirmLabel: "Stop",
+    description:
+      "The application stops answering. Nothing is deleted, and you can start it again at any time.",
+    title: "Stop this application?",
   },
 };
 
@@ -173,7 +180,7 @@ function DeployToggles({
         <DeployToggle
           checked={service.cleanCache}
           disabled={busy}
-          label="Clean Cache"
+          label="Clean cache"
           onSaved={onSaved}
           patch={cleanCachePatch}
           serviceId={service.id}
@@ -278,7 +285,7 @@ function DeployActionBar({
       {handlers.onTerminal ? (
         <Button onClick={handlers.onTerminal} variant="outline">
           <TerminalIcon data-icon="inline-start" weight="regular" />
-          Open Terminal
+          Open terminal
         </Button>
       ) : null}
 
@@ -407,6 +414,7 @@ export function ServiceDeploySettings({
 
       {copy ? (
         <ConfirmActionDialog
+          confirmLabel={copy.confirmLabel}
           description={copy.description}
           onConfirm={handleConfirmed}
           onOpenChange={closeConfirm}
