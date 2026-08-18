@@ -214,8 +214,12 @@ function ServerDetail() {
           <CollapsibleContent className="mt-3 space-y-3">
             <ResourceGraphs series={series} />
             <ServerDiskUsage disk={disk}>
+              {/* Keyed on the server's own value: the toggle holds an
+                  optimistic copy, and without this a refetch that changes
+                  pruneEnabled would leave the switch showing the old one. */}
               <ServerPruneToggle
                 enabled={server.pruneEnabled}
+                key={`prune-${server.id}-${server.pruneEnabled}`}
                 error={pruneError}
                 onError={handlePruneError}
                 role={known}

@@ -29,6 +29,11 @@ export function ServerPruneToggle({
   serverId: string;
 }) {
   const canUpdate = useCan(role, "server", "update");
+  // Optimistic copy of the prop: the switch flips before the server
+  // answers, and rolls back on failure. The caller keys this component on
+  // `pruneEnabled`, so a refetch that changes it remounts rather than
+  // leaving a stale copy — which is what the rule below cannot see.
+  // oxlint-disable-next-line react-doctor/no-derived-useState
   const [value, setValue] = useState(enabled);
   const id = useId();
 
