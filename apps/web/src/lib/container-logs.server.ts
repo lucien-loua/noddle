@@ -140,41 +140,34 @@ export function followContainerLogs(
     });
   };
 
-  const pump = () => {
+  const pump = async () => {
     if (aborted || channel.closed) {
       done();
       return;
     }
 
-    exec(client, latestContainerCommand(swarmName))
-      .then((result) => {
-        if (aborted || channel.closed) {
-          done();
-          return;
-        }
-        const id = result.stdout.trim();
-        // Same id already followed to EOF (stopped container): wait for a
-        // replacement rather than dumping the same tail forever.
-        if (id.length === 0 || id === followedId) {
-          schedule();
-          return;
-        }
-        followedId = id;
-        return openExecPty(client, followCommand(id, tail, since));
-      })
-      .then((pty) => {
-        if (!pty) {
-          return;
-        }
-        attach(pty);
-      })
-      .catch(() => {
-        if (aborted || channel.closed) {
-          done();
-          return;
-        }
+    try {
+      const result = await exec(client, latestContainerCommand(swarmName));
+      if (aborted || channel.closed) {
+        done();
+        return;
+      }
+      const id = result.stdout.trim();
+      // Same id already followed to EOF (stopped container): wait for a
+      // replacement rather than dumping the same tail forever.
+      if (id.length === 0 || id === followedId) {
         schedule();
-      });
+        return;
+      }
+      followedId = id;
+      attach(await openExecPty(client, followCommand(id, tail, since)));
+    } catch {
+      if (aborted || channel.closed) {
+        done();
+        return;
+      }
+      schedule();
+    }
   };
 
   if (channel.closed) {

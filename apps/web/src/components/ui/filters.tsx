@@ -273,15 +273,6 @@ function FilterInput<T = unknown>({
     }
   }, [props.autoFocus]);
 
-  // Validation function to check if input matches pattern
-  const validateInput = (value: string, pattern?: string): boolean => {
-    if (!(pattern && value)) {
-      return true;
-    }
-    const regex = new RegExp(pattern);
-    return regex.test(value);
-  };
-
   // Get validation message for field type
   const getValidationMessage = (): string => context.i18n.validation.invalid;
 
@@ -406,6 +397,17 @@ interface FilterRemoveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
 }
 
 /** The icon button's size follows the filter bar's, with one default. */
+/** One element, not a new one per render: a JSX default breaks memoisation. */
+const DEFAULT_REMOVE_ICON = <XIcon weight="regular" />;
+
+/** Pure: no component state, so it is built once rather than per render. */
+function validateInput(value: string, pattern?: string): boolean {
+  if (!(pattern && value)) {
+    return true;
+  }
+  return new RegExp(pattern).test(value);
+}
+
 const ICON_SIZE = {
   default: "icon",
   lg: "icon-lg",
@@ -446,7 +448,7 @@ function selectionLabel<T>(
 
 function FilterRemoveButton({
   className,
-  icon = <XIcon weight="regular" />,
+  icon = DEFAULT_REMOVE_ICON,
   ...props
 }: FilterRemoveButtonProps) {
   const context = useFilterContext();
@@ -955,10 +957,6 @@ function SelectOptionsPopover<T = unknown>({
   }, [open]);
 
   useEffect(() => {
-    setHighlightedIndex(-1);
-  }, []);
-
-  useEffect(() => {
     if (highlightedIndex >= 0 && open) {
       const element = document.getElementById(
         `${baseId}-item-${highlightedIndex}`
@@ -1228,9 +1226,9 @@ function SelectOptionsPopover<T = unknown>({
 
   return (
     <DropdownMenu
-      onOpenChange={(open) => {
-        setOpen(open);
-        if (!open) {
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
           setTimeout(() => setSearchInput(""), 200);
         }
       }}
@@ -1489,10 +1487,6 @@ function FilterSubmenuContent<T = unknown>({
       }
     }
   }, [isActive, field.searchable, baseId]);
-
-  useEffect(() => {
-    setHighlightedIndex(-1);
-  }, []);
 
   useEffect(() => {
     if (highlightedIndex >= 0 && isActive) {
@@ -1791,10 +1785,6 @@ export function Filters<T = unknown>({
   }, [addFilterOpen, activeMenu]);
 
   useEffect(() => {
-    setHighlightedIndex(-1);
-  }, []);
-
-  useEffect(() => {
     if (highlightedIndex >= 0 && addFilterOpen) {
       const element = document.getElementById(
         `${rootId}-item-${highlightedIndex}`
@@ -2047,6 +2037,7 @@ export function Filters<T = unknown>({
                       }}
                       onMouseEnter={() => setActiveMenu("root")}
                       placeholder={mergedI18n.searchFields}
+                      aria-expanded={addFilterOpen}
                       ref={rootInputRef}
                       role="combobox"
                       value={menuSearchInput}
