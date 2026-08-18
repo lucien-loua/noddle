@@ -56,7 +56,7 @@ export function ServiceDangerZone({
             onClick={del.handleOpen}
             variant="destructive"
           >
-            <TrashIcon data-icon="inline-start" />
+            <TrashIcon data-icon="inline-start" weight="regular" />
             Delete application
           </Button>
         </FrameFooter>

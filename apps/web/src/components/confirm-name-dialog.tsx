@@ -84,7 +84,7 @@ export function ConfirmNameDialog({
                     {copied ? (
                       <CheckIcon data-icon="inline-end" weight="regular" />
                     ) : (
-                      <CopyIcon data-icon="inline-end" />
+                      <CopyIcon data-icon="inline-end" weight="regular" />
                     )}
                   </Badge>{" "}
                   to confirm

@@ -71,7 +71,7 @@ export function DatabaseDangerZone({
 
       <FrameFooter>
         <Button className="w-full" onClick={handleOpen} variant="destructive">
-          <DatabaseIcon data-icon="inline-start" />
+          <DatabaseIcon data-icon="inline-start" weight="regular" />
           Rebuild database
         </Button>
       </FrameFooter>

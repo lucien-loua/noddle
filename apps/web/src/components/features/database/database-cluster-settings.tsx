@@ -93,7 +93,7 @@ export function DatabaseClusterSettings({
               type="button"
               variant="outline"
             >
-              <GearSixIcon data-icon="inline-start" />
+              <GearSixIcon data-icon="inline-start" weight="regular" />
               Swarm Settings
             </Button>
           ) : null}
