@@ -585,16 +585,18 @@ const isGroupLevelField = <T = unknown,>(
 const flattenFields = <T = unknown,>(
   fields: FilterFieldsConfig<T>
 ): FilterFieldConfig<T>[] =>
-  fields.reduce<FilterFieldConfig<T>[]>((acc, item) => {
+  // flatMap, not reduce with a spread: `[...acc, x]` copies the whole
+  // accumulator on every item, so flattening n fields cost O(n²).
+  fields.flatMap((item) => {
     if (isFieldGroup(item)) {
-      return [...acc, ...item.fields];
+      return item.fields;
     }
-    // Handle group-level fields (new structure)
+    // Group-level fields (new structure)
     if (isGroupLevelField(item)) {
-      return [...acc, ...item.fields!];
+      return item.fields ?? [];
     }
-    return [...acc, item];
-  }, []);
+    return item;
+  });
 
 const getFieldsMap = <T = unknown,>(
   fields: FilterFieldsConfig<T>
