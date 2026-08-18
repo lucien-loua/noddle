@@ -2,7 +2,7 @@
  * biome-ignore-all lint/performance/noJsxPropsBind: dialog forms;
  * extracting every setState wrapper adds noise without shared children.
  */
-import { GlobeIcon, PlusIcon } from "@phosphor-icons/react";
+import { GlobeIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
@@ -76,57 +76,56 @@ export function ServiceDomains({
 
   return (
     <>
-      <Frame className="w-full" stacked variant="ghost">
-        <FrameHeader className="flex-row items-center justify-between gap-3">
-          <div className="min-w-0">
-            <FrameTitle>Domains</FrameTitle>
-            <FrameDescription>
-              Domains are used to access the application.
-            </FrameDescription>
-          </div>
-          {canEdit && hasDomains ? (
-            <Button onClick={handleOpenCreate} size="sm" variant="outline">
-              <PlusIcon data-icon="inline-start" weight="regular" />
-              Add domain
-            </Button>
-          ) : null}
-        </FrameHeader>
-
-        {hasDomains ? (
-          <>
-            {service.domains.map((domain) => (
-              <ServiceDomainCard
-                canEdit={canEdit}
-                domain={domain}
-                key={domain.id}
-                lastDeploymentFinishedAt={
-                  service.lastDeployment?.finishedAt ?? null
-                }
-                onEdit={() => setEditor(domain)}
-                onRemove={() => setConfirmRemove(domain)}
-                port={service.port}
-              />
-            ))}
-            {remove.isError ? (
-              <p className="text-destructive text-sm" role="alert">
-                {errorMessage(remove.error, "could not remove domain")}
-              </p>
+      {hasDomains ? (
+        <Frame className="w-full" stacked variant="ghost">
+          <FrameHeader className="flex-row items-center justify-between gap-3">
+            <div className="min-w-0">
+              <FrameTitle>Domains</FrameTitle>
+              <FrameDescription>
+                Domains are used to access the application.
+              </FrameDescription>
+            </div>
+            {canEdit ? (
+              <Button onClick={handleOpenCreate} size="sm" variant="outline">
+                <GlobeIcon data-icon="inline-start" weight="regular" />
+                Add domain
+              </Button>
             ) : null}
-            <FrameFooter>
-              <p className="text-muted-foreground text-xs">
-                {DOMAIN_REDEPLOY_HINT}
-              </p>
-            </FrameFooter>
-          </>
-        ) : (
-          <FramePanel>
-            <Empty>
-              <EmptyMedia>
-                <IconStack>
-                  <GlobeIcon className="size-5" />
-                </IconStack>
-              </EmptyMedia>
+          </FrameHeader>
+          {service.domains.map((domain) => (
+            <ServiceDomainCard
+              canEdit={canEdit}
+              domain={domain}
+              key={domain.id}
+              lastDeploymentFinishedAt={
+                service.lastDeployment?.finishedAt ?? null
+              }
+              onEdit={() => setEditor(domain)}
+              onRemove={() => setConfirmRemove(domain)}
+              port={service.port}
+            />
+          ))}
+          {remove.isError ? (
+            <p className="text-destructive text-sm" role="alert">
+              {errorMessage(remove.error, "could not remove domain")}
+            </p>
+          ) : null}
+          <FrameFooter>
+            <p className="text-muted-foreground text-xs">
+              {DOMAIN_REDEPLOY_HINT}
+            </p>
+          </FrameFooter>
+        </Frame>
+      ) : (
+        <Frame className="flex h-full min-h-0 flex-1 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
               <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <GlobeIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
                 <EmptyTitle>No domain yet</EmptyTitle>
                 <EmptyDescription>
                   To access the application it is required to set at least one
@@ -136,15 +135,15 @@ export function ServiceDomains({
               {canEdit ? (
                 <EmptyContent>
                   <Button onClick={handleOpenCreate}>
-                    <GlobeIcon data-icon="inline-start" weight="fill" />
+                    <GlobeIcon data-icon="inline-start" weight="regular" />
                     Add domain
                   </Button>
                 </EmptyContent>
               ) : null}
             </Empty>
           </FramePanel>
-        )}
-      </Frame>
+        </Frame>
+      )}
 
       {editor ? (
         <ServiceDomainDialog
