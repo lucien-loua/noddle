@@ -12,6 +12,8 @@ import { AppShell } from "@/components/app-shell";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { CreateServiceMenu } from "@/components/features/environment/create-service-menu";
 import { ResourceGrid } from "@/components/features/environment/resource-grid";
+import { EnvironmentTopology } from "@/components/features/environment/topology";
+import { TabRail } from "@/components/tab-rail";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,6 +22,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -30,6 +33,10 @@ import { getProjects } from "@/server/projects";
 import { getServers } from "@/server/servers";
 
 export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
+  // Only the non-default view is carried. `?view=resources` would be a URL
+  // that says nothing, and the detail pages already drop their default tab.
+  validateSearch: (search: Record<string, unknown>): { view?: "topology" } =>
+    search.view === "topology" ? { view: "topology" } : {},
   beforeLoad: async () => {
     const state = await getAuthState();
     if (!state.signedIn) {
@@ -107,6 +114,7 @@ function ProjectEnvironmentPage() {
     servers,
   } = Route.useLoaderData();
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -132,6 +140,16 @@ function ProjectEnvironmentPage() {
       });
     },
     [navigate, projectId]
+  );
+
+  const handleViewChange = useCallback(
+    (value: string) => {
+      navigate({
+        replace: true,
+        search: value === "topology" ? { view: "topology" } : {},
+      });
+    },
+    [navigate]
   );
 
   const createMenu = (
@@ -184,14 +202,51 @@ function ProjectEnvironmentPage() {
       role={role}
       title={`${scope.project} / ${scope.environment}`}
     >
-      <ResourceGrid
-        createAction={emptyInventory ? createMenu : undefined}
-        environmentId={current.id}
-        groups={dashboard.groups}
-        initialScope={scope}
-        projectId={projectId}
-        role={known}
-      />
+      {emptyInventory ? (
+        // No rail on an empty environment: two tabs above a single empty
+        // state offer a choice between nothing and nothing.
+        <ResourceGrid
+          createAction={createMenu}
+          environmentId={current.id}
+          groups={dashboard.groups}
+          initialScope={scope}
+          projectId={projectId}
+          role={known}
+        />
+      ) : (
+        <Tabs
+          // `h-full`, not `flex-1`: the shell's content area is a SCROLL box
+          // in `display: block`, so a flex child has nothing to grow into.
+          // With a height, each panel below can own its overflow — the
+          // resources scroll, the canvas fills what is left.
+          className="flex h-full min-h-0 flex-col gap-3"
+          onValueChange={handleViewChange}
+          value={search.view ?? "resources"}
+        >
+          <TabRail>
+            <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="topology">Topology</TabsTrigger>
+          </TabRail>
+          <TabsContent
+            className="scroll-fade no-scrollbar -mx-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2"
+            value="resources"
+          >
+            <ResourceGrid
+              environmentId={current.id}
+              groups={dashboard.groups}
+              initialScope={scope}
+              projectId={projectId}
+              role={known}
+            />
+          </TabsContent>
+          <TabsContent
+            className="flex min-h-0 flex-1 flex-col"
+            value="topology"
+          >
+            <EnvironmentTopology scope={liveScope} />
+          </TabsContent>
+        </Tabs>
+      )}
     </AppShell>
   );
 }
