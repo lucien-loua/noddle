@@ -164,12 +164,9 @@ function AccountLine({
             the top: "this account is the last owner" means nothing if you
             can't see which one it is. */}
         {error ? (
-          <span
-            className="mt-1 block whitespace-normal text-destructive text-xs"
-            role="status"
-          >
+          <output className="mt-1 block whitespace-normal text-destructive text-xs">
             {error}
-          </span>
+          </output>
         ) : null}
       </TableCell>
 

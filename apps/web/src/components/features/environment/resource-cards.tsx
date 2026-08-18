@@ -78,9 +78,9 @@ export function ServiceCard({
             ? ` · ${service.domains.map((d) => d.host).join(", ")}`
             : ""}
           {service.lastError ? (
-            <span className="block text-destructive" role="status">
+            <output className="block text-destructive">
               {service.lastError}
-            </span>
+            </output>
           ) : null}
         </>
       }
@@ -165,9 +165,9 @@ export function StackCard({
           {stack.serverName}
           {stack.domain ? ` · ${stack.domain}` : ""}
           {stack.lastError ? (
-            <span className="block text-destructive" role="status">
+            <output className="block text-destructive">
               {stack.lastError}
-            </span>
+            </output>
           ) : null}
         </>
       }
@@ -242,9 +242,9 @@ export function DatabaseCard({
           </span>
           {database.serverName}
           {database.lastError ? (
-            <span className="block text-destructive" role="status">
+            <output className="block text-destructive">
               {database.lastError}
-            </span>
+            </output>
           ) : null}
         </>
       }
