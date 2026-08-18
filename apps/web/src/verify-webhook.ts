@@ -613,7 +613,6 @@ try {
   // `synchronize`: the SAME row redeploys, never a second one.
   {
     // Before/after: the POST between them is the thing under test.
-    // oxlint-disable-next-line react-doctor/async-parallel
     const before = await previews();
     const r = await postPr(githubPr("synchronize", 7, headSha, "feature/x"));
     const after = await previews();

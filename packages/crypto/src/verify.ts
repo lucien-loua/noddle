@@ -23,7 +23,6 @@ const mustThrow = (label: string, fn: () => unknown) =>
 function flip(s: string): string {
   const b = Buffer.from(s, "base64url");
   const idx = b.length - 1;
-  // oxlint-disable-next-line no-bitwise
   b[idx] = (b[idx] ?? 0) ^ 0x01;
   return b.toString("base64url");
 }

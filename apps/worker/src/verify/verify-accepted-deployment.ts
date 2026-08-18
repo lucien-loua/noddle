@@ -197,7 +197,6 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
       // AFTER the previous one, not alongside: sweep.ts finds the version to
       // roll back to with `lt(createdAt)`, so which row is older IS the
       // fixture. Inserted together, the two timestamps could tie.
-      // oxlint-disable-next-line react-doctor/async-parallel, react-doctor/server-sequential-independent-await
       const [current] = await db
         .insert(deployments)
         .values({ serviceId, status: "deploying" })
@@ -263,7 +262,6 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
       // AFTER the previous one, not alongside: sweep.ts finds the version to
       // roll back to with `lt(createdAt)`, so which row is older IS the
       // fixture. Inserted together, the two timestamps could tie.
-      // oxlint-disable-next-line react-doctor/async-parallel, react-doctor/server-sequential-independent-await
       const [current] = await db
         .insert(stackDeployments)
         .values({ stackId, status: "deploying" })

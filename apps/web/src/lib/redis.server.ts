@@ -80,7 +80,6 @@ class LogHub {
    */
   // Part of the bus's interface; the module-level redis client is what it
   // reads, so it needs no `this`.
-  // oxlint-disable-next-line class-methods-use-this
   async backlog(deploymentId: string): Promise<LogMessage[]> {
     const raw = await redis.lrange(logBufferKey(deploymentId), 0, -1);
     const messages: LogMessage[] = [];

@@ -59,7 +59,6 @@ export type SwarmUpdateState =
   | "updating"
   // Keeps the literals in autocomplete while still accepting a state Docker
   // adds later.
-  // oxlint-disable-next-line typescript/ban-types
   | (string & {});
 
 function serviceSpec(s: DeploySpec) {

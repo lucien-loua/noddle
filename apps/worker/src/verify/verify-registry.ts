@@ -735,7 +735,6 @@ try {
 
   // Sequential by definition: this is a before/after measurement, and the
   // sweep between them is what it measures.
-  // oxlint-disable-next-line react-doctor/async-parallel
   const before = await volumeMb();
   const swept = await sweepRegistry(ctx, { containerName: REGISTRY_CONTAINER });
   const after = await volumeMb();

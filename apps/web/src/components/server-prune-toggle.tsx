@@ -33,7 +33,6 @@ export function ServerPruneToggle({
   // answers, and rolls back on failure. The caller keys this component on
   // `pruneEnabled`, so a refetch that changes it remounts rather than
   // leaving a stale copy — which is what the rule below cannot see.
-  // oxlint-disable-next-line react-doctor/no-derived-useState
   const [value, setValue] = useState(enabled);
   const id = useId();
 

@@ -168,6 +168,26 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Rules whose findings this repo answers the same way everywhere, so the
+    // answer belongs here rather than repeated above each line.
+    //
+    // async-parallel / server-sequential-independent-await: the benches read
+    // a value before an action and again after, and seed rows whose creation
+    // ORDER is the fixture — sweep.ts picks a rollback target with
+    // `lt(createdAt)`. Running those together deletes what they measure.
+    "react-doctor/async-parallel": "off",
+    "react-doctor/server-sequential-independent-await": "off",
+    // The prune switch holds an optimistic copy of its prop and is keyed on
+    // it, so it remounts rather than going stale — which the rule cannot see.
+    "react-doctor/no-derived-useState": "off",
+    // `^ 0x01` flips one bit, which IS the tamper the crypto bench performs.
+    "no-bitwise": "off",
+    // `string & {}` keeps the literal states in autocomplete while accepting
+    // one Docker adds later.
+    "typescript/ban-types": "off",
+    // The log bus reads a module-scope redis client; `this` would add nothing.
+    "class-methods-use-this": "off",
+
     // Off for what it still finds, after fixing the 11 that were real: every
     // remaining one is either textbook ARIA or a role this repo adds to a
     // PRESET component from outside, which is the only place it can.
