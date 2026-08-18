@@ -24,3 +24,4 @@ Accepted decisions. Do not relitigate without explicit evidence and a stop for a
 | [0018](./0018-default-environment.md) | Default environment is undeletable |
 | [0019](./0019-git-provider-integrations.md) | Git providers via a self-hosted GitHub App |
 | [0020](./0020-railpack-replaces-nixpacks.md) | Railpack replaces Nixpacks |
+| [0021](./0021-declared-service-dependencies.md) | Service dependencies are declared |

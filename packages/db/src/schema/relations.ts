@@ -13,6 +13,7 @@ import {
 import { environments, projects } from "#schema/projects";
 import { s3Destinations } from "#schema/s3-destinations";
 import { servers } from "#schema/servers";
+import { serviceDependencies } from "#schema/service-dependencies";
 import { serviceDomains } from "#schema/service-domains";
 import { services } from "#schema/services";
 import { sshKeys } from "#schema/ssh-keys";
@@ -48,6 +49,11 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
     references: [sshKeys.id],
   }),
   deployments: many(deployments),
+  // Both ends of the same table, so Drizzle needs the relation names to
+  // tell them apart: `dependencies` is what this service consumes,
+  // `dependents` is who consumes it.
+  dependencies: many(serviceDependencies, { relationName: "dependencySource" }),
+  dependents: many(serviceDependencies, { relationName: "dependencyTarget" }),
   domains: many(serviceDomains),
   envVars: many(envVars),
   environment: one(environments, {
@@ -72,6 +78,26 @@ export const serviceDomainsRelations = relations(serviceDomains, ({ one }) => ({
     references: [services.id],
   }),
 }));
+
+export const serviceDependenciesRelations = relations(
+  serviceDependencies,
+  ({ one }) => ({
+    dependsOnDatabase: one(databases, {
+      fields: [serviceDependencies.dependsOnDatabaseId],
+      references: [databases.id],
+    }),
+    dependsOnService: one(services, {
+      fields: [serviceDependencies.dependsOnServiceId],
+      references: [services.id],
+      relationName: "dependencyTarget",
+    }),
+    service: one(services, {
+      fields: [serviceDependencies.serviceId],
+      references: [services.id],
+      relationName: "dependencySource",
+    }),
+  })
+);
 
 export const envVarsRelations = relations(envVars, ({ one }) => ({
   service: one(services, {
@@ -131,6 +157,7 @@ export const stackDeploymentLogsRelations = relations(
 export const databasesRelations = relations(databases, ({ many, one }) => ({
   backupConfigs: many(backupConfigs),
   backups: many(backups),
+  dependents: many(serviceDependencies),
   environment: one(environments, {
     fields: [databases.environmentId],
     references: [environments.id],

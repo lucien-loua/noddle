@@ -22,6 +22,8 @@ Self-hosted deployment platform: point it at a git repo, it builds and runs the 
 
 **Database**: A managed engine instance (Postgres, Redis, …) Noddle provisions as a stateful Swarm service with placement and volumes. _Avoid_: DB service (ambiguous with app Service)
 
+**Dependency**: A declared edge from a Service to what it consumes — a Database, or another Service. Created by attaching, it states usage and never deploy order. _Avoid_: link, relation, connection (that's the DSN)
+
 **Deployment**: One attempted (or completed) ship of a service to a target — recorded in Noddle's history so rollback can return to _any_ previous image. _Avoid_: Release, ship (as nouns for the record)
 
 **Preview**: An ephemeral environment for a pull request, derived from the same deploy path as production services.

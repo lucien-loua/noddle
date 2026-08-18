@@ -22,6 +22,7 @@ export * from "#schema/registries";
 export * from "#schema/relations";
 export * from "#schema/s3-destinations";
 export * from "#schema/servers";
+export * from "#schema/service-dependencies";
 export * from "#schema/service-domains";
 export * from "#schema/services";
 export * from "#schema/ssh-keys";
