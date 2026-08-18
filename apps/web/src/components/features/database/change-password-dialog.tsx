@@ -79,7 +79,7 @@ export function ChangeDatabasePasswordDialog({
         }
       }
       throw new Error(
-        "still applying — the engine has not confirmed the new password yet"
+        "still applying: the engine has not confirmed the new password yet"
       );
     },
     onSuccess: async () => {

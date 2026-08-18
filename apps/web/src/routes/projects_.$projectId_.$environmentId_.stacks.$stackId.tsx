@@ -220,7 +220,7 @@ function StackDetail() {
                 <LogStream deploymentId={shown} onEnd={handleEnd} />
               ) : (
                 <p className="text-muted-foreground text-sm">
-                  No deploys yet — logs will appear on the first build.
+                  No deploys yet. Logs will appear on the first build.
                 </p>
               )}
             </ActiveTabPanel>

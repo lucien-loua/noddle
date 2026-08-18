@@ -47,7 +47,7 @@ export function useDeleteDatabaseAction({
       confirmLabel="Delete database"
       description={
         <>
-          The running container and its volume are removed — the data does not
+          The running container and its volume are removed. The data does not
           survive this.{" "}
           {/* The backups' S3 objects, though, survive — see databases.ts:
                 destroying them would remove the only way to recover what

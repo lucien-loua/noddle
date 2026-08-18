@@ -109,7 +109,7 @@ export async function ensurePreview(opts: {
   });
   if (live.length >= PREVIEW_LIMIT) {
     return {
-      ignored: `preview limit reached (${PREVIEW_LIMIT} live) — close a pull request to free one`,
+      ignored: `preview limit reached (${PREVIEW_LIMIT} live): close a pull request to free one`,
     };
   }
 

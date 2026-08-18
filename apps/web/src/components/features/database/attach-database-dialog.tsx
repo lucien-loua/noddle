@@ -72,7 +72,7 @@ export function AttachDatabaseDialog({
           <DialogTitle>Attach to a service</DialogTitle>
           <DialogDescription>
             The connection string is written as an environment variable of the
-            chosen service — it is never shown here.
+            chosen service. It is never shown here.
           </DialogDescription>
         </DialogHeader>
 

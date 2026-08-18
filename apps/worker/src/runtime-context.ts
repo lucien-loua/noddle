@@ -76,7 +76,7 @@ function defaultConnectForDeploy(
     });
     if (!manager) {
       throw new Error(
-        "no Swarm manager registered — the installer should have created one"
+        "no Swarm manager registered: the installer should have created one"
       );
     }
 

@@ -294,7 +294,7 @@ async function buildAndDeployService(
   // deployment while the old version is still serving.
   if (!outcome.accepted) {
     sink.write(
-      `✗ Swarm rolled the update back (${outcome.updateState}) — the previous version is still serving\n`
+      `✗ Swarm rolled the update back (${outcome.updateState}). The previous version is still serving\n`
     );
     await db
       .update(deployments)

@@ -153,7 +153,7 @@ export const generateServiceDomainHost = createServerFn({ method: "POST" })
         const host = candidates.find((candidate) => !takenHosts.has(candidate));
         if (!host) {
           throw new Error(
-            "could not find an unused test domain — try again or enter a host manually"
+            "could not find an unused test domain: try again or enter a host manually"
           );
         }
         return { host };

@@ -362,8 +362,8 @@ function CreateEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>New environment</DialogTitle>
           <DialogDescription>
-            A place to connect services, stacks and databases to — e.g. staging,
-            next to production.
+            A place to connect services, stacks and databases to. For example
+            staging, next to production.
           </DialogDescription>
         </DialogHeader>
         <DialogForm onSubmit={handleSubmit}>
@@ -526,7 +526,7 @@ function DeleteEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>Delete {env.name}?</DialogTitle>
           <DialogDescription>
-            Only possible while it is empty — remove its services, stacks and
+            Only possible while it is empty. Remove its services, stacks and
             databases first.
           </DialogDescription>
         </DialogHeader>
@@ -575,7 +575,7 @@ function DuplicateEnvironmentDialog({
       onOpenChange(false);
       if (result.databasesSkipped > 0) {
         toast.add({
-          description: `${result.databasesSkipped} database${result.databasesSkipped === 1 ? "" : "s"} skipped — attach a fresh one and copy the data manually if you need it there.`,
+          description: `${result.databasesSkipped} database${result.databasesSkipped === 1 ? "" : "s"} skipped. Attach a fresh one and copy the data manually if you need it there.`,
           title: "Databases were not duplicated",
           type: "info",
         });
@@ -604,8 +604,8 @@ function DuplicateEnvironmentDialog({
         <DialogHeader>
           <DialogTitle>Duplicate {env.name}</DialogTitle>
           <DialogDescription>
-            Copies services and stacks — configuration and environment
-            variables, not their running data. Domains are left unset so the
+            Copies services and stacks, with their configuration and environment
+            variables but not their running data. Domains are left unset so the
             copy never fights the original for the same route. Databases are NOT
             duplicated: they hold real data on a real volume, and a config-only
             clone would only look like a copy.

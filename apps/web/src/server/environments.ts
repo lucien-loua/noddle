@@ -161,7 +161,7 @@ export const deleteEnvironment = createServerFn({ method: "POST" })
         ]);
         if (service || stack || database) {
           throw new Error(
-            "this environment still has services, stacks or databases — remove them first"
+            "this environment still has services, stacks or databases: remove them first"
           );
         }
 

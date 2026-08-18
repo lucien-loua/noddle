@@ -1,4 +1,9 @@
-import { MagnifyingGlassIcon, RocketLaunchIcon } from "@phosphor-icons/react";
+import {
+  ArrowRightIcon,
+  MagnifyingGlassIcon,
+  RocketLaunchIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import {
   createFileRoute,
   Link,
@@ -244,11 +249,13 @@ function DeploymentsPage() {
               <EmptyContent>
                 {filtering ? (
                   <Button onClick={clearFilters} variant="outline">
+                    <XIcon data-icon="inline-start" weight="regular" />
                     Clear filters
                   </Button>
                 ) : (
                   <Button nativeButton={false} render={<Link to="/projects" />}>
                     Go to projects
+                    <ArrowRightIcon data-icon="inline-end" weight="regular" />
                   </Button>
                 )}
               </EmptyContent>

@@ -1,8 +1,8 @@
 import { projectNameSchema } from "@noddle/shared/validation/project";
 import {
   DotsThreeIcon,
+  FolderIcon,
   PencilSimpleIcon,
-  PlusIcon,
   TagIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -51,7 +51,7 @@ export function CreateProjectButton({ role }: { role: RoleName | null }) {
   return (
     <>
       <Button onClick={handleOpen}>
-        <PlusIcon data-icon="inline-start" weight="regular" />
+        <FolderIcon data-icon="inline-start" weight="regular" />
         Create Project
       </Button>
       <ProjectFormDialog onOpenChange={setOpen} open={open} />
@@ -229,7 +229,7 @@ function ProjectFormDialog({
           </DialogTitle>
           <DialogDescription>
             {existing
-              ? "Only the label changes — nothing is redeployed."
+              ? "Only the label changes. Nothing is redeployed."
               : "A project groups environments. It starts with one called production; add more from inside."}
           </DialogDescription>
         </DialogHeader>
@@ -303,7 +303,7 @@ function DeleteProjectDialog({
         <DialogHeader>
           <DialogTitle>Delete {name}?</DialogTitle>
           <DialogDescription>
-            Only possible while it is empty — remove its services, stacks and
+            Only possible while it is empty. Remove its services, stacks and
             databases first. Its environments go with it.
           </DialogDescription>
         </DialogHeader>

@@ -73,7 +73,7 @@ export function pickDestination<T extends DestinationCandidate>(
     const chosen = candidates.find((c) => c.id === requestedId);
     if (!chosen) {
       throw new Error(
-        "the S3 destination this backup used no longer exists — restore and retention cannot know where its object lives"
+        "the S3 destination this backup used no longer exists: restore and retention cannot know where its object lives"
       );
     }
     return chosen;
@@ -81,11 +81,11 @@ export function pickDestination<T extends DestinationCandidate>(
 
   const [only, ...rest] = candidates;
   if (!only) {
-    throw new Error("no S3 destination configured — add one before backing up");
+    throw new Error("no S3 destination configured: add one before backing up");
   }
   if (rest.length > 0) {
     throw new Error(
-      "several S3 destinations exist — pick one for this database before backing up"
+      "several S3 destinations exist: pick one for this database before backing up"
     );
   }
   return only;

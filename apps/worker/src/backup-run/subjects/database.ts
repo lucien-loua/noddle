@@ -77,7 +77,7 @@ export const databaseBackupSubject: BackupSubject<DatabaseBackupRun> = {
     return await captureToS3(client, command, destination, run.objectKey);
   },
   incompleteMessage: (code, stderr) =>
-    `the dumper exited with ${code} — backup incomplete, object deleted: ${stderr.slice(0, 500)}`,
+    `the dumper exited with ${code}. Backup incomplete, object deleted: ${stderr.slice(0, 500)}`,
   loadRun: async (ctx, runId) => {
     const backup = await ctx.db.query.backups.findFirst({
       where: eq(backups.id, runId),

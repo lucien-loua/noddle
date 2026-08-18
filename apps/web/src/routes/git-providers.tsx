@@ -1,4 +1,4 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { PlugsIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -12,6 +12,7 @@ import {
   GithubIcon,
   GitlabIcon,
 } from "@/components/features/services/provider-icons";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getGitProviders } from "@/server/git-providers";
@@ -53,6 +55,7 @@ function GitProvidersPage() {
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "gitProvider", "create");
+  const { isEmpty } = useResourceList(queries.gitProviders, providers);
   const [open, setOpen] = useState(false);
   const [gitlabOpen, setGitlabOpen] = useState(false);
 
@@ -62,7 +65,7 @@ function GitProvidersPage() {
   return (
     <AppShell
       actions={
-        canAdd ? (
+        canAdd && !isEmpty ? (
           // One control in the header, because two providers become four
           // the day Bitbucket and Gitea land and a row of buttons does not
           // survive that. The empty state keeps both visible — there, the
@@ -71,7 +74,7 @@ function GitProvidersPage() {
             <DropdownMenuTrigger
               render={
                 <Button>
-                  <PlusIcon data-icon="inline-start" weight="regular" />
+                  <PlugsIcon data-icon="inline-start" weight="regular" />
                   Connect
                 </Button>
               }

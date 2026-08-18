@@ -53,7 +53,7 @@ const CERTIFICATE_OPTIONS = [
   },
   {
     description:
-      "TLS without automatic provisioning — bring your own certificate in Traefik",
+      "TLS without automatic provisioning: bring your own certificate in Traefik",
     label: "None",
     value: "none",
   },
@@ -182,7 +182,7 @@ export function ServiceDomainDialog({
                         <DiceFiveIcon />
                       </TooltipTrigger>
                       <TooltipContent>
-                        Generate a free sslip.io domain for testing — no DNS
+                        Generate a free sslip.io domain for testing. No DNS
                         setup required.
                       </TooltipContent>
                     </Tooltip>

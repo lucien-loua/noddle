@@ -300,7 +300,7 @@ function PrimaryPathDialog({
           <DialogTitle>Edit primary mount path</DialogTitle>
           <DialogDescription>
             The volume name stays fixed. Only the path inside the container
-            changes — needed when an image major bump moves the data directory.
+            changes. Needed when an image major bump moves the data directory.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

@@ -80,7 +80,7 @@ function UpdateNotes({
       {running === null && !data?.unreachable ? (
         <FrameDescription>
           {data?.remoteCommit
-            ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way — the installer is idempotent."
+            ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way: the installer is idempotent."
             : "This process was not built by the installer, so it carries no version. Updating from here is only meaningful on an installed machine."}
         </FrameDescription>
       ) : null}
@@ -92,7 +92,7 @@ function UpdateNotes({
       {inFlight ? (
         <FrameDescription role="status">
           Updating. The dashboard restarts partway through, so this page will
-          stop responding for a moment — it comes back on its own.
+          stop responding for a moment. It comes back on its own.
         </FrameDescription>
       ) : null}
 

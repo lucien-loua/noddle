@@ -1,4 +1,4 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { PackageIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -7,9 +7,11 @@ import {
   RegistriesList,
   RegistryDialog,
 } from "@/components/features/registries/registries-panel";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getRegistries } from "@/server/registries";
@@ -44,6 +46,7 @@ function RegistriesPage() {
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "registry", "create");
+  const { isEmpty } = useResourceList(queries.registries, registries);
 
   // "Open" and "on what" are only ONE state: separating them had let the
   // add button reopen the PREFILLED dialog and overwrite the row that had
@@ -63,9 +66,9 @@ function RegistriesPage() {
   return (
     <AppShell
       actions={
-        canAdd ? (
+        canAdd && !isEmpty ? (
           <Button onClick={handleAdd}>
-            <PlusIcon data-icon="inline-start" weight="regular" />
+            <PackageIcon data-icon="inline-start" weight="regular" />
             Add registry
           </Button>
         ) : null

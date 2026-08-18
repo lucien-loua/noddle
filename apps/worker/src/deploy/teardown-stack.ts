@@ -186,7 +186,7 @@ async function teardownDatabase(
     }
     if (!volumeGone) {
       throw new Error(
-        `volume ${volumeName} could not be removed — the database row is kept so it stays visible`
+        `volume ${volumeName} could not be removed, so the database row is kept and stays visible`
       );
     }
   }

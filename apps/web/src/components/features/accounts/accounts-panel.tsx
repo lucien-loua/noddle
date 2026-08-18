@@ -97,7 +97,7 @@ export function AccountsPanel({
       {/* Accounts always render the table — at least the signed-in row. */}
       <SettingsList isEmpty={false}>
         <SettingsList.Frame
-          description="A role decides what an account can do, never what it can see — everyone reads the same dashboard."
+          description="A role decides what an account can do, never what it can see: everyone reads the same dashboard."
           title="Accounts"
         >
           <Table>
@@ -520,8 +520,8 @@ function PasswordReveal({ password }: { password: string }) {
       <DialogHeader>
         <DialogTitle>Account created</DialogTitle>
         <DialogDescription>
-          Here is its password. It is shown once and can never be read again —
-          hand it over now.
+          Here is its password. It is shown once and can never be read again.
+          Hand it over now.
         </DialogDescription>
       </DialogHeader>
 

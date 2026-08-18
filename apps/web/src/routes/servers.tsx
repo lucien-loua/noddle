@@ -1,4 +1,4 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { HardDrivesIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -7,9 +7,11 @@ import {
   AddServerDialog,
   ServersList,
 } from "@/components/features/servers/servers-panel";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServers } from "@/server/servers";
@@ -34,15 +36,16 @@ function ServersPage() {
   const { email, role, servers } = Route.useLoaderData();
   const known = role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "server", "create");
+  const { isEmpty } = useResourceList(queries.servers, servers);
   const [open, setOpen] = useState(false);
   const handleOpen = useCallback(() => setOpen(true), []);
 
   return (
     <AppShell
       actions={
-        canAdd ? (
+        canAdd && !isEmpty ? (
           <Button onClick={handleOpen}>
-            <PlusIcon data-icon="inline-start" weight="regular" />
+            <HardDrivesIcon data-icon="inline-start" weight="regular" />
             Add server
           </Button>
         ) : null

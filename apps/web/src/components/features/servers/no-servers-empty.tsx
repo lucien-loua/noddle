@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/empty";
 
 /**
- * Zero servers, said where it blocks — the create dialogs.
+ * Zero servers, said where it blocks: the create dialogs.
  *
  * They each rendered a `destructive` alert, which is the register of a
  * failure: the same files use it, correctly, for a submission that failed.
@@ -35,6 +35,7 @@ export function NoServersEmpty({ description }: { description: string }) {
           render={<Link to="/servers" />}
           variant="outline"
         >
+          <HardDrivesIcon data-icon="inline-start" weight="regular" />
           Add a server
         </Button>
       </EmptyContent>

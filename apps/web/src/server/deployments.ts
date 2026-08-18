@@ -98,7 +98,7 @@ export const triggerRollback = createServerFn({ method: "POST" })
         }
         if (!target.imageTag) {
           throw new Error(
-            "this deployment produced no image — there is nothing to redeploy"
+            "this deployment produced no image, so there is nothing to redeploy"
           );
         }
 

@@ -135,7 +135,7 @@ export const triggerStackRollback = createServerFn({ method: "POST" })
         }
         if (!target.composeSource) {
           throw new Error(
-            "this deployment produced nothing — there is nothing to redeploy"
+            "this deployment produced nothing, so there is nothing to redeploy"
           );
         }
 

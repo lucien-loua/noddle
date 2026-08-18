@@ -55,7 +55,7 @@ function check(stage: string, res: ExecResult): ExecResult {
     // rest is tool output, collapsed behind it. So the first line has to
     // say what happened without any of the noise below it.
     const headline = looksOutOfMemory(output)
-      ? `${stage} ran out of memory — the builder is capped so one heavy build cannot take down what is already running. Build on a larger server, or make the build lighter.`
+      ? `${stage} ran out of memory. The builder is capped so one heavy build cannot take down what is already running. Build on a larger server, or make the build lighter.`
       : `${stage} failed (code ${res.code})`;
     throw new BuildError(stage, `${headline}\n${tail}`, res.code);
   }
@@ -282,7 +282,7 @@ function assertWipableDir(dir: string): void {
   if (bad) {
     throw new BuildError(
       "validation",
-      `working directory refused: "${dir}" — too close to the root or malformed, and it would be erased`,
+      `working directory refused: "${dir}". Too close to the root or malformed, and it would be erased`,
       null
     );
   }
@@ -309,7 +309,7 @@ export function resolveBuildDir(
   if (rel.split("/").some((s) => s === "" || s === "." || s === "..")) {
     throw new BuildError(
       "validation",
-      `build path refused: "${buildPath}" — it would leave the repository`,
+      `build path refused: "${buildPath}". It would leave the repository`,
       null
     );
   }

@@ -675,7 +675,7 @@ function PlacementForm({
     >
       <p className="mb-4 text-muted-foreground text-sm">
         Overriding placement can move the task off the node that holds the named
-        volume — the database may start empty with no error.
+        volume. The database may start empty with no error.
       </p>
       <FieldGroup>
         <LabeledTextarea

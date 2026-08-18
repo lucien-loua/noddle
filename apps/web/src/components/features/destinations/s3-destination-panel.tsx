@@ -144,7 +144,10 @@ export function S3DestinationPanel({
               </EmptyHeader>
               {canEdit ? (
                 <EmptyContent>
-                  <Button onClick={handleCreate}>Add a destination</Button>
+                  <Button onClick={handleCreate}>
+                    <ArchiveIcon data-icon="inline-start" weight="regular" />
+                    Add a destination
+                  </Button>
                 </EmptyContent>
               ) : null}
             </Empty>
@@ -156,7 +159,7 @@ export function S3DestinationPanel({
             <FrameTitle>S3 destinations</FrameTitle>
             <FrameDescription>
               Where Noddle pushes database dumps. One is enough for most
-              installations — a picker only shows up once there are two.
+              installations. A picker only shows up once there are two.
             </FrameDescription>
           </FrameHeader>
           {destinations.map((row) => (
@@ -310,7 +313,7 @@ function DestinationDialog({
             {initial ? `Edit ${initial.name}` : "Add an S3 destination"}
           </DialogTitle>
           <DialogDescription>
-            Saving tests it first — a write, a read and a delete against the
+            Saving tests it first: a write, a read and a delete against the
             bucket.
           </DialogDescription>
         </DialogHeader>

@@ -1,4 +1,5 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   Link,
@@ -21,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { getAuthState } from "@/server/auth";
 import { getDashboardGroups, getEnvironmentScope } from "@/server/dashboard";
 import { getProjectEnvironments } from "@/server/environments";
@@ -108,6 +110,15 @@ function ProjectEnvironmentPage() {
   const navigate = Route.useNavigate();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
+  const scopeQuery = useQuery({
+    ...queries.environmentScope(projectId, current.id),
+    initialData: scope,
+  });
+  const liveScope = scopeQuery.data ?? scope;
+  const emptyInventory =
+    liveScope.services.length === 0 &&
+    liveScope.stacks.length === 0 &&
+    liveScope.databases.length === 0;
 
   const handleNavigate = useCallback(
     (environmentId: string) => {
@@ -123,20 +134,19 @@ function ProjectEnvironmentPage() {
     [navigate, projectId]
   );
 
+  const createMenu = (
+    <CreateServiceMenu
+      align={emptyInventory ? "center" : "end"}
+      environmentName={scope.environment}
+      projectName={scope.project}
+      role={known}
+      servers={servers}
+    />
+  );
+
   return (
     <AppShell
-      actions={
-        // THIS IS WHERE a service is created, and nowhere else: the project
-        // and the environment are already known to the screen, so the
-        // dialogs don't ask for them again. /deployments no longer carries
-        // this action — it's a history, not an inventory.
-        <CreateServiceMenu
-          environmentName={scope.environment}
-          projectName={scope.project}
-          role={known}
-          servers={servers}
-        />
-      }
+      actions={emptyInventory ? null : createMenu}
       breadcrumb={
         <div className="flex min-w-0 items-center gap-2">
           <Button
@@ -175,6 +185,7 @@ function ProjectEnvironmentPage() {
       title={`${scope.project} / ${scope.environment}`}
     >
       <ResourceGrid
+        createAction={emptyInventory ? createMenu : undefined}
         environmentId={current.id}
         groups={dashboard.groups}
         initialScope={scope}

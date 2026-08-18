@@ -64,7 +64,7 @@ export function eventLabel(type: NotificationEventType): string {
 
 /** A line of text readable as-is, regardless of the recipient. */
 function summarize(event: NotificationEvent): string {
-  const head = `${LABELS[event.type]} — ${event.resource}`;
+  const head = `${LABELS[event.type]}: ${event.resource}`;
   return event.detail ? `${head}\n${event.detail}` : head;
 }
 
@@ -93,7 +93,7 @@ export function buildPayload(
           fields: event.url
             ? [{ inline: false, name: "Dashboard", value: event.url }]
             : undefined,
-          title: `${LABELS[event.type]} — ${event.resource}`,
+          title: `${LABELS[event.type]}: ${event.resource}`,
         },
       ],
       username: "Noddle",

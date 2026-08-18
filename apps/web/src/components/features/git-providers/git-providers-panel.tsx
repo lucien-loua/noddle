@@ -256,7 +256,7 @@ function ConnectGithubDialog({
           <DialogTitle>Connect GitHub</DialogTitle>
           <DialogDescription>
             Noddle creates a GitHub App in your own account. It never holds a
-            shared credential — you approve the permissions on GitHub, and can
+            shared credential: you approve the permissions on GitHub, and can
             revoke them there at any time.
           </DialogDescription>
         </DialogHeader>
@@ -512,11 +512,11 @@ export function GitProvidersList({
                     forge IS the content of this screen. */}
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button onClick={onAddGithub}>
-                  <GithubIcon />
+                  <GithubIcon data-icon="inline-start" />
                   Connect GitHub
                 </Button>
                 <Button onClick={onAddGitlab} variant="outline">
-                  <GitlabIcon />
+                  <GitlabIcon data-icon="inline-start" />
                   Connect GitLab
                 </Button>
               </div>
@@ -531,7 +531,7 @@ export function GitProvidersList({
         <FrameTitle>Git providers</FrameTitle>
         <FrameDescription>
           Forges Noddle can read repositories from. The credentials belong to
-          your account — they never leave this server, and revoking them on the
+          your account. They never leave this server, and revoking them on the
           forge revokes them here.
         </FrameDescription>
       </FrameHeader>

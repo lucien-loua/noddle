@@ -132,7 +132,7 @@ export async function runGuarded<TRow = undefined, TResult = void>(opts: {
     const expected = opts.confirmName.expected(row);
     if (opts.confirmName.typed !== expected) {
       throw new Error(
-        `the name you typed does not match "${expected}" — cancelled`
+        `the name you typed does not match "${expected}": cancelled`
       );
     }
   }

@@ -44,7 +44,7 @@ export async function provisionServer(
     await markFailed(
       ctx,
       serverId,
-      "no Swarm manager registered — has the installer run?"
+      "no Swarm manager registered. Has the installer run?"
     );
     throw new Error("no Swarm manager registered");
   }

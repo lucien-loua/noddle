@@ -152,7 +152,7 @@ async function assertNotLastOwner(
   });
   if (owners.length <= 1) {
     throw new Error(
-      "This account is the last owner — removing it would leave the installation with nobody able to grant access."
+      "This account is the last owner. Removing it would leave the installation with nobody able to grant access."
     );
   }
 }

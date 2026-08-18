@@ -180,7 +180,7 @@ function ContainersPage() {
           <FrameHeader>
             <FrameTitle>All nodes</FrameTitle>
             <FrameDescription>
-              Every container across every connected server — Swarm services,
+              Every container across every connected server: Swarm services,
               Noddle&apos;s own control plane, and anything else running
               underneath.
             </FrameDescription>

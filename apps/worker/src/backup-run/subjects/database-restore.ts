@@ -44,7 +44,7 @@ async function resolveRestoreSource(
     });
     if (!backup) {
       throw new Error(
-        "backup not found for this database — cross-database restore refused"
+        "backup not found for this database: cross-database restore refused"
       );
     }
     if (backup.status !== "completed") {

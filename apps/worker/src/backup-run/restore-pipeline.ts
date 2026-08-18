@@ -46,7 +46,7 @@ export async function runRestorePipeline<TRequest, TLoaded>(
   // object is still there.
   if (!(await objectExists(resolved.destination, objectKey))) {
     throw new Error(
-      `object ${objectKey} is missing from the bucket — restore refused before touching the ${subject.missingObjectTarget}`
+      `object ${objectKey} is missing from the bucket: restore refused before touching the ${subject.missingObjectTarget}`
     );
   }
 

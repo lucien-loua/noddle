@@ -265,7 +265,7 @@ export const containerAction = createServerFn({ method: "POST" })
           if (found.kind !== "unmanaged") {
             throw new Error(
               found.kind === "swarm"
-                ? `${found.name} is a Swarm task — restart its service instead, stopping the container only makes Swarm reschedule it.`
+                ? `${found.name} is a Swarm task: restart its service instead, stopping the container only makes Swarm reschedule it.`
                 : `${found.name} is part of Noddle itself and cannot be changed from here.`
             );
           }

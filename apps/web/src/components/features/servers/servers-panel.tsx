@@ -199,7 +199,10 @@ export const ServersList = ({
           </EmptyHeader>
           {onAdd ? (
             <EmptyContent>
-              <Button onClick={onAdd}>Add a server</Button>
+              <Button onClick={onAdd}>
+                <HardDrivesIcon data-icon="inline-start" weight="regular" />
+                Add a server
+              </Button>
             </EmptyContent>
           ) : null}
         </Empty>
@@ -301,7 +304,7 @@ export function AddServerDialog({
           <DialogDescription>
             A host and a key from your library are all it takes. Noddle installs
             Docker if missing, joins its Swarm cluster as a worker, and installs
-            railpack — with nothing else to do by hand on that machine.
+            railpack, with nothing else to do by hand on that machine.
           </DialogDescription>
         </DialogHeader>
 
@@ -349,7 +352,7 @@ export function AddServerDialog({
               <form.AppField name="sshKeyId">
                 {(f) => (
                   <f.FieldCombobox
-                    description="Picked from your library, where it is encrypted at rest. The same key can open several machines — add one under SSH keys if the list is empty."
+                    description="Picked from your library, where it is encrypted at rest. The same key can open several machines. Add one under SSH keys if the list is empty."
                     emptyText="No key matches."
                     items={available}
                     // biome-ignore lint/performance/noJsxPropsBind: inline for type inference from items={available}

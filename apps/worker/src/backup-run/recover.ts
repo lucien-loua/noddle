@@ -1,7 +1,7 @@
 import type { DeployContext } from "#runtime-context";
 
 const STALE_MESSAGE =
-  "interrupted — worker restarted while backup was in progress";
+  "interrupted: worker restarted while backup was in progress";
 
 export interface BackupRecoverSubject {
   findRunningIds: (ctx: DeployContext) => Promise<string[]>;

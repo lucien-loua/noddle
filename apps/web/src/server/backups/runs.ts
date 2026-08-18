@@ -189,7 +189,7 @@ export const triggerRestore = createServerFn({ method: "POST" })
           }
           if (backup.status !== "completed") {
             throw new Error(
-              "only a completed backup can be restored — this one is not"
+              "only a completed backup can be restored, and this one is not"
             );
           }
           await enqueueDeploy({

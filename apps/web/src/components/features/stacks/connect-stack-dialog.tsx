@@ -241,8 +241,8 @@ export function ConnectStackDialog({
                   <FieldLegend variant="label">Public access</FieldLegend>
                   <p className="text-muted-foreground text-sm">
                     A stack exposes at most one service to the web. Left empty,
-                    nothing is published — the stack runs without being
-                    reachable from outside.
+                    nothing is published: the stack runs without being reachable
+                    from outside.
                   </p>
 
                   <form.AppField name="publicService">

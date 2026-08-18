@@ -887,7 +887,7 @@ function DockerSourceForm({
                 <form.AppField name="registryUrl">
                   {(f) => (
                     <f.FieldText
-                      description="The hostname only — no https:// and no path. A port is allowed."
+                      description="The hostname only, with no https:// and no path. A port is allowed."
                       disabled={!canEdit}
                       label="Registry host"
                       placeholder="ghcr.io"
@@ -995,6 +995,11 @@ function ForgeTab({
               render={<Link to="/git-providers" />}
               variant="outline"
             >
+              {forge === "gitlab" ? (
+                <GitlabIcon data-icon="inline-start" />
+              ) : (
+                <GithubIcon data-icon="inline-start" />
+              )}
               Connect {FORGE_LABEL[forge]}
             </Button>
           </EmptyContent>

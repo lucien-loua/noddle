@@ -160,7 +160,7 @@ export async function checkDestination(
     );
   } catch (error) {
     throw new BackupStoreError(
-      `delete refused in "${destination.bucket}": ${describe(error)} — old backups cannot be purged`,
+      `delete refused in "${destination.bucket}": ${describe(error)}. Old backups cannot be purged`,
       { cause: error }
     );
   }

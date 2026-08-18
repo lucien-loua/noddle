@@ -1,4 +1,4 @@
-import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, StackIcon } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
 
 import { ConnectDatabaseDialog } from "@/components/features/database/connect-database-dialog";
@@ -18,11 +18,14 @@ import type { ServerView } from "@/server/servers";
 type Kind = "database" | "repo" | "stack";
 
 export function CreateServiceMenu({
+  align = "end",
   environmentName,
   projectName,
   role,
   servers,
 }: {
+  /** `center` when the trigger sits in an empty state, `end` in the shell. */
+  align?: "center" | "end";
   /** When provided, the dialogs ask for neither the project nor the
    *  environment again. */
   environmentName?: string;
@@ -53,11 +56,11 @@ export function CreateServiceMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button />}>
-          <PlusIcon data-icon="inline-start" weight="regular" />
+          <StackIcon data-icon="inline-start" weight="regular" />
           Create Service
           <CaretDownIcon data-icon="inline-end" weight="regular" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align={align}>
           {canCreateService ? (
             <DropdownMenuItem onClick={openRepo}>Application</DropdownMenuItem>
           ) : null}

@@ -210,7 +210,7 @@ export function ServerDiskUsage({
           {size(reclaimable)} of {size(total)} could be reclaimed. Once a day,
           Noddle prunes stopped containers, images no container uses, and build
           cache untouched for a week; unreferenced registry layers go every
-          hour. Volumes are never pruned — a stopped database still owns its
+          hour. Volumes are never pruned: a stopped database still owns its
           data.
         </FrameDescription>
       </FramePanel>

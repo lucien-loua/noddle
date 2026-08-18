@@ -123,7 +123,10 @@ export function NotificationChannels({
               </EmptyHeader>
               {canManage ? (
                 <EmptyContent>
-                  <Button onClick={handleOpen}>Add channel</Button>
+                  <Button onClick={handleOpen}>
+                    <BellIcon data-icon="inline-start" weight="regular" />
+                    Add channel
+                  </Button>
                 </EmptyContent>
               ) : null}
             </Empty>
@@ -247,7 +250,7 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
   if (channel.lastError) {
     return (
       <span className="truncate text-destructive text-xs">
-        Failing — {channel.lastError}
+        Failing: {channel.lastError}
       </span>
     );
   }
@@ -260,7 +263,7 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
   }
   return (
     <span className="text-muted-foreground text-xs">
-      Never used — test it to find out whether it works
+      Never used. Test it to find out whether it works
     </span>
   );
 }
@@ -324,7 +327,7 @@ function AddChannelDialog({
           <DialogHeader>
             <DialogTitle>Add a channel</DialogTitle>
             <DialogDescription>
-              The URL is encrypted at rest and never shown again — whoever holds
+              The URL is encrypted at rest and never shown again. Whoever holds
               it can post in the channel.
             </DialogDescription>
           </DialogHeader>

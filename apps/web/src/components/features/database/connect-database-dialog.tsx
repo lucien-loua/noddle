@@ -74,7 +74,7 @@ type StepName = (typeof STEPS)[number]["name"];
  */
 const STEP_COPY: Record<StepName, { description: string; title: string }> = {
   details: {
-    description: "Credentials are ready to use — change only if needed.",
+    description: "Credentials are ready to use. Change only if needed.",
     title: "Details",
   },
   engine: {

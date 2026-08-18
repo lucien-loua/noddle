@@ -18,6 +18,7 @@ import { RelativeTime } from "@/components/relative-time";
 import { StatusSummary } from "@/components/status-summary";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -74,7 +75,9 @@ function ProjectsPage() {
 
   return (
     <AppShell
-      actions={<CreateProjectButton role={known} />}
+      actions={
+        allProjects.length === 0 ? null : <CreateProjectButton role={known} />
+      }
       email={email}
       role={role}
       title="Projects"
@@ -95,6 +98,9 @@ function ProjectsPage() {
                   services, stacks and databases.
                 </EmptyDescription>
               </EmptyHeader>
+              <EmptyContent>
+                <CreateProjectButton role={known} />
+              </EmptyContent>
             </Empty>
           </FramePanel>
         </Frame>

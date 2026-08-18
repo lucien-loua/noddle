@@ -239,7 +239,7 @@ export async function gitlabAccessToken(
 
   if (!row.refreshTokenEncrypted) {
     throw new Error(
-      "this GitLab connection was never authorised — connect it again"
+      "this GitLab connection was never authorised: connect it again"
     );
   }
 
@@ -270,7 +270,7 @@ export async function gitlabWebhookSecret(
   const encrypted = provider.gitlab?.webhookSecretEncrypted;
   if (!encrypted) {
     throw new Error(
-      `${provider.name} has no webhook secret — reconnect it to arm autodeploy`
+      `${provider.name} has no webhook secret: reconnect it to arm autodeploy`
     );
   }
   return decryptSecret(

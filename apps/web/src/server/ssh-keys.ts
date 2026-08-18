@@ -79,7 +79,7 @@ export const createSshKey = createServerFn({ method: "POST" })
           // that point that the key doesn't open would leave a server
           // "unreachable" with no readable cause.
           throw new Error(
-            "this private key could not be read — it may be malformed, or protected by a passphrase, which Noddle does not support"
+            "this private key could not be read: it may be malformed, or protected by a passphrase, which Noddle does not support"
           );
         }
 
@@ -129,7 +129,7 @@ export const deleteSshKey = createServerFn({ method: "POST" })
           throw new Error(
             `this key still opens ${used.length} server(s): ${used
               .map((s) => s.name)
-              .join(", ")} — remove them first`
+              .join(", ")}. Remove them first`
           );
         }
 
@@ -143,7 +143,7 @@ export const deleteSshKey = createServerFn({ method: "POST" })
           throw new Error(
             `this key still clones for ${deploying.length} service(s): ${deploying
               .map((s) => s.name)
-              .join(", ")} — change their provider first`
+              .join(", ")}. Change their provider first`
           );
         }
 

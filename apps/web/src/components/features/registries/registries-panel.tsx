@@ -162,7 +162,10 @@ export function RegistriesList({
           </EmptyHeader>
           {onAdd ? (
             <EmptyContent>
-              <Button onClick={onAdd}>Add a registry</Button>
+              <Button onClick={onAdd}>
+                <PackageIcon data-icon="inline-start" weight="regular" />
+                Add a registry
+              </Button>
             </EmptyContent>
           ) : null}
         </Empty>
@@ -174,7 +177,7 @@ export function RegistriesList({
         <FrameTitle>External registries</FrameTitle>
         <FrameDescription>
           Where Noddle can push the images it builds. Its own registry stays the
-          default — these are alternatives, and the password never leaves this
+          default. These are alternatives, and the password never leaves this
           server.
         </FrameDescription>
       </FrameHeader>
@@ -371,7 +374,7 @@ export function RegistryDialog({
                 {(f) => (
                   <f.FieldText
                     addonStart={<GlobeIcon />}
-                    description="The hostname only — no https:// and no path. A port is allowed."
+                    description="The hostname only, with no https:// and no path. A port is allowed."
                     label="Registry host"
                     placeholder="ghcr.io"
                   />

@@ -35,10 +35,10 @@ export async function assertVolumeAttachedToService(
   }
   if (mounts.length === 0) {
     throw new Error(
-      "this service has no Docker volumes attached — add a named volume to the deployment, deploy, then try again"
+      "this service has no Docker volumes attached: add a named volume to the deployment, deploy, then try again"
     );
   }
   throw new Error(
-    `volume "${volumeName}" is not attached to this service — choose ${mounts.map((m) => m.volumeName).join(", ")}`
+    `volume "${volumeName}" is not attached to this service: choose ${mounts.map((m) => m.volumeName).join(", ")}`
   );
 }

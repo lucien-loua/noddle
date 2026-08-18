@@ -1,5 +1,6 @@
 import {
   ArrowClockwiseIcon,
+  HouseIcon,
   PlugsIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
@@ -89,6 +90,7 @@ export function RouteNotFound() {
             render={<Link to="/" />}
             variant="outline"
           >
+            <HouseIcon data-icon="inline-start" weight="regular" />
             Back to dashboard
           </Button>
         </EmptyContent>

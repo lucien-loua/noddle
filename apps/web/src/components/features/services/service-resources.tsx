@@ -10,7 +10,7 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
     <ResourcePanel
       emptyNote="No samples in the last six hours. Resources are sampled every minute on running services."
       series={metrics.data}
-      unboundedNote="No memory limit declared — this service is bounded by the machine."
+      unboundedNote="No memory limit declared. This service is bounded by the machine."
     />
   );
 }

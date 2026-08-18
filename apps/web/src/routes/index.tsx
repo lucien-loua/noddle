@@ -65,10 +65,12 @@ function OverviewPage() {
   return (
     <AppShell
       actions={
-        <Button nativeButton={false} render={<Link to="/projects" />}>
-          Go to projects
-          <ArrowRightIcon data-icon="inline-end" weight="regular" />
-        </Button>
+        nothingAtAll ? null : (
+          <Button nativeButton={false} render={<Link to="/projects" />}>
+            Go to projects
+            <ArrowRightIcon data-icon="inline-end" weight="regular" />
+          </Button>
+        )
       }
       email={email}
       role={role}
@@ -311,6 +313,7 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
             <EmptyContent>
               <Button nativeButton={false} render={<Link to="/projects" />}>
                 Get started
+                <ArrowRightIcon data-icon="inline-end" weight="regular" />
               </Button>
             </EmptyContent>
           </Empty>

@@ -1,3 +1,4 @@
+import { ArchiveIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -51,7 +52,10 @@ function DestinationsPage() {
     <AppShell
       actions={
         canEdit && !isEmpty ? (
-          <Button onClick={handleOpen}>Add destination</Button>
+          <Button onClick={handleOpen}>
+            <ArchiveIcon data-icon="inline-start" weight="regular" />
+            Add destination
+          </Button>
         ) : null
       }
       email={email}

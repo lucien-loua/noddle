@@ -163,7 +163,7 @@ export const triggerVolumeRestore = createServerFn({ method: "POST" })
           }
           if (backup.status !== "completed") {
             throw new Error(
-              "only a completed volume backup can be restored — this one is not"
+              "only a completed volume backup can be restored, and this one is not"
             );
           }
           await enqueueDeploy({

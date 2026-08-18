@@ -141,7 +141,7 @@ export function DatabaseExternal({
               second source for the same information. */}
           {externalPort === null ? (
             <FieldDescription>
-              Not published — reachable only from services on this server.
+              Not published. Reachable only from services on this server.
             </FieldDescription>
           ) : null}
         </Field>

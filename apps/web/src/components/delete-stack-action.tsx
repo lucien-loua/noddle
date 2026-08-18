@@ -59,7 +59,7 @@ export function DeleteStackAction({
             {/* Volumes SURVIVE, by design — see teardown-stack.ts: an
                 arbitrary Compose stack can carry someone's database, and
                 the user never explicitly designated it for deletion. */}
-            Named volumes are kept — a Compose stack can hold data nobody asked
+            Named volumes are kept: a Compose stack can hold data nobody asked
             to erase. <strong>This cannot be undone.</strong>
           </>
         }

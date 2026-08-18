@@ -10,7 +10,7 @@ const SAFE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 export function assertSafeIdentifier(value: string, label: string): void {
   if (!SAFE_IDENTIFIER.test(value)) {
     throw new Error(
-      `${label} is not a safe identifier: "${value}" — letters, digits and underscores only, not starting with a digit`
+      `${label} is not a safe identifier: "${value}". Use letters, digits and underscores only, not starting with a digit`
     );
   }
 }
@@ -51,7 +51,7 @@ export async function findDatabaseContainer(
     .find((l) => l !== "");
   if (!id) {
     throw new Error(
-      `no running container for ${serviceName} — is the database up?`
+      `no running container for ${serviceName}. Is the database up?`
     );
   }
   return id;

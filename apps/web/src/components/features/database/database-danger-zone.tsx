@@ -81,7 +81,7 @@ export function DatabaseDangerZone({
         description={
           <>
             The running container and its volume are removed, then recreated
-            empty — every table, every row, gone.{" "}
+            empty: every table, every row, gone.{" "}
             <strong>This cannot be undone.</strong> The database keeps its name,
             engine and credentials; only its contents are wiped.
           </>

@@ -52,7 +52,7 @@ export async function runLifecycle(
 
     if (!applied) {
       throw new Error(
-        `service ${name} not found on the Swarm cluster — deploy it first`
+        `service ${name} not found on the Swarm cluster: deploy it first`
       );
     }
 
@@ -124,7 +124,7 @@ export async function runDatabaseLifecycle(
 
     if (!applied) {
       throw new Error(
-        `database service ${name} not found on the Swarm cluster — provision it first`
+        `database service ${name} not found on the Swarm cluster: provision it first`
       );
     }
 

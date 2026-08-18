@@ -121,7 +121,7 @@ export const startGithubApp = createServerFn({ method: "POST" })
           // pending row behind on every attempt.
           if (!isPubliclyReachable(origin)) {
             throw new Error(
-              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Open Noddle on a public address — a tunnel URL works — and connect from there.`
+              `GitHub must be able to reach this dashboard to deliver webhooks, and ${origin} is not reachable from the internet. Open Noddle on a public address (a tunnel URL works) and connect from there.`
             );
           }
 
@@ -263,7 +263,7 @@ export const deleteGitProvider = createServerFn({ method: "POST" })
           throw new Error(
             `this connection still clones for ${used.length} service(s): ${used
               .map((s) => s.name)
-              .join(", ")} — change their provider first`
+              .join(", ")}. Change their provider first`
           );
         }
         await db.delete(gitProviders).where(eq(gitProviders.id, row.id));
@@ -301,7 +301,7 @@ export const syncGithubInstallation = createServerFn({ method: "POST" })
           throw new Error(
             `this App is installed on ${installations.length} accounts (${installations
               .map((i) => i.account)
-              .join(", ")}) — connect one App per account`
+              .join(", ")}). Connect one App per account`
           );
         }
         await db

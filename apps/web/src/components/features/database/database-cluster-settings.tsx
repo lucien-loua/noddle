@@ -82,7 +82,7 @@ export function DatabaseClusterSettings({
             <FrameTitle>Cluster Settings</FrameTitle>
             <FrameDescription>
               Applied on the next provision. Keep replicas at 1 unless the data
-              volume is shared — otherwise you risk corruption or an empty
+              volume is shared. Otherwise you risk corruption or an empty
               volume.
             </FrameDescription>
           </div>

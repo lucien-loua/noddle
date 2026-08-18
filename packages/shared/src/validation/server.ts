@@ -5,7 +5,7 @@ export const sshPrivateKeySchema = z
   .min(1, "key required")
   .refine(
     (v) => v.includes("-----BEGIN") && v.includes("PRIVATE KEY"),
-    "not a PEM private key — make sure you didn't paste the public key (.pub) instead"
+    "not a PEM private key: make sure you didn't paste the public key (.pub) instead"
   );
 
 export const serverInputSchema = z.object({

@@ -1,11 +1,14 @@
+import { BellIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { NotificationChannels } from "@/components/features/notifications/notification-channels";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getChannels } from "@/server/notifications";
@@ -31,6 +34,7 @@ function NotificationsPage() {
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const canManage = useCan(known, "notification", "manage");
+  const { isEmpty } = useResourceList(queries.channels, channels);
 
   // The dialog's state lives HERE and not in the panel: its opening button
   // is mounted in AppShell's header, not in the page body. Same shape as the
@@ -41,7 +45,12 @@ function NotificationsPage() {
   return (
     <AppShell
       actions={
-        canManage ? <Button onClick={handleOpen}>Add channel</Button> : null
+        canManage && !isEmpty ? (
+          <Button onClick={handleOpen}>
+            <BellIcon data-icon="inline-start" weight="regular" />
+            Add channel
+          </Button>
+        ) : null
       }
       email={email}
       role={role}

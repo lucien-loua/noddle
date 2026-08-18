@@ -77,7 +77,7 @@ export const addServer = createServerFn({ method: "POST" })
           where: eq(sshKeys.id, data.sshKeyId),
         });
         if (!key) {
-          throw new Error("that SSH key no longer exists — pick another one");
+          throw new Error("that SSH key no longer exists: pick another one");
         }
 
         const [created] = await db
@@ -180,7 +180,7 @@ export const deleteServer = createServerFn({ method: "POST" })
         const held = await heldBy(server.id);
         if (held) {
           throw new Error(
-            `this server still hosts ${held} — move or delete them first`
+            `this server still hosts ${held}: move or delete them first`
           );
         }
 

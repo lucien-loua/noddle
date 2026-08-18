@@ -66,7 +66,7 @@ export function DatabaseCredentials({
       <FrameHeader>
         <FrameTitle>Internal credentials</FrameTitle>
         <FrameDescription>
-          Reachable from any service on the overlay network — never from the
+          Reachable from any service on the overlay network, never from the
           internet. Attaching the database to a service writes this connection
           string into its environment for you.
         </FrameDescription>

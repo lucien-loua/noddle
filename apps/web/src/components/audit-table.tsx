@@ -50,7 +50,7 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
               </EmptyMedia>
               <EmptyTitle>Nothing recorded yet</EmptyTitle>
               <EmptyDescription>
-                Every attempt to change something — allowed or denied — is
+                Every attempt to change something, allowed or denied, is
                 recorded here.
               </EmptyDescription>
             </EmptyHeader>

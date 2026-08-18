@@ -1,5 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
-import { PlusIcon } from "@phosphor-icons/react";
+import { ArchiveIcon, PlusIcon } from "@phosphor-icons/react";
 
 import { IconStack } from "@/components/icon-stack";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ export function ConfigsListBody({
             </Button>
             {canRestore ? (
               <Button onClick={onRestoreS3} variant="outline">
+                <ArchiveIcon data-icon="inline-start" weight="regular" />
                 {restoreLabel}
               </Button>
             ) : null}

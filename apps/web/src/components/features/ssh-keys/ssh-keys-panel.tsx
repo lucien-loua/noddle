@@ -89,7 +89,7 @@ const sshKeyFormSchema = z
       (v.privateKey.includes("-----BEGIN") &&
         v.privateKey.includes("PRIVATE KEY")),
     {
-      message: "Paste a PEM private key — not the .pub public key.",
+      message: "Paste a PEM private key, not the .pub public key.",
       path: ["privateKey"],
     }
   );
@@ -139,7 +139,7 @@ function KeyRow({
             size="sm"
             title={
               used
-                ? "This key still opens a server — remove it first"
+                ? "This key still opens a server. Remove it first"
                 : undefined
             }
             variant="ghost"
@@ -202,12 +202,15 @@ export function SshKeysList({
             <EmptyTitle>No SSH keys</EmptyTitle>
             <EmptyDescription>
               A key is how Noddle reaches your machines. Generating one keeps
-              the private half here, encrypted — it never leaves this server.
+              the private half here, encrypted. It never leaves this server.
             </EmptyDescription>
           </EmptyHeader>
           {onAdd ? (
             <EmptyContent>
-              <Button onClick={onAdd}>Add a key</Button>
+              <Button onClick={onAdd}>
+                <KeyIcon data-icon="inline-start" weight="regular" />
+                Add a key
+              </Button>
             </EmptyContent>
           ) : null}
         </Empty>
@@ -391,7 +394,7 @@ export function AddSshKeyDialog({
                           {(f) => (
                             <f.FieldTextarea
                               className="min-h-32 font-mono text-xs"
-                              description="Passphrase-protected keys are not supported — Noddle would have nowhere to ask for it at deploy time."
+                              description="Passphrase-protected keys are not supported: Noddle would have nowhere to ask for it at deploy time."
                               label="SSH private key, PEM format"
                               placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
                               spellCheck={false}

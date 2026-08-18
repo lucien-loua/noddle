@@ -135,7 +135,7 @@ export function ServerToolchain({
     onSuccess: () =>
       toast.add({
         description:
-          "The worker will install Docker, join this machine to the Swarm and install Railpack — each one only if it is missing. Re-check once it finishes.",
+          "The worker will install Docker, join this machine to the Swarm and install Railpack, each one only if it is missing. Re-check once it finishes.",
         title: "Setup queued",
         type: "success",
       }),

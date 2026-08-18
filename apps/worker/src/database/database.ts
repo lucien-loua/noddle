@@ -642,7 +642,7 @@ export async function rebuildDatabase(
           }
           if (!volumeGone) {
             throw new Error(
-              `volume ${volumeName} could not be removed — the database was left running as it was`
+              `volume ${volumeName} could not be removed, so the database was left running as it was`
             );
           }
         }

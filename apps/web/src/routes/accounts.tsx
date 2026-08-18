@@ -1,3 +1,4 @@
+import { UsersIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
@@ -41,7 +42,12 @@ function AccountsPage() {
   return (
     <AppShell
       actions={
-        canCreate ? <Button onClick={handleOpen}>New account</Button> : null
+        canCreate ? (
+          <Button onClick={handleOpen}>
+            <UsersIcon data-icon="inline-start" weight="regular" />
+            New account
+          </Button>
+        ) : null
       }
       email={email}
       role={role}

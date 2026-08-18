@@ -1,8 +1,9 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { KeyIcon } from "@phosphor-icons/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { useResourceList } from "@/components/features/settings-list/hooks/use-resource-list";
 import {
   AddSshKeyDialog,
   SshKeysList,
@@ -10,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
+import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getSshKeys } from "@/server/ssh-keys";
@@ -45,15 +47,16 @@ function SshKeysPage() {
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "sshKey", "create");
+  const { isEmpty } = useResourceList(queries.sshKeys, keys);
   const [open, setOpen] = useState(false);
   const handleOpen = useCallback(() => setOpen(true), []);
 
   return (
     <AppShell
       actions={
-        canAdd ? (
+        canAdd && !isEmpty ? (
           <Button onClick={handleOpen}>
-            <PlusIcon data-icon="inline-start" weight="regular" />
+            <KeyIcon data-icon="inline-start" weight="regular" />
             Add key
           </Button>
         ) : null

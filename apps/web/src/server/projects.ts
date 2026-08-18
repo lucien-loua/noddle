@@ -167,7 +167,7 @@ export const deleteProject = createServerFn({ method: "POST" })
           ]);
           if (service || stack || database) {
             throw new Error(
-              "this project still has services, stacks or databases — remove them first"
+              "this project still has services, stacks or databases: remove them first"
             );
           }
         }

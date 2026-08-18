@@ -20,7 +20,7 @@ export const ALPINE_IMAGE = "alpine:3";
 export function assertSafeVolumeName(value: string): void {
   if (!SAFE_VOLUME_NAME.test(value)) {
     throw new Error(
-      `volume name is not safe for shell use: "${value}" — letters, digits, underscore, dot and hyphen only`
+      `volume name is not safe for shell use: "${value}". Use letters, digits, underscore, dot and hyphen only`
     );
   }
 }
@@ -36,7 +36,7 @@ export function resolveVolumeName(backup: {
     parseVolumeNameFromObjectKey(backup.objectKey);
   if (!name) {
     throw new Error(
-      "volume name is missing on this backup row — cannot resolve Docker volume"
+      "volume name is missing on this backup row: cannot resolve Docker volume"
     );
   }
   return name;
@@ -117,7 +117,7 @@ export const volumeBackupSubject: BackupSubject<VolumeBackupRun> = {
     return await captureToS3(client, command, destination, run.objectKey);
   },
   incompleteMessage: (code, stderr) =>
-    `volume tar exited with ${code} — backup incomplete, object deleted: ${stderr.slice(0, 500)}`,
+    `volume tar exited with ${code}. Backup incomplete, object deleted: ${stderr.slice(0, 500)}`,
   loadRun: async (ctx, runId) => {
     const backup = await ctx.db.query.volumeBackups.findFirst({
       where: eq(volumeBackups.id, runId),

@@ -61,7 +61,7 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
         </ButtonGroup>
       }
       series={metrics.data}
-      unboundedNote="No memory limit declared — this database is bounded by the machine."
+      unboundedNote="No memory limit declared. This database is bounded by the machine."
       windowHours={windowHours}
     />
   );

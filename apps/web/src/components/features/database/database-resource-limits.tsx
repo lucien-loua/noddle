@@ -176,7 +176,7 @@ export function DatabaseResourceLimits({
           <form.AppField name="cpuLimit">
             {(f) => (
               <f.FieldNumber
-                description="Fractions are allowed — 0.5 is half a core."
+                description="Fractions are allowed: 0.5 is half a core."
                 disabled={!canEdit}
                 label="CPU limit"
                 placeholder="none"

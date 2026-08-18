@@ -17,7 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -330,7 +331,13 @@ function runLifecycleFor(
  * deployed, and a search that returns nothing. Conflating them would say
  * "nothing here" to someone whose only fault was typing three letters.
  */
-function GridEmpty({ filtered }: { filtered: boolean }) {
+function GridEmpty({
+  createAction,
+  filtered,
+}: {
+  createAction?: ReactNode;
+  filtered: boolean;
+}) {
   return (
     <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
       <FramePanel className="flex min-h-0 flex-1 flex-col">
@@ -354,6 +361,7 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
                 : "Create a service to get started."}
             </EmptyDescription>
           </EmptyHeader>
+          {createAction ? <EmptyContent>{createAction}</EmptyContent> : null}
         </Empty>
       </FramePanel>
     </Frame>
@@ -366,6 +374,7 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
  * component below is only the layout — the two change for unrelated reasons.
  */
 interface GridProps {
+  createAction?: ReactNode;
   environmentId: string;
   groups: ProjectGroup[];
   initialScope: Scope;
@@ -787,7 +796,7 @@ function useResourceGridState({
 }
 
 export function ResourceGrid(props: GridProps) {
-  const { groups } = props;
+  const { createAction, groups } = props;
   const {
     awaitingSettle,
     bulkDelete,
@@ -969,7 +978,10 @@ export function ResourceGrid(props: GridProps) {
         // `flex-1` and not a fixed height: an empty environment left a
         // 192px box floating at the top of an otherwise empty screen. The
         // empty state OCCUPIES the remaining space, like on /containers.
-        <GridEmpty filtered={items.length > 0} />
+        <GridEmpty
+          createAction={items.length === 0 ? createAction : undefined}
+          filtered={items.length > 0}
+        />
       ) : (
         // `auto-fill` and not `auto-fit`: `auto-fit` collapses the empty
         // tracks, so a single service would stretch across the whole row.

@@ -55,7 +55,7 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
             if (denied) {
               await removePending();
               return new Response(
-                `GitLab refused the authorisation (${denied}). The connection was removed — start it again.`,
+                `GitLab refused the authorisation (${denied}). The connection was removed. Start it again.`,
                 { headers: { "content-type": "text/plain" }, status: 400 }
               );
             }

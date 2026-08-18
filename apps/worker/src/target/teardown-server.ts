@@ -16,7 +16,7 @@ export async function serverRemovalBlocker(
     return "server not found";
   }
   if (server.role === "manager") {
-    return "this is the Swarm manager — removing it would leave the installation unable to deploy anything";
+    return "this is the Swarm manager: removing it would leave the installation unable to deploy anything";
   }
 
   const [svc, stk, dbs] = await Promise.all([
@@ -34,7 +34,7 @@ export async function serverRemovalBlocker(
   ].filter(Boolean);
 
   if (held.length > 0) {
-    return `still hosts ${held.join(", ")} — move or delete them first`;
+    return `still hosts ${held.join(", ")}: move or delete them first`;
   }
   return null;
 }

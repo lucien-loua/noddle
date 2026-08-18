@@ -44,7 +44,7 @@ export function loadRegistryConfig(): RegistryConfig | undefined {
     // the mount was made on the directory instead of just the certificate.
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `REGISTRY_HOST is set but the CA is unreadable (${CA_PATH}) — did the installer run? ${detail}`,
+      `REGISTRY_HOST is set but the CA is unreadable (${CA_PATH}). Did the installer run? ${detail}`,
       { cause: error }
     );
   }
