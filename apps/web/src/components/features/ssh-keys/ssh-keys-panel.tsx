@@ -160,9 +160,7 @@ function KeyRow({
         />
       </ResourceCardMeta>
       {error ? (
-        <p className="mt-2 text-destructive text-xs" role="status">
-          {error}
-        </p>
+        <output className="block mt-2 text-destructive text-xs">{error}</output>
       ) : null}
     </ResourceCard>
   );

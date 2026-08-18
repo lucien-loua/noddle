@@ -1080,9 +1080,9 @@ function ResourceGridCard({
             <ResourceAddress item={item} />
           </div>
           {item.lastError ? (
-            <p className="line-clamp-2 text-destructive text-xs" role="status">
+            <output className="block line-clamp-2 text-destructive text-xs">
               {item.lastError}
-            </p>
+            </output>
           ) : null}
         </FramePanel>
         <FrameFooter>

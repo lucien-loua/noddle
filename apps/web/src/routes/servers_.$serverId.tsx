@@ -171,9 +171,9 @@ function ServerDetail() {
                 this is the page you come to in order to find out why the
                 machine isn't responding. */}
             {server.status === "unreachable" && server.lastError ? (
-              <p className="mt-4 text-destructive text-sm" role="status">
+              <output className="block mt-4 text-destructive text-sm">
                 {server.lastError}
-              </p>
+              </output>
             ) : null}
           </FramePanel>
         </Frame>

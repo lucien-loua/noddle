@@ -140,9 +140,7 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
         ) : null}
 
         {failed ? (
-          <p className="text-destructive text-xs" role="status">
-            {failed}
-          </p>
+          <output className="block text-destructive text-xs">{failed}</output>
         ) : null}
 
         {inFlight ? (

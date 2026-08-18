@@ -151,9 +151,9 @@ function ProviderRow({
             />
           </dl>
           {error ? (
-            <p className="mt-2 text-destructive text-xs" role="status">
+            <output className="block mt-2 text-destructive text-xs">
               {error}
-            </p>
+            </output>
           ) : null}
         </div>
 

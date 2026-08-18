@@ -66,9 +66,7 @@ export function ServerPruneToggle({
   return (
     <FramePanel>
       {error ? (
-        <p className="mb-3 text-destructive text-sm" role="status">
-          {error}
-        </p>
+        <output className="block mb-3 text-destructive text-sm">{error}</output>
       ) : null}
 
       <FieldLabel
