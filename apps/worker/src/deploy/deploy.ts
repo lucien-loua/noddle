@@ -440,20 +440,24 @@ export async function redeployImage(
     throw new Error(`service not found: ${opts.serviceId}`);
   }
 
-  const registry = await resolveRegistry({
-    appKey: ctx.appKey,
-    db: ctx.db,
-    embedded: ctx.registry,
-    registryId: service.registryId,
-  });
-
-  const origin = await ctx.db.query.deployments.findFirst({
-    orderBy: desc(deployments.createdAt),
-    where: and(
-      eq(deployments.serviceId, service.id),
-      eq(deployments.imageTag, opts.imageTag)
-    ),
-  });
+  // Both read `service` and neither reads the other: the registry lookup
+  // decrypts credentials, the deployment lookup finds the commit this tag
+  // came from. In series a rollback waited for the sum of the two.
+  const [registry, origin] = await Promise.all([
+    resolveRegistry({
+      appKey: ctx.appKey,
+      db: ctx.db,
+      embedded: ctx.registry,
+      registryId: service.registryId,
+    }),
+    ctx.db.query.deployments.findFirst({
+      orderBy: desc(deployments.createdAt),
+      where: and(
+        eq(deployments.serviceId, service.id),
+        eq(deployments.imageTag, opts.imageTag)
+      ),
+    }),
+  ]);
 
   const [created] = await ctx.db
     .insert(deployments)
