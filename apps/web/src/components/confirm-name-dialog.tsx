@@ -72,7 +72,12 @@ export function ConfirmNameDialog({
                   <Badge
                     className="cursor-pointer font-mono"
                     onClick={handleCopy}
-                    render={<button type="button" />}
+                    render={
+                      <button
+                        aria-label={`Copy ${resourceName}`}
+                        type="button"
+                      />
+                    }
                     variant="outline"
                   >
                     {resourceName}
