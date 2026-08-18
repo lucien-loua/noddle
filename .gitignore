@@ -50,3 +50,6 @@ plans/
 
 # Sauvegardes locales avant reset du stack de dev
 .env.before-reset
+
+# Deployment logs, written at runtime next to whichever process ran
+.noddle/
