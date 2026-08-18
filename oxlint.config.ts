@@ -33,6 +33,49 @@ export default defineConfig({
   ignorePatterns: core.ignorePatterns,
   overrides: [
     {
+      // Verify suites are FLAT: a list of independent checks, each a `&&`
+      // chain of assertions. Cyclomatic complexity counts every `&&`, so a
+      // bench scores 27 for having 27 things to prove — the metric measures
+      // its length, not its branching. Splitting one into helpers to satisfy
+      // the count would hide which assertion failed, which is the only thing
+      // a verify has to tell you.
+      files: ["**/verify*.ts"],
+      rules: { complexity: "off" },
+    },
+    {
+      // Drizzle's `drizzle(client, { schema })` takes the WHOLE namespace —
+      // that object is how `db.query.<table>` and the relational API exist at
+      // all. This barrel is the schema, not a convenience re-export.
+      files: ["packages/db/src/schema/index.ts"],
+      rules: { "no-barrel-file": "off" },
+    },
+    {
+      // Build fixtures are repositories under test: this one is CommonJS
+      // precisely to check that railpack detects a plain CJS app. Modernising
+      // it would delete the case.
+      files: ["scripts/fixtures/**"],
+      rules: { "unicorn/prefer-module": "off" },
+    },
+    {
+      // `SshSocketAgent` exists only to give `SshError`'s module its transport;
+      // it is not exported, and a file of its own would publish an internal.
+      // `no-promise-in-callback` fires at the ssh2 boundary, where the library
+      // hands back a stream through a callback and the consumer is a promise —
+      // the seam between the two APIs, which has to live somewhere.
+      files: ["packages/ssh-executor/src/index.ts"],
+      rules: {
+        "max-classes-per-file": "off",
+        "promise/no-promise-in-callback": "off",
+      },
+    },
+    {
+      // The terminal's status IS the effect's product: connecting, open,
+      // closed are transitions of the socket the effect owns, and the parent
+      // renders them. There is no state to lift — the socket is the state.
+      files: ["apps/web/src/components/terminal-dialog.tsx"],
+      rules: { "react-doctor/no-prop-callback-in-effect": "off" },
+    },
+    {
       // `apps/web/src/components/ui` is the shadcn preset — `components.json`
       // points its "ui" alias there, and `shadcn add` overwrites these files.
       // CLAUDE.md is explicit: nothing the preset provides is rewritten by
