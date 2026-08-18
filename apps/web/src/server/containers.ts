@@ -228,7 +228,7 @@ async function readKind(
 const containerActionSchema = z.object({
   action: z.enum(["stop", "restart", "remove"]),
   containerId: z.string().min(1),
-  serverId: z.string().uuid(),
+  serverId: z.uuid(),
 });
 
 /**
@@ -291,7 +291,7 @@ export const containerAction = createServerFn({ method: "POST" })
   });
 
 const restartServiceSchema = z.object({
-  serverId: z.string().uuid(),
+  serverId: z.uuid(),
   serviceName: z.string().min(1),
 });
 
