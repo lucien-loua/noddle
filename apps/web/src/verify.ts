@@ -386,7 +386,12 @@ try {
     // catch-up would arrive immediately and pass, while the live line —
     // published later — would land precisely in the abandoned read.
     const pump = (async () => {
-      while (reader) {
+      // The reader is checked once, not re-tested every turn: it never
+      // changes, and the loop leaves through `return`.
+      if (!reader) {
+        return;
+      }
+      while (true) {
         // biome-ignore lint/performance/noAwaitInLoops: this is a stream pump, sequential by nature
         const chunk = await reader.read();
         if (chunk.done) {
@@ -398,9 +403,7 @@ try {
       // stream cut off: normal at the end
     });
 
-    const readFor = (ms: number) => sleep(ms);
-
-    await readFor(1500);
+    await sleep(1500);
     if (received.includes("line before arrival")) {
       ok("catch-up: the viewer receives what went by before it arrived");
     } else {
@@ -412,7 +415,7 @@ try {
       logChannel(deploymentId),
       encodeLogMessage({ data: "▸ live line\n", type: "chunk" })
     );
-    await readFor(1500);
+    await sleep(1500);
     if (received.includes("live line")) {
       ok("live: a line published by the worker makes it through the stream");
     } else {
@@ -424,7 +427,7 @@ try {
       logChannel(deploymentId),
       encodeLogMessage({ status: "succeeded", type: "end" })
     );
-    await readFor(1500);
+    await sleep(1500);
     if (received.includes("event: end")) {
       ok("the end message closes the stream");
     } else {

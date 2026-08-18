@@ -287,7 +287,12 @@ try {
   let ended = false;
 
   const pump = (async () => {
-    while (reader) {
+    // The reader is checked once, not re-tested every turn: it never
+    // changes, and the loop leaves through `return`.
+    if (!reader) {
+      return;
+    }
+    while (true) {
       // biome-ignore lint/performance/noAwaitInLoops: stream pump, sequential by nature
       const chunk = await reader.read();
       if (chunk.done) {
@@ -303,11 +308,10 @@ try {
     // stream cut off
   });
 
-  const deadline = Date.now() + DEPLOY_TIMEOUT_MS;
-  while (!ended && Date.now() < deadline) {
-    // biome-ignore lint/performance/noAwaitInLoops: waiting for the real build
-    await sleep(2000);
-  }
+  // Wait on the pump itself rather than polling a flag it sets: the flag is
+  // written from another task, so every two seconds spent re-reading it was
+  // latency added to a build that had already finished.
+  await Promise.race([pump, sleep(DEPLOY_TIMEOUT_MS)]);
   controller.abort();
   await pump;
 

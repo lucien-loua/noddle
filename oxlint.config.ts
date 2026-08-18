@@ -145,6 +145,12 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Off after reading all 3: each effect DOES clean up, by closing the
+    // EventSource or the WebSocket the listeners are attached to — which
+    // discards them with it. The rule looks for a literal removeEventListener
+    // and cannot see that `source.close()` is the complete teardown.
+    "react-doctor/effect-needs-cleanup": "off",
+
     // Off after reading all 10 findings: every one is a TanStack Table `cell`
     // renderer, which is that library's required shape — `cell: (info) =>
     // JSX` — and they sit inside useMemo, so nothing is recreated per render.
