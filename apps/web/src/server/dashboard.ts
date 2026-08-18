@@ -549,7 +549,6 @@ async function buildDashboardData(): Promise<DashboardData> {
   ]);
 
   const scopes = new Map<string, Scope>();
-  const scopeProjectId = new Map<string, string>();
   const ensure = (
     projectId: string,
     project: string,
@@ -572,7 +571,6 @@ async function buildDashboardData(): Promise<DashboardData> {
       stacks: [],
     };
     scopes.set(key, created);
-    scopeProjectId.set(key, projectId);
     return created;
   };
 
@@ -608,11 +606,9 @@ async function buildDashboardData(): Promise<DashboardData> {
     if (last && last.project === scope.project) {
       last.scopes.push(scope);
     } else {
-      // biome-ignore lint/style/noNonNullAssertion: `scopeProjectId` is populated by `ensure` before any scope, in lockstep with `scopes`
-      const projectId = scopeProjectId.get(scope.key)!;
       groups.push({
         project: scope.project,
-        projectId,
+        projectId: scope.projectId,
         scopes: [scope],
         statusCounts: {},
       });
