@@ -557,7 +557,7 @@ function HealthCheckForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["healthCheck"]> | null;
 }) {
-  const [test, setTest] = useState((value?.Test ?? []).join("\n"));
+  const [test, setTest] = useState(() => (value?.Test ?? []).join("\n"));
   const [interval, setIntervalNs] = useState(
     value?.Interval == null ? "" : String(value.Interval)
   );
@@ -695,7 +695,7 @@ function PlacementForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["placement"]> | null;
 }) {
-  const [constraints, setConstraints] = useState(
+  const [constraints, setConstraints] = useState(() =>
     (value?.Constraints ?? []).join("\n")
   );
   const [maxReplicas, setMaxReplicas] = useState(
@@ -971,7 +971,7 @@ function LabelsForm({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["labels"]> | null;
 }) {
-  const [raw, setRaw] = useState(formatLabels(value));
+  const [raw, setRaw] = useState(() => formatLabels(value));
 
   return (
     <SectionShell

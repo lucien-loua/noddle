@@ -107,7 +107,7 @@ function DatabaseScheduleForm({
     defaultDatabaseName,
     fallbackDestinationId
   );
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() =>
     scheduleModeFor(defaults.schedule)
   );
 
@@ -276,7 +276,7 @@ function VolumeScheduleForm({
 }) {
   const copy = copyFor("volume");
   const defaults = volumeConfigFormDefaults(editing, fallbackDestinationId);
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() =>
     scheduleModeFor(defaults.schedule)
   );
   const volumesQuery = useQuery({
