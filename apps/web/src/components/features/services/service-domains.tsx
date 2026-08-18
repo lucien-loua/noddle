@@ -33,8 +33,7 @@ import { errorMessage } from "@/lib/format";
 import type { ServiceDomainRow, ServiceRow } from "@/server/dashboard";
 import { deleteServiceDomain } from "@/server/service-domains";
 
-const DOMAIN_REDEPLOY_HINT =
-  "Whenever you make changes to domains, remember to redeploy the application to apply the changes.";
+const DOMAIN_REDEPLOY_HINT = "Domain changes take effect on the next deploy.";
 
 export function ServiceDomains({
   canEdit,
@@ -82,7 +81,7 @@ export function ServiceDomains({
             <div className="min-w-0">
               <FrameTitle>Domains</FrameTitle>
               <FrameDescription>
-                Domains are used to access the application.
+                Where this application answers on the internet.
               </FrameDescription>
             </div>
             {canEdit ? (
@@ -128,8 +127,7 @@ export function ServiceDomains({
                 </EmptyMedia>
                 <EmptyTitle>No domain yet</EmptyTitle>
                 <EmptyDescription>
-                  To access the application it is required to set at least one
-                  domain.
+                  Add a domain to reach this application from the internet.
                 </EmptyDescription>
               </EmptyHeader>
               {canEdit ? (

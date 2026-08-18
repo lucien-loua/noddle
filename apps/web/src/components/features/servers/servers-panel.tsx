@@ -193,8 +193,7 @@ export const ServersList = ({
             </EmptyMedia>
             <EmptyTitle>No servers yet</EmptyTitle>
             <EmptyDescription>
-              Noddle deploys onto machines you own. Add one before you can
-              deploy anything.
+              Noddle deploys onto machines you own. Add one to start deploying.
             </EmptyDescription>
           </EmptyHeader>
           {onAdd ? (

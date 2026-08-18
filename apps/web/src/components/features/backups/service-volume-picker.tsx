@@ -102,7 +102,7 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
         </Combobox>
       )}
       <FieldDescription>
-        Choose the volume to backup. If you do not see the volume here, you can
+        Choose the volume to back up. If you do not see the volume here, you can
         type the volume name manually below.
       </FieldDescription>
     </Field>

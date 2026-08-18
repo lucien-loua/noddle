@@ -387,7 +387,7 @@ function VolumeScheduleForm({
             >
               {(f) => (
                 <f.FieldText
-                  description="The name of the Docker volume to backup."
+                  description="The name of the Docker volume to back up."
                   label="Volume name"
                   placeholder="hello-data-abc123"
                   required

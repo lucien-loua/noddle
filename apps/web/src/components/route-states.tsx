@@ -54,7 +54,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         <EmptyHeader>
           <EmptyTitle>This screen could not load</EmptyTitle>
           <EmptyDescription>
-            {errorMessage(error, "Unknown error")}
+            {errorMessage(error, "No further detail was returned.")}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
