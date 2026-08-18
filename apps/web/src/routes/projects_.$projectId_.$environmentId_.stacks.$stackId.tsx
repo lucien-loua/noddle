@@ -55,6 +55,13 @@ function isStackTab(value: unknown): value is StackTab {
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/stacks/$stackId"
 )({
+  // FIRST, not in alphabetical order: TanStack Router infers the search
+  // params from this one, and anything declared before it loses them.
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    deployment:
+      typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: isStackTab(search.tab) ? search.tab : undefined,
+  }),
   beforeLoad: resourceDetailBeforeLoad,
   component: StackDetail,
   loader: async ({ context, params }) => {
@@ -65,11 +72,6 @@ export const Route = createFileRoute(
     }
     return { email: context.email, role: context.role, stack };
   },
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    tab: isStackTab(search.tab) ? search.tab : undefined,
-  }),
 });
 
 function StackDetail() {

@@ -100,6 +100,13 @@ function parseServiceTab(value: unknown): ServiceTab | undefined {
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/services/$serviceId"
 )({
+  // FIRST, not in alphabetical order: TanStack Router infers the search
+  // params from this one, and anything declared before it loses them.
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    deployment:
+      typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: parseServiceTab(search.tab),
+  }),
   beforeLoad: resourceDetailBeforeLoad,
   component: ServiceDetail,
   loader: async ({ context, params }) => {
@@ -109,11 +116,6 @@ export const Route = createFileRoute(
     }
     return { email: context.email, role: context.role, service };
   },
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    tab: parseServiceTab(search.tab),
-  }),
 });
 
 function ServiceDetail() {

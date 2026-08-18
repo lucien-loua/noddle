@@ -77,6 +77,11 @@ function isDatabaseTab(value: unknown): value is DatabaseTab {
 export const Route = createFileRoute(
   "/projects_/$projectId_/$environmentId_/databases/$databaseId"
 )({
+  // FIRST, not in alphabetical order: TanStack Router infers the search
+  // params from this one, and anything declared before it loses them.
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    tab: isDatabaseTab(search.tab) ? search.tab : undefined,
+  }),
   beforeLoad: resourceDetailBeforeLoad,
   component: DatabaseDetail,
   loader: async ({ context, params }) => {
@@ -92,9 +97,6 @@ export const Route = createFileRoute(
       role: context.role,
     };
   },
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    tab: isDatabaseTab(search.tab) ? search.tab : undefined,
-  }),
 });
 
 function DatabaseDetail() {
