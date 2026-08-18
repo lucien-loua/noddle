@@ -70,6 +70,7 @@ function verifyCrypto(): void {
     const b = Buffer.from(s, "base64url");
     const idx = b.length - 1;
     // biome-ignore lint/suspicious/noBitwiseOperators: flipping a bit IS the test
+    // oxlint-disable-next-line no-bitwise -- flipping one bit IS the tamper
     b[idx] = (b[idx] ?? 0) ^ 0x01;
     return b.toString("base64url");
   };

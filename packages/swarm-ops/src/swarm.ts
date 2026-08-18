@@ -57,6 +57,9 @@ export type SwarmUpdateState =
   | "rollback_paused"
   | "rollback_started"
   | "updating"
+  // Keeps the literals in autocomplete while still accepting a state Docker
+  // adds later.
+  // oxlint-disable-next-line typescript/ban-types
   | (string & {});
 
 function serviceSpec(s: DeploySpec) {

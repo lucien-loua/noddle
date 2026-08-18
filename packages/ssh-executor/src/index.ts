@@ -3,7 +3,7 @@ import type { Duplex } from "node:stream";
 
 import Docker from "dockerode";
 import { Client } from "ssh2";
-import type { ConnectConfig } from "ssh2";
+import type { ClientChannel, ConnectConfig } from "ssh2";
 
 /**
  * The SSH client.
@@ -447,7 +447,7 @@ export interface PtySession {
 }
 
 function wrapChannel(
-  stream: import("ssh2").ClientChannel,
+  stream: ClientChannel,
   client: Client,
   /** When true, ending the channel also ends the SSH client (one-shot). */
   ownClient: boolean
