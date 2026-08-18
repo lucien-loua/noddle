@@ -167,43 +167,44 @@ export function BackupPanel(props: BackupPanelProps) {
         )}
       </Frame>
 
-      {editor ? (
-        isDatabasePanel(props) ? (
-          <BackupConfigDialog
-            defaultDatabaseName={props.defaultDatabaseName}
-            destinations={destinations}
-            editing={editor === "new" ? null : (editor as BackupConfigRow)}
-            onOpenChange={(open) => {
-              if (!open) {
-                setEditor(null);
-              }
-            }}
-            onSaved={() => {
+      {/* Two guarded blocks rather than a ternary inside a ternary:
+          BackupConfigDialog takes a discriminated union, so the branches
+          cannot merge — but they do not need to nest either. */}
+      {editor && isDatabasePanel(props) ? (
+        <BackupConfigDialog
+          defaultDatabaseName={props.defaultDatabaseName}
+          destinations={destinations}
+          editing={editor === "new" ? null : (editor as BackupConfigRow)}
+          onOpenChange={(open) => {
+            if (!open) {
               setEditor(null);
-              invalidate();
-            }}
-            open
-            subject={props.subject}
-          />
-        ) : (
-          <BackupConfigDialog
-            destinations={destinations}
-            editing={
-              editor === "new" ? null : (editor as VolumeBackupConfigRow)
             }
-            onOpenChange={(open) => {
-              if (!open) {
-                setEditor(null);
-              }
-            }}
-            onSaved={() => {
+          }}
+          onSaved={() => {
+            setEditor(null);
+            invalidate();
+          }}
+          open
+          subject={props.subject}
+        />
+      ) : null}
+
+      {editor && !isDatabasePanel(props) ? (
+        <BackupConfigDialog
+          destinations={destinations}
+          editing={editor === "new" ? null : (editor as VolumeBackupConfigRow)}
+          onOpenChange={(open) => {
+            if (!open) {
               setEditor(null);
-              invalidate();
-            }}
-            open
-            subject={props.subject}
-          />
-        )
+            }
+          }}
+          onSaved={() => {
+            setEditor(null);
+            invalidate();
+          }}
+          open
+          subject={props.subject}
+        />
       ) : null}
 
       {historyConfig ? (

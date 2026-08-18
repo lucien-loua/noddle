@@ -405,6 +405,45 @@ interface FilterRemoveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonE
   icon?: React.ReactNode;
 }
 
+/** The icon button's size follows the filter bar's, with one default. */
+const ICON_SIZE = {
+  default: "icon",
+  lg: "icon-lg",
+  sm: "icon-sm",
+} as const satisfies Record<"default" | "lg" | "sm", string>;
+
+/**
+ * What the trigger reads when nothing, one thing, or several are picked.
+ * A function rather than a ternary chain: three outcomes, named once.
+ */
+/**
+ * What the selection becomes when one option is toggled. The same three
+ * outcomes were written twice, as a ternary inside a ternary each time.
+ */
+function nextSelection<T>(
+  values: T[],
+  value: T,
+  { isMultiSelect, isSelected }: { isMultiSelect: boolean; isSelected: boolean }
+): T[] {
+  if (isSelected) {
+    return values.filter((v) => v !== value);
+  }
+  return isMultiSelect ? [...values, value] : [value];
+}
+
+function selectionLabel<T>(
+  selected: FilterOption<T>[],
+  i18n: FilterI18nConfig
+): string | undefined {
+  if (selected.length === 1) {
+    return selected[0]?.label;
+  }
+  if (selected.length > 1) {
+    return `${selected.length} ${i18n.selectedCount}`;
+  }
+  return i18n.select;
+}
+
 function FilterRemoveButton({
   className,
   icon = <XIcon weight="regular" />,
@@ -415,13 +454,7 @@ function FilterRemoveButton({
   return (
     <Button
       className={className}
-      size={
-        context.size === "sm"
-          ? "icon-sm"
-          : (context.size === "lg"
-            ? "icon-lg"
-            : "icon")
-      }
+      size={ICON_SIZE[context.size]}
       variant="outline"
       {...props}
     >
@@ -978,11 +1011,10 @@ function SelectOptionsPopover<T = unknown>({
   // renderers so both behave identically.
   const toggleOption = (option: FilterOption<T>) => {
     const isSelected = effectiveValues.includes(option.value);
-    const next = isSelected
-      ? (effectiveValues.filter((v) => v !== option.value) as T[])
-      : (isMultiSelect
-        ? ([...effectiveValues, option.value] as T[])
-        : ([option.value] as T[]));
+    const next = nextSelection(effectiveValues, option.value, {
+      isMultiSelect,
+      isSelected,
+    });
 
     if (
       !isSelected &&
@@ -1081,11 +1113,10 @@ function SelectOptionsPopover<T = unknown>({
                   const isSelected = effectiveValues.includes(
                     option.value as T
                   );
-                  const next = isSelected
-                    ? (effectiveValues.filter((v) => v !== option.value) as T[])
-                    : (isMultiSelect
-                      ? ([...effectiveValues, option.value] as T[])
-                      : ([option.value] as T[]));
+                  const next = nextSelection(effectiveValues, option.value, {
+                    isMultiSelect,
+                    isSelected,
+                  });
 
                   if (
                     !isSelected &&
@@ -1210,11 +1241,7 @@ function SelectOptionsPopover<T = unknown>({
                       ))}
                     </div>
                   )}
-                  {selectedOptions.length === 1
-                    ? selectedOptions[0]?.label
-                    : (selectedOptions.length > 1
-                      ? `${selectedOptions.length} ${context.i18n.selectedCount}`
-                      : context.i18n.select)}
+                  {selectionLabel(selectedOptions, context.i18n)}
                 </>
               )}
             </div>

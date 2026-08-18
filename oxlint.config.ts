@@ -31,6 +31,30 @@ const selectedJsPlugins = {
 export default defineConfig({
   extends: [core, react, tanstack, vitest, selectedJsPlugins],
   ignorePatterns: core.ignorePatterns,
+  overrides: [
+    {
+      // `apps/web/src/components/ui` is the shadcn preset — `components.json`
+      // points its "ui" alias there, and `shadcn add` overwrites these files.
+      // CLAUDE.md is explicit: nothing the preset provides is rewritten by
+      // hand, so restyling them is work the next component install undoes.
+      //
+      // 78 of 186 findings live here. What is switched off is SHAPE — nested
+      // ternaries, function length, hook naming. What stays on names defects:
+      // const-comparisons, no-accumulating-spread, no-shadow. Vendored code
+      // being ours to leave alone does not make it ours to stop reading.
+      files: ["apps/web/src/components/ui/**"],
+      rules: {
+        complexity: "off",
+        "prefer-destructuring": "off",
+        "react-doctor/no-giant-component": "off",
+        "react/hook-use-state": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "unicorn/no-array-reduce": "off",
+        "unicorn/prefer-query-selector": "off",
+      },
+    },
+  ],
+
   rules: {
     // Off, and this one is load-bearing: it AUTO-FIXES, and `bun run fix`
     // runs on every edit through the PostToolUse hook. Several functions here
