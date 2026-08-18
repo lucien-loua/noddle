@@ -73,6 +73,89 @@ const dbNameOf = (engine: DatabaseEngine) =>
  * on `<service>-password` would leave behind every secret a password change
  * created, and the second harness run would execute against a dirty fixture.
  */
+/**
+ * Connect FROM ANOTHER CONTAINER, on the same overlay — exactly what an
+ * attached application does. Returns `true` if authentication succeeds,
+ * `false` if it is refused.
+ *
+ * Probe argv is a table keyed by engine (same shape as dumpSpecFor /
+ * restoreSpecFor) so a sixth engine fails to compile here, not at runtime.
+ */
+const PROBE_ARGV: Record<
+  DatabaseEngine,
+  (opts: {
+    hostName: string;
+    password: string;
+    port: number;
+    user: string | null;
+  }) => string[]
+> = {
+  mariadb: ({ hostName, password, user }) => [
+    "-e",
+    `MYSQL_PWD=${password}`,
+    DEFAULT_DATABASE_IMAGE.mariadb,
+    "mariadb",
+    "-h",
+    hostName,
+    "-u",
+    user ?? "root",
+    "-e",
+    "select 1",
+  ],
+  mongo: ({ hostName, password, port, user }) => [
+    DEFAULT_DATABASE_IMAGE.mongo,
+    "mongosh",
+    `mongodb://${user}:${encodeURIComponent(password)}@${hostName}:${port}/admin`,
+    "--quiet",
+    "--eval",
+    "db.runCommand({ ping: 1 }).ok",
+  ],
+  mysql: ({ hostName, password, user }) => [
+    "-e",
+    `MYSQL_PWD=${password}`,
+    DEFAULT_DATABASE_IMAGE.mysql,
+    "mysql",
+    "-h",
+    hostName,
+    "-u",
+    user ?? "root",
+    "-e",
+    "select 1",
+  ],
+  postgres: ({ hostName, password, port, user }) => [
+    DEFAULT_DATABASE_IMAGE.postgres,
+    "psql",
+    `postgresql://${user}:${encodeURIComponent(password)}@${hostName}:${port}/${dbNameOf("postgres")}`,
+    "-c",
+    "select 1",
+  ],
+  // Explicit `default:` for the user — without ACL, redis-cli's URI
+  // parser needs the name to recognize the password.
+  redis: ({ hostName, password, port }) => [
+    DEFAULT_DATABASE_IMAGE.redis,
+    "redis-cli",
+    "-u",
+    `redis://default:${encodeURIComponent(password)}@${hostName}:${port}`,
+    "ping",
+  ],
+};
+
+function probeArgvFor(
+  engine: DatabaseEngine,
+  opts: {
+    hostName: string;
+    password: string;
+    port: number;
+    user: string | null;
+  }
+): string[] {
+  const build = PROBE_ARGV[engine];
+  if (!build) {
+    throw new Error(`unsupported database engine for probe: ${engine}`);
+  }
+  return build(opts);
+}
+
 async function removeSecretsByPrefix(
   docker: ReturnType<typeof dockerClient>,
   prefix: string
@@ -164,89 +247,6 @@ try {
     .insert(environments)
     .values({ name: "production", projectId: proj?.id ?? "" })
     .returning();
-
-  /**
-   * Connect FROM ANOTHER CONTAINER, on the same overlay — exactly what an
-   * attached application does. Returns `true` if authentication succeeds,
-   * `false` if it is refused.
-   *
-   * Probe argv is a table keyed by engine (same shape as dumpSpecFor /
-   * restoreSpecFor) so a sixth engine fails to compile here, not at runtime.
-   */
-  const PROBE_ARGV: Record<
-    DatabaseEngine,
-    (opts: {
-      hostName: string;
-      password: string;
-      port: number;
-      user: string | null;
-    }) => string[]
-  > = {
-    mariadb: ({ hostName, password, user }) => [
-      "-e",
-      `MYSQL_PWD=${password}`,
-      DEFAULT_DATABASE_IMAGE.mariadb,
-      "mariadb",
-      "-h",
-      hostName,
-      "-u",
-      user ?? "root",
-      "-e",
-      "select 1",
-    ],
-    mongo: ({ hostName, password, port, user }) => [
-      DEFAULT_DATABASE_IMAGE.mongo,
-      "mongosh",
-      `mongodb://${user}:${encodeURIComponent(password)}@${hostName}:${port}/admin`,
-      "--quiet",
-      "--eval",
-      "db.runCommand({ ping: 1 }).ok",
-    ],
-    mysql: ({ hostName, password, user }) => [
-      "-e",
-      `MYSQL_PWD=${password}`,
-      DEFAULT_DATABASE_IMAGE.mysql,
-      "mysql",
-      "-h",
-      hostName,
-      "-u",
-      user ?? "root",
-      "-e",
-      "select 1",
-    ],
-    postgres: ({ hostName, password, port, user }) => [
-      DEFAULT_DATABASE_IMAGE.postgres,
-      "psql",
-      `postgresql://${user}:${encodeURIComponent(password)}@${hostName}:${port}/${dbNameOf("postgres")}`,
-      "-c",
-      "select 1",
-    ],
-    // Explicit `default:` for the user — without ACL, redis-cli's URI
-    // parser needs the name to recognize the password.
-    redis: ({ hostName, password, port }) => [
-      DEFAULT_DATABASE_IMAGE.redis,
-      "redis-cli",
-      "-u",
-      `redis://default:${encodeURIComponent(password)}@${hostName}:${port}`,
-      "ping",
-    ],
-  };
-
-  function probeArgvFor(
-    engine: DatabaseEngine,
-    opts: {
-      hostName: string;
-      password: string;
-      port: number;
-      user: string | null;
-    }
-  ): string[] {
-    const build = PROBE_ARGV[engine];
-    if (!build) {
-      throw new Error(`unsupported database engine for probe: ${engine}`);
-    }
-    return build(opts);
-  }
 
   const canConnect = async (
     engine: DatabaseEngine,

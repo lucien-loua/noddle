@@ -190,10 +190,10 @@ try {
   // upload and nothing is published — that is what allows NOT writing cleanup
   // code on this path.
   const brokenKey = `${key}-casse`;
-  function* exploding(): Generator<Buffer> {
+  const exploding = function* exploding(): Generator<Buffer> {
     yield Buffer.alloc(CHUNK, 1);
     throw new Error("dumper killed mid-flight");
-  }
+  };
   try {
     await uploadStream(destination, brokenKey, Readable.from(exploding()));
     ko("an exploding stream produced a successful upload");
