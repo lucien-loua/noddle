@@ -194,6 +194,9 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
           watchUntil: previousUntil,
         })
         .returning();
+      // AFTER the previous one, not alongside: sweep.ts finds the version to
+      // roll back to with `lt(createdAt)`, so which row is older IS the
+      // fixture. Inserted together, the two timestamps could tie.
       const [current] = await db
         .insert(deployments)
         .values({ serviceId, status: "deploying" })
@@ -212,15 +215,16 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
         swarmUpdateState: "completed",
       });
 
-      const currentRow = await db.query.deployments.findFirst({
-        where: eq(deployments.id, current.id),
-      });
-      const previousRow = await db.query.deployments.findFirst({
-        where: eq(deployments.id, previous.id),
-      });
-      const serviceRow = await db.query.services.findFirst({
-        where: eq(services.id, serviceId),
-      });
+      // Three reads by id, none of which needs the others.
+      const [currentRow, previousRow, serviceRow] = await Promise.all([
+        db.query.deployments.findFirst({
+          where: eq(deployments.id, current.id),
+        }),
+        db.query.deployments.findFirst({
+          where: eq(deployments.id, previous.id),
+        }),
+        db.query.services.findFirst({ where: eq(services.id, serviceId) }),
+      ]);
 
       check(
         "Service Deployment status succeeded",
@@ -255,6 +259,9 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
           watchUntil: previousUntil,
         })
         .returning();
+      // AFTER the previous one, not alongside: sweep.ts finds the version to
+      // roll back to with `lt(createdAt)`, so which row is older IS the
+      // fixture. Inserted together, the two timestamps could tie.
       const [current] = await db
         .insert(stackDeployments)
         .values({ stackId, status: "deploying" })
@@ -272,15 +279,16 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
         swarmUpdateStates: { web: "completed" },
       });
 
-      const currentRow = await db.query.stackDeployments.findFirst({
-        where: eq(stackDeployments.id, current.id),
-      });
-      const previousRow = await db.query.stackDeployments.findFirst({
-        where: eq(stackDeployments.id, previous.id),
-      });
-      const stackRow = await db.query.stacks.findFirst({
-        where: eq(stacks.id, stackId),
-      });
+      // Three reads by id, none of which needs the others.
+      const [currentRow, previousRow, stackRow] = await Promise.all([
+        db.query.stackDeployments.findFirst({
+          where: eq(stackDeployments.id, current.id),
+        }),
+        db.query.stackDeployments.findFirst({
+          where: eq(stackDeployments.id, previous.id),
+        }),
+        db.query.stacks.findFirst({ where: eq(stacks.id, stackId) }),
+      ]);
 
       check(
         "Stack Deployment status succeeded",
