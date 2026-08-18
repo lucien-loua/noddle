@@ -121,6 +121,14 @@ export default defineConfig({
     // what every file here uses, and it is what tree-shaking wants.
     "unicorn/import-style": "off",
 
+    // Off after reading all 10 findings: every one is a TanStack Table `cell`
+    // renderer, which is that library's required shape — `cell: (info) =>
+    // JSX` — and they sit inside useMemo, so nothing is recreated per render.
+    // React never mounts them as components; the table calls them. The rule
+    // cannot tell a cell renderer from a nested component, and ten permanent
+    // false positives would drown the real one if it ever appeared.
+    "react/no-unstable-nested-components": "off",
+
     // Off, and this time measured rather than assumed. Neither setting fits:
     // the default compares by code point (4 findings — `banReason` must
     // precede `banned` because "R" < "n"), case-insensitive gives 10. The
