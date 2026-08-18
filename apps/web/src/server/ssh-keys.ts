@@ -30,12 +30,12 @@ export const getSshKeys = createServerFn({ method: "GET" }).handler(
     runRead({
       permission: { action: "read", resource: "sshKey" },
       read: async () => {
-        const rows = await db.query.sshKeys.findMany({
-          orderBy: desc(sshKeys.createdAt),
-        });
-        const machines = await db.query.servers.findMany({
-          columns: { sshKeyId: true },
-        });
+        // Neither read needs the other; in series the panel waited for the
+        // sum of two round trips before it could answer.
+        const [rows, machines] = await Promise.all([
+          db.query.sshKeys.findMany({ orderBy: desc(sshKeys.createdAt) }),
+          db.query.servers.findMany({ columns: { sshKeyId: true } }),
+        ]);
 
         return rows.map((row) => ({
           createdAt: row.createdAt.toISOString(),

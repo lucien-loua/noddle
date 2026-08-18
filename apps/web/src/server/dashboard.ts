@@ -330,15 +330,18 @@ async function loadServiceDashboard(
   // The last deployment of each service in a single pass. Deployments are
   // sorted once, then distributed: the first one seen for a service is
   // necessarily the most recent.
-  const recent = await db.query.deployments.findMany({
-    orderBy: desc(deployments.createdAt),
-    where: inArray(
-      deployments.serviceId,
-      rows.map((r) => r.id)
-    ),
-  });
-
-  const nodes = await nodeNames();
+  // `nodeNames()` reaches the Swarm manager and shares nothing with the
+  // deployment read; in series the dashboard paid both round trips.
+  const [recent, nodes] = await Promise.all([
+    db.query.deployments.findMany({
+      orderBy: desc(deployments.createdAt),
+      where: inArray(
+        deployments.serviceId,
+        rows.map((r) => r.id)
+      ),
+    }),
+    nodeNames(),
+  ]);
   const latest = new Map<string, typeof deployments.$inferSelect>();
   const now = Date.now();
   const watched = new Set<string>();
@@ -386,11 +389,13 @@ export const getService = createServerFn({ method: "GET" })
       return null;
     }
 
-    const last = await db.query.deployments.findFirst({
-      orderBy: desc(deployments.createdAt),
-      where: eq(deployments.serviceId, row.id),
-    });
-    const nodes = await nodeNames();
+    const [last, nodes] = await Promise.all([
+      db.query.deployments.findFirst({
+        orderBy: desc(deployments.createdAt),
+        where: eq(deployments.serviceId, row.id),
+      }),
+      nodeNames(),
+    ]);
     const watching = Boolean(
       last?.watchUntil && last.watchUntil.getTime() > Date.now()
     );
@@ -470,14 +475,16 @@ export const getDeployments = createServerFn({ method: "GET" })
   .validator((data: { serviceId: string }) => data)
   .handler(async ({ data }): Promise<DeploymentSummary[]> => {
     await requireSession();
-    const rows = await db.query.deployments.findMany({
-      // The full history is what makes rollback possible to any version.
-      // Capped on the screen, not on the query.
-      limit: 50,
-      orderBy: desc(deployments.createdAt),
-      where: eq(deployments.serviceId, data.serviceId),
-    });
-    const nodes = await nodeNames();
+    const [rows, nodes] = await Promise.all([
+      db.query.deployments.findMany({
+        // The full history is what makes rollback possible to any version.
+        // Capped on the screen, not on the query.
+        limit: 50,
+        orderBy: desc(deployments.createdAt),
+        where: eq(deployments.serviceId, data.serviceId),
+      }),
+      nodeNames(),
+    ]);
     return rows.map((row) => toSummary(row, nodes));
   });
 

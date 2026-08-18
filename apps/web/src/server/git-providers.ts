@@ -43,13 +43,15 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
     runRead({
       permission: { action: "read", resource: "gitProvider" },
       read: async () => {
-        const rows = await db.query.gitProviders.findMany({
-          orderBy: desc(gitProviders.createdAt),
-          with: { github: true, gitlab: true },
-        });
-        const connected = await db.query.services.findMany({
-          columns: { gitProviderId: true },
-        });
+        // Independent reads: the list of connections and the count of what
+        // clones through them share no input.
+        const [rows, connected] = await Promise.all([
+          db.query.gitProviders.findMany({
+            orderBy: desc(gitProviders.createdAt),
+            with: { github: true, gitlab: true },
+          }),
+          db.query.services.findMany({ columns: { gitProviderId: true } }),
+        ]);
 
         return rows.map((row) => ({
           // Each type answers "connected" its own way: GitHub needs an App
