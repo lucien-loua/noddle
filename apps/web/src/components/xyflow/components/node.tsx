@@ -95,19 +95,6 @@ function NodeAction({ ...props }: React.ComponentProps<typeof CardAction>) {
   return <CardAction data-slot="node-action" {...props} />;
 }
 
-function NodeInput({ className, ...props }: React.ComponentProps<"textarea">) {
-  return (
-    <textarea
-      className={cn(
-        "field-sizing-content w-full resize-none break-all bg-transparent font-medium text-base leading-snug outline-none placeholder:text-muted-foreground",
-        className
-      )}
-      data-slot="node-input"
-      {...props}
-    />
-  );
-}
-
 export {
   Node,
   NodeIcon,
@@ -116,7 +103,6 @@ export {
   NodeDescription,
   NodeFooter,
   NodeHeader,
-  NodeInput,
   NodeTitle,
   NodeToolbar,
 };

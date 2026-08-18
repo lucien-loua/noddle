@@ -14,8 +14,11 @@ function FlowCanvas<
 }: React.PropsWithChildren<ReactFlowProps<NodeType, EdgeType>>) {
   return (
     <ReactFlow<NodeType, EdgeType>
-      deleteKeyCode={["Backspace", "Delete"]}
+      // A topology is read: panning and zooming, never editing. Backspace
+      // deleting a node would be a silent lie about what is deployed.
+      deleteKeyCode={null}
       fitView
+      nodesConnectable={false}
       proOptions={{ hideAttribution: true }}
       snapGrid={[16, 16]}
       snapToGrid

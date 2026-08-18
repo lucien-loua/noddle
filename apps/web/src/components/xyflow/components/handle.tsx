@@ -11,6 +11,7 @@ export function Handle({
 }: ComponentProps<typeof HandlePrimitive>) {
   return (
     <HandlePrimitive
+      isConnectable={false}
       className={cn(
         "border! h-5! w-3! rounded-sm! border-border! bg-clip-border! bg-secondary! transition",
         className

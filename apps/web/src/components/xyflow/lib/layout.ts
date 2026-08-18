@@ -1,6 +1,6 @@
+import { Graph, layout } from "@dagrejs/dagre";
 import { Position } from "@xyflow/react";
 import type { Edge, Node } from "@xyflow/react";
-import dagre from "dagre";
 
 export type LayoutDirection = "TB" | "LR" | "BT" | "RL";
 
@@ -36,7 +36,7 @@ export function getLayoutedElements<
     ranksep = 120,
   } = options;
 
-  const graph = new dagre.graphlib.Graph();
+  const graph = new Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({ rankdir: direction, nodesep, ranksep });
 
@@ -50,7 +50,7 @@ export function getLayoutedElements<
     graph.setEdge(edge.source, edge.target);
   }
 
-  dagre.layout(graph);
+  layout(graph);
 
   const sourcePosition = isHorizontal(direction)
     ? Position.Right
