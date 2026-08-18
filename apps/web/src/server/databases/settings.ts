@@ -154,17 +154,21 @@ export const setDatabaseSwarmSettings = createServerFn({ method: "POST" })
       notFoundMessage: "database not found",
       permission: { action: "create", resource: "database" },
       run: async ({ row: database }) => {
+        // Built, not mutated: `null` means "clear this slice", `undefined`
+        // means "leave it alone". Filtering says both without a dynamic
+        // delete and without an `any` write.
         const previous = database.swarmSettings ?? {};
-        const next = { ...previous };
-
-        for (const [key, value] of Object.entries(data.swarmSettings)) {
-          if (value === null) {
-            delete next[key as keyof typeof next];
-          } else if (value !== undefined) {
-            // oxlint-disable-next-line typescript/no-explicit-any
-            (next as any)[key] = value;
-          }
-        }
+        const clearedKeys = new Set(
+          Object.entries(data.swarmSettings)
+            .filter(([, value]) => value === null)
+            .map(([key]) => key)
+        );
+        const next = Object.fromEntries([
+          ...Object.entries(previous).filter(([key]) => !clearedKeys.has(key)),
+          ...Object.entries(data.swarmSettings).filter(
+            ([, value]) => value !== null && value !== undefined
+          ),
+        ]) as typeof previous;
 
         const cleared = Object.keys(next).length === 0 ? null : next;
 

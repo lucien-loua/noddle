@@ -78,6 +78,8 @@ class LogHub {
    * build shows an empty screen until the next line — and Redis pub/sub,
    * being fire-and-forget, will never replay what has already happened.
    */
+  // oxlint-disable-next-line class-methods-use-this -- part of the bus's
+  // interface; the module-level redis client is what it reads.
   async backlog(deploymentId: string): Promise<LogMessage[]> {
     const raw = await redis.lrange(logBufferKey(deploymentId), 0, -1);
     const messages: LogMessage[] = [];
