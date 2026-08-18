@@ -37,12 +37,22 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
   },
   component: ProjectEnvironmentPage,
   loader: async ({ context, params }) => {
-    const [dashboard, allProjects, environments, servers] = await Promise.all([
-      getDashboardGroups(),
-      getProjects(),
-      getProjectEnvironments({ data: { projectId: params.projectId } }),
-      getServers(),
-    ]);
+    // The scope joins the others rather than waiting for the 404 guard below:
+    // it reads `params` only. On a route that does not exist this fetches one
+    // thing for nothing; on every route that does, it saved a round trip.
+    const [dashboard, allProjects, environments, servers, scope] =
+      await Promise.all([
+        getDashboardGroups(),
+        getProjects(),
+        getProjectEnvironments({ data: { projectId: params.projectId } }),
+        getServers(),
+        getEnvironmentScope({
+          data: {
+            environmentId: params.environmentId,
+            projectId: params.projectId,
+          },
+        }),
+      ]);
 
     // EXISTENCE is read from `projects` and `environments`, never from the
     // dashboard's groups: those are built from SERVICES, so an empty
@@ -53,13 +63,6 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
     if (!(project && current)) {
       throw notFound();
     }
-
-    const scope = await getEnvironmentScope({
-      data: {
-        environmentId: params.environmentId,
-        projectId: params.projectId,
-      },
-    });
 
     // The group can legitimately be missing: it's only used to count what
     // sibling environments contain for the selector.
