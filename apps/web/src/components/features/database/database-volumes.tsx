@@ -210,8 +210,12 @@ export function DatabaseVolumes({
         volumePath={resolvedPath}
       />
 
+      {/* Keyed on what it edits, so React remounts instead of the dialog
+          resetting its own fields in an effect — which showed the previous
+          mount's values for one render. */}
       <MountDialog
         databaseId={databaseId}
+        key={addOpen ? "add-open" : "add-closed"}
         mount={null}
         onOpenChange={setAddOpen}
         onSaved={invalidate}
@@ -221,6 +225,9 @@ export function DatabaseVolumes({
 
       <MountDialog
         databaseId={databaseId}
+        key={
+          editMount ? `${editMount.type}:${editMount.source}` : "edit-closed"
+        }
         mount={editMount}
         onOpenChange={(next) => {
           if (!next) {
@@ -375,15 +382,6 @@ function MountDialog({
   const [source, setSource] = useState(mount?.source ?? "");
   const [target, setTarget] = useState(mount?.target ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setType(mount?.type ?? "volume");
-      setSource(mount?.source ?? "");
-      setTarget(mount?.target ?? "");
-      setLocalError(null);
-    }
-  }, [mount, open]);
 
   const handleSave = () => {
     const parsed = mountFormSchema.safeParse({ source, target, type });
