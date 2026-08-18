@@ -1,4 +1,5 @@
 import { pipeline } from "node:stream/promises";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { execArgv, execStream, quoteArg } from "@noddle/ssh-executor";
@@ -281,7 +282,7 @@ const RESTORE_SPECS: Record<DatabaseEngine, RestoreSpec["apply"]> = {
   redis: async ({ body, buildClient, database, managerDocker }) => {
     const serviceName = database.swarmName;
     await scaleServiceAndWait(managerDocker, serviceName, 0);
-    await new Promise((r) => setTimeout(r, SETTLE_MS));
+    await sleep(SETTLE_MS);
     await restoreRedis(buildClient, { body, volume: serviceName });
     await scaleServiceAndWait(managerDocker, serviceName, database.replicas);
   },

@@ -9,6 +9,7 @@
 //
 //   DATABASE_URL=… REDIS_URL=… node apps/worker/src/verify/verify-queue.ts
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabase } from "@noddle/db";
 import {
@@ -115,7 +116,7 @@ try {
         break;
       }
     }
-    await new Promise((r) => setTimeout(r, 2000));
+    await sleep(2000);
   }
 
   if (finalStatus) {

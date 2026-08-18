@@ -1,6 +1,7 @@
 // tier: vm
 // node apps/worker/src/verify/verify-metrics.ts
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabase } from "@noddle/db";
 import {
@@ -406,7 +407,7 @@ try {
     );
     probeUp = seen.stdout.trim().length > 0;
     if (!probeUp) {
-      await new Promise((r) => setTimeout(r, 1000));
+      await sleep(1000);
     }
   }
   // SETUP fails loudly. Without that, a container that never started yields

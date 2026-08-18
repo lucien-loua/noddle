@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
   ENGINE_SPECS,
@@ -617,7 +619,7 @@ export async function rebuildDatabase(
               volumeGone = true;
               break;
             }
-            await new Promise((r) => setTimeout(r, 1000));
+            await sleep(1000);
           }
           if (!volumeGone) {
             throw new Error(

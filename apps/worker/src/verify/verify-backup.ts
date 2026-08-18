@@ -1,6 +1,7 @@
 // tier: vm
 // node apps/worker/src/verify/verify-backup.ts
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import {
   backupObjectKey,
@@ -320,7 +321,7 @@ try {
   // lands squarely inside. Killing later amounted to testing an already-finished
   // dump.
   const killer = (async () => {
-    await new Promise((r) => setTimeout(r, 900));
+    await sleep(900);
     const k = await connect({
       host: TARGET.host,
       privateKey,

@@ -14,6 +14,7 @@ import { randomBytes } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { createDatabase } from "@noddle/db";
 import {
@@ -203,7 +204,7 @@ try {
 
   while (Date.now() < deadline && !reverted) {
     // biome-ignore lint/performance/noAwaitInLoops: intentional polling
-    await new Promise((r) => setTimeout(r, 20_000));
+    await sleep(20_000);
     const result = await sweepWatch(ctx, route);
     if (result.reverted.length > 0) {
       reverted = true;
@@ -255,7 +256,7 @@ try {
         break;
       }
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await sleep(3000);
   }
   if (body === "SAINE") {
     ok("the service serves the healthy version again — the loop is over");

@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import type { TraefikLabels } from "@noddle/proxy-config";
 import {
   MONITOR_SECONDS,
@@ -128,7 +130,7 @@ export async function waitForRunningTask(
     }
     // The restart policy retries: do not exit on the first failure, let the
     // deadline run. A service that never converges will time out.
-    await new Promise((r) => setTimeout(r, 2000));
+    await sleep(2000);
   }
 
   throw new Error(
@@ -293,7 +295,7 @@ export async function readUpdateState(
       return last;
     }
 
-    await new Promise((r) => setTimeout(r, poll));
+    await sleep(poll);
   }
 
   return last;
@@ -388,7 +390,7 @@ export async function scaleServiceAndWait(
       if (alive.length === 0) {
         return;
       }
-      await new Promise((r) => setTimeout(r, 1000));
+      await sleep(1000);
     }
     throw new Error(`service ${serviceName} did not scale down to 0 replicas`);
   }

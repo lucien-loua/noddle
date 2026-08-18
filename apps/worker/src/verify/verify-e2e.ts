@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
@@ -243,7 +244,7 @@ try {
       body = (await res.text()).trim();
       break;
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await sleep(3000);
   }
 
   if (body.includes("e2e")) {

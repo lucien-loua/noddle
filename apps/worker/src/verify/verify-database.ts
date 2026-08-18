@@ -1,6 +1,7 @@
 // tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-database.ts
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
@@ -97,7 +98,7 @@ try {
       if (res.code === 0 || res.stderr.includes("no such volume")) {
         break;
       }
-      await new Promise((r) => setTimeout(r, 1500));
+      await sleep(1500);
     }
   }
 

@@ -70,7 +70,9 @@ export function ChangeDatabasePasswordDialog({
       const deadline = Date.now() + 90_000;
       while (Date.now() < deadline) {
         // biome-ignore lint/performance/noAwaitInLoops: polling, one request after another
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1500);
+        });
         const current = await getDatabaseCredentials({ data: { databaseId } });
         if (current.password === value.password) {
           return;

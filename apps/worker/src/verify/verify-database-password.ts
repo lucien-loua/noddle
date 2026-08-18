@@ -1,6 +1,7 @@
 // tier: vm
 // DATABASE_URL=… node apps/worker/src/verify/verify-database-password.ts
 import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import {
@@ -151,7 +152,7 @@ try {
       ) {
         break;
       }
-      await new Promise((r) => setTimeout(r, 1500));
+      await sleep(1500);
     }
   }
 
