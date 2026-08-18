@@ -172,7 +172,7 @@ async function purgeBytes(
       }
       // biome-ignore lint/performance/noAwaitInLoops: one manifest at a time, deliberately
       const gone = await deleteManifest(ctx.registry, ref).catch(() => false);
-      deletedAny = deletedAny || gone;
+      deletedAny ||= gone;
     }
     if (deletedAny) {
       await garbageCollect(o.managerClient, o.registryContainer).catch(() => {

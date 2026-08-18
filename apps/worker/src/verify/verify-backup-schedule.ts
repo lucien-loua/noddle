@@ -1,8 +1,6 @@
 // tier: vm
 // node apps/worker/src/verify/verify-backup-schedule.ts
 import { randomBytes } from "node:crypto";
-import { homedir } from "node:os";
-import path from "node:path";
 
 import { backupObjectKey, objectExists } from "@noddle/backup-store";
 import type { BackupDestination } from "@noddle/backup-store";
@@ -39,7 +37,6 @@ import { seedSshKey, verifyCtx } from "#verify-seed";
 const TARGET = devTarget();
 
 const DB_URL = devStack().databaseUrl;
-const KEY = process.env.SSH_KEY ?? path.join(homedir(), ".ssh", "id_ed25519");
 
 const S3_ENDPOINT = devStack().s3.endpoint;
 const S3_KEY = devStack().s3.accessKeyId;

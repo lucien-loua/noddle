@@ -143,7 +143,7 @@ try {
   // PR would stop redeploying it as soon as the installation is full — a
   // preview frozen on an old commit, with not a single message about it.
   {
-    const [, , targetId] = madeIds;
+    const targetId = madeIds.at(2);
     const before = (await livePreviews()).length;
     const r = await ensurePreview({
       commitSha: "1".repeat(40),
