@@ -234,131 +234,83 @@ export function DatabaseSwarmSettingsDialog({
   );
 }
 
-function SectionForm({
-  isPending,
-  onClear,
-  onError,
-  onSave,
-  section,
-  swarmSettings,
-}: {
+interface SectionFormProps {
   isPending: boolean;
   onClear: () => Promise<void>;
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   section: MenuId;
   swarmSettings: DatabaseSwarmSettings | null;
-}) {
-  if (section === "health-check") {
-    return (
-      <HealthCheckForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.healthCheck ?? null}
-      />
-    );
-  }
-  if (section === "restart-policy") {
-    return (
-      <RestartPolicyForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.restartPolicy ?? null}
-      />
-    );
-  }
-  if (section === "placement") {
-    return (
-      <PlacementForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.placement ?? null}
-      />
-    );
-  }
-  if (section === "update-config") {
-    return (
-      <UpdateConfigForm
-        isPending={isPending}
-        kind="update"
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.updateConfig ?? null}
-      />
-    );
-  }
-  if (section === "rollback-config") {
-    return (
-      <UpdateConfigForm
-        isPending={isPending}
-        kind="rollback"
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.rollbackConfig ?? null}
-      />
-    );
-  }
-  if (section === "mode") {
-    return (
-      <ModeForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.mode ?? null}
-      />
-    );
-  }
-  if (section === "network") {
-    return (
-      <NetworkForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.networks ?? null}
-      />
-    );
-  }
-  if (section === "labels") {
-    return (
-      <LabelsForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.labels ?? null}
-      />
-    );
-  }
-  if (section === "stop-grace-period") {
-    return (
-      <StopGraceForm
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        onSave={onSave}
-        value={swarmSettings?.stopGracePeriod ?? null}
-      />
-    );
-  }
-  return (
+}
+
+/**
+ * Which form each menu entry opens. A table, not a chain of ten `if`s: every
+ * branch passed the same five props and differed only in the component and
+ * the slice of settings it reads.
+ */
+const SECTION_FORMS: Record<
+  MenuId,
+  (props: SectionFormProps) => React.ReactNode
+> = {
+  "endpoint-spec": (p) => (
     <EndpointForm
-      isPending={isPending}
-      onClear={onClear}
-      onError={onError}
-      onSave={onSave}
-      value={swarmSettings?.endpointSpec ?? null}
+      {...shared(p)}
+      value={p.swarmSettings?.endpointSpec ?? null}
     />
-  );
+  ),
+  "health-check": (p) => (
+    <HealthCheckForm
+      {...shared(p)}
+      value={p.swarmSettings?.healthCheck ?? null}
+    />
+  ),
+  labels: (p) => (
+    <LabelsForm {...shared(p)} value={p.swarmSettings?.labels ?? null} />
+  ),
+  mode: (p) => (
+    <ModeForm {...shared(p)} value={p.swarmSettings?.mode ?? null} />
+  ),
+  network: (p) => (
+    <NetworkForm {...shared(p)} value={p.swarmSettings?.networks ?? null} />
+  ),
+  placement: (p) => (
+    <PlacementForm {...shared(p)} value={p.swarmSettings?.placement ?? null} />
+  ),
+  "restart-policy": (p) => (
+    <RestartPolicyForm
+      {...shared(p)}
+      value={p.swarmSettings?.restartPolicy ?? null}
+    />
+  ),
+  "rollback-config": (p) => (
+    <UpdateConfigForm
+      {...shared(p)}
+      kind="rollback"
+      value={p.swarmSettings?.rollbackConfig ?? null}
+    />
+  ),
+  "stop-grace-period": (p) => (
+    <StopGraceForm
+      {...shared(p)}
+      value={p.swarmSettings?.stopGracePeriod ?? null}
+    />
+  ),
+  "update-config": (p) => (
+    <UpdateConfigForm
+      {...shared(p)}
+      kind="update"
+      value={p.swarmSettings?.updateConfig ?? null}
+    />
+  ),
+};
+
+/** The four props every section form takes, unchanged. */
+function shared({ isPending, onClear, onError, onSave }: SectionFormProps) {
+  return { isPending, onClear, onError, onSave };
+}
+
+function SectionForm(props: SectionFormProps) {
+  return SECTION_FORMS[props.section](props);
 }
 
 function FormActions({
