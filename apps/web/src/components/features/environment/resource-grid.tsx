@@ -173,6 +173,14 @@ interface ResourceSnapshot {
  * keeps it above the card's stretched link, which would otherwise swallow
  * the click and open the detail page instead of the site.
  */
+/** What the viewer's role allows on a resource card. */
+interface GridPermissions {
+  delete: boolean;
+  deploy: boolean;
+  move: boolean;
+  operateDatabase: boolean;
+}
+
 function ResourceAddress({ item }: { item: GridItem }) {
   if (item.engine) {
     return (
@@ -348,19 +356,25 @@ function GridEmpty({ filtered }: { filtered: boolean }) {
   );
 }
 
-export function ResourceGrid({
-  environmentId,
-  groups,
-  initialScope,
-  projectId,
-  role,
-}: {
+/**
+ * Everything the grid DOES: the polling scope query, the settle bookkeeping,
+ * selection, and the lifecycle/move/delete handlers. Kept apart so the
+ * component below is only the layout — the two change for unrelated reasons.
+ */
+interface GridProps {
   environmentId: string;
   groups: ProjectGroup[];
   initialScope: Scope;
   projectId: string;
   role: RoleName | null;
-}) {
+}
+
+function useResourceGridState({
+  environmentId,
+  initialScope,
+  projectId,
+  role,
+}: GridProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   // Move still needs the router: the environment selector counts and the
@@ -435,6 +449,14 @@ export function ResourceGrid({
   // nothing requires them to always go together — a future role could
   // operate applications without touching databases.
   const canOperateDatabase = useCan(role, "database", "operate");
+  // They come from one role and always travel together; four separate booleans
+  // let a call site pass three of them.
+  const can: GridPermissions = {
+    delete: canDelete,
+    deploy: canDeploy,
+    move: canMove,
+    operateDatabase: canOperateDatabase,
+  };
 
   const items: GridItem[] = useMemo(
     () => [
@@ -718,6 +740,91 @@ export function ResourceGrid({
       (i.kind === "database" && canOperateDatabase)
   );
 
+  return {
+    awaitingSettle,
+    bulkDelete,
+    bulkDeleteOpen,
+    bulkDeploy,
+    bulkLifecycle,
+    can,
+    canBulkDeploy,
+    canBulkOperate,
+    clearSelection,
+    closeMove,
+    handleBulkDelete,
+    handleBulkDeploy,
+    handleBulkStart,
+    handleBulkStop,
+    handleMoved,
+    handleSearchChange,
+    handleServerFilterChange,
+    handleSortChange,
+    handleTypeFilterChange,
+    hasSelection,
+    items,
+    markSettling,
+    moveTarget,
+    openBulkDelete,
+    openItem,
+    refreshScope,
+    requestMove,
+    search,
+    selected,
+    selectedItems,
+    serverFilter,
+    servers,
+    setBulkDeleteOpen,
+    sort,
+    toggleSelected,
+    typeFilter,
+    unmarkSettling,
+    visible,
+  };
+}
+
+export function ResourceGrid(props: GridProps) {
+  const { groups } = props;
+  const {
+    awaitingSettle,
+    bulkDelete,
+    bulkDeleteOpen,
+    bulkDeploy,
+    bulkLifecycle,
+    can,
+    canBulkDeploy,
+    canBulkOperate,
+    clearSelection,
+    closeMove,
+    handleBulkDelete,
+    handleBulkDeploy,
+    handleBulkStart,
+    handleBulkStop,
+    handleMoved,
+    handleSearchChange,
+    handleServerFilterChange,
+    handleSortChange,
+    handleTypeFilterChange,
+    hasSelection,
+    items,
+    markSettling,
+    moveTarget,
+    openBulkDelete,
+    openItem,
+    refreshScope,
+    requestMove,
+    search,
+    selected,
+    selectedItems,
+    serverFilter,
+    servers,
+    setBulkDeleteOpen,
+    sort,
+    toggleSelected,
+    typeFilter,
+    unmarkSettling,
+    visible,
+  } = useResourceGridState(props);
+
   return (
     // `h-full` and not `flex-1`: the `AppShell` container does provide a
     // height, but it isn't itself a flex column — a `flex-1` placed here
@@ -841,7 +948,7 @@ export function ResourceGrid({
                 </Button>
               </>
             ) : null}
-            {canDelete ? (
+            {can.delete ? (
               <Button onClick={openBulkDelete} size="sm" variant="destructive">
                 <TrashIcon data-icon="inline-start" />
                 Delete
@@ -870,10 +977,7 @@ export function ResourceGrid({
         <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,clamp(16rem,28vw,22rem)),1fr))] gap-3">
           {visible.map((item) => (
             <ResourceGridCard
-              canDelete={canDelete}
-              canDeploy={canDeploy}
-              canMove={canMove}
-              canOperateDatabase={canOperateDatabase}
+              can={can}
               item={item}
               key={itemKey(item)}
               onMove={item.kind === "service" ? requestMove : undefined}
@@ -937,10 +1041,7 @@ const KIND_ICON: Record<Kind, typeof CodeIcon> = {
 };
 
 function ResourceGridCard({
-  canDelete,
-  canDeploy,
-  canMove,
-  canOperateDatabase,
+  can,
   item,
   onMove,
   onOpen,
@@ -951,10 +1052,7 @@ function ResourceGridCard({
   refreshScope,
   selected,
 }: {
-  canDelete: boolean;
-  canDeploy: boolean;
-  canMove: boolean;
-  canOperateDatabase: boolean;
+  can: GridPermissions;
   item: GridItem;
   onMove: ((item: GridItem) => void) | undefined;
   onOpen: (item: GridItem) => void;
@@ -982,7 +1080,8 @@ function ResourceGridCard({
     item.status !== "deploying" &&
     item.status !== "deleting";
   const inFlight = pendingAction !== null || TRANSIENT_STATUS.has(item.status);
-  const mayOperate = item.kind === "database" ? canOperateDatabase : canDeploy;
+  const mayOperate =
+    item.kind === "database" ? can.operateDatabase : can.deploy;
   const lifecycleAvailable = hasLifecycle(item.kind) && mayOperate && settled;
 
   const handleOpen = useCallback(() => onOpen(item), [item, onOpen]);
@@ -1037,9 +1136,7 @@ function ResourceGridCard({
                 onCheckedChange={handleToggleSelect}
               />
               <ResourceCardMenu
-                canDelete={canDelete}
-                canDeploy={canDeploy}
-                canMove={Boolean(onMove) && canMove}
+                can={can}
                 item={item}
                 lifecycleAvailable={lifecycleAvailable}
                 onDelete={openDelete}
@@ -1112,9 +1209,7 @@ function ResourceGridCard({
 }
 
 function ResourceCardMenu({
-  canDelete,
-  canDeploy,
-  canMove,
+  can,
   item,
   lifecycleAvailable,
   onDelete,
@@ -1125,9 +1220,7 @@ function ResourceCardMenu({
   refreshScope,
   stopped,
 }: {
-  canDelete: boolean;
-  canDeploy: boolean;
-  canMove: boolean;
+  can: GridPermissions;
   item: GridItem;
   lifecycleAvailable: boolean;
   onDelete: () => void;
@@ -1199,7 +1292,7 @@ function ResourceCardMenu({
         }
       />
       <DropdownMenuContent align="end">
-        {hasDeploy(item.kind) && canDeploy ? (
+        {hasDeploy(item.kind) && can.deploy ? (
           <DropdownMenuItem disabled={deploy.isPending} onClick={handleDeploy}>
             <RocketLaunchIcon />
             Deploy
@@ -1217,13 +1310,13 @@ function ResourceCardMenu({
             Restart
           </DropdownMenuItem>
         ) : null}
-        {onMove && canMove ? (
+        {onMove && can.move ? (
           <DropdownMenuItem onClick={onMove}>
             <DotsThreeIcon weight="regular" />
             Move to…
           </DropdownMenuItem>
         ) : null}
-        {canDelete ? (
+        {can.delete ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onDelete} variant="destructive">

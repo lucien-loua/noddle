@@ -127,7 +127,12 @@ interface Props {
   servers: ServerView[];
 }
 
-export function ConnectDatabaseDialog({
+/**
+ * The questionnaire's state machine: step, engine choice, generated
+ * credentials, and the submit that creates the database. Separated from the
+ * markup so each reads on its own.
+ */
+function useConnectDatabase({
   environmentName: lockedEnvironment,
   onOpenChange,
   open,
@@ -137,7 +142,7 @@ export function ConnectDatabaseDialog({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // The NAME stays a `useState` mirrored onto `QuestionnaireInput`: it's THE
   // answer for the "details" step, and an `f.FieldText` wouldn't carry it —
@@ -200,7 +205,7 @@ export function ConnectDatabaseDialog({
       form.reset();
       setName("");
       setStep("engine");
-      setError(null);
+      setSubmitError(null);
       // A FRESH password on every open: `form.reset()` reverts to
       // `defaultValues`, which locks in the password drawn on the first
       // render — reusing it would give two databases sharing their secret,
@@ -221,14 +226,14 @@ export function ConnectDatabaseDialog({
         typeof picked !== "string" ||
         !(DATABASE_ENGINES as readonly string[]).includes(picked)
       ) {
-        setError("Pick a database engine first.");
+        setSubmitError("Pick a database engine first.");
         return;
       }
       const chosen = picked as DatabaseEngine;
       const { values } = form.state;
 
       setPending(true);
-      setError(null);
+      setSubmitError(null);
       try {
         await connectDatabase({
           data: {
@@ -256,7 +261,7 @@ export function ConnectDatabaseDialog({
         await queryClient.invalidateQueries();
         await router.invalidate();
       } catch (error) {
-        setError(errorMessage(error, "could not create the database"));
+        setSubmitError(errorMessage(error, "could not create the database"));
       } finally {
         setPending(false);
       }
@@ -266,6 +271,43 @@ export function ConnectDatabaseDialog({
 
   const noServers = servers.length === 0;
   const lockedScope = Boolean(lockedProject && lockedEnvironment);
+
+  return {
+    engine,
+    submitError,
+    form,
+    handleEngineChange,
+    handleItemChange,
+    handleNameChange,
+    handleSubmit,
+    hasNamedDatabase,
+    lockedScope,
+    name,
+    noServers,
+    pending,
+    regenerate,
+    step,
+  };
+}
+
+export function ConnectDatabaseDialog(props: Props) {
+  const { onOpenChange, open, servers } = props;
+  const {
+    engine,
+    submitError,
+    form,
+    handleEngineChange,
+    handleItemChange,
+    handleNameChange,
+    handleSubmit,
+    hasNamedDatabase,
+    lockedScope,
+    name,
+    noServers,
+    pending,
+    regenerate,
+    step,
+  } = useConnectDatabase(props);
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -438,9 +480,9 @@ export function ConnectDatabaseDialog({
                 the scroll position: on this nine-field form, the alert used
                 to end up below the fold, at the same spot as the question
                 it answers. */}
-            {error ? (
+            {submitError ? (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             ) : null}
 

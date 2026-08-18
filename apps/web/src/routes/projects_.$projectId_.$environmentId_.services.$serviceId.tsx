@@ -118,7 +118,13 @@ export const Route = createFileRoute(
   },
 });
 
-function ServiceDetail() {
+/**
+ * Everything the page DOES: permissions, the two polling queries, the
+ * deploy and rollback mutations, and the handlers that reconcile the cache
+ * afterwards. Split out so the component below is only what the page LOOKS
+ * like — the two changed for unrelated reasons and read as one block.
+ */
+function useServiceDetail() {
   const { email, role, service: initialService } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -305,6 +311,82 @@ function ServiceDetail() {
       title: service.name,
     });
   }, [openTerminal, service.id, service.name]);
+
+  return {
+    actionError,
+    awaiting,
+    canCreateVolumeBackup,
+    canDeploy,
+    canManageWebhook,
+    canReadEnvVar,
+    canRestoreVolumeBackup,
+    canRollback,
+    canShell,
+    currentDeploymentId,
+    deploy,
+    deployments,
+    email,
+    focused,
+    handleDeleted,
+    handleDeploy,
+    handleEnd,
+    handleFocus,
+    handleGenerateWebhook,
+    handleGetWebhook,
+    handleLifecycleDone,
+    handleLogsOpenChange,
+    handleOpenTerminal,
+    handleRollback,
+    handleTabChange,
+    known,
+    role,
+    rollback,
+    runningOn,
+    service,
+    setActionError,
+    shown,
+    tab,
+    terminal,
+  };
+}
+
+function ServiceDetail() {
+  const {
+    actionError,
+    awaiting,
+    canCreateVolumeBackup,
+    canDeploy,
+    canManageWebhook,
+    canReadEnvVar,
+    canRestoreVolumeBackup,
+    canRollback,
+    canShell,
+    currentDeploymentId,
+    deploy,
+    deployments,
+    email,
+    focused,
+    handleDeleted,
+    handleDeploy,
+    handleEnd,
+    handleFocus,
+    handleGenerateWebhook,
+    handleGetWebhook,
+    handleLifecycleDone,
+    handleLogsOpenChange,
+    handleOpenTerminal,
+    handleRollback,
+    handleTabChange,
+    known,
+    role,
+    rollback,
+    runningOn,
+    service,
+    setActionError,
+    shown,
+    tab,
+    terminal,
+  } = useServiceDetail();
 
   return (
     <AppShell
