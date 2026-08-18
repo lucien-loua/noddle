@@ -238,6 +238,36 @@ function buildEndpointSpec(opts: {
   return endpointSpec;
 }
 
+/**
+ * The four fields a user's raw Swarm override may replace, each resolved the
+ * same way: their value if given, ours otherwise.
+ *
+ * Split out because they are the whole reason `databaseServiceSpec` reads as
+ * branchy — four defaults in a row, none of them related to the others.
+ */
+function resolveSwarmOverrides(opts: {
+  networkName: string;
+  placementNodeId?: string;
+  replicas: number;
+  swarmSettings: DatabaseSwarmSettings | null;
+}) {
+  const { networkName, placementNodeId, replicas, swarmSettings } = opts;
+  return {
+    labels: { "traefik.enable": "false", ...swarmSettings?.labels },
+    mode:
+      swarmSettings?.mode ?? ({ Replicated: { Replicas: replicas } } as const),
+    networks:
+      swarmSettings?.networks && swarmSettings.networks.length > 0
+        ? swarmSettings.networks
+        : [{ Target: networkName }],
+    placement:
+      swarmSettings?.placement ??
+      (placementNodeId
+        ? { Constraints: [`node.id==${placementNodeId}`] }
+        : undefined),
+  };
+}
+
 function databaseServiceSpec(opts: {
   databaseName: string | null;
   /** The port PUBLISHED on the host. `null` = reachable from the overlay only. */
@@ -308,24 +338,12 @@ function databaseServiceSpec(opts: {
     swarmSettings?.healthCheck
   );
 
-  const placement =
-    swarmSettings?.placement ??
-    (placementNodeId
-      ? { Constraints: [`node.id==${placementNodeId}`] }
-      : undefined);
-
-  const networks =
-    swarmSettings?.networks && swarmSettings.networks.length > 0
-      ? swarmSettings.networks
-      : [{ Target: networkName }];
-
-  const mode =
-    swarmSettings?.mode ?? ({ Replicated: { Replicas: replicas } } as const);
-
-  const labels = {
-    "traefik.enable": "false",
-    ...swarmSettings?.labels,
-  };
+  const { labels, mode, networks, placement } = resolveSwarmOverrides({
+    networkName,
+    placementNodeId,
+    replicas,
+    swarmSettings,
+  });
 
   const mounts = [
     { Source: name, Target: volumePath, Type: "volume" as const },
@@ -464,18 +482,19 @@ export async function provisionDatabase(
         // Placement from Advanced → Swarm Settings overrides this when set.
         const placementNodeId =
           database.server.swarmNodeId ?? (await getSwarmNodeId(buildDocker));
-        await ensureOverlayNetwork(managerDocker, route.networkName);
-
-        const existing = await findServiceByName(managerDocker, name);
-        // Find-or-create, so calling it on an existing database replaces
-        // nothing: a database's password never changes after creation.
-        // Cluster-wide like the service that will mount it, so never
-        // through `buildDocker` when that differs from the manager.
-        const secretId = await ensureSecret(
-          managerDocker,
-          `${name}-password`,
-          password
-        );
+        // Three preconditions, none of which reads the others: the network,
+        // whether the service already exists, and the secret. In turn they
+        // were three round trips to the manager before anything could start.
+        //
+        // `ensureSecret` is find-or-create, so calling it on an existing
+        // database replaces nothing: a password never changes after creation.
+        // Cluster-wide like the service that will mount it, so never through
+        // `buildDocker` when that differs from the manager.
+        const [, existing, secretId] = await Promise.all([
+          ensureOverlayNetwork(managerDocker, route.networkName),
+          findServiceByName(managerDocker, name),
+          ensureSecret(managerDocker, `${name}-password`, password),
+        ]);
         const desired = databaseServiceSpec({
           databaseName: database.databaseName,
           externalPort: database.externalPort,
