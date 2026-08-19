@@ -33,7 +33,6 @@ const FlowEdge = memo(
         style={{
           stroke: selected ? "var(--primary)" : "var(--border)",
           strokeWidth: 3,
-          transition: "stroke 0.2s ease",
         }}
       />
     );

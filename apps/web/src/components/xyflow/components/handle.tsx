@@ -13,7 +13,7 @@ export function Handle({
     <HandlePrimitive
       isConnectable={false}
       className={cn(
-        "border! h-5! w-3! rounded-sm! border-border! bg-clip-border! bg-secondary! transition",
+        "border! h-5! w-3! -z-1 rounded-xs! border-border! bg-clip-border! bg-secondary!",
         className
       )}
       {...props}
