@@ -1,9 +1,4 @@
-import {
-  decryptSecret,
-  encryptSecret,
-  isRetainedSecret,
-  secretContext,
-} from "@noddle/crypto";
+import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { ENGINE_ENV_PREFIX } from "@noddle/database-spec";
 import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
@@ -68,10 +63,25 @@ export interface EnvVarView {
    *  where it came from. */
   attachedFrom: EnvVarAttachment | null;
   id: string;
+  /**
+   * Stored, no longer chosen on screen.
+   *
+   * It used to drive a per-row "Secret" checkbox whose only effect was
+   * withholding the value from the browser. The table now hides EVERY value
+   * behind a reveal, so the flag has no display job left — it is kept for the
+   * `docker secret` injection it is meant to drive.
+   */
   isSecret: boolean;
   key: string;
-  /** `null` for a secret — never decrypted toward the client. */
-  value: string | null;
+  /**
+   * Decrypted, for a caller holding `envVar: read`.
+   *
+   * That permission is the boundary for "read production secrets", and it
+   * already decides whether this panel appears at all. Withholding the value
+   * on top of it leaves the row unreadable, uncopiable, and editable only by
+   * overwriting it blind.
+   */
+  value: string;
 }
 
 export const getEnvVars = createServerFn({ method: "GET" })
@@ -128,17 +138,14 @@ export const getEnvVars = createServerFn({ method: "GET" })
           id: row.id,
           isSecret: row.isSecret,
           key: row.key,
-          // Non-secret values are encrypted at rest too — a single code path,
-          // so no oversight is possible — but nothing forbids returning them to
-          // an authenticated administrator. It's `isSecret` that decides, not
-          // the storage mode.
-          value: row.isSecret
-            ? null
-            : decryptSecret(
-                row.valueEncrypted,
-                env.appKey,
-                secretContext.envVar(row.id)
-              ),
+          // Every value is encrypted at rest — a single code path, so no
+          // oversight is possible — and every value is returned here. The
+          // permission gates this read, not the storage mode.
+          value: decryptSecret(
+            row.valueEncrypted,
+            env.appKey,
+            secretContext.envVar(row.id)
+          ),
         }));
       },
     })
@@ -190,8 +197,16 @@ async function assertNoReservedKeys(
   }
 }
 
-function isEnvValueRetained(isSecret: boolean, value: string | null): boolean {
-  return isSecret ? isRetainedSecret(value) : value === null;
+/**
+ * `null` means "keep what is stored", and nothing else does.
+ *
+ * It used to depend on `isSecret`, where an EMPTY string also meant keep.
+ * That was necessary while a secret's value never reached the browser, and it
+ * is a trap now that it does: clearing a field would silently keep the old
+ * value.
+ */
+function isEnvValueRetained(value: string | null): boolean {
+  return value === null;
 }
 
 type EnvVarWrite = z.infer<typeof envVarWriteSchema>;
@@ -211,7 +226,7 @@ async function writeEnvVar(
   if (current) {
     const plaintext = incoming.value;
     const flagChanged = current.isSecret !== incoming.isSecret;
-    const valueRetained = isEnvValueRetained(incoming.isSecret, plaintext);
+    const valueRetained = isEnvValueRetained(plaintext);
     if (valueRetained && !flagChanged) {
       return;
     }
@@ -237,7 +252,7 @@ async function writeEnvVar(
   }
 
   const plaintext = incoming.value;
-  if (isEnvValueRetained(incoming.isSecret, plaintext) || plaintext === null) {
+  if (isEnvValueRetained(plaintext) || plaintext === null) {
     throw new Error(`${incoming.key} is a new variable: it needs a value`);
   }
   const id = crypto.randomUUID();

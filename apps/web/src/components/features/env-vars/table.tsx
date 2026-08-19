@@ -1,4 +1,12 @@
-import { KeyIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import {
+  CheckIcon,
+  CopyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  KeyIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
@@ -9,10 +17,11 @@ import {
 import type { ChangeEvent, ClipboardEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 
+import { useCopyFeedback } from "@/components/copyable-value";
 import { DatabaseMark } from "@/components/features/database/database-mark";
+import { useReveal } from "@/components/features/database/reveal-secret";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Frame,
   FrameFooter,
@@ -21,6 +30,12 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -38,6 +53,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { EnvVarAttachment, EnvVarView } from "@/server/env-vars";
 
+import { EnvImportDialog } from "./import-dialog";
 import { parseEnvPaste, shouldInterceptEnvPaste } from "./parse-env-paste";
 import type { EnvPair } from "./parse-env-paste";
 
@@ -81,18 +97,46 @@ type UpdateFn = (uid: string, patch: Partial<DraftVar>) => void;
 type RemoveFn = (uid: string) => void;
 type PasteFn = (uid: string, pairs: EnvPair[]) => void;
 
-const MASK = "••••••••";
-
 const MARKS: Record<ChangeKind, string> = {
   add: "+",
   change: "~",
   remove: "−",
 };
 
+/**
+ * Merges an imported file into the draft: a key already in the table keeps
+ * its place and takes the new value, the rest lands above the trailing blank
+ * row. Replacing the table wholesale would silently drop variables the file
+ * does not mention.
+ */
+function mergeEnvPairs(rows: DraftVar[], pairs: EnvPair[]): DraftVar[] {
+  let next = rows;
+  for (const pair of pairs) {
+    const at = next.findIndex((row) => row.key === pair.key);
+    if (at === -1) {
+      next = [
+        ...next.filter((row) => !isBlank(row)),
+        {
+          attachedFrom: null,
+          isSecret: true,
+          key: pair.key,
+          uid: crypto.randomUUID(),
+          value: pair.value,
+        },
+      ];
+      continue;
+    }
+    next = next.map((row, i) =>
+      i === at ? { ...row, value: pair.value } : row
+    );
+  }
+  return ensureBlank(next);
+}
+
 function blankRow(): DraftVar {
   return {
     attachedFrom: null,
-    isSecret: false,
+    isSecret: true,
     key: "",
     uid: crypto.randomUUID(),
     value: "",
@@ -166,7 +210,7 @@ function applyEnvPaste(
     }
     next.splice(insertAt, 0, {
       attachedFrom: null,
-      isSecret: false,
+      isSecret: true,
       key: pair.key,
       uid: crypto.randomUUID(),
       value: pair.value,
@@ -233,10 +277,15 @@ function diff(saved: EnvVarView[], draft: DraftVar[]): Change[] {
   return changes;
 }
 
-function display(value: string | null, isSecret: boolean): string {
-  if (isSecret) {
-    return MASK;
-  }
+/**
+ * The diff shows values, masked no longer.
+ *
+ * The mask followed a per-row flag that no longer exists, and a diff of
+ * `•••••• → ••••••` cannot do the one job it has: letting you see what you
+ * are about to write before you write it. This appears only after clicking
+ * Save, on values the same table reveals in one click.
+ */
+function display(value: string | null): string {
   return value === null || value === "" ? "(empty)" : value;
 }
 
@@ -342,33 +391,50 @@ function ValueCell({
     [onPasteEnv, row.key, row.uid]
   );
 
-  return (
-    <Input
-      aria-label="Value"
-      className="h-8 font-mono text-xs"
-      onChange={handleChange}
-      onPaste={handlePaste}
-      placeholder={row.value === null ? MASK : "value"}
-      spellCheck={false}
-      type={row.isSecret ? "password" : "text"}
-      value={row.value ?? ""}
-    />
-  );
-}
-
-function SecretCell({ onUpdate, row }: { onUpdate: UpdateFn; row: DraftVar }) {
-  const handleChange = useCallback(
-    (checked: boolean | "indeterminate") =>
-      onUpdate(row.uid, { isSecret: checked === true }),
-    [onUpdate, row.uid]
-  );
+  const { revealed, toggle } = useReveal();
+  const { copied, handleCopy } = useCopyFeedback(row.value ?? "");
 
   return (
-    <Checkbox
-      aria-label="Mark as secret"
-      checked={row.isSecret}
-      onCheckedChange={handleChange}
-    />
+    <InputGroup className="h-8">
+      <InputGroupInput
+        aria-label="Value"
+        className="font-mono text-xs"
+        onChange={handleChange}
+        onPaste={handlePaste}
+        placeholder="value"
+        spellCheck={false}
+        // Hidden by DEFAULT, every row, not only the ones someone thought to
+        // tick. A production table read over a shoulder or on a shared screen
+        // does not get to depend on that.
+        type={revealed ? "text" : "password"}
+        value={row.value ?? ""}
+      />
+      <InputGroupAddon align="inline-end">
+        <InputGroupButton
+          aria-label={revealed ? "Hide the value" : "Reveal the value"}
+          onClick={toggle}
+          size="icon-xs"
+        >
+          {revealed ? (
+            <EyeSlashIcon weight="regular" />
+          ) : (
+            <EyeIcon weight="regular" />
+          )}
+        </InputGroupButton>
+        <InputGroupButton
+          aria-label={`Copy ${row.key || "the value"}`}
+          disabled={!row.value}
+          onClick={handleCopy}
+          size="icon-xs"
+        >
+          {copied ? (
+            <CheckIcon weight="regular" />
+          ) : (
+            <CopyIcon weight="regular" />
+          )}
+        </InputGroupButton>
+      </InputGroupAddon>
+    </InputGroup>
   );
 }
 
@@ -409,6 +475,11 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
 
   const addRow = useCallback(() => {
     setDraft((rows) => [...rows, blankRow()]);
+    setConfirming(false);
+  }, []);
+
+  const importEnv = useCallback((pairs: EnvPair[]) => {
+    setDraft((rows) => mergeEnvPairs(rows, pairs));
     setConfirming(false);
   }, []);
 
@@ -460,12 +531,6 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
         ),
         header: "Value",
       }),
-      columnHelper.accessor("isSecret", {
-        cell: (info) => (
-          <SecretCell onUpdate={update} row={info.row.original} />
-        ),
-        header: "Secret",
-      }),
       columnHelper.display({
         cell: (info) => (
           <RemoveCell onRemove={remove} row={info.row.original} />
@@ -487,10 +552,13 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
     <Frame variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Environment variables</FrameTitle>
-        <Button onClick={addRow} size="sm" variant="outline">
-          <PlusIcon data-icon="inline-start" weight="regular" />
-          Add variable
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <EnvImportDialog onImport={importEnv} />
+          <Button onClick={addRow} size="sm" variant="outline">
+            <PlusIcon data-icon="inline-start" weight="regular" />
+            Add variable
+          </Button>
+        </div>
       </FrameHeader>
       <FramePanel className="p-0">
         <Table>
@@ -565,12 +633,11 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
                         )}
                       >
                         {change.kind === "change"
-                          ? `${display(change.before, change.isSecret)} → ${display(change.after, change.isSecret)}`
+                          ? `${display(change.before)} → ${display(change.after)}`
                           : display(
                               change.kind === "remove"
                                 ? change.before
-                                : change.after,
-                              change.isSecret
+                                : change.after
                             )}
                       </span>
                     </span>
