@@ -17,14 +17,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
@@ -75,7 +67,7 @@ export function DatabaseAttachments({
   const rows = dependents.data ?? [];
 
   return (
-    <Frame className="mb-3" variant="ghost">
+    <Frame className="mb-3" stacked variant="ghost">
       <FrameHeader className="flex-row items-start justify-between gap-3">
         <div className="flex flex-col gap-(--frame-panel-header-gap)">
           <FrameTitle>Attached services</FrameTitle>
@@ -93,34 +85,34 @@ export function DatabaseAttachments({
           />
         ) : null}
       </FrameHeader>
-      <FramePanel>
-        {dependents.isPending ? <Spinner /> : null}
-        {!dependents.isPending && rows.length === 0 ? (
+      {dependents.isPending ? (
+        <FramePanel>
+          <Spinner />
+        </FramePanel>
+      ) : null}
+      {!dependents.isPending && rows.length === 0 ? (
+        <FramePanel>
           <p className="text-muted-foreground text-sm">
             No service uses this database yet.
           </p>
-        ) : null}
-        {rows.length > 0 ? (
-          <ItemGroup className="gap-2">
-            {rows.map((row) => (
-              <DependentRow
-                canDetach={canAttach}
-                detaching={
-                  detach.isPending && detach.variables === row.serviceId
-                }
-                key={row.serviceId}
-                onDetach={detach.mutate}
-                row={row}
-              />
-            ))}
-          </ItemGroup>
-        ) : null}
-        {error ? (
-          <Alert className="mt-3" variant="destructive">
+        </FramePanel>
+      ) : null}
+      {rows.map((row) => (
+        <DependentRow
+          canDetach={canAttach}
+          detaching={detach.isPending && detach.variables === row.serviceId}
+          key={row.serviceId}
+          onDetach={detach.mutate}
+          row={row}
+        />
+      ))}
+      {error ? (
+        <FramePanel>
+          <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        ) : null}
-      </FramePanel>
+        </FramePanel>
+      ) : null}
     </Frame>
   );
 }
@@ -142,20 +134,17 @@ function DependentRow({
   );
 
   return (
-    <Item variant="outline">
-      <ItemContent>
-        <ItemTitle>{row.serviceName}</ItemTitle>
-        <ItemDescription>
-          {row.envVarKey ? (
-            <code>{row.envVarKey}</code>
-          ) : (
-            // The variable was deleted by hand; the declared link outlived it.
-            "variable removed"
-          )}
-        </ItemDescription>
-      </ItemContent>
-      {canDetach ? (
-        <ItemActions>
+    <FramePanel>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate font-semibold text-sm">{row.serviceName}</h2>
+          <p className="truncate font-mono text-muted-foreground text-xs">
+            {/* The variable was deleted by hand; the declared link outlived
+                it, so the row says so instead of inventing a key. */}
+            {row.envVarKey ?? "variable removed"}
+          </p>
+        </div>
+        {canDetach ? (
           <Button
             disabled={detaching}
             onClick={handleDetach}
@@ -165,8 +154,8 @@ function DependentRow({
             {detaching ? <Spinner data-icon="inline-start" /> : null}
             Detach
           </Button>
-        </ItemActions>
-      ) : null}
-    </Item>
+        ) : null}
+      </div>
+    </FramePanel>
   );
 }

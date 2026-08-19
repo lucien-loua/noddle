@@ -1,4 +1,5 @@
-import { DatabaseIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { KeyIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   flexRender,
@@ -8,6 +9,7 @@ import {
 import type { ChangeEvent, ClipboardEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 
+import { DatabaseMark } from "@/components/features/database/database-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,16 +30,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { EnvVarView } from "@/server/env-vars";
+import type { EnvVarAttachment, EnvVarView } from "@/server/env-vars";
 
 import { parseEnvPaste, shouldInterceptEnvPaste } from "./parse-env-paste";
 import type { EnvPair } from "./parse-env-paste";
 
 export interface DraftVar {
-  /** The database this variable came from, when attaching wrote it. Carried
-   *  into the draft so the badge survives editing the row. */
-  attachedFrom: string | null;
+  /** The database this variable came from, when attaching wrote it.
+   *  Carried into the draft so the linked mark survives editing the row. */
+  attachedFrom: EnvVarAttachment | null;
   isSecret: boolean;
   key: string;
   /** Local identifier, stable throughout editing. */
@@ -260,31 +267,6 @@ function KeyCell({
     [onPasteEnv, row.key, row.uid]
   );
 
-  if (row.attachedFrom) {
-    return (
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label="Variable name"
-          className="h-8 font-mono text-xs"
-          onChange={handleChange}
-          onPaste={handlePaste}
-          placeholder="VARIABLE_NAME"
-          value={row.key}
-        />
-        {/* Where this value came from. A connection string is not something
-            anyone typed, and without this the row looks hand-written. */}
-        <Badge
-          aria-label={`Written by attaching the database ${row.attachedFrom}`}
-          className="shrink-0 gap-1"
-          variant="outline"
-        >
-          <DatabaseIcon aria-hidden className="size-3" weight="regular" />
-          {row.attachedFrom}
-        </Badge>
-      </div>
-    );
-  }
-
   return (
     <Input
       aria-label="Variable name"
@@ -295,6 +277,41 @@ function KeyCell({
       spellCheck={false}
       value={row.key}
     />
+  );
+}
+
+function LinkedCell({ attachment }: { attachment: EnvVarAttachment | null }) {
+  if (!attachment) {
+    return (
+      <span className="inline-flex size-8 items-center justify-center text-muted-foreground">
+        <KeyIcon aria-hidden className="size-4" weight="regular" />
+        <span className="sr-only">Typed variable</span>
+      </span>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Link
+            aria-label={`Open ${attachment.name}`}
+            className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+            params={{
+              databaseId: attachment.databaseId,
+              environmentId: attachment.environmentId,
+              projectId: attachment.projectId,
+            }}
+            to="/projects/$projectId/$environmentId/databases/$databaseId"
+          />
+        }
+      >
+        <DatabaseMark className="size-4" engine={attachment.engine} size="xs" />
+      </TooltipTrigger>
+      <TooltipContent>
+        Connection string from attaching {attachment.name}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -416,6 +433,13 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        cell: (info) => (
+          <LinkedCell attachment={info.row.original.attachedFrom} />
+        ),
+        header: () => <span className="sr-only">Linked</span>,
+        id: "linked",
+      }),
       columnHelper.accessor("key", {
         cell: (info) => (
           <KeyCell
@@ -474,7 +498,12 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    className={
+                      header.column.id === "linked" ? "w-0 pe-0" : undefined
+                    }
+                    key={header.id}
+                  >
                     {flexRender(
                       header.column.columnDef.header,
                       header.getContext()
@@ -488,7 +517,12 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    className={
+                      cell.column.id === "linked" ? "w-0 pe-0" : undefined
+                    }
+                    key={cell.id}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

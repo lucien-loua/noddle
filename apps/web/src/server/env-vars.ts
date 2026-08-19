@@ -4,6 +4,7 @@ import {
   isRetainedSecret,
   secretContext,
 } from "@noddle/crypto";
+import type { DatabaseEngine } from "@noddle/database-spec";
 import { ENGINE_ENV_PREFIX } from "@noddle/database-spec";
 import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
@@ -52,11 +53,20 @@ function ownedBy(target: EnvVarTarget) {
       );
 }
 
+/** The database that wrote this variable, when attaching created it. */
+export interface EnvVarAttachment {
+  databaseId: string;
+  engine: DatabaseEngine;
+  environmentId: string;
+  name: string;
+  projectId: string;
+}
+
 export interface EnvVarView {
-  /** The database this variable was written by attaching, `null` when a
-   *  person typed it. The value is a connection string nobody composed by
-   *  hand, and the table has no other way to say where it came from. */
-  attachedFrom: string | null;
+  /** `null` when a person typed the row. The value is then a connection
+   *  string nobody composed by hand, and the table has no other way to say
+   *  where it came from. */
+  attachedFrom: EnvVarAttachment | null;
   id: string;
   isSecret: boolean;
   key: string;
@@ -85,15 +95,32 @@ export const getEnvVars = createServerFn({ method: "GET" })
                   serviceDependencies.envVarId,
                   rows.map((row) => row.id)
                 ),
-                with: { dependsOnDatabase: true },
+                with: {
+                  dependsOnDatabase: {
+                    with: { environment: true },
+                  },
+                },
               })
             : [];
         const attached = new Map(
-          edges.flatMap((edge) =>
-            edge.envVarId && edge.dependsOnDatabase
-              ? [[edge.envVarId, edge.dependsOnDatabase.name] as const]
-              : []
-          )
+          edges.flatMap((edge): [string, EnvVarAttachment][] => {
+            const database = edge.dependsOnDatabase;
+            if (!(edge.envVarId && database?.environment)) {
+              return [];
+            }
+            return [
+              [
+                edge.envVarId,
+                {
+                  databaseId: database.id,
+                  engine: database.engine,
+                  environmentId: database.environmentId,
+                  name: database.name,
+                  projectId: database.environment.projectId,
+                },
+              ],
+            ];
+          })
         );
 
         return rows.map((row) => ({
