@@ -53,7 +53,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { EnvVarAttachment, EnvVarView } from "@/server/env-vars";
 
-import { EnvImportDialog } from "./import-dialog";
+import { EnvImportButton } from "./import-button";
 import { parseEnvPaste, shouldInterceptEnvPaste } from "./parse-env-paste";
 import type { EnvPair } from "./parse-env-paste";
 
@@ -553,7 +553,7 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <FrameTitle>Environment variables</FrameTitle>
         <div className="flex shrink-0 items-center gap-2">
-          <EnvImportDialog onImport={importEnv} />
+          <EnvImportButton onImport={importEnv} />
           <Button onClick={addRow} size="sm" variant="outline">
             <PlusIcon data-icon="inline-start" weight="regular" />
             Add variable
