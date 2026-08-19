@@ -2,7 +2,7 @@ import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
 import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
@@ -42,6 +42,7 @@ export const attachDatabase = createServerFn({ method: "POST" })
           ),
         });
 
+        const envVarId = existing?.id ?? crypto.randomUUID();
         if (existing) {
           await db
             .update(envVars)
@@ -56,31 +57,42 @@ export const attachDatabase = createServerFn({ method: "POST" })
             })
             .where(eq(envVars.id, existing.id));
         } else {
-          const id = crypto.randomUUID();
           await db.insert(envVars).values({
-            id,
+            id: envVarId,
             isSecret: true,
             key: data.envVarKey,
             serviceId: data.serviceId,
             valueEncrypted: encryptSecret(
               value,
               env.appKey,
-              secretContext.envVar(id)
+              secretContext.envVar(envVarId)
             ),
           });
         }
 
-        // The edge, kept. Attaching is the moment the link is KNOWN; the
-        // connection string that carries it is encrypted, so nothing can
-        // recover it afterwards. Declarative on purpose: removing the
-        // variable is not the same statement as "no longer uses it".
+        // The edge, kept, pointing at the variable it just wrote so
+        // detaching can take it back. Attaching is the moment the link is
+        // KNOWN; the connection string carrying it is encrypted, so nothing
+        // recovers it afterwards.
+        //
+        // `DoUpdate`, not `DoNothing`: attaching the same database again
+        // under another key rewrites which variable carries it, and an edge
+        // still pointing at the old one would detach the wrong thing.
         await db
           .insert(serviceDependencies)
           .values({
             dependsOnDatabaseId: database.id,
+            envVarId,
             serviceId: data.serviceId,
           })
-          .onConflictDoNothing();
+          .onConflictDoUpdate({
+            set: { envVarId },
+            target: [
+              serviceDependencies.serviceId,
+              serviceDependencies.dependsOnDatabaseId,
+            ],
+            targetWhere: isNotNull(serviceDependencies.dependsOnDatabaseId),
+          });
 
         return { key: data.envVarKey };
       },

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import {
   databases,
+  envVars,
   environments,
   projects,
   servers,
@@ -12,7 +13,7 @@ import {
   sshKeys,
 } from "@noddle/db/schema";
 import { check, cleanup, expectThrowsAsync, runVerify } from "@noddle/testing";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 
@@ -36,8 +37,20 @@ const wipe = async () => {
   await db.delete(sshKeys).where(eq(sshKeys.name, PROBE));
 };
 
-const edgeCount = async () =>
-  (await db.select().from(serviceDependencies)).length;
+/**
+ * The suite's OWN edges, never `count(*)`.
+ *
+ * A global count read correctly only because the bench used to empty the
+ * table first. Now that it leaves other people's rows alone, counting all of
+ * them makes the result depend on what else lives in the database.
+ */
+const edgeCount = async (serviceIds: string[]) =>
+  (
+    await db
+      .select()
+      .from(serviceDependencies)
+      .where(inArray(serviceDependencies.serviceId, serviceIds))
+  ).length;
 
 await wipe();
 cleanup(wipe);
@@ -99,6 +112,7 @@ await runVerify("service dependencies (the topology edge)", async () => {
 
   const apiId = api?.id ?? "";
   const workerId = worker?.id ?? "";
+  const mine = [apiId, workerId];
   const databaseId = database?.id ?? "";
 
   await db
@@ -142,18 +156,62 @@ await runVerify("service dependencies (the topology edge)", async () => {
     .values({ dependsOnServiceId: apiId, serviceId: workerId });
   check("the reverse edge is accepted — cycles are not refused here", true);
 
-  check("three edges stand", (await edgeCount()) === 3);
+  check("three edges stand", (await edgeCount(mine)) === 3);
 
   await db.delete(databases).where(eq(databases.id, databaseId));
   check(
     "deleting the database takes its edge with it",
-    (await edgeCount()) === 2
+    (await edgeCount(mine)) === 2
   );
 
   await db.delete(services).where(eq(services.id, workerId));
   check(
     "deleting a service takes the edges on BOTH of its ends",
-    (await edgeCount()) === 0
+    (await edgeCount(mine)) === 0
+  );
+
+  // A fresh database: the first one was deleted above, to prove the cascade.
+  const [second] = await db
+    .insert(databases)
+    .values({
+      engine: "postgres",
+      environmentId: environment?.id ?? "",
+      name: "second-db",
+      rootPasswordEncrypted: "placeholder",
+      serverId: server?.id ?? "",
+      swarmName: "deps-probe-second",
+    })
+    .returning();
+  const secondDatabaseId = second?.id ?? "";
+
+  // The ADR's rule, at the level that enforces it: deleting the variable by
+  // hand does not undo the statement. The edge stays and merely forgets which
+  // variable carried it — which is what lets the screen say "variable
+  // removed" instead of inventing a key.
+  const [variable] = await db
+    .insert(envVars)
+    .values({
+      isSecret: true,
+      key: "DATABASE_URL",
+      serviceId: apiId,
+      valueEncrypted: "placeholder",
+    })
+    .returning();
+  const [linked] = await db
+    .insert(serviceDependencies)
+    .values({
+      dependsOnDatabaseId: secondDatabaseId,
+      envVarId: variable?.id,
+      serviceId: apiId,
+    })
+    .returning();
+  await db.delete(envVars).where(eq(envVars.id, variable?.id ?? ""));
+  const survivor = await db.query.serviceDependencies.findFirst({
+    where: eq(serviceDependencies.id, linked?.id ?? ""),
+  });
+  check(
+    "deleting the variable leaves the edge, with no variable",
+    survivor !== undefined && survivor.envVarId === null
   );
 
   // The edge is only true if something writes it. Attaching is the one moment
@@ -163,8 +221,16 @@ await runVerify("service dependencies (the topology edge)", async () => {
     "utf-8"
   );
   check(
-    "attachDatabase records the edge",
+    "attachDatabase records the edge AND the variable it wrote",
     attach.includes("insert(serviceDependencies)") &&
-      attach.includes("onConflictDoNothing()")
+      attach.includes("envVarId,") &&
+      attach.includes("onConflictDoUpdate(")
+  );
+
+  const detach = readFileSync(join(WEB_SRC, "server/dependencies.ts"), "utf-8");
+  check(
+    "detachDatabase removes the edge AND its variable",
+    detach.includes("delete(serviceDependencies)") &&
+      detach.includes("delete(envVars)")
   );
 });

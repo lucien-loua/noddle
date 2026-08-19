@@ -86,6 +86,10 @@ export const serviceDependenciesRelations = relations(
       fields: [serviceDependencies.dependsOnDatabaseId],
       references: [databases.id],
     }),
+    envVar: one(envVars, {
+      fields: [serviceDependencies.envVarId],
+      references: [envVars.id],
+    }),
     dependsOnService: one(services, {
       fields: [serviceDependencies.dependsOnServiceId],
       references: [services.id],

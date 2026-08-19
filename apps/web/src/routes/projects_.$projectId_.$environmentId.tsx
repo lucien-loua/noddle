@@ -6,7 +6,7 @@ import {
   notFound,
   redirect,
 } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { EnvironmentSelector } from "@/components/environment-selector";
@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import {
+  readEnvironmentView,
+  writeEnvironmentView,
+} from "@/lib/environment-view";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -148,6 +152,7 @@ function ProjectEnvironmentPage() {
 
   const handleViewChange = useCallback(
     (value: string) => {
+      writeEnvironmentView(value === "topology" ? "topology" : "resources");
       navigate({
         replace: true,
         search: value === "topology" ? { view: "topology" } : {},
@@ -155,6 +160,16 @@ function ProjectEnvironmentPage() {
     },
     [navigate]
   );
+
+  // Restores the last view when the URL carries none — the case of coming
+  // back from a resource opened out of the graph, where the breadcrumb points
+  // at the environment with no search. An effect, not a render-time read:
+  // see `environment-view.ts`.
+  useEffect(() => {
+    if (!search.view && readEnvironmentView() === "topology") {
+      navigate({ replace: true, search: { view: "topology" } });
+    }
+  }, [navigate, search.view]);
 
   const createMenu = (
     <CreateServiceMenu

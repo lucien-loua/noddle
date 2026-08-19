@@ -3,6 +3,7 @@ import { check, pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { createdAt } from "#schema/columns";
 import { databases } from "#schema/databases";
+import { envVars } from "#schema/env-vars";
 import { services } from "#schema/services";
 
 /**
@@ -31,6 +32,16 @@ export const serviceDependencies = pgTable(
       () => services.id,
       { onDelete: "cascade" }
     ),
+    /**
+     * The variable attaching wrote, so detaching can take it back.
+     *
+     * `set null`, NOT cascade: deleting the variable by hand is not the
+     * statement "this app no longer uses that database" (ADR-0021). The edge
+     * survives, having merely forgotten which variable carried it.
+     */
+    envVarId: uuid("env_var_id").references(() => envVars.id, {
+      onDelete: "set null",
+    }),
     id: uuid("id").primaryKey().defaultRandom(),
     serviceId: uuid("service_id")
       .notNull()

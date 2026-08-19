@@ -1,4 +1,4 @@
-import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { DatabaseIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import {
   createColumnHelper,
   flexRender,
@@ -35,6 +35,9 @@ import { parseEnvPaste, shouldInterceptEnvPaste } from "./parse-env-paste";
 import type { EnvPair } from "./parse-env-paste";
 
 export interface DraftVar {
+  /** The database this variable came from, when attaching wrote it. Carried
+   *  into the draft so the badge survives editing the row. */
+  attachedFrom: string | null;
   isSecret: boolean;
   key: string;
   /** Local identifier, stable throughout editing. */
@@ -80,7 +83,13 @@ const MARKS: Record<ChangeKind, string> = {
 };
 
 function blankRow(): DraftVar {
-  return { isSecret: false, key: "", uid: crypto.randomUUID(), value: "" };
+  return {
+    attachedFrom: null,
+    isSecret: false,
+    key: "",
+    uid: crypto.randomUUID(),
+    value: "",
+  };
 }
 
 function isBlank(row: DraftVar): boolean {
@@ -98,6 +107,7 @@ function ensureBlank(rows: DraftVar[]): DraftVar[] {
 function toDraft(rows: EnvVarView[]): DraftVar[] {
   return ensureBlank(
     rows.map((row) => ({
+      attachedFrom: row.attachedFrom,
       isSecret: row.isSecret,
       key: row.key,
       uid: row.id,
@@ -148,6 +158,7 @@ function applyEnvPaste(
       continue;
     }
     next.splice(insertAt, 0, {
+      attachedFrom: null,
       isSecret: false,
       key: pair.key,
       uid: crypto.randomUUID(),
@@ -248,6 +259,31 @@ function KeyCell({
     },
     [onPasteEnv, row.key, row.uid]
   );
+
+  if (row.attachedFrom) {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="Variable name"
+          className="h-8 font-mono text-xs"
+          onChange={handleChange}
+          onPaste={handlePaste}
+          placeholder="VARIABLE_NAME"
+          value={row.key}
+        />
+        {/* Where this value came from. A connection string is not something
+            anyone typed, and without this the row looks hand-written. */}
+        <Badge
+          aria-label={`Written by attaching the database ${row.attachedFrom}`}
+          className="shrink-0 gap-1"
+          variant="outline"
+        >
+          <DatabaseIcon aria-hidden className="size-3" weight="regular" />
+          {row.attachedFrom}
+        </Badge>
+      </div>
+    );
+  }
 
   return (
     <Input

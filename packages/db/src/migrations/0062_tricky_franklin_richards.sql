@@ -1,0 +1,2 @@
+ALTER TABLE "service_dependencies" ADD COLUMN "env_var_id" uuid;--> statement-breakpoint
+ALTER TABLE "service_dependencies" ADD CONSTRAINT "service_dependencies_env_var_id_env_vars_id_fk" FOREIGN KEY ("env_var_id") REFERENCES "public"."env_vars"("id") ON DELETE set null ON UPDATE no action;

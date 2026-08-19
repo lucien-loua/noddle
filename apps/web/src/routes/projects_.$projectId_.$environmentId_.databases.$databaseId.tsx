@@ -5,10 +5,7 @@ import { lazy, useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import {
-  AttachDatabaseDialog,
-  DEFAULT_ENV_VAR_KEY,
-} from "@/components/features/database/attach-database-dialog";
+import { DatabaseAttachments } from "@/components/features/database/database-attachments";
 import { DatabaseCredentials } from "@/components/features/database/database-credentials";
 import { DatabaseExternal } from "@/components/features/database/database-external";
 import { DatabaseHeaderActions } from "@/components/features/database/database-header-actions";
@@ -281,20 +278,17 @@ function DatabaseDetail() {
 
           <TabsContent className={DETAIL_TAB_PANEL_CLASS} value="general">
             <DatabaseCredentials
-              action={
-                canAttach ? (
-                  <AttachDatabaseDialog
-                    databaseId={database.id}
-                    defaultKey={DEFAULT_ENV_VAR_KEY[database.engine]}
-                    services={services}
-                  />
-                ) : null
-              }
               canChangePassword={canEditConfig}
               canRead={canReadSecrets}
               databaseId={database.id}
               databaseName={database.name}
               running={database.status === "running"}
+            />
+            <DatabaseAttachments
+              canAttach={canAttach}
+              databaseId={database.id}
+              engine={database.engine}
+              services={services}
             />
             <DatabaseExternal
               canEdit={canEditConfig}

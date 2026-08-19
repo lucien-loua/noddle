@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { useEffect, useMemo } from "react";
 
+import { IconStack } from "@/components/icon-stack";
 import {
   Empty,
   EmptyDescription,
@@ -84,12 +85,14 @@ export function EnvironmentTopology({ scope }: { scope: Scope }) {
 
   if (graph.edges.length === 0) {
     return (
-      <Frame variant="ghost">
-        <FramePanel>
-          <Empty className="border-0">
+      <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
+        <FramePanel className="flex min-h-0 flex-1 flex-col">
+          <Empty className="min-h-0 flex-1 border-0">
             <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <GraphIcon weight="regular" />
+              <EmptyMedia>
+                <IconStack>
+                  <GraphIcon className="size-5" />
+                </IconStack>
               </EmptyMedia>
               <EmptyTitle>Nothing is linked yet</EmptyTitle>
               <EmptyDescription>

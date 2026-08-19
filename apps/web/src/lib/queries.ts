@@ -16,7 +16,10 @@ import {
   getService,
 } from "@/server/dashboard";
 import { getDatabase, getDatabaseCredentials } from "@/server/databases";
-import { getEnvironmentDependencies } from "@/server/dependencies";
+import {
+  getDatabaseDependents,
+  getEnvironmentDependencies,
+} from "@/server/dependencies";
 import type { EnvVarTarget } from "@/server/env-vars";
 import { getEnvVars } from "@/server/env-vars";
 import { getProjectEnvironments } from "@/server/environments";
@@ -143,6 +146,12 @@ export const queries = {
     queryOptions({
       queryFn: () => getDestinations(),
       queryKey: ["destinations"],
+    }),
+
+  databaseDependents: (databaseId: string) =>
+    queryOptions({
+      queryFn: () => getDatabaseDependents({ data: { databaseId } }),
+      queryKey: ["database-dependents", databaseId],
     }),
 
   environmentDependencies: (environmentId: string) =>

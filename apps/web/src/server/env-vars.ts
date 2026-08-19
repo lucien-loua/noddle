@@ -5,7 +5,7 @@ import {
   secretContext,
 } from "@noddle/crypto";
 import { ENGINE_ENV_PREFIX } from "@noddle/database-spec";
-import { databases, envVars } from "@noddle/db/schema";
+import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, isNull } from "drizzle-orm";
@@ -53,6 +53,10 @@ function ownedBy(target: EnvVarTarget) {
 }
 
 export interface EnvVarView {
+  /** The database this variable was written by attaching, `null` when a
+   *  person typed it. The value is a connection string nobody composed by
+   *  hand, and the table has no other way to say where it came from. */
+  attachedFrom: string | null;
   id: string;
   isSecret: boolean;
   key: string;
@@ -71,7 +75,29 @@ export const getEnvVars = createServerFn({ method: "GET" })
           where: ownedBy(data),
         });
 
+        // One query for the whole table rather than one per row. Only a
+        // service can hold an attached variable — a database is the far end
+        // of the link, never the near one.
+        const edges =
+          data.serviceId && rows.length > 0
+            ? await db.query.serviceDependencies.findMany({
+                where: inArray(
+                  serviceDependencies.envVarId,
+                  rows.map((row) => row.id)
+                ),
+                with: { dependsOnDatabase: true },
+              })
+            : [];
+        const attached = new Map(
+          edges.flatMap((edge) =>
+            edge.envVarId && edge.dependsOnDatabase
+              ? [[edge.envVarId, edge.dependsOnDatabase.name] as const]
+              : []
+          )
+        );
+
         return rows.map((row) => ({
+          attachedFrom: attached.get(row.id) ?? null,
           id: row.id,
           isSecret: row.isSecret,
           key: row.key,

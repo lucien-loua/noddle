@@ -44,6 +44,10 @@ export const DEFAULT_ENV_VAR_KEY: Record<DatabaseEngine, string> = {
 interface Props {
   databaseId: string;
   defaultKey: string;
+  /** Fired once the attach succeeded. `router.invalidate()` alone does not
+   *  reach a react-query cache, so a list of attached services beside this
+   *  dialog would keep showing the state from before the click. */
+  onAttached?: () => void;
   /** Controlled from the outside — a context menu, for example — whose
    *  trigger lives elsewhere. Omitted: the component stays self-contained,
    *  with its own "Attach" button, like on a database's detail card. */
@@ -59,6 +63,7 @@ interface Props {
 export function AttachDatabaseDialog({
   databaseId,
   defaultKey,
+  onAttached,
   onOpenChange: controlledOnOpenChange,
   open: controlledOpen,
   services,
@@ -95,6 +100,7 @@ export function AttachDatabaseDialog({
           </Alert>
         ) : (
           <AttachBody
+            onAttached={onAttached}
             databaseId={databaseId}
             defaultKey={defaultKey}
             open={open}
@@ -114,11 +120,13 @@ interface AttachFormValues {
 function AttachBody({
   databaseId,
   defaultKey,
+  onAttached,
   open,
   services,
 }: {
   databaseId: string;
   defaultKey: string;
+  onAttached?: () => void;
   open: boolean;
   services: ServiceRow[];
 }) {
@@ -136,6 +144,7 @@ function AttachBody({
       }),
     onSuccess: async (result) => {
       setDone(result.key);
+      onAttached?.();
       await router.invalidate();
     },
   });
