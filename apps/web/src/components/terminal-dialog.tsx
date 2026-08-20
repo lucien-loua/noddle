@@ -35,6 +35,16 @@ export type TerminalTarget =
       id: string;
       title: string;
       shell?: string;
+    }
+  /** A container addressed directly, from the Containers page: there is no
+   *  Noddle row behind it, so the machine and the id ARE the address. */
+  | {
+      kind: "container";
+      target: "container";
+      containerId: string;
+      serverId: string;
+      title: string;
+      shell?: string;
     };
 
 function wsUrl(target: TerminalTarget, cols: number, rows: number): string {
@@ -48,12 +58,22 @@ function wsUrl(target: TerminalTarget, cols: number, rows: number): string {
     });
     return `${base}/api/terminal/ssh?${q}`;
   }
-  const q = new URLSearchParams({
-    cols: String(cols),
-    id: target.id,
-    rows: String(rows),
-    target: target.target,
-  });
+  const q = new URLSearchParams(
+    target.target === "container"
+      ? {
+          cols: String(cols),
+          containerId: target.containerId,
+          rows: String(rows),
+          serverId: target.serverId,
+          target: target.target,
+        }
+      : {
+          cols: String(cols),
+          id: target.id,
+          rows: String(rows),
+          target: target.target,
+        }
+  );
   if (target.shell) {
     q.set("shell", target.shell);
   }

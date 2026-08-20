@@ -1,0 +1,219 @@
+// tier: pure
+// bun run apps/web/src/verify-container-detail.ts
+//
+// The Containers page reads a machine through two parsers and nothing
+// else: `docker ps` for the list, `docker inspect` for the drawer. Both
+// turn a string into something the UI treats as fact, which is where this
+// feature can go wrong silently — an SSH call that fails is loud.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { BUILDKIT_CONTAINER } from "@noddle/shared/noddle-containers";
+import { check, runVerify } from "@noddle/testing";
+
+import {
+  classify,
+  parseInspect,
+  parsePs,
+  PS_FIELDS,
+  PS_FORMAT,
+} from "@/lib/container-read.server";
+
+const WEB_SRC = path.join(import.meta.dirname);
+const SERVER = "server1";
+
+/** One `docker ps` line, tabs included, as the remote shell emits it. */
+function psLine(fields: string[]): string {
+  return fields.join("\t");
+}
+
+const INSPECT = JSON.stringify({
+  Args: ["postgres"],
+  Config: {
+    Env: ["PATH=/usr/local/bin", "POSTGRES_PASSWORD=s3cr3t-value"],
+    Image: "postgres:18",
+    Labels: { "com.docker.swarm.service.name": "pj-test-hejg5w" },
+  },
+  Created: "2026-08-14T10:59:50.123456789Z",
+  HostConfig: { RestartPolicy: { MaximumRetryCount: 0, Name: "" } },
+  Id: "3115b0f8f67b2c5e2b2c2e6a0a9a1f5f4c8d7b6a5e4d3c2b1a0f9e8d7c6b5a49",
+  Mounts: [
+    {
+      Destination: "/var/lib/postgresql/18/docker",
+      Mode: "z",
+      Name: "pj-test-hejg5w-data",
+      Propagation: "",
+      RW: true,
+      Source: "/var/lib/docker/volumes/pj-test-hejg5w-data/_data",
+      Type: "volume",
+    },
+    {
+      Destination: "/etc/hosts",
+      Mode: "ro",
+      RW: false,
+      Source: "/host/etc/hosts",
+      Type: "bind",
+    },
+  ],
+  Name: "/pj-test-hejg5w.1.ausfaebqcnsf9mpsvx5g0xrzq",
+  NetworkSettings: {
+    Networks: {
+      "noddle-network": {
+        Aliases: ["pj-test"],
+        Gateway: "10.0.1.1",
+        IPAddress: "10.0.1.12",
+        IPPrefixLen: 24,
+        MacAddress: "02:42:0a:00:01:0c",
+      },
+    },
+    Ports: {
+      "5432/tcp": [{ HostIp: "0.0.0.0", HostPort: "5432" }],
+      "9187/tcp": null,
+    },
+  },
+  Path: "docker-entrypoint.sh",
+  State: { Health: { Status: "healthy" }, Running: true, Status: "running" },
+});
+
+await runVerify("container detail (ps + inspect parsing)", () => {
+  // The format string and the parser's field count are one decision in two
+  // places. Adding a column to one without the other drops EVERY row on
+  // the floor — the parser skips what it cannot count.
+  check(
+    "PS_FORMAT emits exactly PS_FIELDS values",
+    PS_FORMAT.split("{{").length - 1 === PS_FIELDS
+  );
+
+  const rows = parsePs(
+    psLine([
+      "3115b0f8f67b",
+      "pj-test-hejg5w.1.ausfaebq",
+      "postgres:18",
+      "running",
+      "Up 6 days",
+      "0.0.0.0:5432->5432/tcp",
+      "pj-test-hejg5w",
+      "",
+    ]),
+    { id: SERVER, name: "vps-1" }
+  );
+  check("a full line parses", rows.length === 1);
+  check(
+    "the port summary is kept whole",
+    rows[0]?.ports === "0.0.0.0:5432->5432/tcp"
+  );
+  check("a Swarm label makes it a task", rows[0]?.kind === "swarm");
+  check(
+    "the service name is carried",
+    rows[0]?.serviceName === "pj-test-hejg5w"
+  );
+
+  // The previous format had seven fields. A line from a stale remote (or a
+  // half-applied change) must be DROPPED, never rendered with the ports
+  // read as a label.
+  const stale = parsePs(
+    psLine(["id", "name", "img", "running", "Up", "", ""]),
+    { id: SERVER, name: "vps-1" }
+  );
+  check("a line with the old field count is ignored", stale.length === 0);
+
+  check(
+    "Noddle's own compose project is control plane",
+    classify({
+      composeProject: "noddle",
+      name: "noddle-web-1",
+      swarmService: "",
+    }) === "control-plane"
+  );
+  // Both names, and the current one comes from the module that STARTS the
+  // daemon: a page protecting a container by a name nobody creates any
+  // more protects nothing, which is the state this check was written for.
+  check(
+    "the capped build daemon is control plane despite empty labels",
+    classify({
+      composeProject: "",
+      name: BUILDKIT_CONTAINER,
+      swarmService: "",
+    }) === "control-plane"
+  );
+  check(
+    "the pre-railpack builder is still protected",
+    classify({
+      composeProject: "",
+      name: "buildx_buildkit_noddle-builder0",
+      swarmService: "",
+    }) === "control-plane"
+  );
+
+  const detail = parseInspect(INSPECT);
+  check("the name loses Docker's leading slash", detail.name.startsWith("pj-"));
+  check(
+    "the command joins Path and Args",
+    detail.command === "docker-entrypoint.sh postgres"
+  );
+  check(
+    "an empty restart policy reads as Docker's own 'no'",
+    detail.restartPolicy === "no"
+  );
+  check(
+    "health is carried when the image declares one",
+    detail.health === "healthy"
+  );
+
+  // A named volume's Source is a 64-character path that identifies
+  // nothing: the NAME is what a reader recognises.
+  check(
+    "a named volume shows its name",
+    detail.mounts[0]?.source === "pj-test-hejg5w-data"
+  );
+  check(
+    "a read-only bind is reported as such",
+    detail.mounts[1]?.readWrite === false
+  );
+
+  check(
+    "the address carries its prefix",
+    detail.networks[0]?.ipAddress === "10.0.1.12/24"
+  );
+  check("aliases survive", detail.networks[0]?.aliases[0] === "pj-test");
+
+  const published = detail.ports.find((p) => p.containerPort === "5432/tcp");
+  const exposed = detail.ports.find((p) => p.containerPort === "9187/tcp");
+  check(
+    "a published port names its host binding",
+    published?.published === "0.0.0.0:5432"
+  );
+  // Exposed and published are not the same fact, and the difference is the
+  // answer to "why can I not reach it".
+  check(
+    "an exposed but unpublished port is not invented",
+    exposed?.published === null
+  );
+
+  // THE rule of this screen: `docker inspect` renders Config.Env in the
+  // clear, and nothing that leaves the server may carry a value.
+  check(
+    "environment NAMES are returned",
+    detail.envNames.includes("POSTGRES_PASSWORD")
+  );
+  check(
+    "no environment VALUE leaves the server",
+    !JSON.stringify(detail).includes("s3cr3t-value")
+  );
+
+  // The shell into an arbitrary container is guarded on the machine, not
+  // in the menu: the row that opened the dialog may be an hour old.
+  const terminal = readFileSync(
+    path.join(WEB_SRC, "lib/terminal.server.ts"),
+    "utf-8"
+  );
+  check(
+    "the terminal re-reads the kind before exec",
+    terminal.includes('from "@/lib/container-read.server"') &&
+      terminal.includes("readKind(ssh, containerId)")
+  );
+  check(
+    "the terminal refuses a shell into Noddle itself",
+    terminal.includes('found.kind === "control-plane"')
+  );
+});

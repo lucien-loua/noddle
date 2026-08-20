@@ -19,13 +19,13 @@ import { eq } from "drizzle-orm";
 
 import type { Session } from "@/lib/auth.server";
 import { auth } from "@/lib/auth.server";
+import { CONTAINER_ID, readKind } from "@/lib/container-read.server";
 import { db } from "@/lib/db.server";
 import { can } from "@/lib/permissions";
 import type { Permission } from "@/lib/permissions";
 import { connectToServer } from "@/lib/ssh.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
-const CONTAINER_ID = /^[a-f0-9]{12,64}$/i;
 const ALLOWED_SHELLS = new Set(["sh", "bash", "ash"]);
 const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
 
@@ -242,6 +242,75 @@ async function openContainerExec(
   }
 }
 
+/**
+ * A shell in a container Noddle did not deploy — the Containers page.
+ *
+ * The kind is re-read on the MACHINE before the exec, and that is the
+ * whole point of the detour: the row that opened this dialog may be an
+ * hour old, and `docker exec` into Noddle's own web container would put a
+ * root shell inside the process serving the page. Client-side hiding is
+ * only a courtesy; the refusal lives here.
+ */
+async function openServerContainerTerminal(
+  session: Session,
+  params: Record<string, string>,
+  dims: { cols: number; rows: number },
+  shell: string,
+  meta: AuditMeta
+): Promise<TerminalOpenResult> {
+  const { containerId, serverId } = params;
+  if (!(serverId && UUID.test(serverId))) {
+    return { message: "invalid serverId", ok: false, status: 400 };
+  }
+  if (!(containerId && CONTAINER_ID.test(containerId))) {
+    return { message: "invalid containerId", ok: false, status: 400 };
+  }
+  const server = await db.query.servers.findFirst({
+    where: eq(servers.id, serverId),
+  });
+  if (!server) {
+    return { message: "server not found", ok: false, status: 404 };
+  }
+
+  const ssh = await connectToServer(server);
+  try {
+    const found = await readKind(ssh, containerId);
+    if (!found) {
+      ssh.end();
+      return { message: "container not found", ok: false, status: 404 };
+    }
+    // Audited under the container's real NAME, which only the machine
+    // knows — an id in the log names nothing a week later.
+    const allowed = await requireTerminalPermission(
+      session,
+      { action: "shell", resource: "container" },
+      { id: containerId, name: found.name },
+      meta
+    );
+    if (!allowed) {
+      ssh.end();
+      return { message: "forbidden", ok: false, status: 403 };
+    }
+    if (found.kind === "control-plane") {
+      ssh.end();
+      return {
+        message: `${found.name} is part of Noddle itself and cannot be shelled into from here.`,
+        ok: false,
+        status: 403,
+      };
+    }
+    const pty = await openExecPty(
+      ssh,
+      dockerExecCommand(containerId, shell),
+      dims
+    );
+    return { label: found.name, ok: true, pty, ssh };
+  } catch (error) {
+    ssh.end();
+    throw error;
+  }
+}
+
 async function openContainerTerminal(
   session: Session,
   params: Record<string, string>,
@@ -249,14 +318,20 @@ async function openContainerTerminal(
   meta: AuditMeta
 ): Promise<TerminalOpenResult> {
   const { target, id } = params;
+  const shell = parseShell(params.shell);
+
+  // The Containers page addresses a container DIRECTLY — there is no
+  // Noddle row behind it to resolve a Swarm name from.
+  if (target === "container") {
+    return openServerContainerTerminal(session, params, dims, shell, meta);
+  }
+
   if (!(id && UUID.test(id))) {
     return { message: "invalid id", ok: false, status: 400 };
   }
   if (target !== "service" && target !== "database") {
     return { message: "invalid target", ok: false, status: 400 };
   }
-
-  const shell = parseShell(params.shell);
 
   if (target === "database") {
     const database = await db.query.databases.findFirst({

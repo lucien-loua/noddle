@@ -10,6 +10,7 @@ import { listVolumeBackupConfigs } from "@/server/backups/volume/configs";
 import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
 import { getVolumeBackups } from "@/server/backups/volume/runs";
 import { listServiceVolumes } from "@/server/backups/volume/volumes";
+import { inspectContainer } from "@/server/containers";
 import {
   getDeployments,
   getEnvironmentScope,
@@ -105,6 +106,15 @@ export const queries = {
 
   channels: () =>
     queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
+
+  containerDetail: (serverId: string, containerId: string) =>
+    queryOptions({
+      queryFn: () => inspectContainer({ data: { containerId, serverId } }),
+      queryKey: ["container-detail", serverId, containerId],
+      // One SSH round-trip per drawer opened. Ports, mounts and networks
+      // are fixed at creation — they do not move while it is open.
+      staleTime: 60 * 1000,
+    }),
 
   database: (databaseId: string) =>
     queryOptions({

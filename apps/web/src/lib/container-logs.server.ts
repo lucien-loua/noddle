@@ -85,6 +85,64 @@ function pipePty(
 }
 
 /**
+ * Follows ONE container by id, and ends when it does.
+ *
+ * The service variant below waits for a REPLACEMENT task when the followed
+ * container dies, because a service outlives its containers. Here the
+ * container IS the subject: the drawer was opened on that id, Swarm's next
+ * task is a different row on the page, and re-attaching to it would show
+ * output the reader never asked for.
+ */
+export function followContainerById(
+  channel: SseChannel,
+  client: SshClient,
+  containerId: string,
+  tail: number,
+  since: string
+): () => void {
+  const { finish } = channel;
+  let session: Awaited<ReturnType<typeof openExecPty>> | undefined;
+  let aborted = false;
+
+  const done = () => {
+    client.end();
+    finish();
+  };
+
+  const leave = () => {
+    aborted = true;
+    session?.close();
+  };
+
+  const start = async () => {
+    try {
+      const pty = await openExecPty(
+        client,
+        followCommand(containerId, tail, since)
+      );
+      if (aborted || channel.closed) {
+        pty.close();
+        done();
+        return;
+      }
+      session = pty;
+      pipePty(channel, pty, done);
+    } catch (error) {
+      sendLogError(channel.send, error);
+      done();
+    }
+  };
+
+  if (channel.closed) {
+    done();
+    return leave;
+  }
+
+  start();
+  return leave;
+}
+
+/**
  * Arms a PTY follow and returns the cancel fn immediately. When the
  * followed container dies, wait for a new id instead of ending the SSE
  * — Start/Restart replace the task, and the tab should pick it up.
