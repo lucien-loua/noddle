@@ -108,8 +108,11 @@ export function computeBuildCap(opts: {
 /** `buildx inspect` has no --format on the pinned version; parse its output. */
 const REMOTE_DRIVER = /^Driver:\s+remote$/m;
 
-/** The BuildKit daemon Noddle runs. Both build paths go through it. */
-export const BUILDKIT_CONTAINER = "noddle-buildkit";
+/** The BuildKit daemon Noddle runs. Both build paths go through it.
+ *  The NAME comes from `@noddle/shared`, not from here: the dashboard has
+ *  to recognise this container to refuse destroying it, and the two names
+ *  drifting apart is what once left it removable from the UI. */
+export { BUILDKIT_CONTAINER } from "@noddle/shared/noddle-containers";
 /** buildx alias pointing at that same daemon, for the Dockerfile path. */
 export const BUILDX_BUILDER = "noddle-builder";
 

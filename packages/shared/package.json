@@ -11,6 +11,7 @@
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
+    "./noddle-containers": "./src/noddle-containers.ts",
     "./password": "./src/password.ts",
     "./redact": "./src/redact.ts",
     "./source-type": "./src/source-type.ts",
