@@ -12,6 +12,10 @@ import { AppShell } from "@/components/app-shell";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { CreateServiceMenu } from "@/components/features/environment/create-service-menu";
 import { ResourceGrid } from "@/components/features/environment/resource-grid";
+import {
+  SCOPE_POLL_MS,
+  scopeIsTransient,
+} from "@/components/features/environment/scope-poll";
 import { EnvironmentTopology } from "@/components/features/environment/topology";
 import { TabRail } from "@/components/tab-rail";
 import {
@@ -124,9 +128,17 @@ function ProjectEnvironmentPage() {
   const navigate = Route.useNavigate();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
+  const view = search.view ?? "resources";
   const scopeQuery = useQuery({
     ...queries.environmentScope(projectId, current.id),
     initialData: scope,
+    // The grid owns this poll on its own tab and is UNMOUNTED on the other
+    // one, so without this the graph freezes: a deploy running in front of
+    // you never changes the dot.
+    refetchInterval: (q) =>
+      view === "topology" && q.state.data && scopeIsTransient(q.state.data)
+        ? SCOPE_POLL_MS
+        : false,
   });
   const liveScope = scopeQuery.data ?? scope;
   const emptyInventory =
@@ -147,8 +159,6 @@ function ProjectEnvironmentPage() {
     },
     [navigate, projectId]
   );
-
-  const view = search.view ?? "resources";
 
   const handleViewChange = useCallback(
     (value: string) => {
@@ -265,7 +275,7 @@ function ProjectEnvironmentPage() {
             value="topology"
           >
             <ActiveTabPanel active={view} value="topology">
-              <EnvironmentTopology scope={liveScope} />
+              <EnvironmentTopology role={known} scope={liveScope} />
             </ActiveTabPanel>
           </TabsContent>
         </Tabs>

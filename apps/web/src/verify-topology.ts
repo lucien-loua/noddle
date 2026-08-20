@@ -12,9 +12,13 @@ const ENVIRONMENT = "env-1";
 const PROJECT = "proj-1";
 
 const service = (id: string, domains: number) => ({
-  domains: Array.from({ length: domains }, (_, i) => ({ host: `${id}-${i}` })),
+  domains: Array.from({ length: domains }, (_, i) => ({
+    host: `${id}-${i}`,
+    https: true,
+  })),
   id,
   name: id,
+  port: 3000,
   serverName: "vps-1",
   status: "running",
 });
@@ -40,6 +44,7 @@ const stack = (id: string, domain: string | null) => ({
   domain,
   id,
   name: id,
+  port: 8080,
   serverName: "vps-1",
   status: "running",
 });
@@ -67,6 +72,23 @@ await runVerify("environment topology (the drawn graph)", () => {
     );
     check("a declared dependency is drawn", ids(edges).includes("api->db"));
     check(
+      "the two kinds of edge are told apart on the canvas",
+      edges.find((e) => e.id === "ingress-api")?.data?.dashed === true &&
+        edges.find((e) => e.id === "dep-api-db")?.data?.dashed === false
+    );
+    check(
+      "the internet node states how much it reaches",
+      nodes.find((n) => n.id === INTERNET_NODE_ID)?.data.reaches === 1
+    );
+    check(
+      "an ingress edge carries what Traefik does with the request",
+      edges.find((e) => e.id === "ingress-api")?.data?.label === "HTTPS :3000"
+    );
+    check(
+      "a published service's host is a REACHABLE url, scheme and all",
+      nodes.find((n) => n.id === "api")?.data.addressUrl === "https://api-0"
+    );
+    check(
       "every resource is a node, edges or not — nothing is hidden",
       nodes.filter((n) => n.id !== INTERNET_NODE_ID).length === 3
     );
@@ -91,6 +113,59 @@ await runVerify("environment topology (the drawn graph)", () => {
     check(
       "a stack that publishes a domain is reached too",
       ids(edges).join(",") === `${INTERNET_NODE_ID}->web`
+    );
+    check(
+      "a stack states its port and CLAIMS NO SCHEME — it records none",
+      edges.find((e) => e.id === "ingress-web")?.data?.label === ":8080"
+    );
+    check(
+      "and its host stays TEXT, for want of a scheme to link with",
+      buildTopology(
+        scope({ stacks: [stack("web", "shop.test")] }),
+        []
+      ).nodes.find((n) => n.id === "web")?.data.addressUrl === null
+    );
+  }
+
+  {
+    // The open slot is an invitation, and an invitation you cannot accept is
+    // worse than none: it needs the permission AND something to attach.
+    const unconsumed = scope({
+      databases: [database("db")],
+      services: [service("api", 0)],
+    });
+
+    check(
+      "no attach slot without the permission",
+      !buildTopology(unconsumed, []).nodes.some((n) => n.data.kind === "attach")
+    );
+
+    const offered = buildTopology(unconsumed, [], { canAttach: true });
+    const slot = offered.nodes.find((n) => n.data.kind === "attach");
+    check(
+      "a database nothing consumes offers to be attached",
+      slot?.data.attachTo === "db" && slot.id === "attach-db"
+    );
+    check(
+      "the slot points AT the database, and is marked a ghost so the empty state still counts",
+      offered.edges.some(
+        (e) =>
+          e.target === "db" && e.source === slot?.id && e.data?.ghost === true
+      )
+    );
+    check(
+      "no slot on a database that IS consumed",
+      !buildTopology(
+        unconsumed,
+        [{ from: "api", to: "db", toKind: "database" }],
+        { canAttach: true }
+      ).nodes.some((n) => n.data.kind === "attach")
+    );
+    check(
+      "no slot when there is no service to attach",
+      !buildTopology(scope({ databases: [database("db")] }), [], {
+        canAttach: true,
+      }).nodes.some((n) => n.data.kind === "attach")
     );
   }
 
@@ -135,8 +210,26 @@ await runVerify("environment topology (the drawn graph)", () => {
       at("db")?.hasTarget === true && at("db")?.hasSource === false
     );
     check(
+      "a running service has a container to look into",
+      at("api")?.live === true
+    );
+    check(
+      "the internet boundary has none — it is not a container",
+      at(INTERNET_NODE_ID)?.live === false
+    );
+    check(
       "a service nothing touches has NO handle at all",
       at("worker")?.hasSource === false && at("worker")?.hasTarget === false
+    );
+  }
+
+  {
+    const deploying = { ...service("api", 1), status: "deploying" };
+    check(
+      "a service still deploying offers nothing to open",
+      buildTopology(scope({ services: [deploying] }), []).nodes.find(
+        (n) => n.id === "api"
+      )?.data.live === false
     );
   }
 
