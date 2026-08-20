@@ -20,8 +20,6 @@ function FlowCanvas<
       fitView
       nodesConnectable={false}
       proOptions={{ hideAttribution: true }}
-      snapGrid={[16, 16]}
-      snapToGrid
       {...props}
     >
       <Background

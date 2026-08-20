@@ -10,10 +10,27 @@ export interface LayoutOptions {
   nodeHeight?: number;
   nodesep?: number;
   ranksep?: number;
+  /** Real sizes, once the caller has measured them. Dagre centres a rank on
+   *  the boxes it is handed, so an estimate that is wrong for one node leaves
+   *  that node off the rank's centre line. */
+  sizeOf?: (node: Node) => { height?: number; width?: number } | undefined;
 }
 
 function isHorizontal(direction: LayoutDirection) {
   return direction === "LR" || direction === "RL";
+}
+
+function resolveSize(
+  node: Node,
+  sizeOf: LayoutOptions["sizeOf"],
+  nodeWidth: number,
+  nodeHeight: number
+) {
+  const size = sizeOf?.(node);
+  return {
+    width: size?.width ?? node.measured?.width ?? node.width ?? nodeWidth,
+    height: size?.height ?? node.measured?.height ?? node.height ?? nodeHeight,
+  };
 }
 
 /**
@@ -34,6 +51,7 @@ export function getLayoutedElements<
     nodeHeight = 160,
     nodesep = 80,
     ranksep = 120,
+    sizeOf,
   } = options;
 
   const graph = new Graph();
@@ -41,9 +59,7 @@ export function getLayoutedElements<
   graph.setGraph({ rankdir: direction, nodesep, ranksep });
 
   for (const node of nodes) {
-    const width = node.measured?.width ?? node.width ?? nodeWidth;
-    const height = node.measured?.height ?? node.height ?? nodeHeight;
-    graph.setNode(node.id, { width, height });
+    graph.setNode(node.id, resolveSize(node, sizeOf, nodeWidth, nodeHeight));
   }
 
   for (const edge of edges) {
