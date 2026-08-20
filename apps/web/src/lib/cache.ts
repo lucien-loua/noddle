@@ -52,6 +52,11 @@ export const cache = {
   envVars: (qc: QueryClient, target: EnvVarTarget) =>
     qc.invalidateQueries({ queryKey: queries.envVars(target).queryKey }),
 
+  environmentDependencies: (qc: QueryClient, environmentId: string) =>
+    qc.invalidateQueries({
+      queryKey: queries.environmentDependencies(environmentId).queryKey,
+    }),
+
   environmentScope: (
     qc: QueryClient,
     projectId: string,

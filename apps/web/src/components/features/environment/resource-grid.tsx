@@ -89,6 +89,12 @@ import { triggerDeploy, triggerLifecycle } from "@/server/deployments";
 import { deleteService } from "@/server/services";
 import { deleteStack, triggerStackDeploy } from "@/server/stacks";
 
+import {
+  isTransientStatus,
+  SCOPE_POLL_MS,
+  scopeIsTransient,
+} from "./scope-poll";
+
 type Kind = "database" | "service" | "stack";
 
 /** Where the thing comes from — the question a card could not answer. */
@@ -117,7 +123,6 @@ type SortKey = "name" | "status";
 type TypeFilter = "all" | Kind;
 type LifecycleAction = "restart" | "start" | "stop";
 
-const SCOPE_POLL_MS = 2000;
 const AWAITING_TIMEOUT_MS = 60_000;
 
 const PENDING_LABEL: Record<LifecycleAction, string> = {
@@ -211,18 +216,6 @@ function ResourceAddress({ item }: { item: GridItem }) {
  *  share the same UUID and we need to know which `deleteX` to call. */
 function itemKey(item: { id: string; kind: Kind }): string {
   return `${item.kind}:${item.id}`;
-}
-
-/** Statuses that are in-flight: the grid polls until they leave. */
-const TRANSIENT_STATUS = new Set(["deleting", "deploying"]);
-
-function scopeIsTransient(scope: Scope): boolean {
-  const busy = (status: string) => TRANSIENT_STATUS.has(status);
-  return (
-    scope.services.some((s) => busy(s.status)) ||
-    scope.stacks.some((s) => busy(s.status)) ||
-    scope.databases.some((d) => busy(d.status))
-  );
 }
 
 function snapshotInScope(
@@ -1095,7 +1088,7 @@ function ResourceGridCard({
     item.status !== "created" &&
     item.status !== "deploying" &&
     item.status !== "deleting";
-  const inFlight = pendingAction !== null || TRANSIENT_STATUS.has(item.status);
+  const inFlight = pendingAction !== null || isTransientStatus(item.status);
   const mayOperate =
     item.kind === "database" ? can.operateDatabase : can.deploy;
   const lifecycleAvailable = hasLifecycle(item.kind) && mayOperate && settled;
