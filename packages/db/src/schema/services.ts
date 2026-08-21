@@ -118,8 +118,27 @@ export const services = pgTable(
     // nothing has failed; never cleared automatically, to stay legible if
     // the service remains stuck.
     lastError: text("last_error"),
+    /**
+     * The IDENTITY, and it never changes.
+     *
+     * `swarmServiceName()` derives the running Swarm service from it, which
+     * in turn names the volumes and is what teardown, sweep, metrics, the
+     * terminal and the log stream all look up. Renaming it would leave the
+     * running service under its old name — invisible to Noddle, with the next
+     * deploy creating a SECOND one beside it, and nothing failing loudly.
+     * Rename `displayName` instead.
+     */
     name: text("name").notNull(),
     port: integer("port").notNull().default(3000),
+
+    /**
+     * What a human calls it. `null` = never renamed, so `name` is shown.
+     *
+     * Nullable on purpose rather than backfilled from `name`: "unset" is a
+     * real state, and a copy would silently go stale the day `name` is used
+     * for anything else. Cosmetic by construction — nothing derives from it.
+     */
+    displayName: text("display_name"),
 
     /**
      * A pull request preview is an ORDINARY service, not a separate table:

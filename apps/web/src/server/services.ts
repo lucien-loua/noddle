@@ -1,10 +1,12 @@
 import { environments, projects, services } from "@noddle/db/schema";
 import { ensureRepositoryHook } from "@noddle/git-provider-credentials/hooks";
 import { markDeleting } from "@noddle/shared/lifecycle";
+import { toResourceSlug, uniqueResourceSlug } from "@noddle/shared/slug";
 import {
   connectRepoSchema,
   deleteServiceSchema,
   moveServiceSchema,
+  renameServiceSchema,
   updateServiceSettingsSchema,
 } from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
@@ -121,13 +123,29 @@ export const connectRepo = createServerFn({ method: "POST" })
             });
           }
 
+          // The user types a NAME; Noddle derives the identity from it.
+          // Refusing "Start" and asking them to produce a DNS-safe string
+          // themselves is making them solve our constraint.
+          const wanted = toResourceSlug(data.name) || "app";
+          const siblings = await db.query.services.findMany({
+            columns: { name: true },
+            where: eq(services.environmentId, environment.id),
+          });
+          const slug = uniqueResourceSlug(
+            wanted,
+            siblings.map((row) => row.name)
+          );
+
           const [service] = await db
             .insert(services)
             .values({
               buildMethod: "railpack",
+              // `null` when the typed name IS the slug: "never renamed" has to
+              // keep meaning something, or every resource looks renamed.
+              displayName: data.name === slug ? null : data.name,
               environmentId: environment.id,
               gitBranch: "main",
-              name: data.name,
+              name: slug,
               port: 3000,
               serverId: data.serverId,
               sourceType: "git",
@@ -219,6 +237,42 @@ export const updateServiceSettings = createServerFn({ method: "POST" })
  * announcing the deletion while the application is still responding would
  * be the worst of both possible lies.
  */
+/**
+ * Rename what a human reads. The IDENTITY is untouched.
+ *
+ * `services.name` is what `swarmServiceName()` derives the running Swarm
+ * service from, so it stays put: renaming it would leave the running service
+ * under its old name, invisible to Noddle, with the next deploy creating a
+ * second one beside it and nothing failing loudly.
+ *
+ * No uniqueness check, unlike `renameProject`: two services may read the same
+ * on screen because neither is addressed by it — the URL carries the id and
+ * the unique index still covers `(environmentId, name)`.
+ */
+export const renameService = createServerFn({ method: "POST" })
+  .validator(renameServiceSchema)
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.services.findFirst({
+          where: eq(services.id, data.serviceId),
+        }),
+      notFoundMessage: "service not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row: service }) => {
+        await db
+          .update(services)
+          // Empty means CLEAR, so the service reads as its identity again.
+          .set({ displayName: data.displayName || null })
+          .where(eq(services.id, service.id));
+        return { ok: true as const };
+      },
+      // The name recorded is the one BEFORE the rename: the audit line says
+      // what was acted on, not what it became.
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
+  );
+
 export const deleteService = createServerFn({ method: "POST" })
   .validator(deleteServiceSchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>

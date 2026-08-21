@@ -1,0 +1,11 @@
+-- A Service gains a display name; its IDENTITY stays put.
+--
+-- Taken as drizzle-kit generated it, which is safe HERE and was not in 0016:
+-- the column is nullable, so there is no `NOT NULL` to violate on a table
+-- that already has rows, and nothing to backfill.
+--
+-- Deliberately NOT backfilled from `name`. `null` means "never renamed", so
+-- the UI falls back to `name`; a copy taken now would be one more thing to
+-- keep in step. And `name` must stay exactly where it is — it is what
+-- `swarmServiceName()` derives the running Swarm service from.
+ALTER TABLE "services" ADD COLUMN "display_name" text;

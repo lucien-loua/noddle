@@ -6,6 +6,7 @@ import {
 } from "@noddle/db/schema";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
+import { renameStackSchema } from "@noddle/shared/validation/service";
 import {
   connectStackSchema,
   deleteStackSchema,
@@ -195,6 +196,34 @@ export const getStackDeployments = createServerFn({ method: "GET" })
  * deployment of the same stack would race, and the latter would recreate
  * what the former just removed.
  */
+/**
+ * Rename what a human reads. The IDENTITY is untouched.
+ *
+ * `name` stays put: it is what the typed delete confirmation is checked
+ * against, and a stack's name also prefixes its volumes. Nothing derives from
+ * `displayName`, which is the whole point of it being a separate column.
+ */
+export const renameStack = createServerFn({ method: "POST" })
+  .validator(renameStackSchema)
+  .handler(async ({ data }): Promise<{ ok: true }> =>
+    runGuarded({
+      load: () =>
+        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
+      notFoundMessage: "stack not found",
+      permission: { action: "create", resource: "service" },
+      run: async ({ row: stack }) => {
+        await db
+          .update(stacks)
+          // Empty means CLEAR, so it reads as its identity again.
+          .set({ displayName: data.displayName || null })
+          .where(eq(stacks.id, stack.id));
+        return { ok: true as const };
+      },
+      // The name recorded is the one BEFORE the rename.
+      target: ({ row }) => ({ id: row.id, name: row.name }),
+    })
+  );
+
 export const deleteStack = createServerFn({ method: "POST" })
   .validator(deleteStackSchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>

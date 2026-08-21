@@ -18,6 +18,7 @@ import { useTerminalDialog } from "@/components/terminal-dialog";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import type { LifecycleAction } from "@/components/use-lifecycle-actions";
 import { cache } from "@/lib/cache";
+import { displayNameOf } from "@/lib/format";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
@@ -308,9 +309,9 @@ function useServiceDetail() {
       id: service.id,
       kind: "container",
       target: "service",
-      title: service.name,
+      title: displayNameOf(service),
     });
-  }, [openTerminal, service.id, service.name]);
+  }, [openTerminal, service]);
 
   return {
     actionError,
@@ -393,7 +394,7 @@ function ServiceDetail() {
       breadcrumb={
         <DetailBreadcrumb
           environment={service.environment}
-          name={service.name}
+          name={displayNameOf(service)}
           parent={{
             environmentId: service.environmentId,
             label: service.environment,
@@ -405,7 +406,7 @@ function ServiceDetail() {
       }
       email={email}
       role={role}
-      title={service.name}
+      title={displayNameOf(service)}
     >
       <ResourceDetailFrame
         deleteError={actionError}
@@ -502,7 +503,7 @@ function ServiceDetail() {
             <ActiveTabPanel active={tab} value="logs">
               <ContainerLogs
                 generation={`${service.status}:${service.updatedAt}`}
-                name={service.name}
+                name={displayNameOf(service)}
                 streamUrl={`/api/service-logs/${service.id}`}
               />
             </ActiveTabPanel>

@@ -101,6 +101,21 @@ export function serviceLabel(status: string): { label: string; tone: Tone } {
   return SERVICE_LABELS[status] ?? { label: status, tone: "neutral" };
 }
 
+/**
+ * What a human calls it, falling back to the identity.
+ *
+ * Applied at the BOUNDARY where a row becomes something the screen draws, not
+ * at each `<span>`: `name` stays the identity everywhere it matters — the
+ * Swarm service, the volumes, the unique index — and display code keeps
+ * reading one field.
+ */
+export function displayNameOf(row: {
+  displayName?: string | null;
+  name: string;
+}): string {
+  return row.displayName ?? row.name;
+}
+
 /** A status's tone, translated into a `Badge` variant. */
 export function badgeVariant(
   tone: Tone

@@ -39,6 +39,15 @@ export const stacks = pgTable(
     // Why a teardown failed — same reasoning as `services.lastError`.
     lastError: text("last_error"),
     name: text("name").notNull(),
+
+    /**
+     * What a human calls it. `null` = never renamed, so `name` is shown.
+     *
+     * Cosmetic by construction: nothing derives from it. `name` stays the
+     * identity — it is what the typed delete confirmation is checked against,
+     * and what the unique index covers.
+     */
+    displayName: text("display_name"),
     port: integer("port"),
 
     // The key of the service, WITHIN the compose file, that receives the

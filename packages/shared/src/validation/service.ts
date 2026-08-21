@@ -18,6 +18,29 @@ export const serviceNameSchema = z
     "lowercase letters, digits and dashes; cannot start or end with a dash"
   );
 
+/**
+ * A DISPLAY name, and so deliberately unconstrained next to
+ * `serviceNameSchema` above: that one is DNS-safe because it becomes the
+ * Swarm service name, this one is only ever read by a human. Empty means
+ * "clear it" — the service falls back to its identity.
+ */
+export const serviceDisplayNameSchema = z.string().trim().max(48);
+
+export const renameServiceSchema = z.object({
+  displayName: serviceDisplayNameSchema,
+  serviceId: z.uuid(),
+});
+
+export const renameDatabaseSchema = z.object({
+  databaseId: z.uuid(),
+  displayName: serviceDisplayNameSchema,
+});
+
+export const renameStackSchema = z.object({
+  displayName: serviceDisplayNameSchema,
+  stackId: z.uuid(),
+});
+
 export const gitRepoUrlSchema = z
   .string()
   .min(1)
@@ -115,7 +138,7 @@ export const serviceInputSchema = z.object({
  */
 export const connectRepoSchema = z.object({
   environmentName: environmentNameSchema,
-  name: serviceNameSchema,
+  name: serviceDisplayNameSchema.min(1),
   projectName: projectNameSchema,
   serverId: z.uuid(),
 });

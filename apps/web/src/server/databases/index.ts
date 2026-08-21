@@ -11,6 +11,7 @@ export {
   deleteDatabase,
   rebuildDatabase,
   triggerDatabaseLifecycle,
+  renameDatabase,
 } from "./lifecycle";
 export { type DatabaseRow, getDatabase, getDatabaseDashboard } from "./read";
 export {

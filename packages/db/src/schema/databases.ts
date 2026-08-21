@@ -183,6 +183,15 @@ export const databases = pgTable(
     name: text("name").notNull(),
 
     /**
+     * What a human calls it. `null` = never renamed, so `name` is shown.
+     *
+     * Cosmetic by construction: nothing derives from it. `name` stays the
+     * identity — it is what the typed delete confirmation is checked against,
+     * and what the unique index covers.
+     */
+    displayName: text("display_name"),
+
+    /**
      * Desired Swarm replicas. Default 1. Values > 1 with a local named
      * volume are unsafe (corruption / empty second task) — the screen warns;
      * the worker still applies what is stored.

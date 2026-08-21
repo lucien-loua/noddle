@@ -12,6 +12,7 @@ import {
   PlayIcon,
   RocketLaunchIcon,
   StackIcon,
+  TagIcon,
   StopIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -79,7 +80,12 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { cache } from "@/lib/cache";
-import { dotClass, errorMessage, serviceLabel } from "@/lib/format";
+import {
+  displayNameOf,
+  dotClass,
+  errorMessage,
+  serviceLabel,
+} from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
@@ -89,6 +95,7 @@ import { triggerDeploy, triggerLifecycle } from "@/server/deployments";
 import { deleteService } from "@/server/services";
 import { deleteStack, triggerStackDeploy } from "@/server/stacks";
 
+import { RenameResourceDialog } from "./rename-resource-dialog";
 import {
   isTransientStatus,
   SCOPE_POLL_MS,
@@ -140,6 +147,11 @@ interface GridItem {
   /** The engine, for databases only: it's what selects the mark. */
   engine?: DatabaseEngine;
   id: string;
+  /** What the card SHOWS. `name` stays the identity: it is what the typed
+   *  delete confirmation is checked against, server-side. */
+  label: string;
+  /** Services only, and `null` until renamed — it seeds the rename dialog. */
+  displayName?: string | null;
   kind: Kind;
   lastError: string | null;
   name: string;
@@ -185,6 +197,7 @@ interface GridPermissions {
   deploy: boolean;
   move: boolean;
   operateDatabase: boolean;
+  rename: boolean;
 }
 
 function ResourceAddress({ item }: { item: GridItem }) {
@@ -447,6 +460,13 @@ function useResourceGridState({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [renaming, setRenaming] = useState<GridItem | null>(null);
+
+  const closeRename = useCallback((open: boolean) => {
+    if (!open) {
+      setRenaming(null);
+    }
+  }, []);
 
   const canDeploy = useCan(role, "service", "deploy");
   const canDelete = useCan(role, "service", "delete");
@@ -462,6 +482,8 @@ function useResourceGridState({
     deploy: canDeploy,
     move: canMove,
     operateDatabase: canOperateDatabase,
+    // Same permission as Move: both are management, neither touches what runs.
+    rename: canMove,
   };
 
   const items: GridItem[] = useMemo(
@@ -476,6 +498,8 @@ function useResourceGridState({
           id: s.id,
           kind: "service",
           lastError: s.lastError,
+          displayName: s.displayName,
+          label: displayNameOf(s),
           name: s.name,
           serverName: s.serverName,
           source: s.sourceType,
@@ -486,7 +510,9 @@ function useResourceGridState({
       ...scope.stacks.map((s): GridItem => ({
         domain: s.domain,
         domainUrl: null,
+        displayName: s.displayName,
         id: s.id,
+        label: displayNameOf(s),
         kind: "stack",
         lastError: s.lastError,
         name: s.name,
@@ -501,7 +527,9 @@ function useResourceGridState({
         domain: null,
         domainUrl: null,
         engine: d.engine,
+        displayName: d.displayName,
         id: d.id,
+        label: displayNameOf(d),
         kind: "database",
         lastError: d.lastError,
         name: d.name,
@@ -532,7 +560,7 @@ function useResourceGridState({
         return true;
       }
       return (
-        item.name.toLowerCase().includes(q) ||
+        item.label.toLowerCase().includes(q) ||
         (item.domain?.toLowerCase().includes(q) ?? false)
       );
     });
@@ -750,6 +778,9 @@ function useResourceGridState({
     awaitingSettle,
     bulkDelete,
     bulkDeleteOpen,
+    closeRename,
+    renaming,
+    setRenaming,
     bulkDeploy,
     bulkLifecycle,
     can,
@@ -794,6 +825,9 @@ export function ResourceGrid(props: GridProps) {
     awaitingSettle,
     bulkDelete,
     bulkDeleteOpen,
+    closeRename,
+    renaming,
+    setRenaming,
     bulkDeploy,
     bulkLifecycle,
     can,
@@ -991,6 +1025,7 @@ export function ResourceGrid(props: GridProps) {
               key={itemKey(item)}
               onMove={item.kind === "service" ? requestMove : undefined}
               onOpen={openItem}
+              onRename={setRenaming}
               onSettling={markSettling}
               onToggleSelect={toggleSelected}
               onUnsettling={unmarkSettling}
@@ -1014,12 +1049,23 @@ export function ResourceGrid(props: GridProps) {
         />
       ) : null}
 
+      {renaming ? (
+        <RenameResourceDialog
+          displayName={renaming.displayName ?? null}
+          kind={renaming.kind}
+          name={renaming.name}
+          onOpenChange={closeRename}
+          open
+          resourceId={renaming.id}
+        />
+      ) : null}
+
       <Dialog onOpenChange={setBulkDeleteOpen} open={bulkDeleteOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete {selected.size} items?</DialogTitle>
             <DialogDescription>
-              {selectedItems.map((i) => i.name).join(", ")}. Every deployment
+              {selectedItems.map((i) => i.label).join(", ")}. Every deployment
               history, log and image tied to them is removed too.{" "}
               <strong>This cannot be undone.</strong>
             </DialogDescription>
@@ -1054,6 +1100,7 @@ function ResourceGridCard({
   item,
   onMove,
   onOpen,
+  onRename,
   onSettling,
   onToggleSelect,
   onUnsettling,
@@ -1065,6 +1112,7 @@ function ResourceGridCard({
   item: GridItem;
   onMove: ((item: GridItem) => void) | undefined;
   onOpen: (item: GridItem) => void;
+  onRename: (item: GridItem) => void;
   onSettling: (items: GridItem[], action: LifecycleAction) => void;
   onToggleSelect: (item: GridItem) => void;
   onUnsettling: (items: GridItem[]) => void;
@@ -1094,6 +1142,7 @@ function ResourceGridCard({
   const lifecycleAvailable = hasLifecycle(item.kind) && mayOperate && settled;
 
   const handleOpen = useCallback(() => onOpen(item), [item, onOpen]);
+  const handleRename = useCallback(() => onRename(item), [item, onRename]);
   const handleToggleSelect = useCallback(
     () => onToggleSelect(item),
     [item, onToggleSelect]
@@ -1131,7 +1180,7 @@ function ResourceGridCard({
                 onClick={handleOpen}
                 type="button"
               >
-                {item.name}
+                {item.label}
               </button>
             </FrameTitle>
             {/* The title's stretched `::after` covers the WHOLE card at
@@ -1140,7 +1189,7 @@ function ResourceGridCard({
                 `.click()` here reaches the title's button instead. */}
             <div className="relative z-20 flex items-center gap-1">
               <Checkbox
-                aria-label={`Select ${item.name}`}
+                aria-label={`Select ${item.label}`}
                 checked={selected}
                 onCheckedChange={handleToggleSelect}
               />
@@ -1150,6 +1199,7 @@ function ResourceGridCard({
                 lifecycleAvailable={lifecycleAvailable}
                 onDelete={openDelete}
                 onMove={onMove ? handleMove : undefined}
+                onRename={handleRename}
                 onSettling={onSettling}
                 onUnsettling={onUnsettling}
                 pendingAction={pendingAction}
@@ -1223,6 +1273,7 @@ function ResourceCardMenu({
   lifecycleAvailable,
   onDelete,
   onMove,
+  onRename,
   onSettling,
   onUnsettling,
   pendingAction,
@@ -1233,6 +1284,7 @@ function ResourceCardMenu({
   item: GridItem;
   lifecycleAvailable: boolean;
   onDelete: () => void;
+  onRename: () => void;
   onMove: (() => void) | undefined;
   onSettling: (items: GridItem[], action: LifecycleAction) => void;
   onUnsettling: (items: GridItem[]) => void;
@@ -1292,7 +1344,7 @@ function ResourceCardMenu({
       <DropdownMenuTrigger
         render={
           <Button
-            aria-label={`Actions for ${item.name}`}
+            aria-label={`Actions for ${item.label}`}
             size="icon-xs"
             variant="ghost"
           >
@@ -1317,6 +1369,12 @@ function ResourceCardMenu({
           <DropdownMenuItem disabled={lifecycleBusy} onClick={handleRestart}>
             <ArrowClockwiseIcon weight="fill" />
             Restart
+          </DropdownMenuItem>
+        ) : null}
+        {can.rename ? (
+          <DropdownMenuItem onClick={onRename}>
+            <TagIcon />
+            Rename
           </DropdownMenuItem>
         ) : null}
         {onMove && can.move ? (
@@ -1393,7 +1451,7 @@ function ResourceDeleteDialog({
       open={open}
       pending={remove.isPending}
       resourceName={item.name}
-      title={`Delete ${item.name}?`}
+      title={`Delete ${item.label}?`}
     />
   );
 }

@@ -16,6 +16,7 @@ import {
   TrashIcon,
   ShareNetworkIcon,
   StackIcon,
+  TagIcon,
   TerminalWindowIcon,
   TextAlignLeftIcon,
 } from "@phosphor-icons/react";
@@ -78,6 +79,7 @@ const HANDLE_SOURCE_STYLE = { right: "calc(var(--frame-px) * -1)" };
 export type LifecycleKind = "database" | "service" | "stack";
 
 export type TopologyAction =
+  | { kind: "rename"; id: string; resource: LifecycleKind }
   | { kind: "attach"; databaseId: string }
   | {
       kind: "lifecycle";
@@ -102,6 +104,7 @@ export interface TopologyActions {
   canDelete: boolean;
   canDeploy: boolean;
   canOperateDatabase: boolean;
+  canRename: boolean;
   canShell: boolean;
   run: (action: TopologyAction) => void;
 }
@@ -347,13 +350,19 @@ function PanelRows({ data }: { data: TopologyNodeData }) {
 function menuFor(
   actions: TopologyActions | null,
   data: TopologyNodeData
-): { deployable: boolean; operable: boolean; removable: boolean } {
+): {
+  deployable: boolean;
+  operable: boolean;
+  removable: boolean;
+  renamable: boolean;
+} {
   const mayOperate =
     data.kind === "database" ? actions?.canOperateDatabase : actions?.canDeploy;
   return {
     deployable: Boolean(actions?.canDeploy) && data.kind !== "database",
     operable: Boolean(mayOperate) && data.live && data.kind !== "stack",
     removable: Boolean(actions?.canDelete),
+    renamable: Boolean(actions?.canRename) && data.kind !== "internet",
   };
 }
 
@@ -381,12 +390,16 @@ function LifecycleMenu({ data }: { data: TopologyNodeData }) {
   const onStart = useCallback(() => fire("start"), [fire]);
   const onStop = useCallback(() => fire("stop"), [fire]);
   const onDelete = useCallback(() => fire("delete"), [fire]);
+  const onRename = useCallback(
+    () => actions?.run({ id, kind: "rename", resource }),
+    [actions, id, resource]
+  );
 
-  const { deployable, operable, removable } = menuFor(actions, data);
+  const { deployable, operable, removable, renamable } = menuFor(actions, data);
   const stopped = status === "stopped";
   const busy = data.pending !== null;
 
-  if (!(id && (deployable || operable || removable))) {
+  if (!(id && (deployable || operable || removable || renamable))) {
     return null;
   }
 
@@ -406,6 +419,12 @@ function LifecycleMenu({ data }: { data: TopologyNodeData }) {
         }
       />
       <DropdownMenuContent align="end">
+        {renamable ? (
+          <DropdownMenuItem onClick={onRename}>
+            <TagIcon />
+            Rename
+          </DropdownMenuItem>
+        ) : null}
         {deployable ? (
           <DropdownMenuItem onClick={onDeploy}>
             <RocketLaunchIcon />

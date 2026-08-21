@@ -10,6 +10,7 @@ import { db } from "@/lib/db.server";
 import type { DatabaseRow } from "@/server/databases/read";
 
 export interface DatabaseJoined {
+  displayName: string | null;
   cpuLimitNanos: number | null;
   cpuReservationNanos: number | null;
   databaseName: string | null;
@@ -38,6 +39,7 @@ export function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
     cpuLimitNanos: d.cpuLimitNanos,
     cpuReservationNanos: d.cpuReservationNanos,
     databaseName: d.databaseName,
+    displayName: d.displayName,
     engine: d.engine,
     environment: d.environment.name,
     environmentId: d.environmentId,

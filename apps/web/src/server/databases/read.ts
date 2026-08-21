@@ -15,6 +15,8 @@ import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
 
 export interface DatabaseRow {
+  /** What a human renamed it to. `null` = never renamed; read `name`. */
+  displayName: string | null;
   cpuLimitNanos: number | null;
   cpuReservationNanos: number | null;
   databaseName: string | null;

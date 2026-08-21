@@ -61,6 +61,8 @@ export interface ServiceRow {
   cleanCache: boolean;
   /** Deploy key for a private repository. `null` = anonymous clone. */
   deployKeyId: string | null;
+  /** What a human renamed it to. `null` = never renamed; read `name`. */
+  displayName: string | null;
   dockerImage: string | null;
   domains: ServiceDomainRow[];
   environment: string;
@@ -110,6 +112,8 @@ export interface ServiceRow {
 }
 
 export interface StackRow {
+  /** What a human renamed it to. `null` = never renamed; read `name`. */
+  displayName: string | null;
   domain: string | null;
   environment: string;
   environmentId: string;
@@ -173,6 +177,7 @@ interface ServiceJoined {
   buildPath: string | null;
   cleanCache: boolean;
   deployKeyId: string | null;
+  displayName: string | null;
   dockerImage: string | null;
   domains: {
     certificateType: "none" | "letsencrypt";
@@ -239,6 +244,7 @@ function toServiceRow(
     hookError,
     id: service.id,
     lastDeployment: last ? toSummary(last, nodes) : null,
+    displayName: service.displayName,
     lastError: service.lastError,
     name: service.name,
     port: service.port,
@@ -444,6 +450,7 @@ async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
   return rows.map((stack) => {
     const last = latest.get(stack.id);
     return {
+      displayName: stack.displayName,
       domain: stack.domain,
       environment: stack.environment.name,
       environmentId: stack.environmentId,

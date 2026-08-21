@@ -12,6 +12,7 @@ const ENVIRONMENT = "env-1";
 const PROJECT = "proj-1";
 
 const service = (id: string, domains: number) => ({
+  displayName: null,
   domains: Array.from({ length: domains }, (_, i) => ({
     host: `${id}-${i}`,
     https: true,
@@ -33,6 +34,7 @@ const scope = (over: Partial<TopologyScope> = {}): TopologyScope => ({
 });
 
 const database = (id: string) => ({
+  displayName: null,
   engine: "postgres" as const,
   id,
   name: id,
@@ -41,6 +43,7 @@ const database = (id: string) => ({
 });
 
 const stack = (id: string, domain: string | null) => ({
+  displayName: null,
   domain,
   id,
   name: id,
@@ -71,6 +74,15 @@ await runVerify("environment topology (the drawn graph)", () => {
       !ids(edges).includes(`${INTERNET_NODE_ID}->worker`)
     );
     check("a declared dependency is drawn", ids(edges).includes("api->db"));
+    check(
+      "a node draws the DISPLAY name, and the identity stays underneath",
+      buildTopology(
+        scope({
+          services: [{ ...service("api", 0), displayName: "Checkout" }],
+        }),
+        []
+      ).nodes.find((n) => n.id === "api")?.data.label === "Checkout"
+    );
     check(
       "the two kinds of edge are told apart on the canvas",
       edges.find((e) => e.id === "ingress-api")?.data?.dashed === true &&

@@ -75,6 +75,7 @@ export interface TopologyNode {
  */
 export interface TopologyScope {
   databases: {
+    displayName: string | null;
     engine: DatabaseEngine;
     id: string;
     name: string;
@@ -84,6 +85,8 @@ export interface TopologyScope {
   environmentId: string;
   projectId: string;
   services: {
+    /** `null` = never renamed; the node reads `name`. */
+    displayName: string | null;
     domains: { host: string; https: boolean }[];
     id: string;
     name: string;
@@ -94,6 +97,7 @@ export interface TopologyScope {
     status: string;
   }[];
   stacks: {
+    displayName: string | null;
     domain: string | null;
     id: string;
     name: string;
@@ -213,7 +217,7 @@ export function buildTopology(
         hasSource: false,
         hasTarget: false,
         kind: "service",
-        label: service.name,
+        label: service.displayName ?? service.name,
         live: !NO_CONTAINER.has(service.status),
         pending: null,
         reaches: null,
@@ -238,7 +242,7 @@ export function buildTopology(
         hasSource: false,
         hasTarget: false,
         kind: "stack",
-        label: stack.name,
+        label: stack.displayName ?? stack.name,
         live: !NO_CONTAINER.has(stack.status),
         pending: null,
         reaches: null,
@@ -263,7 +267,7 @@ export function buildTopology(
         hasSource: false,
         hasTarget: false,
         kind: "database",
-        label: database.name,
+        label: database.displayName ?? database.name,
         live: !NO_CONTAINER.has(database.status),
         pending: null,
         reaches: null,
@@ -312,11 +316,35 @@ export function buildTopology(
   // when the reader may actually attach, and only when there is something to
   // attach — an invitation that cannot be accepted is worse than none.
   if (options?.canAttach && scope.services.length > 0) {
-    const consumed = new Set(edges.map((e) => e.target));
-    for (const database of scope.databases) {
-      if (consumed.has(database.id)) {
-        continue;
-      }
+    pushAttachSlots(nodes, edges, scope.databases);
+  }
+
+  // Set LAST, not while building: a node's handles depend on the edges, and
+  // the edges are only complete here.
+  const sources = new Set(edges.map((e) => e.source));
+  const targets = new Set(edges.map((e) => e.target));
+  for (const node of nodes) {
+    node.data.hasSource = sources.has(node.id);
+    node.data.hasTarget = targets.has(node.id);
+  }
+
+  return { edges, nodes };
+}
+
+/**
+ * An open slot beside every database nothing consumes.
+ *
+ * Split out of `buildTopology` for its cognitive complexity, not because it
+ * stands alone: it reads the edges built so far to know what is unconsumed.
+ */
+function pushAttachSlots(
+  nodes: TopologyNode[],
+  edges: Edge[],
+  databases: TopologyScope["databases"]
+) {
+  const consumed = new Set(edges.map((e) => e.target));
+  for (const database of databases) {
+    if (!consumed.has(database.id)) {
       const id = `attach-${database.id}`;
       nodes.push({
         data: {
@@ -349,15 +377,4 @@ export function buildTopology(
       });
     }
   }
-
-  // Set LAST, not while building: a node's handles depend on the edges, and
-  // the edges are only complete here.
-  const sources = new Set(edges.map((e) => e.source));
-  const targets = new Set(edges.map((e) => e.target));
-  for (const node of nodes) {
-    node.data.hasSource = sources.has(node.id);
-    node.data.hasTarget = targets.has(node.id);
-  }
-
-  return { edges, nodes };
 }
