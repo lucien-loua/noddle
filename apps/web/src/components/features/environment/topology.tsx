@@ -1,7 +1,7 @@
 "use client";
 
 import { CornersOutIcon, GraphIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MarkerType,
   Panel,
@@ -29,7 +29,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Frame, FramePanel } from "@/components/ui/frame";
-import { toast } from "@/components/ui/toast";
 import {
   Tooltip,
   TooltipContent,
@@ -39,17 +38,12 @@ import { FlowCanvas } from "@/components/xyflow/components/canvas";
 import { edgeTypes } from "@/components/xyflow/components/edge";
 import { getLayoutedElements } from "@/components/xyflow/lib/layout";
 import { cache } from "@/lib/cache";
-import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { useCan } from "@/lib/use-permission";
 import type { Scope } from "@/server/dashboard";
-import { deleteDatabase, triggerDatabaseLifecycle } from "@/server/databases";
-import { triggerDeploy, triggerLifecycle } from "@/server/deployments";
-import { deleteService } from "@/server/services";
-import { deleteStack, triggerStackDeploy } from "@/server/stacks";
 
-import { SCOPE_POLL_MS, useAwaitingSettle } from "./scope-poll";
+import { RenameResourceDialog } from "./rename-resource-dialog";
 import { TopologyDrawer } from "./topology-drawer";
 import type { TopologyPanel } from "./topology-drawer";
 import { buildTopology } from "./topology-graph";
@@ -65,6 +59,8 @@ import type {
   TopologyAction,
   TopologyActions,
 } from "./topology-node";
+import type { LifecycleTarget } from "./use-topology-lifecycle";
+import { useTopologyLifecycle } from "./use-topology-lifecycle";
 
 /**
  * The environment, drawn: what the internet reaches, and what consumes what.
@@ -85,47 +81,6 @@ const DEFAULT_EDGE_OPTIONS = {
     width: 14,
   },
 };
-
-/** What `runLifecycle` accepts. `delete` is NOT here on purpose — it goes
- *  through the typed confirmation, never straight from a menu click. */
-type LifecycleName = "deploy" | "restart" | "start" | "stop";
-
-interface LifecycleTarget {
-  id: string;
-  name: string;
-  resource: LifecycleKind;
-  status: string;
-}
-
-/** The same call, routed by type: the resource grid speaks to exactly these
- *  server functions, and a second spelling of "stop" would eventually drift
- *  from the first. */
-function runLifecycle(
-  target: LifecycleTarget,
-  action: LifecycleName
-): Promise<unknown> {
-  if (action === "deploy") {
-    return target.resource === "stack"
-      ? triggerStackDeploy({ data: { stackId: target.id } })
-      : triggerDeploy({ data: { serviceId: target.id } });
-  }
-  if (target.resource === "database") {
-    return triggerDatabaseLifecycle({
-      data: { action, databaseId: target.id },
-    });
-  }
-  return triggerLifecycle({ data: { action, serviceId: target.id } });
-}
-
-function removeResource(target: LifecycleTarget, confirmName: string) {
-  if (target.resource === "service") {
-    return deleteService({ data: { confirmName, serviceId: target.id } });
-  }
-  if (target.resource === "stack") {
-    return deleteStack({ data: { confirmName, stackId: target.id } });
-  }
-  return deleteDatabase({ data: { confirmName, databaseId: target.id } });
-}
 
 const LAYOUT = {
   direction: "LR",
@@ -284,6 +239,17 @@ function TopologyCanvas({
   );
 }
 
+/** The row behind a node, for the fields the canvas does not carry. */
+function identityOf(scope: Scope, resource: LifecycleKind, id: string) {
+  if (resource === "database") {
+    return scope.databases.find((r) => r.id === id);
+  }
+  if (resource === "stack") {
+    return scope.stacks.find((r) => r.id === id);
+  }
+  return scope.services.find((r) => r.id === id);
+}
+
 export function EnvironmentTopology({
   role,
   scope,
@@ -291,89 +257,29 @@ export function EnvironmentTopology({
   role: RoleName | null;
   scope: Scope;
 }) {
-  const queryClient = useQueryClient();
   const dependencies = useQuery(
     queries.environmentDependencies(scope.environmentId)
   );
   const canAttach = useCan(role, "database", "attach");
   const canShell = useCan(role, "container", "shell");
+  const canRename = useCan(role, "service", "create");
   const canDeploy = useCan(role, "service", "deploy");
   const canDelete = useCan(role, "service", "delete");
   const canOperateDatabase = useCan(role, "database", "operate");
   const { openTerminal, terminal } = useTerminalDialog();
   const [attachTo, setAttachTo] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{
+    id: string;
+    resource: LifecycleKind;
+  } | null>(null);
   const [panel, setPanel] = useState<TopologyPanel | null>(null);
-  const [removing, setRemoving] = useState<LifecycleTarget | null>(null);
-  const settle = useAwaitingSettle();
-
-  const refreshScope = useCallback(
-    () =>
-      cache.environmentScope(queryClient, scope.projectId, scope.environmentId),
-    [queryClient, scope.environmentId, scope.projectId]
-  );
-
-  // The route polls while a status is TRANSIENT. An action fired from here
-  // has a window before the status even moves — `stop` leaves a service
-  // reading `running` for a second or two — so this second observer on the
-  // same key keeps watching until the row actually changes. React Query takes
-  // the shortest interval among observers, so the two cannot fight.
-  useQuery({
-    ...queries.environmentScope(scope.projectId, scope.environmentId),
-    refetchInterval: settle.active ? SCOPE_POLL_MS : false,
-    staleTime: SCOPE_POLL_MS,
-  });
-
-  const settling = useMemo(
-    () => [...scope.services, ...scope.stacks, ...scope.databases],
-    [scope.databases, scope.services, scope.stacks]
-  );
-
-  useEffect(() => settle.refine(settling), [settle, settling]);
-
-  const lifecycle = useMutation({
-    mutationFn: ({
-      action,
-      target,
-    }: {
-      action: LifecycleName;
-      target: LifecycleTarget;
-    }) => runLifecycle(target, action),
-    onError: (error: Error) =>
-      toast.add({
-        description: errorMessage(error, "the action was refused"),
-        title: "Action failed",
-        type: "error",
-      }),
-    onMutate: ({ action, target }) =>
-      settle.mark(target.id, target.status, action),
-    onSuccess: () => refreshScope(),
-  });
-
-  const remove = useMutation({
-    mutationFn: (confirmName: string) => {
-      if (!removing) {
-        throw new Error("nothing to delete");
-      }
-      settle.mark(removing.id, removing.status, "delete");
-      return removeResource(removing, confirmName);
-    },
-    onError: (error: Error) => {
-      setRemoving(null);
-      toast.add({
-        description: errorMessage(error, "deletion failed"),
-        title: "Not deleted",
-        type: "error",
-      });
-    },
-    onSuccess: async () => {
-      await refreshScope();
-      setRemoving(null);
-    },
-  });
+  const queryClient = useQueryClient();
+  const { lifecycle, pending, remove, removing, setRemoving } =
+    useTopologyLifecycle(scope);
 
   const graph = useMemo(() => {
     const built = buildTopology(scope, dependencies.data ?? [], { canAttach });
-    if (settle.pending.size === 0) {
+    if (pending.size === 0) {
       return built;
     }
     // Overlaid HERE and not in `buildTopology`: the graph builder states what
@@ -381,11 +287,13 @@ export function EnvironmentTopology({
     return {
       edges: built.edges,
       nodes: built.nodes.map((node) => {
-        const pending = settle.pending.get(node.id);
-        return pending ? { ...node, data: { ...node.data, pending } } : node;
+        const label = pending.get(node.id);
+        return label
+          ? { ...node, data: { ...node.data, pending: label } }
+          : node;
       }),
     };
-  }, [canAttach, dependencies.data, scope, settle.pending]);
+  }, [canAttach, dependencies.data, pending, scope]);
 
   const handleAttached = useCallback(() => {
     cache.environmentDependencies(queryClient, scope.environmentId);
@@ -402,6 +310,12 @@ export function EnvironmentTopology({
     (typed: string) => remove.mutate(typed),
     [remove]
   );
+
+  const handleRenameOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setRenaming(null);
+    }
+  }, []);
 
   const handleAttachOpenChange = useCallback((open: boolean) => {
     if (!open) {
@@ -430,10 +344,19 @@ export function EnvironmentTopology({
         });
         return;
       }
+      if (action.kind === "rename") {
+        setRenaming({ id: action.id, resource: action.resource });
+        return;
+      }
       if (action.kind === "lifecycle") {
+        // The identity is read from the scope, never from the node: the node
+        // draws the DISPLAY name, and a delete confirmation checked against
+        // that would refuse every renamed service.
+        const row = identityOf(scope, action.resource, action.id);
         const target: LifecycleTarget = {
           id: action.id,
-          name: action.name,
+          label: action.name,
+          name: row?.name ?? action.name,
           resource: action.resource,
           status: action.status,
         };
@@ -446,7 +369,7 @@ export function EnvironmentTopology({
       }
       setPanel(action);
     },
-    [lifecycle, openTerminal]
+    [lifecycle, openTerminal, scope]
   );
 
   const actions = useMemo<TopologyActions>(
@@ -454,10 +377,11 @@ export function EnvironmentTopology({
       canDelete,
       canDeploy,
       canOperateDatabase,
+      canRename,
       canShell,
       run: runAction,
     }),
-    [canDelete, canDeploy, canOperateDatabase, canShell, runAction]
+    [canDelete, canDeploy, canOperateDatabase, canRename, canShell, runAction]
   );
 
   // Remounts the log stream when the container is replaced — start, restart
@@ -475,6 +399,11 @@ export function EnvironmentTopology({
 
   const attaching = attachTo
     ? scope.databases.find((d) => d.id === attachTo)
+    : undefined;
+  // Looked up rather than carried in node data: the node draws the DISPLAY
+  // name, and the dialog needs the identity underneath it too.
+  const renamingRow = renaming
+    ? identityOf(scope, renaming.resource, renaming.id)
     : undefined;
 
   // Held back until the edges are in. Laying out with the ingress edges
@@ -532,6 +461,16 @@ export function EnvironmentTopology({
         panel={panel}
         scope={scope}
       />
+      {renamingRow && renaming ? (
+        <RenameResourceDialog
+          displayName={renamingRow.displayName ?? null}
+          kind={renaming.resource}
+          name={renamingRow.name}
+          onOpenChange={handleRenameOpenChange}
+          open
+          resourceId={renamingRow.id}
+        />
+      ) : null}
       {terminal}
 
       <ConfirmNameDialog
@@ -547,7 +486,7 @@ export function EnvironmentTopology({
         open={removing !== null}
         pending={remove.isPending}
         resourceName={removing?.name ?? ""}
-        title={`Delete ${removing?.name ?? ""}?`}
+        title={`Delete ${removing?.label ?? ""}?`}
       />
 
       {attaching ? (
