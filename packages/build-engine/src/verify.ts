@@ -1,12 +1,12 @@
 // tier: vm
 // node packages/build-engine/src/verify.ts
 
+import { BUILDKIT_CONTAINER } from "@noddle/shared/noddle-containers";
 import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
 import { devTarget } from "@noddle/testing/dev-target";
 
 import {
-  BUILDKIT_CONTAINER,
   BUILDX_BUILDER,
   BuildError,
   buildImage,
