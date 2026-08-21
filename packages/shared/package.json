@@ -14,6 +14,7 @@
     "./noddle-containers": "./src/noddle-containers.ts",
     "./password": "./src/password.ts",
     "./redact": "./src/redact.ts",
+    "./slug": "./src/slug.ts",
     "./source-type": "./src/source-type.ts",
     "./swarm-names": "./src/swarm-names.ts",
     "./toolchain": "./src/toolchain.ts",
