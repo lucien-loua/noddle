@@ -1,5 +1,5 @@
-import { isPortableImage } from "@noddle/registry";
-import type { RegistryConfig } from "@noddle/registry";
+import { isPortableImage } from "@noddle/deploy-engine";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import type { DockerApi } from "@noddle/ssh-executor";
 import { getSwarmNodeId } from "@noddle/swarm-ops";
 import type { RegistryAuth } from "@noddle/swarm-ops";

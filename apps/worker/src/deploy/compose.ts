@@ -1,17 +1,15 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  buildImageFromDockerfile,
-  computeBuildCap,
-  ensureCappedBuilder,
-  fetchSource,
-} from "@noddle/build-engine";
-import {
   stackDeploymentLogs,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import {
+  buildImageFromDockerfile,
+  computeBuildCap,
+  ensureCappedBuilder,
+  fetchSource,
   injectDeployConfig,
   parseCompose,
   SAFE_COMPOSE_KEY,

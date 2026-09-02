@@ -9,7 +9,7 @@ import {
   looksOutOfMemory,
   looksUnauthenticated,
   resolveBuildDir,
-} from "#index";
+} from "./build.ts";
 
 const CLONE = "/var/lib/noddle/builds/abc";
 const WHITESPACE = /\s+/;

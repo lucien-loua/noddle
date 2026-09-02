@@ -13,7 +13,7 @@ import {
   serviceMetrics,
   services,
 } from "@noddle/db/schema";
-import type { RegistryConfig } from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import {
   connect,
   disconnect,

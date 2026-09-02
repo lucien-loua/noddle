@@ -79,7 +79,6 @@
       "dependencies": {
         "@noddle/backup": "workspace:*",
         "@noddle/backup-store": "workspace:*",
-        "@noddle/build-engine": "workspace:*",
         "@noddle/crypto": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
@@ -88,7 +87,6 @@
         "@noddle/git-provider": "workspace:*",
         "@noddle/git-provider-credentials": "workspace:*",
         "@noddle/notifier": "workspace:*",
-        "@noddle/registry": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
@@ -126,17 +124,6 @@
       "dependencies": {
         "@aws-sdk/client-s3": "catalog:",
         "@aws-sdk/lib-storage": "catalog:",
-      },
-      "devDependencies": {
-        "@noddle/testing": "workspace:*",
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
-    "packages/build-engine": {
-      "name": "@noddle/build-engine",
-      "dependencies": {
-        "@noddle/shared": "workspace:*",
-        "@noddle/ssh-executor": "workspace:*",
       },
       "devDependencies": {
         "@noddle/testing": "workspace:*",
@@ -184,6 +171,7 @@
       "name": "@noddle/deploy-engine",
       "dependencies": {
         "@noddle/shared": "workspace:*",
+        "@noddle/ssh-executor": "workspace:*",
         "yaml": "catalog:",
       },
       "devDependencies": {
@@ -215,15 +203,6 @@
       "name": "@noddle/notifier",
       "devDependencies": {
         "@noddle/testing": "workspace:*",
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
-    "packages/registry": {
-      "name": "@noddle/registry",
-      "dependencies": {
-        "@noddle/ssh-executor": "workspace:*",
-      },
-      "devDependencies": {
         "@noddle/tsconfig": "workspace:*",
       },
     },
@@ -604,8 +583,6 @@
 
     "@noddle/backup-store": ["@noddle/backup-store@workspace:packages/backup-store"],
 
-    "@noddle/build-engine": ["@noddle/build-engine@workspace:packages/build-engine"],
-
     "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
 
     "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
@@ -621,8 +598,6 @@
     "@noddle/git-provider-credentials": ["@noddle/git-provider-credentials@workspace:packages/git-provider-credentials"],
 
     "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
-
-    "@noddle/registry": ["@noddle/registry@workspace:packages/registry"],
 
     "@noddle/shared": ["@noddle/shared@workspace:packages/shared"],
 

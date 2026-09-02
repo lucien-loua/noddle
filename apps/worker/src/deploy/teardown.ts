@@ -5,7 +5,7 @@ import {
   deleteManifest,
   garbageCollect,
   parseRegistryRef,
-} from "@noddle/registry";
+} from "@noddle/deploy-engine";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { execArgv } from "@noddle/ssh-executor";

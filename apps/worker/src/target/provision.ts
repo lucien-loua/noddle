@@ -1,5 +1,5 @@
 import { servers } from "@noddle/db/schema";
-import { ensureRegistryTrust } from "@noddle/registry";
+import { ensureRegistryTrust } from "@noddle/deploy-engine";
 import { railpackInstallCommand } from "@noddle/shared/toolchain";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";

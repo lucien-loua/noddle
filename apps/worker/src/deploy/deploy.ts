@@ -1,11 +1,3 @@
-import {
-  buildImage,
-  buildImageFromDockerfile,
-  computeBuildCap,
-  ensureCappedBuilder,
-  fetchSource,
-  resolveBuildDir,
-} from "@noddle/build-engine";
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import {
   deploymentLogs,
@@ -13,9 +5,17 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import type { DomainRoute } from "@noddle/deploy-engine";
-import { pushImage, registryImageTag } from "@noddle/registry";
-import type { RegistryConfig } from "@noddle/registry";
+import {
+  buildImage,
+  buildImageFromDockerfile,
+  computeBuildCap,
+  ensureCappedBuilder,
+  fetchSource,
+  resolveBuildDir,
+  pushImage,
+  registryImageTag,
+} from "@noddle/deploy-engine";
+import type { DomainRoute, RegistryConfig } from "@noddle/deploy-engine";
 import { redactUrlCredentials } from "@noddle/shared/redact";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";

@@ -1,6 +1,5 @@
 import { routeLabels, serviceRouteLabels } from "@noddle/deploy-engine";
-import type { DomainRoute } from "@noddle/deploy-engine";
-import type { RegistryConfig } from "@noddle/registry";
+import type { DomainRoute, RegistryConfig } from "@noddle/deploy-engine";
 import type { DockerApi } from "@noddle/ssh-executor";
 import {
   deployService,

@@ -19,8 +19,8 @@ import {
   pushImage,
   REGISTRY_USER,
   registryImageTag,
-} from "@noddle/registry";
-import type { RegistryConfig } from "@noddle/registry";
+} from "@noddle/deploy-engine";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,

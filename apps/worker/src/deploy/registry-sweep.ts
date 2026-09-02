@@ -4,8 +4,8 @@ import {
   garbageCollect,
   KEEP_PER_SERVICE,
   parseRegistryRef,
-} from "@noddle/registry";
-import type { RegistryConfig } from "@noddle/registry";
+} from "@noddle/deploy-engine";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import { disconnect } from "@noddle/ssh-executor";
 import { desc, eq, inArray } from "drizzle-orm";
 

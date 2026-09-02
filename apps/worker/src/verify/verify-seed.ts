@@ -2,7 +2,7 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { sshKeys } from "@noddle/db/schema";
-import type { RegistryConfig } from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import { eq } from "drizzle-orm";
 
 import { createDeployContext } from "#runtime-context";

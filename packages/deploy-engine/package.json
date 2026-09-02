@@ -9,10 +9,12 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "verify:pure": "noddle-verify pure"
+    "verify:pure": "noddle-verify pure",
+    "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
     "@noddle/shared": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*",
     "yaml": "catalog:"
   },
   "devDependencies": {

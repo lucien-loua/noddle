@@ -11,7 +11,7 @@ import {
   computeBuildCap,
   ensureCappedBuilder,
   fetchSource,
-} from "#index";
+} from "./build.ts";
 
 const TARGET = devTarget();
 

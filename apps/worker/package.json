@@ -44,7 +44,6 @@
   "dependencies": {
     "@noddle/backup": "workspace:*",
     "@noddle/backup-store": "workspace:*",
-    "@noddle/build-engine": "workspace:*",
     "@noddle/crypto": "workspace:*",
     "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
@@ -53,7 +52,6 @@
     "@noddle/git-provider": "workspace:*",
     "@noddle/git-provider-credentials": "workspace:*",
     "@noddle/notifier": "workspace:*",
-    "@noddle/registry": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-credentials": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",

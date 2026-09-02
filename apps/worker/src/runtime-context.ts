@@ -1,6 +1,6 @@
 import type { Database } from "@noddle/db";
 import { servers } from "@noddle/db/schema";
-import type { RegistryConfig } from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, dockerClient } from "@noddle/ssh-executor";
 import type { DockerApi, SshClient } from "@noddle/ssh-executor";
