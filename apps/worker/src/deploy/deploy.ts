@@ -13,7 +13,7 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import type { DomainRoute } from "@noddle/proxy-config";
+import type { DomainRoute } from "@noddle/deploy-engine";
 import { pushImage, registryImageTag } from "@noddle/registry";
 import type { RegistryConfig } from "@noddle/registry";
 import { redactUrlCredentials } from "@noddle/shared/redact";

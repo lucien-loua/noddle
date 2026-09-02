@@ -1,5 +1,5 @@
 {
-  "name": "@noddle/proxy-config",
+  "name": "@noddle/deploy-engine",
   "private": true,
   "type": "module",
   "imports": {
@@ -10,6 +10,10 @@
   },
   "scripts": {
     "verify:pure": "noddle-verify pure"
+  },
+  "dependencies": {
+    "@noddle/shared": "workspace:*",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@noddle/testing": "workspace:*",

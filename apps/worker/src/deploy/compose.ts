@@ -7,20 +7,20 @@ import {
   fetchSource,
 } from "@noddle/build-engine";
 import {
-  injectDeployConfig,
-  parseCompose,
-  SAFE_COMPOSE_KEY,
-} from "@noddle/compose-engine";
-import type {
-  ComposeBuildSpec,
-  ComposeFile,
-  ComposeService,
-} from "@noddle/compose-engine";
-import {
   stackDeploymentLogs,
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import {
+  injectDeployConfig,
+  parseCompose,
+  SAFE_COMPOSE_KEY,
+} from "@noddle/deploy-engine";
+import type {
+  ComposeBuildSpec,
+  ComposeFile,
+  ComposeService,
+} from "@noddle/deploy-engine";
 import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
 import {

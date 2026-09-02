@@ -1,5 +1,5 @@
-import { routeLabels, serviceRouteLabels } from "@noddle/proxy-config";
-import type { DomainRoute } from "@noddle/proxy-config";
+import { routeLabels, serviceRouteLabels } from "@noddle/deploy-engine";
+import type { DomainRoute } from "@noddle/deploy-engine";
 import type { RegistryConfig } from "@noddle/registry";
 import type { DockerApi } from "@noddle/ssh-executor";
 import {

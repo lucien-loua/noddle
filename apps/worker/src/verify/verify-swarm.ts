@@ -1,5 +1,5 @@
 // tier: vm
-import { routeLabels } from "@noddle/proxy-config";
+import { routeLabels } from "@noddle/deploy-engine";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
 import {

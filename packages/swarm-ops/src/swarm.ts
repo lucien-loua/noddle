@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
-import type { TraefikLabels } from "@noddle/proxy-config";
+import type { TraefikLabels } from "@noddle/deploy-engine";
 import {
   MONITOR_SECONDS,
   renderDockerodeHttpHealthcheck,

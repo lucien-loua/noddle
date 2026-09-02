@@ -1,7 +1,8 @@
-import { routeLabels } from "@noddle/proxy-config";
 import { renderComposeHttpHealthcheck } from "@noddle/shared/deploy-policy";
 import { composeWorkloadDeploy } from "@noddle/shared/workload";
 import { parse } from "yaml";
+
+import { routeLabels } from "./proxy.ts";
 
 export { SAFE_SHELL_IDENTIFIER as SAFE_COMPOSE_KEY } from "@noddle/shared/shell-identifier";
 

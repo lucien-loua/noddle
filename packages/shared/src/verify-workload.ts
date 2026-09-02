@@ -54,7 +54,7 @@ await runVerify("workload policy (C2)", () => {
     "utf-8"
   );
   const composeEngine = readFileSync(
-    join(REPO, "packages/compose-engine/src/index.ts"),
+    join(REPO, "packages/deploy-engine/src/internal/compose.ts"),
     "utf-8"
   );
   const database = readFileSync(

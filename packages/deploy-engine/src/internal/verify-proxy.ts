@@ -1,7 +1,7 @@
 // tier: pure
 import { check, expectThrows, runVerify } from "@noddle/testing";
 
-import { hostRule, routeLabels, serviceRouteLabels } from "./index.ts";
+import { hostRule, routeLabels, serviceRouteLabels } from "./proxy.ts";
 
 await runVerify("proxy-config", () => {
   check(

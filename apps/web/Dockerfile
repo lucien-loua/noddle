@@ -8,15 +8,14 @@ COPY apps/worker/package.json apps/worker/
 COPY packages/backup/package.json packages/backup/
 COPY packages/backup-store/package.json packages/backup-store/
 COPY packages/build-engine/package.json packages/build-engine/
-COPY packages/compose-engine/package.json packages/compose-engine/
 COPY packages/crypto/package.json packages/crypto/
 COPY packages/database-spec/package.json packages/database-spec/
 COPY packages/db/package.json packages/db/
 COPY packages/deploy-contract/package.json packages/deploy-contract/
+COPY packages/deploy-engine/package.json packages/deploy-engine/
 COPY packages/git-provider/package.json packages/git-provider/
 COPY packages/git-provider-credentials/package.json packages/git-provider-credentials/
 COPY packages/notifier/package.json packages/notifier/
-COPY packages/proxy-config/package.json packages/proxy-config/
 COPY packages/registry/package.json packages/registry/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ssh-credentials/package.json packages/ssh-credentials/

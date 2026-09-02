@@ -6,12 +6,10 @@
     "#*": "./src/*.ts"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./swarm": "./src/swarm.ts",
-    "./watch": "./src/watch.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
-    "@noddle/proxy-config": "workspace:*",
+    "@noddle/deploy-engine": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*"
   },

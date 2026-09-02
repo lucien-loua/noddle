@@ -5,7 +5,7 @@ import {
   injectDeployConfig,
   listComposeServiceKeys,
   parseCompose,
-} from "./index.ts";
+} from "./compose.ts";
 
 const SAMPLE = `
 services:

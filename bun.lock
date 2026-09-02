@@ -80,15 +80,14 @@
         "@noddle/backup": "workspace:*",
         "@noddle/backup-store": "workspace:*",
         "@noddle/build-engine": "workspace:*",
-        "@noddle/compose-engine": "workspace:*",
         "@noddle/crypto": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
+        "@noddle/deploy-engine": "workspace:*",
         "@noddle/git-provider": "workspace:*",
         "@noddle/git-provider-credentials": "workspace:*",
         "@noddle/notifier": "workspace:*",
-        "@noddle/proxy-config": "workspace:*",
         "@noddle/registry": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
@@ -144,18 +143,6 @@
         "@noddle/tsconfig": "workspace:*",
       },
     },
-    "packages/compose-engine": {
-      "name": "@noddle/compose-engine",
-      "dependencies": {
-        "@noddle/proxy-config": "workspace:*",
-        "@noddle/shared": "workspace:*",
-        "yaml": "catalog:",
-      },
-      "devDependencies": {
-        "@noddle/testing": "workspace:*",
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
     "packages/crypto": {
       "name": "@noddle/crypto",
       "devDependencies": {
@@ -193,6 +180,17 @@
         "@noddle/tsconfig": "workspace:*",
       },
     },
+    "packages/deploy-engine": {
+      "name": "@noddle/deploy-engine",
+      "dependencies": {
+        "@noddle/shared": "workspace:*",
+        "yaml": "catalog:",
+      },
+      "devDependencies": {
+        "@noddle/testing": "workspace:*",
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
     "packages/git-provider": {
       "name": "@noddle/git-provider",
       "devDependencies": {
@@ -215,13 +213,6 @@
     },
     "packages/notifier": {
       "name": "@noddle/notifier",
-      "devDependencies": {
-        "@noddle/testing": "workspace:*",
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
-    "packages/proxy-config": {
-      "name": "@noddle/proxy-config",
       "devDependencies": {
         "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
@@ -276,7 +267,7 @@
     "packages/swarm-ops": {
       "name": "@noddle/swarm-ops",
       "dependencies": {
-        "@noddle/proxy-config": "workspace:*",
+        "@noddle/deploy-engine": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
       },
@@ -615,8 +606,6 @@
 
     "@noddle/build-engine": ["@noddle/build-engine@workspace:packages/build-engine"],
 
-    "@noddle/compose-engine": ["@noddle/compose-engine@workspace:packages/compose-engine"],
-
     "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
 
     "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
@@ -625,13 +614,13 @@
 
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
 
+    "@noddle/deploy-engine": ["@noddle/deploy-engine@workspace:packages/deploy-engine"],
+
     "@noddle/git-provider": ["@noddle/git-provider@workspace:packages/git-provider"],
 
     "@noddle/git-provider-credentials": ["@noddle/git-provider-credentials@workspace:packages/git-provider-credentials"],
 
     "@noddle/notifier": ["@noddle/notifier@workspace:packages/notifier"],
-
-    "@noddle/proxy-config": ["@noddle/proxy-config@workspace:packages/proxy-config"],
 
     "@noddle/registry": ["@noddle/registry@workspace:packages/registry"],
 

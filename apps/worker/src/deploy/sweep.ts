@@ -1,5 +1,5 @@
-import { listComposeServiceKeys } from "@noddle/compose-engine";
 import { deployments, servers, stackDeployments } from "@noddle/db/schema";
+import { listComposeServiceKeys } from "@noddle/deploy-engine";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
 import { inspectServiceHealth } from "@noddle/swarm-ops";
