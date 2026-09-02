@@ -15,6 +15,7 @@ export {
   parseCompose,
   SAFE_COMPOSE_KEY,
 } from "./internal/compose.ts";
+export { SECOND_NS } from "./internal/deploy-policy.ts";
 export {
   type DomainRoute,
   routeLabels,
@@ -43,3 +44,4 @@ export {
   WATCH_WINDOW_MS,
   watchUntilFor,
 } from "./internal/watch.ts";
+export { dockerodeWorkloadPolicy } from "./internal/workload.ts";

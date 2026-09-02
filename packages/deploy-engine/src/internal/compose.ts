@@ -1,8 +1,8 @@
-import { renderComposeHttpHealthcheck } from "@noddle/shared/deploy-policy";
-import { composeWorkloadDeploy } from "@noddle/shared/workload";
 import { parse } from "yaml";
 
+import { renderComposeHttpHealthcheck } from "./deploy-policy.ts";
 import { routeLabels } from "./proxy.ts";
+import { composeWorkloadDeploy } from "./workload.ts";
 
 export { SAFE_SHELL_IDENTIFIER as SAFE_COMPOSE_KEY } from "@noddle/shared/shell-identifier";
 

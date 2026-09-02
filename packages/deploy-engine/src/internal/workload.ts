@@ -5,7 +5,7 @@ import {
   renderDockerodeRestartPolicy,
   renderDockerodeRollbackConfig,
   renderDockerodeUpdateConfig,
-} from "#deploy-policy";
+} from "./deploy-policy.ts";
 
 export interface DockerodeUpdateConfig {
   Delay?: number;

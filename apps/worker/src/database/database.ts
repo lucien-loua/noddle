@@ -15,11 +15,11 @@ import {
   awaitSwarmVerdict,
   ensureOverlayNetwork,
   getSwarmNodeId,
+  dockerodeWorkloadPolicy,
+  SECOND_NS,
 } from "@noddle/deploy-engine";
 import { removeService } from "@noddle/deploy-engine/ops";
-import { SECOND_NS } from "@noddle/shared/deploy-policy";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
-import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
 import type { DockerApi } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 

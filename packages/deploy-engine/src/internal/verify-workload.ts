@@ -9,15 +9,14 @@ import {
   renderComposeUpdateConfig,
   renderDockerodeUpdateConfig,
   SECOND_NS,
-} from "#deploy-policy";
+} from "./deploy-policy.ts";
 import {
   composeWorkloadDeploy,
   dockerodeWorkloadPolicy,
   resolveDockerodeUpdateConfig,
-} from "#workload";
+} from "./workload.ts";
 
-const ROOT = join(import.meta.dirname, "../..");
-const REPO = join(ROOT, "..");
+const REPO = join(import.meta.dirname, "../../../..");
 
 await runVerify("workload policy (C2)", () => {
   const dockerode = dockerodeWorkloadPolicy();

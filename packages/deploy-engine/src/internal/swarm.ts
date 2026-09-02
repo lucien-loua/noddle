@@ -1,13 +1,13 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
+import type { DockerApi } from "@noddle/ssh-executor";
+
 import {
   MONITOR_SECONDS,
   renderDockerodeHttpHealthcheck,
-} from "@noddle/shared/deploy-policy";
-import { dockerodeWorkloadPolicy } from "@noddle/shared/workload";
-import type { DockerApi } from "@noddle/ssh-executor";
-
+} from "./deploy-policy.ts";
 import type { TraefikLabels } from "./proxy.ts";
+import { dockerodeWorkloadPolicy } from "./workload.ts";
 
 export interface DeploySpec {
   env: Record<string, string>;

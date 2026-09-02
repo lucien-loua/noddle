@@ -10,7 +10,7 @@ import {
   renderDockerodeHttpHealthcheck,
   renderDockerodeUpdateConfig,
   SECOND_NS,
-} from "#deploy-policy";
+} from "./deploy-policy.ts";
 
 await runVerify("deploy policy renderers", () => {
   check("monitor is 45s", MONITOR_SECONDS === 45);

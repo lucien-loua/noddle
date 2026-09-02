@@ -7,7 +7,6 @@
   },
   "exports": {
     "./build-spec": "./src/build-spec.ts",
-    "./deploy-policy": "./src/deploy-policy.ts",
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
@@ -20,8 +19,7 @@
     "./swarm-names": "./src/swarm-names.ts",
     "./toolchain": "./src/toolchain.ts",
     "./validation/*": "./src/validation/*.ts",
-    "./watch-paths": "./src/watch-paths.ts",
-    "./workload": "./src/workload.ts"
+    "./watch-paths": "./src/watch-paths.ts"
   },
   "scripts": {
     "verify:pure": "noddle-verify pure"
