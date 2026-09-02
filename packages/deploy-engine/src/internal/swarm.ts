@@ -102,7 +102,7 @@ export interface DeployOutcome {
 
 export type SwarmUpdateReading = Omit<DeployOutcome, "accepted" | "created">;
 
-async function findService(docker: DockerApi, name: string) {
+export async function findService(docker: DockerApi, name: string) {
   const list = await docker.listServices({
     filters: JSON.stringify({ name: [name] }),
   });

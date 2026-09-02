@@ -16,7 +16,7 @@ import {
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
-import { removeService } from "@noddle/deploy-engine/ops";
+import { removeService, removeSecretIfExists } from "@noddle/deploy-engine/ops";
 import {
   connect,
   disconnect,
@@ -28,7 +28,7 @@ import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
 import { runBackup } from "#backup";
-import { provisionDatabase, removeSecretIfExists } from "#database";
+import { provisionDatabase } from "#database";
 import {
   findDatabaseContainer,
   legacyDatabaseServiceName,

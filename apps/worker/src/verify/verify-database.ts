@@ -5,7 +5,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
-import { removeService } from "@noddle/deploy-engine/ops";
+import { removeService, removeSecretIfExists } from "@noddle/deploy-engine/ops";
 import {
   connect,
   disconnect,
@@ -17,7 +17,7 @@ import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";
 
-import { provisionDatabase, removeSecretIfExists } from "#database";
+import { provisionDatabase } from "#database";
 import { seedSshKey, verifyCtx, verifyBuild } from "#verify-seed";
 
 const DB_URL = devStack().databaseUrl;

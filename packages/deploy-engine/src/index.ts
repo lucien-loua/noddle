@@ -1,5 +1,11 @@
 export { listComposeServiceKeys } from "./internal/compose.ts";
-export { SECOND_NS } from "./internal/deploy-policy.ts";
+export {
+  type DatabaseSwarmOverrides,
+  provisionDatabase,
+  type ProvisionDatabaseClients,
+  type ProvisionDatabaseIo,
+  type ProvisionDatabaseSpec,
+} from "./internal/database.ts";
 export {
   type DomainRoute,
   routeLabels,
@@ -35,6 +41,7 @@ export {
 export {
   awaitSwarmVerdict,
   deployService,
+  type DeployOutcome,
   ensureOverlayNetwork,
   getSwarmNodeId,
   isDeployAccepted,
@@ -46,4 +53,3 @@ export {
   WATCH_WINDOW_MS,
   watchUntilFor,
 } from "./internal/watch.ts";
-export { dockerodeWorkloadPolicy } from "./internal/workload.ts";

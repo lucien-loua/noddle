@@ -1,3 +1,4 @@
+export { removeSecretIfExists } from "./internal/database.ts";
 export {
   deleteManifest,
   ensureRegistryTrust,

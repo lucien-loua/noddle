@@ -14,6 +14,7 @@
     "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
+    "@noddle/database-spec": "workspace:*",
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
     "yaml": "catalog:"

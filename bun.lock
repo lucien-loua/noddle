@@ -169,6 +169,7 @@
     "packages/deploy-engine": {
       "name": "@noddle/deploy-engine",
       "dependencies": {
+        "@noddle/database-spec": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "yaml": "catalog:",
