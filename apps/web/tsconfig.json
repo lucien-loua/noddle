@@ -1,0 +1,20 @@
+{
+  "extends": "@noddle/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["bun", "vite/client"],
+    "strictNullChecks": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.ts",
+    "server.ts",
+    "scripts/**/*.ts",
+    "types/**/*.d.ts"
+  ]
+}

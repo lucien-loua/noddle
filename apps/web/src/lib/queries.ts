@@ -1,0 +1,292 @@
+import { queryOptions } from "@tanstack/react-query";
+
+import type { BackupSubject } from "@/lib/backup-subject";
+import { getAccounts } from "@/server/accounts";
+import { listBackupConfigs } from "@/server/backups/configs";
+import type { BackupConfigRow } from "@/server/backups/configs";
+import { getDestinations } from "@/server/backups/destinations";
+import { getBackups, listBackupObjects } from "@/server/backups/runs";
+import { listVolumeBackupConfigs } from "@/server/backups/volume/configs";
+import type { VolumeBackupConfigRow } from "@/server/backups/volume/configs";
+import { getVolumeBackups } from "@/server/backups/volume/runs";
+import { listServiceVolumes } from "@/server/backups/volume/volumes";
+import { inspectContainer, getContainers } from "@/server/containers";
+import { getControlPlaneSettings } from "@/server/control-plane";
+import {
+  getDeployments,
+  getEnvironmentScope,
+  getService,
+  getDatabaseDeployments,
+} from "@/server/dashboard";
+import { getDatabase, getDatabaseCredentials } from "@/server/databases";
+import {
+  getDatabaseDependents,
+  getEnvironmentDependencies,
+} from "@/server/dependencies";
+import type { EnvVarTarget } from "@/server/env-vars";
+import { getEnvVars } from "@/server/env-vars";
+import { getProjectEnvironments } from "@/server/environments";
+import {
+  getGitProviders,
+  getProviderBranches,
+  getProviderRepositories,
+} from "@/server/git-providers";
+import { getDatabaseMetrics, getServiceMetrics } from "@/server/metrics";
+import { getChannels } from "@/server/notifications";
+import { getRegistries, getRegistryOptions } from "@/server/registries";
+import { checkServerTools, getServers } from "@/server/servers";
+import { getSshKeys } from "@/server/ssh-keys";
+import { getStackDeployments } from "@/server/stacks";
+import { getUpdateStatus } from "@/server/updates";
+
+function databaseBackupConfigsQuery(databaseId: string) {
+  return queryOptions({
+    queryFn: () => listBackupConfigs({ data: { databaseId } }),
+    queryKey: ["backup-configs", databaseId],
+  });
+}
+
+function volumeBackupConfigsQuery(serviceId: string) {
+  return queryOptions({
+    queryFn: () => listVolumeBackupConfigs({ data: { serviceId } }),
+    queryKey: ["volume-backup-configs", serviceId],
+  });
+}
+
+function backupConfigsForQuery(subject: BackupSubject) {
+  if (subject.kind === "database") {
+    return queryOptions({
+      queryFn: (): Promise<BackupConfigRow[] | VolumeBackupConfigRow[]> =>
+        listBackupConfigs({ data: { databaseId: subject.databaseId } }),
+      queryKey: ["backup-configs", subject.databaseId],
+    });
+  }
+  return queryOptions({
+    queryFn: (): Promise<BackupConfigRow[] | VolumeBackupConfigRow[]> =>
+      listVolumeBackupConfigs({ data: { serviceId: subject.serviceId } }),
+    queryKey: ["volume-backup-configs", subject.serviceId],
+  });
+}
+
+function databaseBackupRunsQuery(databaseId: string, configId: string) {
+  return queryOptions({
+    queryFn: () => getBackups({ data: { configId, databaseId } }),
+    queryKey: ["backups", databaseId, configId],
+  });
+}
+
+function volumeBackupRunsQuery(serviceId: string, configId: string) {
+  return queryOptions({
+    queryFn: () => getVolumeBackups({ data: { configId, serviceId } }),
+    queryKey: ["volume-backups", serviceId, configId],
+  });
+}
+
+function backupRunsForQuery(subject: BackupSubject, configId: string) {
+  return subject.kind === "database"
+    ? databaseBackupRunsQuery(subject.databaseId, configId)
+    : volumeBackupRunsQuery(subject.serviceId, configId);
+}
+
+export const queries = {
+  accounts: () =>
+    queryOptions({ queryFn: () => getAccounts(), queryKey: ["accounts"] }),
+
+  backupConfigs: databaseBackupConfigsQuery,
+
+  backupConfigsFor: backupConfigsForQuery,
+
+  backupObjects: (destinationId: string) =>
+    queryOptions({
+      queryFn: () => listBackupObjects({ data: { destinationId } }),
+      queryKey: ["backup-objects", destinationId],
+    }),
+
+  backupRunsFor: backupRunsForQuery,
+
+  backups: databaseBackupRunsQuery,
+
+  channels: () =>
+    queryOptions({ queryFn: () => getChannels(), queryKey: ["channels"] }),
+
+  containerDetail: (serverId: string, containerId: string) =>
+    queryOptions({
+      queryFn: () => inspectContainer({ data: { containerId, serverId } }),
+      queryKey: ["container-detail", serverId, containerId],
+      staleTime: 60 * 1000,
+    }),
+
+  database: (databaseId: string) =>
+    queryOptions({
+      queryFn: async () => {
+        const row = await getDatabase({ data: { databaseId } });
+        if (!row) {
+          throw new Error(`database not found: ${databaseId}`);
+        }
+        return row;
+      },
+      queryKey: ["database", databaseId],
+    }),
+
+  databaseCredentials: (databaseId: string) =>
+    queryOptions({
+      queryFn: () => getDatabaseCredentials({ data: { databaseId } }),
+      queryKey: ["database-credentials", databaseId],
+    }),
+
+  databaseMetrics: (databaseId: string, windowHours: 1 | 6 | 24) =>
+    queryOptions({
+      queryFn: () =>
+        getDatabaseMetrics({
+          data: {
+            databaseId,
+            windowHours: ({ 1: "1", 24: "24", 6: "6" } as const)[windowHours],
+          },
+        }),
+      queryKey: ["database-metrics", databaseId, windowHours],
+    }),
+
+  containers: () =>
+    queryOptions({
+      queryFn: () => getContainers(),
+      queryKey: ["containers"],
+    }),
+
+  controlPlaneSettings: () =>
+    queryOptions({
+      queryFn: () => getControlPlaneSettings(),
+      queryKey: ["control-plane-settings"],
+    }),
+
+  databaseDeployments: (databaseId: string) =>
+    queryOptions({
+      queryFn: () => getDatabaseDeployments({ data: { databaseId } }),
+      queryKey: ["database-deployments", databaseId],
+    }),
+
+  deployments: (serviceId: string) =>
+    queryOptions({
+      queryFn: () => getDeployments({ data: { serviceId } }),
+      queryKey: ["deployments", serviceId],
+    }),
+
+  destinations: () =>
+    queryOptions({
+      queryFn: () => getDestinations(),
+      queryKey: ["destinations"],
+    }),
+
+  databaseDependents: (databaseId: string) =>
+    queryOptions({
+      queryFn: () => getDatabaseDependents({ data: { databaseId } }),
+      queryKey: ["database-dependents", databaseId],
+    }),
+
+  environmentDependencies: (environmentId: string) =>
+    queryOptions({
+      queryFn: () => getEnvironmentDependencies({ data: { environmentId } }),
+      queryKey: ["environment-dependencies", environmentId],
+    }),
+
+  environmentScope: (projectId: string, environmentId: string) =>
+    queryOptions({
+      queryFn: () =>
+        getEnvironmentScope({ data: { environmentId, projectId } }),
+      queryKey: ["environment-scope", projectId, environmentId],
+    }),
+
+  envVars: (target: EnvVarTarget) =>
+    queryOptions({
+      queryFn: () => getEnvVars({ data: target }),
+      queryKey: [
+        "env-vars",
+        "serviceId" in target ? target.serviceId : target.databaseId,
+      ],
+    }),
+
+  gitProviders: () =>
+    queryOptions({
+      queryFn: () => getGitProviders(),
+      queryKey: ["git-providers"],
+    }),
+
+  projectEnvironments: (projectId: string) =>
+    queryOptions({
+      queryFn: () => getProjectEnvironments({ data: { projectId } }),
+      queryKey: ["project-environments", projectId],
+    }),
+
+  providerBranches: (gitProviderId: string, fullName: string) =>
+    queryOptions({
+      queryFn: () => getProviderBranches({ data: { fullName, gitProviderId } }),
+      queryKey: ["provider-branches", gitProviderId, fullName],
+    }),
+
+  providerRepositories: (gitProviderId: string) =>
+    queryOptions({
+      queryFn: () => getProviderRepositories({ data: { gitProviderId } }),
+      queryKey: ["provider-repositories", gitProviderId],
+    }),
+
+  registries: () =>
+    queryOptions({ queryFn: () => getRegistries(), queryKey: ["registries"] }),
+
+  registryOptions: () =>
+    queryOptions({
+      queryFn: () => getRegistryOptions(),
+      queryKey: ["registry-options"],
+    }),
+
+  servers: () =>
+    queryOptions({ queryFn: () => getServers(), queryKey: ["servers"] }),
+
+  serverTools: (serverId: string) =>
+    queryOptions({
+      queryFn: () => checkServerTools({ data: { serverId } }),
+      queryKey: ["server-tools", serverId],
+      staleTime: 5 * 60 * 1000,
+    }),
+
+  service: (serviceId: string) =>
+    queryOptions({
+      queryFn: async () => {
+        const row = await getService({ data: { serviceId } });
+        if (!row) {
+          throw new Error(`service not found: ${serviceId}`);
+        }
+        return row;
+      },
+      queryKey: ["service", serviceId],
+    }),
+
+  serviceMetrics: (serviceId: string) =>
+    queryOptions({
+      queryFn: () => getServiceMetrics({ data: { serviceId } }),
+      queryKey: ["service-metrics", serviceId],
+    }),
+
+  serviceVolumes: (serviceId: string) =>
+    queryOptions({
+      queryFn: () => listServiceVolumes({ data: { serviceId } }),
+      queryKey: ["service-volumes", serviceId],
+    }),
+
+  sshKeys: () =>
+    queryOptions({ queryFn: () => getSshKeys(), queryKey: ["ssh-keys"] }),
+
+  stackDeployments: (stackId: string) =>
+    queryOptions({
+      queryFn: () => getStackDeployments({ data: { stackId } }),
+      queryKey: ["stack-deployments", stackId],
+    }),
+
+  updateStatus: () =>
+    queryOptions({
+      queryFn: () => getUpdateStatus(),
+      queryKey: ["update-status"],
+    }),
+
+  volumeBackupConfigs: volumeBackupConfigsQuery,
+
+  volumeBackups: volumeBackupRunsQuery,
+};

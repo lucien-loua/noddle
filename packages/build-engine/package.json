@@ -1,0 +1,23 @@
+{
+  "name": "@noddle/build-engine",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "verify:pure": "noddle-verify pure",
+    "verify:vm": "noddle-verify vm"
+  },
+  "dependencies": {
+    "@noddle/shared": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

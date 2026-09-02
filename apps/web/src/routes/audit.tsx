@@ -1,0 +1,69 @@
+import { LockIcon } from "@phosphor-icons/react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+import { AppShell } from "@/components/app-shell";
+import { AuditTable } from "@/components/audit-table";
+import { IconStack } from "@/components/icon-stack";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Frame, FramePanel } from "@/components/ui/frame";
+import { getAuditLog } from "@/server/audit";
+import { getAuthState } from "@/server/auth";
+
+export const Route = createFileRoute("/audit")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: AuditPage,
+
+  errorComponent: AuditDenied,
+  loader: async ({ context }) => ({
+    email: context.email,
+    entries: await getAuditLog(),
+    role: context.role,
+  }),
+});
+
+function AuditDenied() {
+  return (
+    <AppShell title="Audit">
+      <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+        <FramePanel className="flex min-h-0 flex-1 flex-col">
+          <Empty className="min-h-0 flex-1 border-0">
+            <EmptyHeader>
+              <EmptyMedia>
+                <IconStack>
+                  <LockIcon className="size-5" />
+                </IconStack>
+              </EmptyMedia>
+              <EmptyTitle>Not available for your role</EmptyTitle>
+              <EmptyDescription>
+                The audit log is limited to administrators. This visit was
+                recorded.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </FramePanel>
+      </Frame>
+    </AppShell>
+  );
+}
+
+function AuditPage() {
+  const { email, entries, role } = Route.useLoaderData();
+
+  return (
+    <AppShell email={email} role={role} title="Audit">
+      <AuditTable entries={entries} />
+    </AppShell>
+  );
+}

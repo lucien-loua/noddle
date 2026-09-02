@@ -1,0 +1,37 @@
+{
+  "name": "@noddle/shared",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    "./build-spec": "./src/build-spec.ts",
+    "./deploy-policy": "./src/deploy-policy.ts",
+    "./generate-domain": "./src/generate-domain.ts",
+    "./lifecycle": "./src/lifecycle.ts",
+    "./logs": "./src/logs.ts",
+    "./noddle-containers": "./src/noddle-containers.ts",
+    "./password": "./src/password.ts",
+    "./redact": "./src/redact.ts",
+    "./shell-identifier": "./src/shell-identifier.ts",
+    "./slug": "./src/slug.ts",
+    "./source-type": "./src/source-type.ts",
+    "./swarm-names": "./src/swarm-names.ts",
+    "./toolchain": "./src/toolchain.ts",
+    "./validation/*": "./src/validation/*.ts",
+    "./watch-paths": "./src/watch-paths.ts",
+    "./workload": "./src/workload.ts"
+  },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
+  "dependencies": {
+    "@noddle/database-spec": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

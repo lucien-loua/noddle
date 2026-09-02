@@ -1,0 +1,207 @@
+// tier: vm
+import { BUILDKIT_CONTAINER } from "@noddle/shared/noddle-containers";
+import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
+import { devTarget } from "@noddle/testing/dev-target";
+
+import {
+  BUILDX_BUILDER,
+  BuildError,
+  buildImage,
+  computeBuildCap,
+  ensureCappedBuilder,
+  fetchSource,
+} from "#index";
+
+const TARGET = devTarget();
+
+const WORK = "/opt/noddle-verify";
+const TAG = `noddle-verify:${Date.now()}`;
+
+let pass = 0;
+let fail = 0;
+const ok = (m: string) => {
+  pass += 1;
+  console.log(`  [32m✓[0m ${m}`);
+};
+const ko = (m: string) => {
+  fail += 1;
+  console.log(`  [31m✗[0m ${m}`);
+};
+
+{
+  const tiny = computeBuildCap({ totalMemoryMb: 1024 });
+  const vps = computeBuildCap({ totalMemoryMb: 2048 });
+  const big = computeBuildCap({ totalMemoryMb: 16_384 });
+
+  if (tiny.memory === "512m") {
+    ok("tiny machine → floor at 512m (a Node build fails below that)");
+  } else {
+    ko(`floor not respected: ${tiny.memory}`);
+  }
+  if (Number.parseInt(vps.memory, 10) < 2048 - 768) {
+    ok(`2 GB VPS → ${vps.memory}, control-plane room is reserved`);
+  } else {
+    ko(`cap too high for 2 GB: ${vps.memory}`);
+  }
+  if (Number.parseInt(big.memory, 10) > Number.parseInt(vps.memory, 10)) {
+    ok(`16 GB → ${big.memory}, the cap follows the machine`);
+  } else {
+    ko("the cap does not follow machine size");
+  }
+}
+
+let client: SshClient | undefined;
+
+try {
+  client = await connect({
+    host: TARGET.host,
+    privateKey: TARGET.privateKey,
+    user: TARGET.user,
+  });
+  ok(`connected to ${TARGET.user}@${TARGET.host}`);
+
+  const cap = computeBuildCap({ totalMemoryMb: 2048 });
+  await exec(
+    client,
+    `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+  );
+  await exec(
+    client,
+    `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
+  );
+  await ensureCappedBuilder(client, cap);
+  ok(`builder created (${cap.memory}, quota ${cap.cpuQuota}/${cap.cpuPeriod})`);
+
+  const inspect = await exec(
+    client,
+    `sudo docker inspect ${quoteArg(BUILDKIT_CONTAINER)} --format '{{.HostConfig.Memory}} {{.HostConfig.CpuQuota}}'`
+  );
+  const [memBytes, quota] = inspect.stdout.trim().split(" ").map(Number);
+  const expectedBytes = Number.parseInt(cap.memory, 10) * 1024 * 1024;
+
+  if (memBytes === expectedBytes) {
+    ok(`memory cgroup actually set: ${memBytes} bytes`);
+  } else {
+    ko(
+      `memory cgroup missing or wrong: ${memBytes}, expected ${expectedBytes}`
+    );
+  }
+  if (quota === cap.cpuQuota) {
+    ok(`CPU cgroup actually set: ${quota}`);
+  } else {
+    ko(`CPU cgroup missing or wrong: ${quota}, expected ${cap.cpuQuota}`);
+  }
+
+  const attacks: [string, Record<string, string>][] = [
+    ["branch --upload-pack", { branch: "--upload-pack=/tmp/pwn.sh" }],
+    ["URL --upload-pack", { repoUrl: "--upload-pack=/tmp/pwn.sh" }],
+    ["URL -u", { repoUrl: "-u/tmp/pwn.sh" }],
+    ["SHA flag", { commitSha: "--upload-pack=/tmp/pwn.sh" }],
+  ];
+  const attempts = await Promise.all(
+    attacks.map(async ([label, override]) => {
+      try {
+        await fetchSource(client as SshClient, {
+          branch: "main",
+          dir: `${WORK}/attack`,
+          repoUrl: "https://example.com/x.git",
+          ...override,
+        });
+        return { label, outcome: "passed" as const };
+      } catch (error) {
+        return error instanceof BuildError && error.stage === "validation"
+          ? { label, outcome: "blocked" as const }
+          : {
+              detail: error instanceof Error ? error.message : String(error),
+              label,
+              outcome: "error" as const,
+            };
+      }
+    })
+  );
+
+  for (const a of attempts) {
+    if (a.outcome === "blocked") {
+      ok(`${a.label} refused before any execution`);
+    } else if (a.outcome === "passed") {
+      ko(`${a.label} — SHOULD HAVE BEEN REFUSED`);
+    } else {
+      ko(`${a.label} — wrong error: ${a.detail}`);
+    }
+  }
+
+  const origin = `${WORK}/origin`;
+  await exec(
+    client,
+    `sudo rm -rf ${quoteArg(WORK)} && sudo mkdir -p ${quoteArg(origin)} && sudo chown -R "$USER" ${quoteArg(WORK)} && ` +
+      `cd ${quoteArg(origin)} && ` +
+      `printf '{"name":"v","scripts":{"start":"node s.js"}}' > package.json && ` +
+      `printf 'require("http").createServer((q,r)=>r.end("ok")).listen(3000)' > s.js && ` +
+      "git init -q . && git config user.email v@x && git config user.name v && " +
+      "git add -A && git commit -q -m init"
+  );
+
+  const sha = await fetchSource(client, {
+    branch: "master",
+    dir: `${WORK}/src`,
+    repoUrl: `file://${origin}`,
+  });
+  if (/^[0-9a-f]{40}$/.test(sha)) {
+    ok(`fetchSource returns a full SHA: ${sha.slice(0, 8)}`);
+  } else {
+    ko(`unexpected SHA: ${sha}`);
+  }
+
+  let lines = 0;
+  await buildImage(client, {
+    dir: `${WORK}/src`,
+    imageTag: TAG,
+    onStderr: () => {
+      lines += 1;
+    },
+    onStdout: () => {
+      lines += 1;
+    },
+  });
+  ok(`build succeeded, ${lines} log fragment(s) streamed`);
+
+  const imgs = await exec(
+    client,
+    `sudo docker image inspect ${quoteArg(TAG)} --format '{{.Id}}'`
+  );
+  if (imgs.code === 0 && imgs.stdout.trim().startsWith("sha256:")) {
+    ok("image exists in the local Docker store");
+  } else {
+    ko("image not found after the build");
+  }
+
+  const probe = await exec(
+    client,
+    `sudo docker run --rm --entrypoint /bin/sh ${quoteArg(TAG)} -c 'command -v curl'`
+  );
+  if (probe.code === 0 && probe.stdout.trim() !== "") {
+    ok(`curl is on the image's non-login PATH: ${probe.stdout.trim()}`);
+  } else {
+    ko("curl is MISSING from the built image — every healthcheck would fail");
+  }
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+} finally {
+  if (client) {
+    await exec(
+      client,
+      `sudo docker buildx rm ${quoteArg(BUILDX_BUILDER)} 2>/dev/null`
+    );
+    await exec(
+      client,
+      `sudo docker rm -f ${quoteArg(BUILDKIT_CONTAINER)} 2>/dev/null`
+    );
+    await exec(client, `sudo docker image rm -f ${quoteArg(TAG)} 2>/dev/null`);
+    await exec(client, `sudo rm -rf ${quoteArg(WORK)}`);
+    disconnect(client);
+  }
+}
+
+console.log(`\n\u001B[1mpassed ${pass}, failed ${fail}\u001B[0m\n`);
+process.exit(fail === 0 ? 0 : 1);

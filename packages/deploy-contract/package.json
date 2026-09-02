@@ -1,0 +1,24 @@
+{
+  "name": "@noddle/deploy-contract",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./queue": "./src/queue.ts",
+    "./schedule": "./src/schedule.ts"
+  },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
+  "dependencies": {
+    "bullmq": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

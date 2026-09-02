@@ -1,0 +1,233 @@
+import {
+  CodeIcon,
+  DatabaseIcon,
+  FolderIcon,
+  StackIcon,
+  TreeStructureIcon,
+} from "@phosphor-icons/react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useMemo } from "react";
+
+import { AppShell } from "@/components/app-shell";
+import { IconStack } from "@/components/icon-stack";
+import {
+  CreateProjectButton,
+  ProjectRowActions,
+} from "@/components/project-actions";
+import { RelativeTime } from "@/components/relative-time";
+import { StatusSummary } from "@/components/status-summary";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Frame,
+  FrameDescription,
+  FrameFooter,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { roles } from "@/lib/permissions";
+import type { RoleName } from "@/lib/permissions";
+import { getAuthState } from "@/server/auth";
+import { getDashboardGroups } from "@/server/dashboard";
+import type { ProjectGroup } from "@/server/dashboard";
+import { getProjects } from "@/server/projects";
+import type { ProjectView } from "@/server/projects";
+
+export const Route = createFileRoute("/projects")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ProjectsPage,
+  loader: async ({ context }) => {
+    const [dashboard, allProjects] = await Promise.all([
+      getDashboardGroups(),
+      getProjects(),
+    ]);
+    return {
+      allProjects,
+      dashboard,
+      email: context.email,
+      role: context.role,
+    };
+  },
+});
+
+function ProjectsPage() {
+  const { allProjects, dashboard, email, role } = Route.useLoaderData();
+  const known: RoleName | null =
+    role && role in roles ? (role as RoleName) : null;
+
+  const byId = useMemo(
+    () => new Map(dashboard.groups.map((g) => [g.projectId, g])),
+    [dashboard.groups]
+  );
+
+  return (
+    <AppShell
+      actions={
+        allProjects.length === 0 ? null : <CreateProjectButton role={known} />
+      }
+      email={email}
+      role={role}
+      title="Projects"
+    >
+      {allProjects.length === 0 ? (
+        <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
+          <FramePanel className="flex min-h-0 flex-1 flex-col">
+            <Empty className="min-h-0 flex-1 border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <IconStack>
+                    <FolderIcon className="size-5" />
+                  </IconStack>
+                </EmptyMedia>
+                <EmptyTitle>No projects yet</EmptyTitle>
+                <EmptyDescription>
+                  A project groups environments, and an environment holds your
+                  services, stacks and databases.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <CreateProjectButton role={known} />
+              </EmptyContent>
+            </Empty>
+          </FramePanel>
+        </Frame>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,clamp(16rem,28vw,22rem)),1fr))] gap-4">
+          {allProjects.map((project) => (
+            <ProjectCard
+              group={byId.get(project.id)}
+              key={project.id}
+              project={project}
+              role={known}
+            />
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}
+
+function ProjectCount({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof CodeIcon;
+  label: string;
+  value: number;
+}) {
+  if (value === 0) {
+    return null;
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-sm">
+      <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <span className="font-medium tabular-nums">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
+  );
+}
+
+function ProjectCard({
+  group,
+  project,
+  role,
+}: {
+  group: ProjectGroup | undefined;
+  project: ProjectView;
+  role: RoleName | null;
+}) {
+  const scopes = group?.scopes ?? [];
+  const services = scopes.reduce((n, s) => n + s.services.length, 0);
+  const stacks = scopes.reduce((n, s) => n + s.stacks.length, 0);
+  const databases = scopes.reduce((n, s) => n + s.databases.length, 0);
+  const environments = scopes.length;
+  const deployed = group
+    ? Object.values(group.statusCounts).reduce((n, c) => n + c, 0)
+    : 0;
+
+  return (
+    <Frame className="group transition-shadow hover:shadow-lg">
+      <FrameHeader>
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <FrameTitle className="min-w-0 truncate">
+              <Link
+                className="truncate after:absolute after:inset-0 after:z-10"
+                params={{ projectId: project.id }}
+                to="/projects/$projectId"
+              >
+                {project.name}
+              </Link>
+            </FrameTitle>
+            {project.description ? (
+              <FrameDescription className="line-clamp-2">
+                {project.description}
+              </FrameDescription>
+            ) : null}
+          </div>
+          <div className="relative z-20 shrink-0">
+            <ProjectRowActions
+              description={project.description}
+              name={project.name}
+              projectId={project.id}
+              role={role}
+            />
+          </div>
+        </div>
+      </FrameHeader>
+      <FramePanel className="flex flex-col gap-3">
+        {deployed > 0 && group ? (
+          <StatusSummary counts={group.statusCounts} />
+        ) : (
+          <p className="text-muted-foreground text-sm">No resources yet</p>
+        )}
+        {services + stacks + databases > 0 ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <ProjectCount
+              icon={CodeIcon}
+              label={services === 1 ? "application" : "applications"}
+              value={services}
+            />
+            <ProjectCount icon={StackIcon} label="compose" value={stacks} />
+            <ProjectCount
+              icon={DatabaseIcon}
+              label={databases === 1 ? "database" : "databases"}
+              value={databases}
+            />
+          </div>
+        ) : null}
+      </FramePanel>
+      <FrameFooter>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground text-xs">
+          <span>
+            Created{" "}
+            <RelativeTime
+              className="relative z-20"
+              iso={project.createdAt}
+              long
+            />
+          </span>
+          <span aria-hidden>·</span>
+          <span className="flex items-center gap-1.5">
+            <TreeStructureIcon aria-hidden className="size-3.5 shrink-0" />
+            {environments} environment{environments === 1 ? "" : "s"}
+          </span>
+        </p>
+      </FrameFooter>
+    </Frame>
+  );
+}

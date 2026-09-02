@@ -1,0 +1,268 @@
+// tier: vm
+import { randomBytes } from "node:crypto";
+import { mkdtemp, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { isAbsolute, join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { encryptSecret, secretContext } from "@noddle/crypto";
+import { createDatabase } from "@noddle/db";
+import {
+  deploymentLogs,
+  deployments,
+  environments,
+  envVars,
+  projects,
+  servers,
+  serviceDomains,
+  services,
+} from "@noddle/db/schema";
+import { connect, disconnect, exec, quoteArg } from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
+import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
+import { eq } from "drizzle-orm";
+
+import { runDeploy } from "#deploy";
+import { seedSshKey, verifyCtx } from "#verify-seed";
+
+const DB_URL = devStack().databaseUrl;
+const TARGET = devTarget();
+
+const FILE_URL = "file://";
+const SERVICE_NAME = "noddle-e2e";
+const ORIGIN = "/opt/noddle-e2e-origin";
+
+let pass = 0;
+let fail = 0;
+const ok = (m: string) => {
+  pass += 1;
+  console.log(`  [32m✓[0m ${m}`);
+};
+const ko = (m: string) => {
+  fail += 1;
+  console.log(`  [31m✗[0m ${m}`);
+};
+
+const appKey = randomBytes(32);
+const db = createDatabase({ url: DB_URL });
+const { privateKey } = TARGET;
+const sshKeyId = await seedSshKey(db, appKey, "verify-e2e", privateKey);
+const domain = `${SERVICE_NAME}.${TARGET.host.replaceAll(".", "-")}.sslip.io`;
+
+let ssh: Awaited<ReturnType<typeof connect>> | undefined;
+
+try {
+  ssh = await connect({ host: TARGET.host, privateKey, user: TARGET.user });
+
+  await exec(
+    ssh,
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+      `cd ${quoteArg(ORIGIN)} && ` +
+      `printf '%s' '{"name":"e2e","scripts":{"start":"node s.js"}}' > package.json && ` +
+      `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("e2e "+(process.env.GREETING||"?"))).listen(p)' > s.js && ` +
+      "git init -q -b main . && git config user.email e@x && git config user.name e && " +
+      "git add -A && git commit -q -m init"
+  );
+  ok("source repo created on the target");
+
+  const [srv] = await db
+    .insert(servers)
+    .values({
+      host: TARGET.host,
+      isSelf: false,
+      name: "e2e-target",
+      role: "manager",
+      sshKeyId,
+      sshUser: TARGET.user,
+      totalMemoryMb: 2048,
+    })
+    .returning();
+  if (!srv) {
+    throw new Error("server insert failed");
+  }
+  ok("server registered, SSH key encrypted with AAD binding");
+
+  const [proj] = await db.insert(projects).values({ name: "e2e" }).returning();
+  const [env] = await db
+    .insert(environments)
+    .values({ name: "production", projectId: proj?.id ?? "" })
+    .returning();
+  const [svc] = await db
+    .insert(services)
+    .values({
+      buildMethod: "railpack",
+      environmentId: env?.id ?? "",
+      gitBranch: "main",
+      gitRepoUrl: `file://${ORIGIN}`,
+      name: SERVICE_NAME,
+      port: 3000,
+      serverId: srv.id,
+      sourceType: "git",
+    })
+    .returning();
+  if (!svc) {
+    throw new Error("service insert failed");
+  }
+  await db.insert(serviceDomains).values({ host: domain, serviceId: svc.id });
+
+  const [ev] = await db
+    .insert(envVars)
+    .values({
+      isSecret: false,
+      key: "GREETING",
+      serviceId: svc.id,
+      valueEncrypted: "placeholder",
+    })
+    .returning();
+  await db
+    .update(envVars)
+    .set({
+      valueEncrypted: encryptSecret(
+        "hello",
+        appKey,
+        secretContext.envVar(ev?.id ?? "")
+      ),
+    })
+    .where(eq(envVars.id, ev?.id ?? ""));
+  ok("service and encrypted environment variable registered");
+
+  await removeService(
+    (await import("@noddle/ssh-executor")).dockerClient(ssh),
+    SERVICE_NAME
+  );
+
+  const [dep] = await db
+    .insert(deployments)
+    .values({ serviceId: svc.id, status: "queued", trigger: "manual" })
+    .returning();
+  if (!dep) {
+    throw new Error("deployment insert failed");
+  }
+
+  const logDir = await mkdtemp(join(tmpdir(), "noddle-e2e-logs-"));
+  let streamed = 0;
+  console.log(
+    "    (clone, capped build, and Swarm switchover — a few minutes…)"
+  );
+
+  await runDeploy(
+    verifyCtx({ appKey, db }),
+    { networkName: "noddle-public" },
+    {
+      logRoot: logDir,
+      onLog: () => {
+        streamed += 1;
+      },
+    },
+    { deploymentId: dep.id }
+  );
+
+  const final = await db.query.deployments.findFirst({
+    where: eq(deployments.id, dep.id),
+  });
+
+  if (final?.status === "succeeded") {
+    ok(`deployment succeeded, swarm=${final.swarmUpdateState ?? "create"}`);
+  } else {
+    ko(`status ${final?.status} — ${final?.errorMessage ?? ""}`);
+  }
+  if (final?.commitSha && /^[0-9a-f]{40}$/.test(final.commitSha)) {
+    ok(`SHA resolved and persisted: ${final.commitSha.slice(0, 8)}`);
+  } else {
+    ko("SHA not persisted");
+  }
+  if (final?.imageTag) {
+    ok(`image built: ${final.imageTag}`);
+  } else {
+    ko("no image tag");
+  }
+  if (final?.watchUntil && final.watchUntil > new Date()) {
+    ok("post-deploy watch armed");
+  } else {
+    ko("watchUntil missing: late crashes would not be caught");
+  }
+  if (streamed > 0) {
+    ok(`${streamed} log fragments streamed to SSE`);
+  } else {
+    ko("no logs streamed");
+  }
+
+  const logs = await db.query.deploymentLogs.findMany({
+    where: eq(deploymentLogs.deploymentId, dep.id),
+  });
+  const [row] = logs;
+  if (logs.length === 1 && row && row.byteSize > 0) {
+    ok(`logs: 1 DB row, pointer to ${row.byteSize} bytes on disk`);
+  } else {
+    ko(`expected exactly 1 log pointer, got ${logs.length}`);
+  }
+
+  const archivePath = row?.storageUrl.startsWith(FILE_URL)
+    ? row.storageUrl.slice(FILE_URL.length)
+    : undefined;
+  if (archivePath && isAbsolute(archivePath)) {
+    const bytes = await stat(archivePath)
+      .then((info) => info.size)
+      .catch(() => -1);
+    if (bytes > 0) {
+      ok(`log pointer resolves from any cwd: ${archivePath}`);
+    } else {
+      ko(`log pointer names an unreadable file: ${archivePath}`);
+    }
+  } else {
+    ko(`log pointer is not an absolute file URL: ${row?.storageUrl}`);
+  }
+
+  const svcAfter = await db.query.services.findFirst({
+    where: eq(services.id, svc.id),
+  });
+  if (
+    svcAfter?.status === "running" &&
+    svcAfter.currentDeploymentId === dep.id
+  ) {
+    ok("service marked running and pointing at this deployment");
+  } else {
+    ko(`unexpected service state: ${svcAfter?.status}`);
+  }
+
+  let body = "";
+  const httpDeadline = Date.now() + 90_000;
+  while (Date.now() < httpDeadline) {
+    const res = await fetch(`http://${domain}/`, {
+      signal: AbortSignal.timeout(10_000),
+    }).catch(() => null);
+    if (res?.ok) {
+      body = (await res.text()).trim();
+      break;
+    }
+    await sleep(3000);
+  }
+
+  if (body.includes("e2e")) {
+    ok(`HTTP via Traefik: "${body}"`);
+  } else {
+    ko("no response via Traefik within 90 s");
+  }
+  if (body.includes("hello")) {
+    ok("the encrypted variable was decrypted and injected into the container");
+  } else {
+    ko("environment variable missing from the container");
+  }
+} catch (error) {
+  ko(`exception: ${error instanceof Error ? error.message : String(error)}`);
+} finally {
+  if (ssh) {
+    try {
+      const { dockerClient } = await import("@noddle/ssh-executor");
+      if (!process.env.NODDLE_KEEP) {
+        await removeService(dockerClient(ssh), SERVICE_NAME);
+      }
+      await exec(ssh, `sudo rm -rf ${quoteArg(ORIGIN)}`);
+    } catch {}
+    disconnect(ssh);
+  }
+}
+
+console.log(`\n[1mpassed ${pass}, failed ${fail}[0m\n`);
+process.exit(fail === 0 ? 0 : 1);

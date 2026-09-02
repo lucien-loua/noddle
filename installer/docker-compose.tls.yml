@@ -1,0 +1,42 @@
+services:
+  traefik:
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.swarm=true
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=noddle-public
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL missing}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.caserver=${ACME_CASERVER:-https://acme-v02.api.letsencrypt.org/directory}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+  web:
+    environment:
+      BETTER_AUTH_URL: https://${NODDLE_DOMAIN:?NODDLE_DOMAIN missing}
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
+      - traefik.http.routers.noddle-web-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN missing}`)
+      - traefik.http.routers.noddle-web-tls.entrypoints=websecure
+      - traefik.http.routers.noddle-web-tls.tls=true
+      - traefik.http.routers.noddle-web-tls.tls.certresolver=le
+
+  worker:
+    environment:
+      CERT_RESOLVER: le
+
+volumes:
+  letsencrypt:

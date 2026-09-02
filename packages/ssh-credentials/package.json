@@ -1,0 +1,24 @@
+{
+  "name": "@noddle/ssh-credentials",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
+  "dependencies": {
+    "@noddle/crypto": "workspace:*",
+    "@noddle/db": "workspace:*",
+    "@noddle/ssh-executor": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

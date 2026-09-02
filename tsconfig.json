@@ -1,0 +1,25 @@
+{
+  // Root config: used by `bun run typecheck`, which checks the whole repo at
+  // once. Options live in @noddle/tsconfig, which each package extends on its
+  // own so editors see the right config per package.
+  //
+  // `types` is not overridden here: since TypeScript 6, the field is no longer
+  // auto-filled from present @types packages, so it is declared once in the
+  // base (["bun"], which also ships Node types).
+  //
+  // `apps/web` has its own config and is NOT included here: it is the only
+  // package that sees the DOM and JSX. Mixing them would make `document`
+  // typeable from the worker. The `typecheck` script runs both in sequence.
+  "extends": "@noddle/tsconfig/base.json",
+  // `scripts/` is repo-level tooling: it belongs to no package, so nothing
+  // else picks it up — an editor falls back to an inferred config with no
+  // `types` and every `node:` import goes unresolved.
+  "include": [
+    "packages/*/src/**/*.ts",
+    "apps/worker/src/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
+}

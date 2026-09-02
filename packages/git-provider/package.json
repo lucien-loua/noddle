@@ -1,0 +1,19 @@
+{
+  "name": "@noddle/git-provider",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    "./github": "./src/github.ts",
+    "./gitlab": "./src/gitlab.ts"
+  },
+  "scripts": {
+    "verify:pure": "noddle-verify pure"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

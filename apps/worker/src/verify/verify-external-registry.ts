@@ -1,0 +1,375 @@
+// tier: vm
+import { randomBytes } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { encryptSecret, secretContext } from "@noddle/crypto";
+import { createDatabase } from "@noddle/db";
+import {
+  deployments,
+  environments,
+  projects,
+  registries,
+  servers,
+  serviceDomains,
+  services,
+} from "@noddle/db/schema";
+import {
+  connect,
+  disconnect,
+  dockerClient,
+  exec,
+  execArgv,
+  quoteArg,
+} from "@noddle/ssh-executor";
+import { removeService } from "@noddle/swarm-ops";
+import { devStack } from "@noddle/testing/dev-stack";
+import { devTarget } from "@noddle/testing/dev-target";
+import { eq, inArray } from "drizzle-orm";
+
+import { runDeploy } from "#deploy";
+import { provisionServer } from "#provision";
+import { seedSshKey, verifyCtx } from "#verify-seed";
+
+const MANAGER = devTarget();
+const WORKER = devTarget("noddle-target-2");
+
+const DB_URL = devStack().databaseUrl;
+
+const SERVICE_NAME = "noddle-ext";
+const ORIGIN = "/opt/noddle-ext-origin";
+const EXT_DIR = "/etc/noddle/registry-ext";
+const EXT_CONTAINER = "noddle-registry-ext";
+const EXT_PORT = 5001;
+const EXT_USER = "octocat";
+const EXT_PREFIX = "acme-org";
+
+let pass = 0;
+let fail = 0;
+const ok = (m: string) => {
+  pass += 1;
+  console.log(`  \u001B[32m✓\u001B[0m ${m}`);
+};
+const ko = (m: string) => {
+  fail += 1;
+  console.log(`  \u001B[31m✗\u001B[0m ${m}`);
+};
+const step = (m: string) => console.log(`\n\u001B[1m${m}\u001B[0m`);
+
+const appKey = randomBytes(32);
+const db = createDatabase({ url: DB_URL });
+const { privateKey } = MANAGER;
+const sshKeyId = await seedSshKey(db, appKey, "verify-external", privateKey);
+const extPassword = randomBytes(16).toString("hex");
+const extHost = `${MANAGER.host}:${EXT_PORT}`;
+const domain = `${SERVICE_NAME}.${MANAGER.host.replaceAll(".", "-")}.sslip.io`;
+
+let managerSsh: Awaited<ReturnType<typeof connect>> | undefined;
+let workerSsh: Awaited<ReturnType<typeof connect>> | undefined;
+
+await db.delete(deployments);
+await db.delete(services);
+await db.delete(environments);
+await db.delete(projects);
+await db.delete(registries);
+await db
+  .delete(servers)
+  .where(inArray(servers.host, [MANAGER.host, WORKER.host]));
+
+try {
+  managerSsh = await connect({
+    host: MANAGER.host,
+    privateKey,
+    user: MANAGER.user,
+  });
+  workerSsh = await connect({
+    host: WORKER.host,
+    privateKey,
+    user: MANAGER.user,
+  });
+  const managerDocker = dockerClient(managerSsh);
+
+  step("An external registry, distinct credentials and port");
+  await exec(managerSsh, `sudo docker rm -f ${EXT_CONTAINER}`);
+  await exec(
+    managerSsh,
+    `sudo rm -rf ${EXT_DIR} && sudo mkdir -p ${EXT_DIR} && ` +
+      "sudo openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes " +
+      `-keyout ${EXT_DIR}/ca.key -out ${EXT_DIR}/ca.crt ` +
+      "-subj '/CN=Acme Registry CA' " +
+      "-addext 'basicConstraints=critical,CA:TRUE' " +
+      "-addext 'keyUsage=critical,keyCertSign,cRLSign' 2>/dev/null && " +
+      `printf 'subjectAltName=IP:${MANAGER.host}\\nbasicConstraints=CA:FALSE\\nkeyUsage=critical,digitalSignature,keyEncipherment\\nextendedKeyUsage=serverAuth\\n' | sudo tee ${EXT_DIR}/ext.cnf >/dev/null && ` +
+      `sudo openssl req -newkey rsa:2048 -nodes -keyout ${EXT_DIR}/registry.key ` +
+      `-out ${EXT_DIR}/registry.csr -subj '/CN=${MANAGER.host}' 2>/dev/null && ` +
+      `sudo openssl x509 -req -in ${EXT_DIR}/registry.csr -CA ${EXT_DIR}/ca.crt ` +
+      `-CAkey ${EXT_DIR}/ca.key -CAcreateserial -out ${EXT_DIR}/registry.crt ` +
+      `-days 3650 -sha256 -extfile ${EXT_DIR}/ext.cnf 2>/dev/null`
+  );
+  const htpasswd = await exec(
+    managerSsh,
+    `printf '%s' ${quoteArg(extPassword)} | sudo docker run --rm -i httpd:2-alpine htpasswd -Bin ${EXT_USER} 2>/dev/null | sudo tee ${EXT_DIR}/htpasswd`
+  );
+  if (htpasswd.stdout.includes("$2y$")) {
+    ok(`htpasswd bcrypt for "${EXT_USER}", a different account from ours`);
+  } else {
+    ko(`unexpected htpasswd: ${htpasswd.stdout.slice(0, 60)}`);
+  }
+
+  await execArgv(managerSsh, [
+    "sudo",
+    "docker",
+    "run",
+    "-d",
+    "--name",
+    EXT_CONTAINER,
+    "--restart",
+    "unless-stopped",
+    "-p",
+    `${EXT_PORT}:5000`,
+    "-v",
+    `${EXT_DIR}:/certs:ro`,
+    "-e",
+    "REGISTRY_HTTP_ADDR=0.0.0.0:5000",
+    "-e",
+    "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt",
+    "-e",
+    "REGISTRY_HTTP_TLS_KEY=/certs/registry.key",
+    "-e",
+    "REGISTRY_AUTH=htpasswd",
+    "-e",
+    "REGISTRY_AUTH_HTPASSWD_REALM=acme",
+    "-e",
+    "REGISTRY_AUTH_HTPASSWD_PATH=/certs/htpasswd",
+    "registry:3.1.1",
+  ]);
+  await sleep(4000);
+  const alive = await exec(
+    managerSsh,
+    `sudo docker inspect -f '{{.State.Running}}' ${EXT_CONTAINER}`
+  );
+  if (alive.stdout.trim() === "true") {
+    ok(`external registry listening on ${extHost}`);
+  } else {
+    const why = await exec(
+      managerSsh,
+      `sudo docker logs --tail 5 ${EXT_CONTAINER}`
+    );
+    ko(`external registry dead: ${why.stderr.trim() || why.stdout.trim()}`);
+    throw new Error("external registry unavailable");
+  }
+
+  const caCert = (
+    await exec(managerSsh, `sudo cat ${EXT_DIR}/ca.crt`)
+  ).stdout.trim();
+  for (const client of [managerSsh, workerSsh]) {
+    await exec(
+      client,
+      `sudo mkdir -p /etc/docker/certs.d/${extHost} && ` +
+        `printf '%s' ${quoteArg(caCert)} | sudo tee /etc/docker/certs.d/${extHost}/ca.crt >/dev/null`
+    );
+  }
+  ok("external registry CA deposited on both nodes, outside Noddle");
+
+  step("The registry chosen by the service");
+  const registryId = crypto.randomUUID();
+  await db.insert(registries).values({
+    id: registryId,
+    imagePrefix: EXT_PREFIX,
+    name: "acme",
+    passwordEncrypted: encryptSecret(
+      extPassword,
+      appKey,
+      secretContext.registry(registryId)
+    ),
+    registryUrl: extHost,
+    username: EXT_USER,
+  });
+  ok("registries row written, password encrypted under its AAD");
+
+  const [managerRow] = await db
+    .insert(servers)
+    .values({
+      host: MANAGER.host,
+      name: "ext-manager",
+      role: "manager",
+      sshKeyId,
+      sshUser: MANAGER.user,
+      status: "connected",
+      totalMemoryMb: 2048,
+    })
+    .returning();
+  const [workerRow] = await db
+    .insert(servers)
+    .values({
+      host: WORKER.host,
+      name: "ext-worker",
+      sshKeyId,
+      sshUser: MANAGER.user,
+    })
+    .returning();
+  if (!(managerRow && workerRow)) {
+    throw new Error("server insert failed");
+  }
+
+  const ctx = verifyCtx({ appKey, db });
+  const route = { networkName: "noddle-public" };
+  const build = { logRoot: "/tmp/noddle-ext-logs" };
+
+  console.log("    (provisioning the worker…)");
+  await provisionServer(ctx, workerRow.id);
+
+  step("Deploy to the external registry");
+  await exec(
+    workerSsh,
+    `sudo rm -rf ${quoteArg(ORIGIN)} && sudo mkdir -p ${quoteArg(ORIGIN)} && sudo chown -R "$USER" ${quoteArg(ORIGIN)} && ` +
+      `cd ${quoteArg(ORIGIN)} && ` +
+      `printf '%s' '{"name":"ext","scripts":{"start":"node s.js"}}' > package.json && ` +
+      `printf '%s' 'const p=process.env.PORT||3000;require("http").createServer((q,r)=>r.end("external hello")).listen(p)' > s.js && ` +
+      "git init -q -b main . && git config user.email e@x && git config user.name e && " +
+      "git add -A && git commit -q -m init"
+  );
+
+  const leftovers = await managerDocker.listServices({
+    filters: JSON.stringify({ name: [SERVICE_NAME] }),
+  });
+  for (const old of leftovers) {
+    const name = old.Spec?.Name;
+    if (name?.startsWith(`${SERVICE_NAME}-`)) {
+      await removeService(managerDocker, name);
+    }
+  }
+
+  const [proj] = await db.insert(projects).values({ name: "ext" }).returning();
+  const [env] = await db
+    .insert(environments)
+    .values({ name: "production", projectId: proj?.id ?? "" })
+    .returning();
+  const [svc] = await db
+    .insert(services)
+    .values({
+      buildMethod: "railpack",
+      environmentId: env?.id ?? "",
+      gitBranch: "main",
+      gitRepoUrl: `file://${ORIGIN}`,
+      name: SERVICE_NAME,
+      port: 3000,
+      registryId,
+      serverId: workerRow.id,
+      sourceType: "git",
+    })
+    .returning();
+  if (!svc) {
+    throw new Error("service insert failed");
+  }
+  await db.insert(serviceDomains).values({ host: domain, serviceId: svc.id });
+
+  const [dep] = await db
+    .insert(deployments)
+    .values({ serviceId: svc.id, status: "queued", trigger: "manual" })
+    .returning();
+  if (!dep) {
+    throw new Error("deployment insert failed");
+  }
+
+  console.log("    (railpack build on the worker, push to the external…)");
+  await runDeploy(ctx, route, build, { deploymentId: dep.id });
+
+  const done = await db.query.deployments.findFirst({
+    where: eq(deployments.id, dep.id),
+  });
+  if (done?.status === "succeeded") {
+    ok(`deployment succeeded — ${done.imageTag}`);
+  } else {
+    ko(`deployment ${done?.status}: ${done?.errorMessage ?? ""}`);
+    throw new Error("deployment failed; the rest is meaningless");
+  }
+
+  const tag = done.imageTag ?? "";
+  if (tag.startsWith(`${extHost}/${EXT_PREFIX}/`)) {
+    ok(`tag carries the chosen host AND prefix: ${extHost}/${EXT_PREFIX}/…`);
+  } else {
+    ko(`unexpected tag: ${tag}`);
+  }
+
+  const catalog = await exec(
+    managerSsh,
+    `curl -s --cacert ${EXT_DIR}/ca.crt -u ${quoteArg(`${EXT_USER}:${extPassword}`)} https://${extHost}/v2/_catalog`
+  );
+  if (catalog.stdout.includes(`${EXT_PREFIX}/${SERVICE_NAME}`)) {
+    ok(`external registry holds the repo: ${catalog.stdout.trim()}`);
+  } else {
+    ko(`repo absent from external registry: ${catalog.stdout.trim()}`);
+  }
+
+  const swarmName = tag.split("/").pop()?.split(":")[0] ?? "";
+  const listed = await managerDocker.listServices({
+    filters: JSON.stringify({ name: [SERVICE_NAME] }),
+  });
+  const spec = listed.find((s) => s.Spec?.Name?.startsWith(`${SERVICE_NAME}-`));
+  const constraints = spec?.Spec?.TaskTemplate?.Placement?.Constraints ?? [];
+  if (constraints.length === 0) {
+    ok("no placement constraint: the image is portable");
+  } else {
+    ko(`unexpected constraint: ${constraints.join(", ")}`);
+  }
+
+  step("A node that never built the image pulls it from the external");
+  const buildNode = (
+    await exec(workerSsh, "sudo docker info -f '{{.Swarm.NodeID}}'")
+  ).stdout.trim();
+  await exec(
+    managerSsh,
+    `sudo docker node update --availability drain ${buildNode}`
+  );
+  try {
+    let landed = "";
+    for (let i = 0; i < 30; i += 1) {
+      await sleep(3000);
+      const ps = await exec(
+        managerSsh,
+        `sudo docker service ps --filter desired-state=running --format '{{.Node}} {{.CurrentState}}' ${quoteArg(spec?.Spec?.Name ?? swarmName)}`
+      );
+      if (ps.stdout.includes("Running")) {
+        landed = ps.stdout.trim();
+        break;
+      }
+    }
+    if (landed && !landed.startsWith("ext-worker")) {
+      ok(`rescheduled off the build node: ${landed.split("\n")[0]}`);
+    } else if (landed) {
+      ko(`still on the build node: ${landed}`);
+    } else {
+      ko("task never returned to running after drain");
+    }
+
+    const http = await exec(
+      managerSsh,
+      `curl -s -m 10 -H ${quoteArg(`Host: ${domain}`)} http://127.0.0.1/`
+    );
+    if (http.stdout.includes("external hello")) {
+      ok("HTTP served from the node that PULLED the image from the external");
+    } else {
+      ko(`unexpected HTTP: ${http.stdout.slice(0, 80)}`);
+    }
+  } finally {
+    await exec(
+      managerSsh,
+      `sudo docker node update --availability active ${buildNode}`
+    );
+  }
+} catch (error) {
+  ko(`interrupted: ${error instanceof Error ? error.message : String(error)}`);
+} finally {
+  if (managerSsh) {
+    await exec(managerSsh, `sudo docker rm -f ${EXT_CONTAINER}`);
+    disconnect(managerSsh);
+  }
+  if (workerSsh) {
+    disconnect(workerSsh);
+  }
+}
+
+console.log(
+  `\n\u001B[1m${pass} passed, ${fail} failed\u001B[0m ${fail === 0 ? "\u001B[32m✓\u001B[0m" : "\u001B[31m✗\u001B[0m"}`
+);
+process.exit(fail === 0 ? 0 : 1);

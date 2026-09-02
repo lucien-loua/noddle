@@ -1,0 +1,64 @@
+import type { Icon } from "@phosphor-icons/react";
+import { ArchiveIcon, CaretDownIcon } from "@phosphor-icons/react";
+
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export function ScheduleActions({
+  canRestore,
+  createIcon: CreateIcon,
+  createLabel,
+  onCreate,
+  onRestoreS3,
+  restoreLabel,
+}: {
+  canRestore: boolean;
+  createIcon: Icon;
+  createLabel: string;
+  onCreate: () => void;
+  onRestoreS3: () => void;
+  restoreLabel: string;
+}) {
+  if (!canRestore) {
+    return (
+      <Button onClick={onCreate} size="sm" variant="outline">
+        <CreateIcon data-icon="inline-start" weight="regular" />
+        {createLabel}
+      </Button>
+    );
+  }
+
+  return (
+    <ButtonGroup>
+      <Button onClick={onCreate} size="sm" variant="outline">
+        <CreateIcon data-icon="inline-start" weight="regular" />
+        {createLabel}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              aria-label="More backup actions"
+              size="icon-sm"
+              variant="outline"
+            >
+              <CaretDownIcon weight="regular" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={onRestoreS3}>
+            <ArchiveIcon data-icon="inline-start" weight="regular" />
+            {restoreLabel}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
+  );
+}

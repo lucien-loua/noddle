@@ -1,0 +1,30 @@
+import { isPortableImage } from "@noddle/registry";
+import type { RegistryConfig } from "@noddle/registry";
+import type { DockerApi } from "@noddle/ssh-executor";
+import { getSwarmNodeId } from "@noddle/swarm-ops";
+import type { RegistryAuth } from "@noddle/swarm-ops";
+
+export async function placementFor(opts: {
+  buildDocker: DockerApi;
+  image: string;
+  registry: RegistryConfig | undefined;
+  swarmNodeId: string | null | undefined;
+}): Promise<string | undefined> {
+  if (isPortableImage(opts.image, opts.registry)) {
+    return;
+  }
+  return opts.swarmNodeId ?? (await getSwarmNodeId(opts.buildDocker));
+}
+
+export function authFor(
+  registry: RegistryConfig | undefined
+): RegistryAuth | undefined {
+  if (!registry) {
+    return;
+  }
+  return {
+    password: registry.password,
+    serveraddress: registry.host,
+    username: registry.username,
+  };
+}
