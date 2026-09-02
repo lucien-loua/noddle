@@ -1,10 +1,8 @@
 export {
-  buildImage,
   buildImageFromDockerfile,
   computeBuildCap,
   ensureCappedBuilder,
   fetchSource,
-  resolveBuildDir,
 } from "./internal/build.ts";
 export {
   type ComposeBuildSpec,
@@ -19,7 +17,6 @@ export { SECOND_NS } from "./internal/deploy-policy.ts";
 export {
   type DomainRoute,
   routeLabels,
-  serviceRouteLabels,
   type TraefikLabels,
 } from "./internal/proxy.ts";
 export {
@@ -30,12 +27,22 @@ export {
   registryImageTag,
 } from "./internal/registry.ts";
 export {
+  type PlacementPolicy,
+  ship,
+  type ShipBuild,
+  type ShipClients,
+  type ShipGitSource,
+  type ShipIo,
+  type ShipResolvedImage,
+  type ShipTarget,
+  type ShipVerdict,
+} from "./internal/ship.ts";
+export {
   awaitSwarmVerdict,
   deployService,
   ensureOverlayNetwork,
   getSwarmNodeId,
   isDeployAccepted,
-  readRunningNodeId,
   type RegistryAuth,
   type SwarmUpdateState,
 } from "./internal/swarm.ts";

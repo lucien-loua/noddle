@@ -5,17 +5,12 @@ import {
   servers,
   services,
 } from "@noddle/db/schema";
-import {
-  buildImage,
-  buildImageFromDockerfile,
-  computeBuildCap,
-  ensureCappedBuilder,
-  fetchSource,
-  resolveBuildDir,
-  pushImage,
-  registryImageTag,
+import { ship } from "@noddle/deploy-engine";
+import type {
+  DomainRoute,
+  RegistryConfig,
+  ShipBuild,
 } from "@noddle/deploy-engine";
-import type { DomainRoute, RegistryConfig } from "@noddle/deploy-engine";
 import { redactUrlCredentials } from "@noddle/shared/redact";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
@@ -27,7 +22,6 @@ import {
   recordRefusedService,
 } from "#deploy/accepted-deployment";
 import { providerCloneUrl } from "#deploy/provider-clone";
-import { rolloutService } from "#deploy/rollout";
 import { withDeployClients } from "#job-run";
 import type { DeployClients } from "#job-run";
 import { createLogSink } from "#log-sink";
@@ -117,131 +111,50 @@ async function sourceCredentials(
   };
 }
 
-async function buildAndPushImage(
-  service: RunDeployment["service"],
-  imageTag: string,
-  registry: RegistryConfig | undefined,
-  buildClient: DeployClients["buildClient"],
-  sink: Awaited<ReturnType<typeof createLogSink>>,
-  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void }
-): Promise<void> {
-  if (service.cleanCache) {
-    sink.write("▸ cache disabled for this build\n");
-  }
-
-  const buildDir = resolveBuildDir(
-    `${BUILD_ROOT}/${service.id}`,
-    service.buildPath
-  );
-  if (service.buildPath) {
-    sink.write(`▸ build context: ${service.buildPath}\n`);
-  }
-
-  if (service.buildMethod === "dockerfile") {
-    sink.write("▸ building from Dockerfile\n");
-    await buildImageFromDockerfile(buildClient, {
-      contextDir: buildDir,
-      dockerfilePath: "Dockerfile",
-      imageTag,
-      noCache: service.cleanCache,
-      ...stream,
-    });
-  } else {
-    if (service.publishDirectory) {
-      sink.write(`▸ static output: ${service.publishDirectory}\n`);
-    }
-    await buildImage(buildClient, {
-      dir: buildDir,
-      imageTag,
-      noCache: service.cleanCache,
-      publishDirectory: service.publishDirectory,
-      ...stream,
-    });
-  }
-
-  if (registry) {
-    sink.write("▸ pushing image to the registry\n");
-    await pushImage(buildClient, registry, {
-      imageTag,
-      removeLocal: true,
-      ...stream,
-    });
-  }
-}
-
 async function buildAndDeployService(
   ctx: DeployContext,
   route: RouteOptions,
   registry: RegistryConfig | undefined,
   deployment: RunDeployment,
   sink: Awaited<ReturnType<typeof createLogSink>>,
-  stream: { onStderr: (s: string) => void; onStdout: (s: string) => void },
   clients: DeployClients
 ): Promise<void> {
   const { db } = ctx;
   const { service } = deployment;
   const { server } = service;
-  const { buildClient, buildDocker, managerDocker } = clients;
   const publishedImage = service.sourceType === "docker_image";
 
-  let imageTag: string;
-  let sha: string | null = null;
-
+  let build: ShipBuild;
   if (publishedImage) {
     if (!service.dockerImage) {
       throw new Error("service has no docker image");
     }
-    imageTag = service.dockerImage;
-    sink.write(`▸ image ${imageTag}\n`);
+    build = { image: service.dockerImage, kind: "image" };
   } else {
     if (!service.gitRepoUrl) {
       throw new Error(
         "service has no git repository: this source_type is not supported here"
       );
     }
-
-    const cap = computeBuildCap({
-      totalMemoryMb: server.totalMemoryMb ?? 2048,
-    });
-    sink.write(`▸ build capped at ${cap.memory}\n`);
-    await ensureCappedBuilder(buildClient, cap, stream);
-
-    const workDir = `${BUILD_ROOT}/${service.id}`;
     const auth = await sourceCredentials(ctx, service, sink);
-
-    sha = await fetchSource(buildClient, {
-      branch: service.gitBranch ?? "main",
-      commitSha: deployment.commitSha ?? undefined,
-      deployKey: auth.deployKey,
-      dir: workDir,
-      keyScope: service.id,
-      repoUrl: auth.repoUrl ?? service.gitRepoUrl,
-      submodules: service.gitSubmodules,
-      ...stream,
-    });
-
-    const builtName = swarmServiceName(service);
-    const version = `${sha.slice(0, 12)}-${Date.now()}`;
-    imageTag = registry
-      ? registryImageTag(registry, builtName, version)
-      : `${builtName}:${version}`;
-  }
-
-  const swarmName = swarmServiceName(service);
-  await db
-    .update(deployments)
-    .set({ commitSha: sha, imageTag, status: "deploying" })
-    .where(eq(deployments.id, deployment.id));
-
-  if (!publishedImage) {
-    await buildAndPushImage(
-      service,
-      imageTag,
-      registry,
-      buildClient,
-      sink,
-      stream
-    );
+    build = {
+      buildMethod:
+        service.buildMethod === "dockerfile" ? "dockerfile" : "buildpacks",
+      buildPath: service.buildPath ?? undefined,
+      kind: "git",
+      noCache: Boolean(service.cleanCache),
+      publishDirectory: service.publishDirectory ?? undefined,
+      repoDir: `${BUILD_ROOT}/${service.id}`,
+      source: {
+        branch: service.gitBranch ?? "main",
+        commitSha: deployment.commitSha ?? undefined,
+        deployKey: auth.deployKey,
+        keyScope: service.id,
+        repoUrl: auth.repoUrl ?? service.gitRepoUrl,
+        submodules: service.gitSubmodules,
+      },
+      totalMemoryMb: server.totalMemoryMb ?? 2048,
+    };
   }
 
   const env: Record<string, string> = {};
@@ -253,21 +166,32 @@ async function buildAndDeployService(
     );
   }
 
-  sink.write("▸ Swarm rollout\n");
-  const outcome = await rolloutService({
-    buildDocker,
-    certResolver: route.certResolver,
-    domainRoutes: routeHosts(service.domains),
-    env,
-    image: imageTag,
-    managerDocker,
-    networkName: route.networkName,
-    port: service.port,
-    portable: publishedImage,
-    registry,
-    serviceName: swarmName,
-    swarmNodeId: server.swarmNodeId,
-  });
+  const swarmName = swarmServiceName(service);
+
+  const outcome = await ship(
+    build,
+    {
+      certResolver: route.certResolver,
+      domains: routeHosts(service.domains),
+      env,
+      networkName: route.networkName,
+      placementPolicy: publishedImage ? "portable" : "auto",
+      port: service.port,
+      registry,
+      serviceName: swarmName,
+      swarmNodeId: server.swarmNodeId,
+    },
+    clients,
+    {
+      onImageResolved: ({ commitSha, imageTag }) =>
+        db
+          .update(deployments)
+          .set({ commitSha, imageTag, status: "deploying" })
+          .where(eq(deployments.id, deployment.id))
+          .then(() => undefined),
+      onLog: sink.write,
+    }
+  );
 
   const finishedAt = new Date();
 
@@ -344,17 +268,8 @@ export async function runDeploy(
       root: build.logRoot,
     });
     const log = sink;
-    const stream = { onStderr: log.write, onStdout: log.write };
     await withDeployClients(ctx, service.server, (clients) =>
-      buildAndDeployService(
-        ctx,
-        route,
-        registry,
-        deployment,
-        log,
-        stream,
-        clients
-      )
+      buildAndDeployService(ctx, route, registry, deployment, log, clients)
     );
   } catch (error) {
     const message = redactUrlCredentials(
@@ -426,59 +341,57 @@ export async function redeployImage(
     })
     .returning();
 
-  return await withDeployClients(
-    ctx,
-    service.server,
-    async ({ buildDocker, managerDocker }) => {
-      const env: Record<string, string> = {};
-      for (const v of service.envVars) {
-        env[v.key] = decryptSecret(
-          v.valueEncrypted,
-          ctx.appKey,
-          secretContext.envVar(v.id)
-        );
-      }
+  return await withDeployClients(ctx, service.server, async (clients) => {
+    const env: Record<string, string> = {};
+    for (const v of service.envVars) {
+      env[v.key] = decryptSecret(
+        v.valueEncrypted,
+        ctx.appKey,
+        secretContext.envVar(v.id)
+      );
+    }
 
-      const swarmName = swarmServiceName(service);
-      const outcome = await rolloutService({
-        buildDocker,
+    const swarmName = swarmServiceName(service);
+    const outcome = await ship(
+      { image: opts.imageTag, kind: "image" },
+      {
         certResolver: route.certResolver,
-        domainRoutes: routeHosts(service.domains),
+        domains: routeHosts(service.domains),
         env,
-        image: opts.imageTag,
-        managerDocker,
         networkName: route.networkName,
+        placementPolicy: "auto",
         port: service.port,
         registry,
         serviceName: swarmName,
         swarmNodeId: service.server.swarmNodeId,
-      });
+      },
+      clients
+    );
 
-      const finishedAt = new Date();
-      if (!created) {
-        return "";
-      }
-      if (!outcome.accepted) {
-        await recordRefusedService(ctx.db, {
-          deploymentId: created.id,
-          finishedAt,
-          nodeId: outcome.nodeId,
-          serviceId: service.id,
-          swarmUpdateMessage: outcome.updateMessage,
-          swarmUpdateState: outcome.updateState,
-        });
-        return created.id;
-      }
-      await recordAcceptedService(ctx.db, {
+    const finishedAt = new Date();
+    if (!created) {
+      return "";
+    }
+    if (!outcome.accepted) {
+      await recordRefusedService(ctx.db, {
         deploymentId: created.id,
         finishedAt,
         nodeId: outcome.nodeId,
         serviceId: service.id,
+        swarmUpdateMessage: outcome.updateMessage,
         swarmUpdateState: outcome.updateState,
       });
       return created.id;
     }
-  );
+    await recordAcceptedService(ctx.db, {
+      deploymentId: created.id,
+      finishedAt,
+      nodeId: outcome.nodeId,
+      serviceId: service.id,
+      swarmUpdateState: outcome.updateState,
+    });
+    return created.id;
+  });
 }
 
 export async function refreshServerFacts(
