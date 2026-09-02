@@ -8,19 +8,18 @@ import {
   fetchSource,
   resolveBuildDir,
 } from "./build.ts";
+import { resolvePlacement } from "./placement.ts";
+import type { PlacementPolicy } from "./placement.ts";
 import { serviceRouteLabels } from "./proxy.ts";
 import type { DomainRoute } from "./proxy.ts";
-import { isPortableImage, pushImage, registryImageTag } from "./registry.ts";
+import { pushImage, registryImageTag } from "./registry.ts";
 import type { RegistryConfig } from "./registry.ts";
 import {
   deployService,
   ensureOverlayNetwork,
-  getSwarmNodeId,
   readRunningNodeId,
 } from "./swarm.ts";
 import type { RegistryAuth, SwarmUpdateState } from "./swarm.ts";
-
-export type PlacementPolicy = "auto" | "pinned" | "portable";
 
 export interface ShipGitSource {
   branch: string;
@@ -92,22 +91,6 @@ function registryAuthFor(
     serveraddress: registry.host,
     username: registry.username,
   };
-}
-
-async function resolvePlacement(opts: {
-  buildDocker: DockerApi;
-  image: string;
-  policy: PlacementPolicy;
-  registry: RegistryConfig | undefined;
-  swarmNodeId: string | null;
-}): Promise<string | undefined> {
-  if (opts.policy === "portable") {
-    return;
-  }
-  if (opts.policy === "auto" && isPortableImage(opts.image, opts.registry)) {
-    return;
-  }
-  return opts.swarmNodeId ?? (await getSwarmNodeId(opts.buildDocker));
 }
 
 export async function ship(

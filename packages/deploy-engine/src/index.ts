@@ -1,18 +1,4 @@
-export {
-  buildImageFromDockerfile,
-  computeBuildCap,
-  ensureCappedBuilder,
-  fetchSource,
-} from "./internal/build.ts";
-export {
-  type ComposeBuildSpec,
-  type ComposeFile,
-  type ComposeService,
-  injectDeployConfig,
-  listComposeServiceKeys,
-  parseCompose,
-  SAFE_COMPOSE_KEY,
-} from "./internal/compose.ts";
+export { listComposeServiceKeys } from "./internal/compose.ts";
 export { SECOND_NS } from "./internal/deploy-policy.ts";
 export {
   type DomainRoute,
@@ -26,8 +12,8 @@ export {
   type RegistryConfig,
   registryImageTag,
 } from "./internal/registry.ts";
+export { type PlacementPolicy } from "./internal/placement.ts";
 export {
-  type PlacementPolicy,
   ship,
   type ShipBuild,
   type ShipClients,
@@ -37,6 +23,15 @@ export {
   type ShipTarget,
   type ShipVerdict,
 } from "./internal/ship.ts";
+export {
+  shipStack,
+  type ShipStackBuild,
+  type ShipStackClients,
+  type ShipStackIo,
+  type ShipStackSource,
+  type ShipStackTarget,
+  type ShipStackVerdict,
+} from "./internal/stack.ts";
 export {
   awaitSwarmVerdict,
   deployService,
