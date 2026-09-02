@@ -40,6 +40,8 @@ Noddle deploys applications and databases to a server you own, from a single das
 
 **Registry**: Image store used so a built image can leave the build node (embedded registry in Phase 4+). Without a push, a local image pins the service to that node.
 
+**Deploy engine**: The module that turns a resolved spec into a running Service, Stack or Database — build, push, placement, Traefik labels, service update, Swarm verdict. It owns no database and no queue: the worker resolves rows and secrets into the spec, and acts on the verdict it gets back. Operating something already running (remove, restart, scale, registry trust and pruning) is a separate entry, not a deploy. _Avoid_: deployer, build pipeline, orchestrator
+
 ### Runtime
 
 **Job**: One unit of queued work on the deploy queue — a ship, a backup, a teardown, a prune. Every Job kind shares that queue on purpose: its concurrency of 1 is what keeps a build, a push and a prune from racing. _Not_: a Deployment, which is the row in the history. Deploying enqueues a Job; most Job kinds produce no Deployment at all.
