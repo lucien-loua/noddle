@@ -11,8 +11,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./dev-stack": "./src/dev-stack.ts",
-    "./dev-target": "./src/dev-target.ts",
-    "./seed-stack": "./src/seed-stack.ts"
+    "./dev-target": "./src/dev-target.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "catalog:",

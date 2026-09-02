@@ -139,23 +139,6 @@ export async function githubAppCredentials(
   return githubAppFromRow(appKey, gitProviderId, provider.github);
 }
 
-export async function githubAppFor(
-  db: Database,
-  appKey: Buffer,
-  gitProviderId: string
-): Promise<GithubApp> {
-  const provider = await loadProvider(db, gitProviderId);
-  if (provider.providerType !== "github") {
-    throw new Error(`${provider.name} is not a GitHub connection`);
-  }
-  return githubAppWithInstallation(
-    appKey,
-    gitProviderId,
-    provider.name,
-    provider.github
-  );
-}
-
 export async function gitlabAppFor(
   db: Database,
   appKey: Buffer,

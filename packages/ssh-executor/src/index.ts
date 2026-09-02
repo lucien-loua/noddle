@@ -180,17 +180,6 @@ export function execArgv(
   return exec(client, argv.map(quoteArg).join(" "), opts);
 }
 
-export function execStreamArgv<T>(
-  client: Client,
-  argv: readonly string[],
-  consume: (io: ExecStreamIo) => Promise<T>
-): Promise<ExecStreamResult<T>> {
-  if (argv.length === 0) {
-    throw new TypeError("argv vide");
-  }
-  return execStream(client, argv.map(quoteArg).join(" "), consume);
-}
-
 export function disconnect(client: Client): void {
   client.end();
 }
@@ -216,18 +205,6 @@ export function writeRemoteFile(
       });
     });
   });
-}
-
-export async function withServer<T>(
-  creds: ServerCredentials,
-  fn: (client: Client) => Promise<T>
-): Promise<T> {
-  const client = await connect(creds);
-  try {
-    return await fn(client);
-  } finally {
-    disconnect(client);
-  }
 }
 
 class SshSocketAgent extends http.Agent {

@@ -93,10 +93,6 @@ export function cleanup(fn: () => void | Promise<void>): void {
   cleanups.push(fn);
 }
 
-export function counts(): { fail: number; pass: number } {
-  return { fail, pass };
-}
-
 export async function finish(): Promise<never> {
   for (const fn of cleanups) {
     try {
