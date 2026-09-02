@@ -1,8 +1,10 @@
 import { deployments, servers, stackDeployments } from "@noddle/db/schema";
-import { listComposeServiceKeys } from "@noddle/deploy-engine";
+import {
+  listComposeServiceKeys,
+  inspectServiceHealth,
+} from "@noddle/deploy-engine";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect } from "@noddle/ssh-executor";
-import { inspectServiceHealth } from "@noddle/swarm-ops";
 import { and, desc, eq, gt, isNotNull, lt, ne } from "drizzle-orm";
 
 import { redeployStack } from "#compose";

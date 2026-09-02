@@ -1,12 +1,12 @@
 import { databases, services } from "@noddle/db/schema";
-import { markRunning, markStopped } from "@noddle/shared/lifecycle";
-import type { StatusPatch } from "@noddle/shared/lifecycle";
-import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   restartService,
   scaleService,
   waitForRunningTask,
-} from "@noddle/swarm-ops";
+} from "@noddle/deploy-engine/ops";
+import { markRunning, markStopped } from "@noddle/shared/lifecycle";
+import type { StatusPatch } from "@noddle/shared/lifecycle";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { eq } from "drizzle-orm";
 
 import { withDeployClients } from "#job-run";

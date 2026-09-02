@@ -28,13 +28,13 @@
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
+        "@noddle/deploy-engine": "workspace:*",
         "@noddle/git-provider": "workspace:*",
         "@noddle/git-provider-credentials": "workspace:*",
         "@noddle/notifier": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
-        "@noddle/swarm-ops": "workspace:*",
         "@phosphor-icons/react": "^2.1.10",
         "@shadcn/react": "^0.3.0",
         "@tanstack/charts": "catalog:",
@@ -90,7 +90,6 @@
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-credentials": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
-        "@noddle/swarm-ops": "workspace:*",
         "bullmq": "catalog:",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
@@ -109,8 +108,8 @@
         "@noddle/crypto": "workspace:*",
         "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
+        "@noddle/deploy-engine": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
-        "@noddle/swarm-ops": "workspace:*",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
       },
@@ -241,17 +240,6 @@
         "@noddle/tsconfig": "workspace:*",
         "@types/dockerode": "catalog:",
         "@types/ssh2": "catalog:",
-      },
-    },
-    "packages/swarm-ops": {
-      "name": "@noddle/swarm-ops",
-      "dependencies": {
-        "@noddle/deploy-engine": "workspace:*",
-        "@noddle/shared": "workspace:*",
-        "@noddle/ssh-executor": "workspace:*",
-      },
-      "devDependencies": {
-        "@noddle/tsconfig": "workspace:*",
       },
     },
     "packages/testing": {
@@ -604,8 +592,6 @@
     "@noddle/ssh-credentials": ["@noddle/ssh-credentials@workspace:packages/ssh-credentials"],
 
     "@noddle/ssh-executor": ["@noddle/ssh-executor@workspace:packages/ssh-executor"],
-
-    "@noddle/swarm-ops": ["@noddle/swarm-ops@workspace:packages/swarm-ops"],
 
     "@noddle/testing": ["@noddle/testing@workspace:packages/testing"],
 

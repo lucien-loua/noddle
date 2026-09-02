@@ -1,9 +1,9 @@
 import { servers } from "@noddle/db/schema";
-import { ensureRegistryTrust } from "@noddle/deploy-engine";
+import { getSwarmNodeId } from "@noddle/deploy-engine";
+import { ensureRegistryTrust } from "@noddle/deploy-engine/ops";
 import { railpackInstallCommand } from "@noddle/shared/toolchain";
 import { credentialsFor } from "@noddle/ssh-credentials";
 import { connect, disconnect, exec, execArgv } from "@noddle/ssh-executor";
-import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";

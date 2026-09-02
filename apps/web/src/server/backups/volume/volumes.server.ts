@@ -1,7 +1,7 @@
 import { services } from "@noddle/db/schema";
+import { listServiceVolumeMounts } from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { dockerClient } from "@noddle/ssh-executor";
-import { listServiceVolumeMounts } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";

@@ -1,9 +1,9 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { databases, stacks } from "@noddle/db/schema";
+import { removeService } from "@noddle/deploy-engine/ops";
 import type { DockerApi } from "@noddle/ssh-executor";
 import { execArgv } from "@noddle/ssh-executor";
-import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { removeSecretIfExists } from "#database";

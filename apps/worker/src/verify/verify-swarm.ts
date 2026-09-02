@@ -1,14 +1,14 @@
 // tier: vm
-import { routeLabels } from "@noddle/deploy-engine";
-import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
-import type { SshClient } from "@noddle/ssh-executor";
 import {
   deployService,
   ensureOverlayNetwork,
   getSwarmNodeId,
   isDeployAccepted,
-  removeService,
-} from "@noddle/swarm-ops";
+  routeLabels,
+} from "@noddle/deploy-engine";
+import { removeService } from "@noddle/deploy-engine/ops";
+import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
+import type { SshClient } from "@noddle/ssh-executor";
 import { devTarget } from "@noddle/testing/dev-target";
 
 const TARGET = devTarget();

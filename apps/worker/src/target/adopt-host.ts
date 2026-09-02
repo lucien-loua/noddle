@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import { encryptSecret, loadAppKey, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { servers, sshKeys } from "@noddle/db/schema";
-import { ensureRegistryTrust } from "@noddle/deploy-engine";
+import { getSwarmNodeId } from "@noddle/deploy-engine";
+import { ensureRegistryTrust } from "@noddle/deploy-engine/ops";
 import { connect, disconnect, dockerClient } from "@noddle/ssh-executor";
 import { publicKeyOf } from "@noddle/ssh-executor/keys";
-import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { and, eq } from "drizzle-orm";
 
 import { loadRegistryConfig } from "#registry";

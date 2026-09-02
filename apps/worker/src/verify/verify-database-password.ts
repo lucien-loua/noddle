@@ -12,6 +12,7 @@ import {
 import type { DatabaseEngine } from "@noddle/database-spec";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
+import { removeService, waitForRunningTask } from "@noddle/deploy-engine/ops";
 import {
   connect,
   disconnect,
@@ -19,7 +20,6 @@ import {
   exec,
   execArgv,
 } from "@noddle/ssh-executor";
-import { removeService, waitForRunningTask } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";

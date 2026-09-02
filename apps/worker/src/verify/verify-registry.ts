@@ -14,13 +14,16 @@ import {
   services,
 } from "@noddle/db/schema";
 import {
-  ensureRegistryTrust,
-  KEEP_PER_SERVICE,
   pushImage,
   REGISTRY_USER,
   registryImageTag,
 } from "@noddle/deploy-engine";
 import type { RegistryConfig } from "@noddle/deploy-engine";
+import {
+  ensureRegistryTrust,
+  KEEP_PER_SERVICE,
+  removeService,
+} from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -30,7 +33,6 @@ import {
   execArgv,
   quoteArg,
 } from "@noddle/ssh-executor";
-import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";

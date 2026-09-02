@@ -7,10 +7,10 @@ import {
   volumeBackups,
 } from "@noddle/db/schema";
 import type { servers } from "@noddle/db/schema";
+import { scaleServiceAndWait } from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { disconnect, execStream, quoteArg } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
-import { scaleServiceAndWait } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { runRestorePipeline } from "#backup-run/restore-pipeline";

@@ -13,6 +13,9 @@ import {
   injectDeployConfig,
   parseCompose,
   SAFE_COMPOSE_KEY,
+  awaitSwarmVerdict,
+  ensureOverlayNetwork,
+  getSwarmNodeId,
 } from "@noddle/deploy-engine";
 import type {
   ComposeBuildSpec,
@@ -21,11 +24,6 @@ import type {
 } from "@noddle/deploy-engine";
 import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
-import {
-  awaitSwarmVerdict,
-  ensureOverlayNetwork,
-  getSwarmNodeId,
-} from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 import { stringify as stringifyYaml } from "yaml";
 

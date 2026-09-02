@@ -15,6 +15,8 @@ import {
   services,
   volumeBackups,
 } from "@noddle/db/schema";
+import { getSwarmNodeId } from "@noddle/deploy-engine";
+import { removeService } from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -22,7 +24,6 @@ import {
   dockerClient,
   execArgv,
 } from "@noddle/ssh-executor";
-import { getSwarmNodeId, removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq, inArray } from "drizzle-orm";

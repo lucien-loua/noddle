@@ -1,11 +1,11 @@
 import { deployments, servers } from "@noddle/db/schema";
+import type { RegistryConfig } from "@noddle/deploy-engine";
 import {
   deleteManifest,
   garbageCollect,
   KEEP_PER_SERVICE,
   parseRegistryRef,
-} from "@noddle/deploy-engine";
-import type { RegistryConfig } from "@noddle/deploy-engine";
+} from "@noddle/deploy-engine/ops";
 import { disconnect } from "@noddle/ssh-executor";
 import { desc, eq, inArray } from "drizzle-orm";
 

@@ -22,14 +22,24 @@ export {
   type TraefikLabels,
 } from "./internal/proxy.ts";
 export {
-  deleteManifest,
-  ensureRegistryTrust,
-  garbageCollect,
   isPortableImage,
-  KEEP_PER_SERVICE,
-  parseRegistryRef,
   pushImage,
   REGISTRY_USER,
   type RegistryConfig,
   registryImageTag,
 } from "./internal/registry.ts";
+export {
+  awaitSwarmVerdict,
+  deployService,
+  ensureOverlayNetwork,
+  getSwarmNodeId,
+  isDeployAccepted,
+  readRunningNodeId,
+  type RegistryAuth,
+  type SwarmUpdateState,
+} from "./internal/swarm.ts";
+export {
+  inspectServiceHealth,
+  WATCH_WINDOW_MS,
+  watchUntilFor,
+} from "./internal/watch.ts";

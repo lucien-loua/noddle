@@ -55,7 +55,6 @@
     "@noddle/shared": "workspace:*",
     "@noddle/ssh-credentials": "workspace:*",
     "@noddle/ssh-executor": "workspace:*",
-    "@noddle/swarm-ops": "workspace:*",
     "bullmq": "catalog:",
     "croner": "^10.0.1",
     "drizzle-orm": "catalog:",

@@ -1,12 +1,16 @@
-import { routeLabels, serviceRouteLabels } from "@noddle/deploy-engine";
-import type { DomainRoute, RegistryConfig } from "@noddle/deploy-engine";
-import type { DockerApi } from "@noddle/ssh-executor";
 import {
+  routeLabels,
+  serviceRouteLabels,
   deployService,
   ensureOverlayNetwork,
   readRunningNodeId,
-} from "@noddle/swarm-ops";
-import type { SwarmUpdateState } from "@noddle/swarm-ops";
+} from "@noddle/deploy-engine";
+import type {
+  DomainRoute,
+  RegistryConfig,
+  SwarmUpdateState,
+} from "@noddle/deploy-engine";
+import type { DockerApi } from "@noddle/ssh-executor";
 
 import { authFor, placementFor } from "#deploy/placement";
 

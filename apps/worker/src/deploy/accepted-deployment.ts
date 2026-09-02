@@ -5,13 +5,13 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
+import { watchUntilFor } from "@noddle/deploy-engine";
 import {
   markCrashed,
   markFailed,
   markRunning,
   settle,
 } from "@noddle/shared/lifecycle";
-import { watchUntilFor } from "@noddle/swarm-ops";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 
 async function clearSupersededServiceWatch(

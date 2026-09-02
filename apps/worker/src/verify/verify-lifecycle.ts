@@ -11,9 +11,9 @@ import {
   serviceDomains,
   services,
 } from "@noddle/db/schema";
+import { removeService } from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { connect, disconnect, dockerClient, exec } from "@noddle/ssh-executor";
-import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";

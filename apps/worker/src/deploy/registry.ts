@@ -3,11 +3,11 @@ import { readFileSync } from "node:fs";
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
 import { registries, servers } from "@noddle/db/schema";
-import { ensureRegistryTrust, REGISTRY_USER } from "@noddle/deploy-engine";
+import { REGISTRY_USER, getSwarmNodeId } from "@noddle/deploy-engine";
 import type { RegistryConfig } from "@noddle/deploy-engine";
+import { ensureRegistryTrust } from "@noddle/deploy-engine/ops";
 import { disconnect, dockerClient } from "@noddle/ssh-executor";
 import type { DockerApi, SshClient } from "@noddle/ssh-executor";
-import { getSwarmNodeId } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 type ServerRow = typeof servers.$inferSelect;

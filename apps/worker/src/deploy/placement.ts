@@ -1,8 +1,6 @@
-import { isPortableImage } from "@noddle/deploy-engine";
-import type { RegistryConfig } from "@noddle/deploy-engine";
+import { isPortableImage, getSwarmNodeId } from "@noddle/deploy-engine";
+import type { RegistryConfig, RegistryAuth } from "@noddle/deploy-engine";
 import type { DockerApi } from "@noddle/ssh-executor";
-import { getSwarmNodeId } from "@noddle/swarm-ops";
-import type { RegistryAuth } from "@noddle/swarm-ops";
 
 export async function placementFor(opts: {
   buildDocker: DockerApi;

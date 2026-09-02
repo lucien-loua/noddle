@@ -2,9 +2,9 @@ import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import type { DatabaseEngine } from "@noddle/database-spec";
+import { scaleServiceAndWait } from "@noddle/deploy-engine/ops";
 import { execArgv, execStream, quoteArg } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
-import { scaleServiceAndWait } from "@noddle/swarm-ops";
 
 const SETTLE_MS = 1500;
 

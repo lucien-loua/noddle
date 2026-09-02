@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { databases, environments, projects, servers } from "@noddle/db/schema";
+import { removeService } from "@noddle/deploy-engine/ops";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import {
   connect,
@@ -12,7 +13,6 @@ import {
   exec,
   execArgv,
 } from "@noddle/ssh-executor";
-import { removeService } from "@noddle/swarm-ops";
 import { devStack } from "@noddle/testing/dev-stack";
 import { devTarget } from "@noddle/testing/dev-target";
 import { eq } from "drizzle-orm";

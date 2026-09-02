@@ -13,7 +13,7 @@ import {
   stackDeployments,
   stacks,
 } from "@noddle/db/schema";
-import { WATCH_WINDOW_MS } from "@noddle/swarm-ops";
+import { WATCH_WINDOW_MS } from "@noddle/deploy-engine";
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 import { eq } from "drizzle-orm";
 
@@ -79,7 +79,9 @@ await runVerify("accepted deployment (Post-deploy watch)", async () => {
 
     check(
       "accepted-deployment imports watchUntilFor",
-      accepted.includes('import { watchUntilFor } from "@noddle/swarm-ops"')
+      accepted.includes(
+        'import { watchUntilFor } from "@noddle/deploy-engine";'
+      )
     );
     check(
       "deploy.ts does not import watchUntilFor",

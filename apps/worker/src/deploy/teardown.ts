@@ -5,12 +5,12 @@ import {
   deleteManifest,
   garbageCollect,
   parseRegistryRef,
-} from "@noddle/deploy-engine";
+  removeService,
+} from "@noddle/deploy-engine/ops";
 import { markFailed } from "@noddle/shared/lifecycle";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { execArgv } from "@noddle/ssh-executor";
 import type { dockerClient } from "@noddle/ssh-executor";
-import { removeService } from "@noddle/swarm-ops";
 import { eq } from "drizzle-orm";
 
 import { withDeployClients } from "#job-run";

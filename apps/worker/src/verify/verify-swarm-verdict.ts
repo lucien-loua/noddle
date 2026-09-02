@@ -1,6 +1,6 @@
 // tier: pure
+import { awaitSwarmVerdict } from "@noddle/deploy-engine";
 import type { DockerApi } from "@noddle/ssh-executor";
-import { awaitSwarmVerdict } from "@noddle/swarm-ops";
 import { check, runVerify, suite } from "@noddle/testing";
 
 import { createMemoryDockerApi } from "#testing/memory-docker";

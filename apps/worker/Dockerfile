@@ -25,7 +25,6 @@ COPY packages/notifier/package.json packages/notifier/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ssh-credentials/package.json packages/ssh-credentials/
 COPY packages/ssh-executor/package.json packages/ssh-executor/
-COPY packages/swarm-ops/package.json packages/swarm-ops/
 COPY packages/testing/package.json packages/testing/
 COPY packages/tsconfig/package.json packages/tsconfig/
 
