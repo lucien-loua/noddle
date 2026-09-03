@@ -1,5 +1,4 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import { ENGINE_SPECS } from "@noddle/database-spec";
 import {
   databaseDeploymentLogs,
   databaseDeployments,
@@ -9,6 +8,7 @@ import {
 import { provisionDatabase as runProvision } from "@noddle/deploy-engine";
 import type { DatabaseSwarmOverrides } from "@noddle/deploy-engine";
 import { removeService } from "@noddle/deploy-engine/ops";
+import { ENGINE_SPECS } from "@noddle/shared/database-spec";
 import { markCrashed, markRunning } from "@noddle/shared/lifecycle";
 import { eq } from "drizzle-orm";
 

@@ -1,7 +1,7 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import type { DatabaseEngine } from "@noddle/database-spec";
-import { ENGINE_ENV_PREFIX } from "@noddle/database-spec";
 import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
+import { ENGINE_ENV_PREFIX } from "@noddle/shared/database-spec";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, inArray, isNull } from "drizzle-orm";

@@ -7,6 +7,7 @@
   },
   "exports": {
     "./build-spec": "./src/build-spec.ts",
+    "./database-spec": "./src/database-spec.ts",
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
@@ -25,7 +26,6 @@
     "verify:pure": "noddle-verify pure"
   },
   "dependencies": {
-    "@noddle/database-spec": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

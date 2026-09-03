@@ -2,14 +2,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { check, runVerify } from "@noddle/testing";
+
 import {
   connectionUrlFor,
   DATABASE_PORT,
   DEFAULT_DATABASE_IMAGE,
   ENGINE_SPECS,
   passwordChangeFor,
-} from "@noddle/database-spec";
-import { check, runVerify } from "@noddle/testing";
+} from "#database-spec";
 
 const REPO = join(import.meta.dirname, "../..");
 
@@ -42,7 +43,7 @@ await runVerify("EngineSpec ownership (C5)", () => {
   );
 
   const engines = readFileSync(
-    join(REPO, "database-spec/src/index.ts"),
+    join(REPO, "shared/src/database-spec.ts"),
     "utf-8"
   );
   const dumpSpec = readFileSync(join(REPO, "backup/src/dump-spec.ts"), "utf-8");

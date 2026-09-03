@@ -1,8 +1,8 @@
 import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import type { DatabaseEngine } from "@noddle/database-spec";
 import { scaleServiceAndWait } from "@noddle/deploy-engine/ops";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { execArgv, execStream, quoteArg } from "@noddle/ssh-executor";
 import type { SshClient } from "@noddle/ssh-executor";
 

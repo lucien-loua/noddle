@@ -1,4 +1,4 @@
-import { DATABASE_PORT } from "@noddle/database-spec";
+import { DATABASE_PORT } from "@noddle/shared/database-spec";
 import { isTerminalStatus } from "@noddle/shared/logs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";

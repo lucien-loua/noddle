@@ -14,7 +14,6 @@ COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
 COPY packages/backup/package.json packages/backup/
 COPY packages/crypto/package.json packages/crypto/
-COPY packages/database-spec/package.json packages/database-spec/
 COPY packages/db/package.json packages/db/
 COPY packages/deploy-contract/package.json packages/deploy-contract/
 COPY packages/deploy-engine/package.json packages/deploy-engine/

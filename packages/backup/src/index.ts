@@ -3,9 +3,9 @@ import {
   resolveRetainedSecret,
   secretContext,
 } from "@noddle/crypto";
-import type { DatabaseEngine } from "@noddle/database-spec";
 import type { Database } from "@noddle/db";
 import { s3Destinations } from "@noddle/db/schema";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { eq } from "drizzle-orm";
 
 import { backupObjectKey, volumeBackupObjectKey } from "./store.ts";

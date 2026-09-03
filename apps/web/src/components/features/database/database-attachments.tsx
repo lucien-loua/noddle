@@ -1,6 +1,6 @@
 "use client";
 
-import type { DatabaseEngine } from "@noddle/database-spec";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 

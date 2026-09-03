@@ -1,10 +1,10 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
+import { databases, environments, projects } from "@noddle/db/schema";
 import {
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
   HAS_NAMED_DATABASE,
-} from "@noddle/database-spec";
-import { databases, environments, projects } from "@noddle/db/schema";
+} from "@noddle/shared/database-spec";
 import { generateDatabasePassword } from "@noddle/shared/password";
 import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connectDatabaseSchema } from "@noddle/shared/validation/database";

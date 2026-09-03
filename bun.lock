@@ -24,7 +24,6 @@
         "@fontsource-variable/inter": "^5.3.0",
         "@noddle/backup": "workspace:*",
         "@noddle/crypto": "workspace:*",
-        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/deploy-engine": "workspace:*",
@@ -78,7 +77,6 @@
       "dependencies": {
         "@noddle/backup": "workspace:*",
         "@noddle/crypto": "workspace:*",
-        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-contract": "workspace:*",
         "@noddle/deploy-engine": "workspace:*",
@@ -105,9 +103,9 @@
         "@aws-sdk/client-s3": "catalog:",
         "@aws-sdk/lib-storage": "catalog:",
         "@noddle/crypto": "workspace:*",
-        "@noddle/database-spec": "workspace:*",
         "@noddle/db": "workspace:*",
         "@noddle/deploy-engine": "workspace:*",
+        "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "croner": "^10.0.1",
         "drizzle-orm": "catalog:",
@@ -119,13 +117,6 @@
     },
     "packages/crypto": {
       "name": "@noddle/crypto",
-      "devDependencies": {
-        "@noddle/testing": "workspace:*",
-        "@noddle/tsconfig": "workspace:*",
-      },
-    },
-    "packages/database-spec": {
-      "name": "@noddle/database-spec",
       "devDependencies": {
         "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
@@ -157,7 +148,6 @@
     "packages/deploy-engine": {
       "name": "@noddle/deploy-engine",
       "dependencies": {
-        "@noddle/database-spec": "workspace:*",
         "@noddle/shared": "workspace:*",
         "@noddle/ssh-executor": "workspace:*",
         "yaml": "catalog:",
@@ -197,7 +187,6 @@
     "packages/shared": {
       "name": "@noddle/shared",
       "dependencies": {
-        "@noddle/database-spec": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -559,8 +548,6 @@
     "@noddle/backup": ["@noddle/backup@workspace:packages/backup"],
 
     "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
-
-    "@noddle/database-spec": ["@noddle/database-spec@workspace:packages/database-spec"],
 
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
 

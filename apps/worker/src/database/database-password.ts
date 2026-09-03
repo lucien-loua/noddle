@@ -1,6 +1,6 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import { passwordChangeFor } from "@noddle/database-spec";
 import { databases } from "@noddle/db/schema";
+import { passwordChangeFor } from "@noddle/shared/database-spec";
 import { execStream, quoteArg } from "@noddle/ssh-executor";
 import type { DockerApi, SshClient } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";

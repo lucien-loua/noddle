@@ -1,4 +1,4 @@
-import type { DatabaseEngine } from "@noddle/database-spec";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 
 export interface DumpSpec {
   argv: (opts: {

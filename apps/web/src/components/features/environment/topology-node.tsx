@@ -1,6 +1,6 @@
 "use client";
 
-import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
+import { DATABASE_ENGINE_LABEL } from "@noddle/shared/database-spec";
 import {
   ArrowClockwiseIcon,
   ArrowSquareOutIcon,

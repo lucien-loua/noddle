@@ -1,4 +1,4 @@
-import { DATABASE_ENGINE_LABEL } from "@noddle/database-spec";
+import { DATABASE_ENGINE_LABEL } from "@noddle/shared/database-spec";
 
 import { DatabaseMark } from "@/components/features/database/database-mark";
 import { StatusIndicator } from "@/components/ui/status";

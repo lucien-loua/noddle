@@ -1,4 +1,4 @@
-import type { DatabaseEngine } from "@noddle/database-spec";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { attachDatabaseSchema } from "@noddle/shared/validation/database";
 import { CodeIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";

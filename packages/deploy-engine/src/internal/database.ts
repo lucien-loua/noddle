@@ -1,5 +1,5 @@
-import type { EngineParams, EngineSpec } from "@noddle/database-spec";
-import { SECRET_MODE_OWNER_READ_ONLY } from "@noddle/database-spec";
+import type { EngineParams, EngineSpec } from "@noddle/shared/database-spec";
+import { SECRET_MODE_OWNER_READ_ONLY } from "@noddle/shared/database-spec";
 import type { DockerApi } from "@noddle/ssh-executor";
 
 import { SECOND_NS } from "./deploy-policy.ts";

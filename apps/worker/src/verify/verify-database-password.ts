@@ -3,16 +3,16 @@ import { randomBytes } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
+import { createDatabase } from "@noddle/db";
+import { databases, environments, projects, servers } from "@noddle/db/schema";
+import { removeService, waitForRunningTask } from "@noddle/deploy-engine/ops";
 import {
   DATABASE_PORT,
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
   HAS_NAMED_DATABASE,
-} from "@noddle/database-spec";
-import type { DatabaseEngine } from "@noddle/database-spec";
-import { createDatabase } from "@noddle/db";
-import { databases, environments, projects, servers } from "@noddle/db/schema";
-import { removeService, waitForRunningTask } from "@noddle/deploy-engine/ops";
+} from "@noddle/shared/database-spec";
+import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import {
   connect,
   disconnect,
