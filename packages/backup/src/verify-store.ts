@@ -12,8 +12,8 @@ import {
   downloadStream,
   objectExists,
   uploadStream,
-} from "#index";
-import type { BackupDestination } from "#index";
+} from "./store.ts";
+import type { BackupDestination } from "./store.ts";
 
 const ENDPOINT = devStack().s3.endpoint;
 const ACCESS_KEY = devStack().s3.accessKeyId;

@@ -1,8 +1,7 @@
 import type { Readable } from "node:stream";
 
-import { resolveDestination } from "@noddle/backup";
-import { deleteObject, uploadStream } from "@noddle/backup-store";
-import type { BackupDestination } from "@noddle/backup-store";
+import { resolveDestination, deleteObject, uploadStream } from "@noddle/backup";
+import type { BackupDestination } from "@noddle/backup";
 import { uploadedSize } from "@noddle/backup/uploaded-size";
 import type { servers } from "@noddle/db/schema";
 import { disconnect, execStream } from "@noddle/ssh-executor";

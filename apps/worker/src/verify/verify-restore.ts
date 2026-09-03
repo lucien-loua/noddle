@@ -1,8 +1,8 @@
 // tier: vm
 import { randomBytes } from "node:crypto";
 
-import { backupObjectKey, deleteObject } from "@noddle/backup-store";
-import type { BackupDestination } from "@noddle/backup-store";
+import { backupObjectKey, deleteObject } from "@noddle/backup";
+import type { BackupDestination } from "@noddle/backup";
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {

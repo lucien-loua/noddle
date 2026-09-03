@@ -1,5 +1,3 @@
-import type { BackupDestination } from "@noddle/backup-store";
-import { backupObjectKey, volumeBackupObjectKey } from "@noddle/backup-store";
 import {
   decryptSecret,
   resolveRetainedSecret,
@@ -9,6 +7,22 @@ import type { DatabaseEngine } from "@noddle/database-spec";
 import type { Database } from "@noddle/db";
 import { s3Destinations } from "@noddle/db/schema";
 import { eq } from "drizzle-orm";
+
+import { backupObjectKey, volumeBackupObjectKey } from "./store.ts";
+import type { BackupDestination } from "./store.ts";
+
+export {
+  backupObjectKey,
+  type BackupDestination,
+  checkDestination,
+  deleteObject,
+  downloadStream,
+  type ListedBackupObject,
+  listObjects,
+  objectExists,
+  parseVolumeNameFromObjectKey,
+  uploadStream,
+} from "./store.ts";
 
 export const BACKUP_EXTENSION: Record<DatabaseEngine, string> = {
   mariadb: "sql",

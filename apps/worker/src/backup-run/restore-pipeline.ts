@@ -1,5 +1,8 @@
-import { resolveDestination } from "@noddle/backup";
-import { downloadStream, objectExists } from "@noddle/backup-store";
+import {
+  resolveDestination,
+  downloadStream,
+  objectExists,
+} from "@noddle/backup";
 
 import type { DeployContext } from "#runtime-context";
 

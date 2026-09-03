@@ -1,5 +1,4 @@
-import { resolveDestinationSecret } from "@noddle/backup";
-import { checkDestination } from "@noddle/backup-store";
+import { resolveDestinationSecret, checkDestination } from "@noddle/backup";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { backupConfigs, backups, s3Destinations } from "@noddle/db/schema";
 import {

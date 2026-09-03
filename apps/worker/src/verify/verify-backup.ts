@@ -6,8 +6,8 @@ import {
   backupObjectKey,
   checkDestination,
   objectExists,
-} from "@noddle/backup-store";
-import type { BackupDestination } from "@noddle/backup-store";
+} from "@noddle/backup";
+import type { BackupDestination } from "@noddle/backup";
 import { encryptSecret, secretContext } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import {

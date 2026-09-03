@@ -1,5 +1,5 @@
-import { objectExists, objectSize } from "@noddle/backup-store";
-import type { BackupDestination } from "@noddle/backup-store";
+import { objectExists, objectSize } from "./store.ts";
+import type { BackupDestination } from "./store.ts";
 
 export async function uploadedSize(
   destination: BackupDestination,

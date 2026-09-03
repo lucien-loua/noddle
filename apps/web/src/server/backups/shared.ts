@@ -1,5 +1,4 @@
-import { resolveDestination } from "@noddle/backup";
-import { deleteObject } from "@noddle/backup-store";
+import { resolveDestination, deleteObject } from "@noddle/backup";
 import { s3Destinations } from "@noddle/db/schema";
 import { eq } from "drizzle-orm";
 

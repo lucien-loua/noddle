@@ -2,8 +2,8 @@ import {
   buildBackupInsert,
   resolveDestination,
   resolveDestinationRow,
+  listObjects,
 } from "@noddle/backup";
-import { listObjects } from "@noddle/backup-store";
 import { backups } from "@noddle/db/schema";
 import {
   backupRequestSchema,

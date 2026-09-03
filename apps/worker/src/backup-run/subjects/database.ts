@@ -1,5 +1,5 @@
 import { buildBackupInsert } from "@noddle/backup";
-import type { BackupDestination } from "@noddle/backup-store";
+import type { BackupDestination } from "@noddle/backup";
 import { dumpSpecFor } from "@noddle/backup/dump-spec";
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { DatabaseEngine } from "@noddle/database-spec";

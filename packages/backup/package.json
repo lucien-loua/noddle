@@ -13,10 +13,12 @@
     "./uploaded-size": "./src/uploaded-size.ts"
   },
   "scripts": {
+    "verify:local": "noddle-verify local",
     "verify:pure": "noddle-verify pure"
   },
   "dependencies": {
-    "@noddle/backup-store": "workspace:*",
+    "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/lib-storage": "catalog:",
     "@noddle/crypto": "workspace:*",
     "@noddle/database-spec": "workspace:*",
     "@noddle/db": "workspace:*",
