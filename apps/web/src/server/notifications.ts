@@ -1,6 +1,6 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
 import { notificationChannels } from "@noddle/db/schema";
-import { deliver } from "@noddle/notifier";
+import { deliver } from "@noddle/shared/notify";
 import {
   notificationChannelIdSchema,
   notificationChannelSchema,

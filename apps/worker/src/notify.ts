@@ -1,7 +1,7 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import { notificationChannels } from "@noddle/db/schema";
-import { deliver, isFailure } from "@noddle/notifier";
-import type { NotificationEvent } from "@noddle/notifier";
+import { deliver, isFailure } from "@noddle/shared/notify";
+import type { NotificationEvent } from "@noddle/shared/notify";
 import { eq } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";

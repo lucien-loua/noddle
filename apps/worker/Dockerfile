@@ -19,7 +19,6 @@ COPY packages/deploy-contract/package.json packages/deploy-contract/
 COPY packages/deploy-engine/package.json packages/deploy-engine/
 COPY packages/git-provider/package.json packages/git-provider/
 COPY packages/git-provider-credentials/package.json packages/git-provider-credentials/
-COPY packages/notifier/package.json packages/notifier/
 COPY packages/shared/package.json packages/shared/
 COPY packages/ssh-credentials/package.json packages/ssh-credentials/
 COPY packages/ssh-executor/package.json packages/ssh-executor/

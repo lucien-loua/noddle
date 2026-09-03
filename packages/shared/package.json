@@ -12,6 +12,7 @@
     "./lifecycle": "./src/lifecycle.ts",
     "./logs": "./src/logs.ts",
     "./noddle-containers": "./src/noddle-containers.ts",
+    "./notify": "./src/notify.ts",
     "./password": "./src/password.ts",
     "./redact": "./src/redact.ts",
     "./shell-identifier": "./src/shell-identifier.ts",

@@ -4,8 +4,8 @@ import type { Server } from "node:http";
 
 import { check, cleanup, runVerify, suite } from "@noddle/testing";
 
-import { buildPayload, deliver, eventLabel, isFailure } from "#index";
-import type { NotificationEvent } from "#index";
+import { buildPayload, deliver, eventLabel, isFailure } from "#notify";
+import type { NotificationEvent } from "#notify";
 
 interface Received {
   body: string;
