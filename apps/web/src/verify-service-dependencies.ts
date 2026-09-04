@@ -13,9 +13,12 @@ import {
   sshKeys,
 } from "@noddle/db/schema";
 import { check, cleanup, expectThrowsAsync, runVerify } from "@noddle/testing";
+import { assertDevStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
+
+assertDevStack();
 
 const WEB_SRC = import.meta.dirname;
 
