@@ -130,7 +130,7 @@ RAILPACK_VERSION=0.36.4
 if ! command -v railpack >/dev/null 2>&1; then
   say "railpack $RAILPACK_VERSION"
   export RAILPACK_VERSION
-  curl -sSL https://railpack.com/install.sh | $SUDO -E sh
+  curl -sSL https://railpack.com/install.sh | ${SUDO:+$SUDO -E} sh
 fi
 
 BUILDKIT_IMAGE=moby/buildkit:v0.27.0
