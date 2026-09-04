@@ -15,7 +15,7 @@ const UPDATE_LOG = "/var/log/noddle-update.log";
 const LOG_LINES = 40;
 
 const FIRST_FIELD = /\s+/;
-const TAG_LINE = /^([0-9a-f]{40})\s+refs\/tags\/(v\d+\.\d+\.\d+)$/;
+const TAG_LINE = /^([0-9a-f]{40})\s+refs\/tags\/(v\d+\.\d+\.\d+)(\^\{\})?$/;
 
 export interface UpdateStatus {
   behind: boolean;
@@ -58,16 +58,20 @@ function compareVersions(a: string, b: string): number {
 }
 
 function latestTag(stdout: string): Release | null {
-  const tags = stdout
-    .split("\n")
-    .flatMap((line) => {
-      const match = TAG_LINE.exec(line.trim());
-      return match?.[1] && match[2]
-        ? [{ commit: match[1], version: match[2] }]
-        : [];
-    })
-    .toSorted((a, b) => compareVersions(a.version, b.version));
-  return tags.at(-1) ?? null;
+  const commitOf = new Map<string, string>();
+  for (const line of stdout.split("\n")) {
+    const match = TAG_LINE.exec(line.trim());
+    if (!(match?.[1] && match[2])) {
+      continue;
+    }
+    const peeled = Boolean(match[3]);
+    if (peeled || !commitOf.has(match[2])) {
+      commitOf.set(match[2], match[1]);
+    }
+  }
+  const version = [...commitOf.keys()].toSorted(compareVersions).at(-1);
+  const commit = version ? commitOf.get(version) : undefined;
+  return version && commit ? { commit, version } : null;
 }
 
 async function readRemoteRelease(client: SshClient): Promise<Release | null> {
@@ -78,7 +82,6 @@ async function readRemoteRelease(client: SshClient): Promise<Release | null> {
     NODDLE_DIR,
     "ls-remote",
     "--tags",
-    "--refs",
     "origin",
     "v*",
   ]);
