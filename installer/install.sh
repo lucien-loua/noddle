@@ -179,7 +179,7 @@ else
     | $SUDO tee "$REGISTRY_DIR/htpasswd" >/dev/null
   $SUDO docker rmi httpd:2-alpine >/dev/null 2>&1 || true
 
-  $SUDO chmod 600 "$REGISTRY_DIR"/*
+  $SUDO find "$REGISTRY_DIR" -maxdepth 1 -type f -exec chmod 600 {} +
   $SUDO chmod 644 "$REGISTRY_DIR/ca.crt"
   echo "CA generated for $REGISTRY_HOST (valid for 10 years)"
 fi
