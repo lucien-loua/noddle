@@ -24,6 +24,17 @@ else
   TARGET_USER="$USER"
 fi
 
+LOCK_DIR="/var/lock/noddle-install"
+if ! $SUDO mkdir "$LOCK_DIR" 2>/dev/null; then
+  HOLDER="$($SUDO cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+  if [ -n "$HOLDER" ] && kill -0 "$HOLDER" 2>/dev/null; then
+    die "an install or update is already running (pid $HOLDER)"
+  fi
+  echo "clearing a stale lock left by pid ${HOLDER:-unknown}"
+fi
+printf '%s' "$$" | $SUDO tee "$LOCK_DIR/pid" >/dev/null
+trap '$SUDO rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
+
 say "Docker"
 if command -v docker >/dev/null 2>&1; then
   echo "already present: $(docker --version)"
@@ -251,6 +262,25 @@ say "Adopting this machine as server #1"
   -e HOST_SSH_KEY="$SSH_DIR/id_ed25519" \
   -e HOST_NAME="$(hostname)" \
   worker node src/target/adopt-host.ts </dev/null
+
+say "Checking the dashboard answers"
+HEALTH_CODE=""
+for _ in $(seq 1 30); do
+  HEALTH_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 \
+    http://127.0.0.1/login || true)"
+  case "$HEALTH_CODE" in
+    2??|3??) break ;;
+    *) HEALTH_CODE="" ;;
+  esac
+  sleep 5
+done
+if [ -z "$HEALTH_CODE" ]; then
+  $SUDO docker logs noddle-web-1 --tail 40 2>&1 || true
+  die "the dashboard never answered on :80. The new containers are already
+  running in place of the old ones, so this install is not serving. The logs
+  above are the dashboard's; \`${COMPOSE[*]} logs\` has the rest."
+fi
+echo "dashboard answered $HEALTH_CODE"
 
 printf '\n\033[32m✓ Noddle is installed.\033[0m\n\n'
 if [ -n "$CONFIGURED_DOMAIN" ]; then
