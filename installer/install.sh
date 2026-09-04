@@ -75,6 +75,7 @@ else
   $SUDO tee "$ENV_FILE" >/dev/null <<EOF
 APP_KEY=$(openssl rand -base64 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
+REDIS_PASSWORD=$(openssl rand -hex 24)
 NODDLE_URL=${NODDLE_URL:-}
 # Both together, or neither: Let's Encrypt certifies a NAME, never an IP
 # address. Without a domain, Noddle serves plain HTTP.
@@ -87,6 +88,7 @@ EOF
   echo "generated in $ENV_FILE (back this up)"
 fi
 
+ensure_env REDIS_PASSWORD "$(openssl rand -hex 24)"
 ensure_env NODDLE_DOMAIN "${NODDLE_DOMAIN:-}"
 ensure_env ACME_EMAIL "${ACME_EMAIL:-}"
 ensure_env ACME_CASERVER "${ACME_CASERVER:-}"
