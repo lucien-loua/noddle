@@ -74,6 +74,7 @@ export const auth = betterAuth({
       roles,
     }),
   ],
+  rateLimit: { enabled: true },
   secret: deriveSubkey(env.appKey, "noddle-better-auth").toString("base64"),
 
   trustedOrigins: (request) => {

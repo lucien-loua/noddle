@@ -34,6 +34,8 @@ RUN APP_KEY="$(head -c 32 /dev/urandom | base64)" \
     REDIS_URL="redis://localhost:6379" \
     bun run build
 
+ENV NODE_ENV=production
+
 EXPOSE 3000
 
 CMD ["bun", "run", "server.ts"]
