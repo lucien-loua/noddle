@@ -7,6 +7,7 @@ services:
     command:
       - --providers.docker=true
       - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=noddle-public
       - --providers.swarm=true
       - --providers.swarm.exposedByDefault=false
       - --providers.swarm.network=noddle-public
@@ -34,12 +35,19 @@ services:
       timeout: 5s
       retries: 20
     networks:
-      - noddle-public
+      - noddle-control
 
   redis:
     image: redis:7
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD missing}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD missing}
     volumes:
       - redis-data:/data
     healthcheck:
@@ -48,7 +56,7 @@ services:
       timeout: 5s
       retries: 20
     networks:
-      - noddle-public
+      - noddle-control
 
   registry:
     image: registry:3.1.1
@@ -79,7 +87,7 @@ services:
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY missing}
       DATABASE_URL: postgres://noddle:${POSTGRES_PASSWORD}@postgres:5432/noddle
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       BETTER_AUTH_URL: ${NODDLE_URL:-}
     volumes:
       - noddle-logs:/var/lib/noddle/logs:ro
@@ -93,6 +101,7 @@ services:
       - traefik.http.routers.noddle-web.priority=1
       - traefik.http.services.noddle-web.loadbalancer.server.port=3000
     networks:
+      - noddle-control
       - noddle-public
 
   worker:
@@ -105,7 +114,7 @@ services:
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY missing}
       DATABASE_URL: postgres://noddle:${POSTGRES_PASSWORD}@postgres:5432/noddle
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       LOG_ROOT: /var/lib/noddle/logs
       TRAEFIK_NETWORK: noddle-public
       REGISTRY_HOST: ${REGISTRY_HOST:-}
@@ -117,8 +126,9 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    stop_grace_period: 600s
     networks:
-      - noddle-public
+      - noddle-control
 
 volumes:
   postgres-data:
@@ -127,5 +137,6 @@ volumes:
   registry-data:
 
 networks:
+  noddle-control:
   noddle-public:
     external: true

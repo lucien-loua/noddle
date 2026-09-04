@@ -34,7 +34,13 @@ export async function needsSetup(): Promise<boolean> {
   return (await userCount()) === 0;
 }
 
+const HTTPS_BASE_URL = (process.env.BETTER_AUTH_URL ?? "").startsWith(
+  "https://"
+);
+
 export const auth = betterAuth({
+  advanced: { useSecureCookies: HTTPS_BASE_URL },
+
   database: drizzleAdapter(db, { provider: "pg", schema }),
 
   databaseHooks: {
@@ -74,6 +80,7 @@ export const auth = betterAuth({
       roles,
     }),
   ],
+  rateLimit: { enabled: true },
   secret: deriveSubkey(env.appKey, "noddle-better-auth").toString("base64"),
 
   trustedOrigins: (request) => {

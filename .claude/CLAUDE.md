@@ -53,23 +53,16 @@ Practical consequence of the Apache-2.0 licence: **every new file is Apache-2.0.
   /web                      TanStack Start (UI + server functions)
   /worker                   BullMQ worker — build and deploy jobs
 /packages
-  /backup                   Backup orchestration
-  /backup-store             S3-compatible backup storage
-  /build-engine             Railpack / Dockerfile image build
-  /compose-engine           Compose parsing, rewritten into a Swarm stack
+  /backup                   Backup orchestration + S3-compatible storage
   /crypto                   AES-256-GCM secrets, derived from APP_KEY
-  /database-spec            Managed engines and their specs
   /db                       Drizzle schema + migrations
   /deploy-contract          Shared deploy job contract
+  /deploy-engine            Build, Traefik labels, Compose→Swarm, service ops
   /git-provider             GitHub App / GitLab OAuth API access
   /git-provider-credentials Forge token storage and refresh
-  /notifier                 Notification channels
-  /proxy-config             Traefik label generation
-  /registry                 Embedded image registry
-  /shared                   Zod schemas, policies, shared types
+  /shared                   Zod schemas, policies, engine specs, notification channels
   /ssh-credentials          Server access resolved from the SSH key library
   /ssh-executor             SSH pool, remote Docker wrappers
-  /swarm-ops                Swarm service, volume and watch operations
   /testing                  Verify harness + dev-stack helpers
   /tsconfig                 Shared TypeScript config
 /installer

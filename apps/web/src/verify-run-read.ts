@@ -16,6 +16,8 @@ const RESTRICTED_GETS = [
   "listBackupObjects",
 ];
 
+const NEXT_DECLARATION = "\nexport const ";
+
 function listServerTs(dir: string, prefix = ""): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -31,11 +33,18 @@ function listServerTs(dir: string, prefix = ""): string[] {
   return out;
 }
 
+function declarationBody(source: string, name: string): string | null {
+  const start = source.indexOf(`export const ${name}`);
+  if (start === -1) {
+    return null;
+  }
+  const rest = source.slice(start);
+  const next = rest.slice(1).indexOf(NEXT_DECLARATION);
+  return next === -1 ? rest : rest.slice(0, next + 1);
+}
+
 await runVerify("runRead adoption", () => {
-  const sources = listServerTs(SERVER_DIR).map((file) =>
-    readFileSync(join(SERVER_DIR, file), "utf-8")
-  );
-  const combined = sources.join("\n");
+  const files = listServerTs(SERVER_DIR);
   const perm = readFileSync(
     join(import.meta.dirname, "lib/permission.server.ts"),
     "utf-8"
@@ -47,20 +56,34 @@ await runVerify("runRead adoption", () => {
   );
 
   for (const name of RESTRICTED_GETS) {
+    const found = files.flatMap((file) => {
+      const body = declarationBody(
+        readFileSync(join(SERVER_DIR, file), "utf-8"),
+        name
+      );
+      return body === null ? [] : [{ body, file }];
+    });
+
+    if (found.length !== 1) {
+      check(
+        `${name} is declared exactly once under server/`,
+        false,
+        found.length === 0
+          ? "not found"
+          : `declared in ${found.map((f) => f.file).join(", ")}`
+      );
+      continue;
+    }
+
+    const [only] = found;
+    if (!only) {
+      continue;
+    }
+    check(`${name} uses runRead`, only.body.includes("runRead("), only.file);
     check(
-      `${name} uses runRead`,
-      new RegExp(`export const ${name}[\\s\\S]*?runRead\\(`).test(combined)
+      `${name} does not call requirePermission directly`,
+      !only.body.includes("requirePermission("),
+      only.file
     );
   }
-
-  const stillDirect = RESTRICTED_GETS.filter((name) =>
-    new RegExp(`export const ${name}[\\s\\S]*?requirePermission\\(`).test(
-      combined
-    )
-  );
-  check(
-    "no restricted GET still calls requirePermission directly",
-    stillDirect.length === 0,
-    stillDirect.join(", ")
-  );
 });

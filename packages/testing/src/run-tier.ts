@@ -8,6 +8,12 @@ const TIERS = [...RUNNABLE, "fixture"] as const;
 type Tier = (typeof TIERS)[number];
 
 const VERIFY_FILE = /^verify.*\.ts$/;
+const DRIVERS = [
+  "createDatabase(",
+  "devStack(",
+  "devTarget(",
+  "dockerClient(",
+] as const;
 const TIER_HEADER = /^\/\/ tier: (local|pure|vm|fixture)\n/;
 const RUNTIME_HEADER = /^\/\/ runtime: (bun|node)$/m;
 
@@ -62,6 +68,22 @@ if (undeclared.length > 0) {
   for (const path of undeclared) {
     process.stderr.write(
       `${RED}✗${OFF} ${relative(cwd, path)} has no \`// tier:\` header\n`
+    );
+  }
+  process.exit(2);
+}
+
+const dishonest = all
+  .filter((path) => tierOf(path) === "pure")
+  .flatMap((path) => {
+    const src = readFileSync(path, "utf-8");
+    const driver = DRIVERS.find((name) => src.includes(name));
+    return driver ? [{ driver, path }] : [];
+  });
+if (dishonest.length > 0) {
+  for (const { driver, path } of dishonest) {
+    process.stderr.write(
+      `${RED}✗${OFF} ${relative(cwd, path)} declares \`// tier: pure\` but reaches for \`${driver}\`\n`
     );
   }
   process.exit(2);

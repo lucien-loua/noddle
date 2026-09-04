@@ -35,5 +35,6 @@ WORKDIR /noddle/apps/worker
 
 ARG NODDLE_COMMIT=""
 ENV NODDLE_COMMIT=$NODDLE_COMMIT
+ENV NODE_ENV=production
 
 CMD ["node", "src/index.ts"]

@@ -9,10 +9,13 @@ import {
   services,
   sshKeys,
 } from "@noddle/db/schema";
+import { assertDevStack } from "@noddle/testing/dev-stack";
 import { eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { ensurePreview, PREVIEW_LIMIT } from "@/lib/preview.server";
+
+assertDevStack();
 
 let pass = 0;
 let fail = 0;
