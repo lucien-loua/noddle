@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
-import { UpdatePanel } from "@/components/features/updates/panel";
 import { ResourceGraphs } from "@/components/resource-graphs";
 import { ServerDiskUsage } from "@/components/server-disk";
 import { ServerPruneToggle } from "@/components/server-prune-toggle";
@@ -186,11 +185,6 @@ function ServerDetail() {
         </Collapsible>
       </section>
 
-      {server.role === "manager" ? (
-        <section className="mt-8">
-          <UpdatePanel role={known} />
-        </section>
-      ) : null}
       {terminal}
     </AppShell>
   );

@@ -4,7 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
-import { withManagerSession } from "@/lib/ssh.server";
+import { withSelfSession } from "@/lib/ssh.server";
 
 const NODDLE_DIR = "/opt/noddle";
 
@@ -62,7 +62,7 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
     let unreachable: string | null = null;
 
     try {
-      await withManagerSession(async (client) => {
+      await withSelfSession(async (client) => {
         status.remoteCommit = await readRemoteCommit(client);
         const log = await execArgv(client, [
           "sudo",
@@ -92,7 +92,7 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
     runGuarded({
       permission: { action: "update", resource: "installation" },
       run: async () =>
-        withManagerSession(async (client) => {
+        withSelfSession(async (client) => {
           const res = await execArgv(client, [
             "sudo",
             "sh",

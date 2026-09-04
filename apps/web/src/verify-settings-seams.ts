@@ -31,9 +31,9 @@ await runVerify("settings seams (SSH factory + SettingsList)", () => {
       !containers.includes("connectToServerById")
   );
   check(
-    "updates use withManagerSession",
-    updates.includes("withManagerSession") &&
-      !updates.includes("connectToManager()")
+    "updates target the self host, which is where /opt/noddle lives",
+    updates.includes("withSelfSession") &&
+      !(updates.includes("withManagerSession") || updates.includes("connectTo"))
   );
   check(
     "volume mounts use withManagerSession",

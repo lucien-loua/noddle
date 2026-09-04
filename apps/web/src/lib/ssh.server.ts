@@ -23,11 +23,32 @@ export async function connectToManager(): Promise<SshClient> {
   return await connectToServer(manager);
 }
 
+export async function connectToSelf(): Promise<SshClient> {
+  const self = await db.query.servers.findFirst({
+    where: eq(servers.isSelf, true),
+  });
+  if (!self) {
+    throw new Error("no self host registered");
+  }
+  return await connectToServer(self);
+}
+
 export async function withServerSession<T>(
   server: ServerRow,
   fn: (client: SshClient) => Promise<T>
 ): Promise<T> {
   const client = await connectToServer(server);
+  try {
+    return await fn(client);
+  } finally {
+    disconnect(client);
+  }
+}
+
+export async function withSelfSession<T>(
+  fn: (client: SshClient) => Promise<T>
+): Promise<T> {
+  const client = await connectToSelf();
   try {
     return await fn(client);
   } finally {
