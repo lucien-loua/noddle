@@ -23,11 +23,26 @@ const SHORT = 12;
 // oxlint-disable-next-line no-control-regex -- this is precisely the ESC character we're targeting
 const ANSI = /\u001B\[[0-9;]*m/g;
 
-function Commit({ sha }: { sha: string | null }) {
-  if (!sha) {
+function Commit({
+  sha,
+  version,
+}: {
+  sha: string | null;
+  version?: string | null;
+}) {
+  if (!(sha || version)) {
     return <span className="text-muted-foreground">unknown</span>;
   }
-  return <span className="font-mono text-xs">{sha.slice(0, SHORT)}</span>;
+  return (
+    <span className="flex items-baseline gap-2">
+      {version ? <span>{version}</span> : null}
+      {sha ? (
+        <span className="font-mono text-muted-foreground text-xs">
+          {sha.slice(0, SHORT)}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function UpdateNotes({
@@ -47,7 +62,8 @@ function UpdateNotes({
     <>
       {data?.unreachable ? (
         <FrameDescription>
-          Could not reach the manager to check for updates: {data.unreachable}
+          Could not reach the host that holds this installation:{" "}
+          {data.unreachable}
         </FrameDescription>
       ) : null}
 
@@ -128,13 +144,16 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
           <div className="flex items-center gap-3">
             <dt className="min-w-0 flex-1 text-muted-foreground">Running</dt>
             <dd>
-              <Commit sha={running} />
+              <Commit sha={running} version={data?.runningVersion} />
             </dd>
           </div>
           <div className="flex items-center gap-3">
             <dt className="min-w-0 flex-1 text-muted-foreground">Available</dt>
             <dd>
-              <Commit sha={data?.remoteCommit ?? null} />
+              <Commit
+                sha={data?.remoteCommit ?? null}
+                version={data?.remoteVersion}
+              />
             </dd>
           </div>
         </dl>

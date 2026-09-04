@@ -8,41 +8,101 @@ import { withSelfSession } from "@/lib/ssh.server";
 
 const NODDLE_DIR = "/opt/noddle";
 
-const NODDLE_REF = "main";
+const UNTAGGED_REF = "main";
 
 const UPDATE_LOG = "/var/log/noddle-update.log";
 
 const LOG_LINES = 40;
 
 const FIRST_FIELD = /\s+/;
+const TAG_LINE = /^([0-9a-f]{40})\s+refs\/tags\/(v\d+\.\d+\.\d+)$/;
 
 export interface UpdateStatus {
   behind: boolean;
   log: string | null;
   remoteCommit: string | null;
+  remoteVersion: string | null;
   runningCommit: string | null;
+  runningVersion: string | null;
   unreachable: string | null;
   updatable: boolean;
+}
+
+interface Release {
+  commit: string;
+  version: string | null;
 }
 
 function runningCommit(): string | null {
   return process.env.NODDLE_COMMIT || null;
 }
 
-async function readRemoteCommit(client: SshClient): Promise<string | null> {
-  const res = await execArgv(client, [
+function runningVersion(): string | null {
+  return process.env.NODDLE_VERSION || null;
+}
+
+function versionParts(tag: string): number[] {
+  return tag.slice(1).split(".").map(Number);
+}
+
+function compareVersions(a: string, b: string): number {
+  const left = versionParts(a);
+  const right = versionParts(b);
+  for (const [index, value] of left.entries()) {
+    const delta = value - (right[index] ?? 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+}
+
+function latestTag(stdout: string): Release | null {
+  const tags = stdout
+    .split("\n")
+    .flatMap((line) => {
+      const match = TAG_LINE.exec(line.trim());
+      return match?.[1] && match[2]
+        ? [{ commit: match[1], version: match[2] }]
+        : [];
+    })
+    .toSorted((a, b) => compareVersions(a.version, b.version));
+  return tags.at(-1) ?? null;
+}
+
+async function readRemoteRelease(client: SshClient): Promise<Release | null> {
+  const tagged = await execArgv(client, [
+    "sudo",
+    "git",
+    "-C",
+    NODDLE_DIR,
+    "ls-remote",
+    "--tags",
+    "--refs",
+    "origin",
+    "v*",
+  ]);
+  if (tagged.code === 0) {
+    const release = latestTag(tagged.stdout);
+    if (release) {
+      return release;
+    }
+  }
+
+  const head = await execArgv(client, [
     "sudo",
     "git",
     "-C",
     NODDLE_DIR,
     "ls-remote",
     "origin",
-    NODDLE_REF,
+    UNTAGGED_REF,
   ]);
-  if (res.code !== 0) {
+  if (head.code !== 0) {
     return null;
   }
-  return res.stdout.trim().split(FIRST_FIELD)[0] ?? null;
+  const [commit] = head.stdout.trim().split(FIRST_FIELD);
+  return commit ? { commit, version: null } : null;
 }
 
 export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
@@ -54,7 +114,9 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
       behind: false,
       log: null,
       remoteCommit: null,
+      remoteVersion: null,
       runningCommit: running,
+      runningVersion: runningVersion(),
       unreachable: null,
       updatable: false,
     };
@@ -63,7 +125,9 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
 
     try {
       await withSelfSession(async (client) => {
-        status.remoteCommit = await readRemoteCommit(client);
+        const release = await readRemoteRelease(client);
+        status.remoteCommit = release?.commit ?? null;
+        status.remoteVersion = release?.version ?? null;
         const log = await execArgv(client, [
           "sudo",
           "tail",

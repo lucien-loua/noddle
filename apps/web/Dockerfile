@@ -25,7 +25,9 @@ COPY packages/ packages/
 COPY apps/web/ apps/web/
 
 ARG NODDLE_COMMIT=""
+ARG NODDLE_VERSION=""
 ENV NODDLE_COMMIT=$NODDLE_COMMIT
+ENV NODDLE_VERSION=$NODDLE_VERSION
 
 WORKDIR /noddle/apps/web
 

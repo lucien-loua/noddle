@@ -34,7 +34,9 @@ COPY apps/worker/ apps/worker/
 WORKDIR /noddle/apps/worker
 
 ARG NODDLE_COMMIT=""
+ARG NODDLE_VERSION=""
 ENV NODDLE_COMMIT=$NODDLE_COMMIT
+ENV NODDLE_VERSION=$NODDLE_VERSION
 ENV NODE_ENV=production
 
 CMD ["node", "src/index.ts"]

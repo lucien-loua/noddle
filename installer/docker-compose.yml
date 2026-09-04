@@ -83,6 +83,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NODDLE_COMMIT: ${NODDLE_COMMIT:-}
+        NODDLE_VERSION: ${NODDLE_VERSION:-}
     restart: unless-stopped
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY missing}
@@ -110,6 +111,7 @@ services:
       dockerfile: apps/worker/Dockerfile
       args:
         NODDLE_COMMIT: ${NODDLE_COMMIT:-}
+        NODDLE_VERSION: ${NODDLE_VERSION:-}
     restart: unless-stopped
     environment:
       APP_KEY: ${APP_KEY:?APP_KEY missing}

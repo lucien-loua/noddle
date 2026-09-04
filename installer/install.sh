@@ -4,7 +4,7 @@ set -euo pipefail
 
 NODDLE_DIR="${NODDLE_DIR:-/opt/noddle}"
 NODDLE_REPO="${NODDLE_REPO:-https://github.com/lucien-loua/noddle.git}"
-NODDLE_REF="${NODDLE_REF:-main}"
+NODDLE_REF="${NODDLE_REF:-}"
 SSH_DIR="/etc/noddle/ssh"
 SSH_KEY="$SSH_DIR/id_ed25519"
 REGISTRY_DIR="/etc/noddle/registry"
@@ -48,15 +48,42 @@ $SUDO docker network create --driver=overlay --attachable "$NETWORK" 2>/dev/null
   || echo "network $NETWORK already there"
 
 say "Sources"
+command -v git >/dev/null 2>&1 \
+  || { $SUDO apt-get update -qq && $SUDO apt-get install -y -qq git; }
+
+latest_release() {
+  local listing
+  listing="$(git ls-remote --tags --refs "$1" 'v*' 2>/dev/null || true)"
+  printf '%s\n' "$listing" \
+    | awk '$2 ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/ {
+        sub(/^refs\/tags\//, "", $2); print $2 }' \
+    | sort -V \
+    | tail -1
+}
+
+if [ -z "$NODDLE_REF" ]; then
+  NODDLE_REF="$(latest_release "$NODDLE_REPO")"
+  if [ -z "$NODDLE_REF" ]; then
+    NODDLE_REF="main"
+    echo "no release tag yet, tracking main"
+  fi
+fi
+echo "target: $NODDLE_REF"
+
 if [ -d "$NODDLE_DIR/.git" ]; then
   $SUDO git -C "$NODDLE_DIR" fetch --depth 1 origin "$NODDLE_REF"
   $SUDO git -C "$NODDLE_DIR" checkout -q FETCH_HEAD
   echo "updated in $NODDLE_DIR"
 else
-  command -v git >/dev/null 2>&1 || $SUDO apt-get update -qq && $SUDO apt-get install -y -qq git
   $SUDO git clone --depth 1 --branch "$NODDLE_REF" "$NODDLE_REPO" "$NODDLE_DIR"
   echo "cloned into $NODDLE_DIR"
 fi
+
+case "$NODDLE_REF" in
+  v[0-9]*) NODDLE_VERSION="$NODDLE_REF" ;;
+  *) NODDLE_VERSION="" ;;
+esac
+export NODDLE_VERSION
 
 say "Secrets"
 ENV_FILE="$NODDLE_DIR/installer/.env"

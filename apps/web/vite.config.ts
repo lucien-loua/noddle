@@ -8,6 +8,9 @@ export default defineConfig({
     "process.env.NODDLE_COMMIT": JSON.stringify(
       process.env.NODDLE_COMMIT ?? ""
     ),
+    "process.env.NODDLE_VERSION": JSON.stringify(
+      process.env.NODDLE_VERSION ?? ""
+    ),
   },
   optimizeDeps: {
     exclude: ["@noddle/ssh-executor", "ssh2", "cpu-features"],

@@ -29,9 +29,9 @@ function SettingsPage() {
   return (
     <AppShell email={email} role={role} title="Settings">
       <div className="flex flex-col gap-4">
-        <UpdatePanel role={known} />
         <DashboardDomain canEdit={canAdmin} />
         <Maintenance canRun={canAdmin} />
+        <UpdatePanel role={known} />
       </div>
     </AppShell>
   );
