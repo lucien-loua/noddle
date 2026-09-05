@@ -111,7 +111,7 @@ function verifyNameSchemas(): void {
 
   if (
     buildPathSchema.safeParse("").success &&
-    buildPathSchema.safeParse("apps/web").success &&
+    buildPathSchema.safeParse("apps/dashboard").success &&
     !buildPathSchema.safeParse("../../etc").success &&
     !buildPathSchema.safeParse("apps/../../etc").success &&
     !buildPathSchema.safeParse("/absolute").success
@@ -133,14 +133,14 @@ function verifyNameSchemas(): void {
       watchPaths: [],
     }).success &&
     serviceGitProviderSchema.safeParse({
-      buildPath: "apps/web",
+      buildPath: "apps/dashboard",
       deployKeyId: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
       gitBranch: "main",
       gitProviderId: "3f2504e0-4f89-41d3-9a0c-0305e82c3302",
       gitRepoFullName: "org/repo",
       gitRepoUrl: "",
       gitSubmodules: true,
-      watchPaths: ["apps/web/**"],
+      watchPaths: ["apps/dashboard/**"],
     }).success &&
     !serviceGitProviderSchema.safeParse({
       buildPath: "",

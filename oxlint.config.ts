@@ -52,11 +52,11 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/web/src/components/terminal-dialog.tsx"],
+      files: ["apps/dashboard/src/components/terminal-dialog.tsx"],
       rules: { "react-doctor/no-prop-callback-in-effect": "off" },
     },
     {
-      files: ["apps/web/src/components/ui/**"],
+      files: ["apps/dashboard/src/components/ui/**"],
       rules: {
         complexity: "off",
         "prefer-destructuring": "off",

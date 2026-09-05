@@ -77,10 +77,10 @@ services:
     networks:
       - noddle-public
 
-  web:
+  dashboard:
     build:
       context: ..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/dashboard/Dockerfile
       args:
         NODDLE_COMMIT: ${NODDLE_COMMIT:-}
         NODDLE_VERSION: ${NODDLE_VERSION:-}
@@ -97,10 +97,10 @@ services:
       redis: { condition: service_healthy }
     labels:
       - traefik.enable=true
-      - traefik.http.routers.noddle-web.entrypoints=web
-      - traefik.http.routers.noddle-web.rule=PathPrefix(`/`)
-      - traefik.http.routers.noddle-web.priority=1
-      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
+      - traefik.http.routers.noddle-dashboard.entrypoints=web
+      - traefik.http.routers.noddle-dashboard.rule=PathPrefix(`/`)
+      - traefik.http.routers.noddle-dashboard.priority=1
+      - traefik.http.services.noddle-dashboard.loadbalancer.server.port=3000
     networks:
       - noddle-control
       - noddle-public

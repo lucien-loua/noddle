@@ -209,7 +209,7 @@ try {
       stdout: "pipe",
     }),
     Bun.spawn(["bun", "run", "server.ts"], {
-      cwd: join(repoRoot, "apps/web"),
+      cwd: join(repoRoot, "apps/dashboard"),
       env: { ...process.env, BETTER_AUTH_URL: BASE, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",

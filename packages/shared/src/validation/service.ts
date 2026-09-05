@@ -71,7 +71,7 @@ export const buildPathSchema = z
   .max(512, "Keep the path under 512 characters.")
   .regex(
     /^(?:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)?$/,
-    "expected a relative path such as apps/web"
+    "expected a relative path such as apps/dashboard"
   )
   .refine(
     (v) => !v.split("/").includes(".."),

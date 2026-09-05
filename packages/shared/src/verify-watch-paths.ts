@@ -22,12 +22,15 @@ await runVerify("watch paths", () => {
 
   check(
     "one matching file among many is enough",
-    shouldDeployPaths(["apps/web/**"], ["README.md", "apps/web/src/main.tsx"])
+    shouldDeployPaths(
+      ["apps/dashboard/**"],
+      ["README.md", "apps/dashboard/src/main.tsx"]
+    )
   );
 
   check(
     "any pattern in the list can match",
-    shouldDeployPaths(["apps/web/**", "package.json"], ["package.json"])
+    shouldDeployPaths(["apps/dashboard/**", "package.json"], ["package.json"])
   );
 
   check(
@@ -39,7 +42,7 @@ await runVerify("watch paths", () => {
   check(
     "a bare filename does not match the same name in a subdirectory",
     shouldDeployPaths(["package.json"], ["package.json"]) &&
-      !shouldDeployPaths(["package.json"], ["apps/web/package.json"])
+      !shouldDeployPaths(["package.json"], ["apps/dashboard/package.json"])
   );
 
   check(

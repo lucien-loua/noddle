@@ -8,7 +8,7 @@ const at = (path: string) =>
 
 const PROD = at("installer/docker-compose.yml");
 const DEV = at("compose.dev.yml");
-const WEB_ENV = at("apps/web/.env.example");
+const WEB_ENV = at("apps/dashboard/.env.example");
 const WORKER_ENV = at("apps/worker/.env.example");
 
 const SHARED_SERVICES = ["postgres", "redis"];

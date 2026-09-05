@@ -194,7 +194,7 @@ function WatchPathsField({
       <FieldLabel htmlFor="watch-path-draft">Watch paths</FieldLabel>
       <FieldDescription>
         Deploy only when a push touches one of these globs, for example
-        apps/web/**. Empty deploys on every push.
+        apps/dashboard/**. Empty deploys on every push.
       </FieldDescription>
       <InputGroup>
         <InputGroupInput
@@ -202,7 +202,7 @@ function WatchPathsField({
           id="watch-path-draft"
           onChange={handleDraft}
           onKeyDown={handleKeyDown}
-          placeholder="apps/web/**"
+          placeholder="apps/dashboard/**"
           value={draft}
         />
         <InputGroupAddon align="inline-end">
@@ -634,7 +634,7 @@ function GitSourceForm({
               description="Directory inside the repository to build, for a monorepo. Empty builds the root."
               disabled={!canEdit}
               label="Build path"
-              placeholder="apps/web"
+              placeholder="apps/dashboard"
             />
           )}
         </form.AppField>

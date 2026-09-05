@@ -97,13 +97,13 @@ bun run dev
 ## How it is built
 
 ```
-apps/web        dashboard (TanStack Start: UI + server functions)
+apps/dashboard        dashboard (TanStack Start: UI + server functions)
 apps/worker     BullMQ worker — build and deploy jobs
 packages/       shared modules: db, ssh-executor, build-engine, …
 installer/      install.sh and the production stack
 ```
 
-`apps/web` runs on Bun and `apps/worker` on **Node**, which is not a preference: `dockerode` over an SSH tunnel does not work on Bun, measured both ways. The worker loads its code once at startup, so a change to `build-engine` or `ssh-executor` does nothing until it restarts.
+`apps/dashboard` runs on Bun and `apps/worker` on **Node**, which is not a preference: `dockerode` over an SSH tunnel does not work on Bun, measured both ways. The worker loads its code once at startup, so a change to `build-engine` or `ssh-executor` does nothing until it restarts.
 
 Three documents carry what the code cannot say on its own:
 

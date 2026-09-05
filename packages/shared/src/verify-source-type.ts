@@ -4,14 +4,14 @@ import { check, runVerify } from "@noddle/testing";
 import { dockerSourcePatch, gitSourcePatch } from "./source-type.ts";
 
 const connected = {
-  buildPath: "apps/web",
+  buildPath: "apps/dashboard",
   deployKeyId: null,
   gitBranch: "main",
   gitProviderId: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
   gitRepoFullName: "group/sub/app",
   gitRepoUrl: "https://gitlab.com/group/sub/app.git",
   gitSubmodules: true,
-  watchPaths: ["apps/web/**"],
+  watchPaths: ["apps/dashboard/**"],
 };
 
 await runVerify("service source type", () => {

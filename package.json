@@ -52,7 +52,7 @@
     "dev:stack:down": "docker compose -f compose.dev.yml down",
     "dev:stack:reset": "docker compose -f compose.dev.yml down -v && bun run dev:stack && bun run --cwd packages/db migrate && bun run scripts/dev-adopt-notice.ts",
     "fix": "ultracite fix",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/dashboard",
     "verify:local": "vp run -r --concurrency-limit 1 verify:local",
     "verify:pure": "vp run -r verify:pure",
     "verify:vm": "vp run -r --concurrency-limit 1 verify:vm"

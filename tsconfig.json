@@ -7,7 +7,7 @@
   // auto-filled from present @types packages, so it is declared once in the
   // base (["bun"], which also ships Node types).
   //
-  // `apps/web` has its own config and is NOT included here: it is the only
+  // `apps/dashboard` has its own config and is NOT included here: it is the only
   // package that sees the DOM and JSX. Mixing them would make `document`
   // typeable from the worker. The `typecheck` script runs both in sequence.
   "extends": "@noddle/tsconfig/base.json",

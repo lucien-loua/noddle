@@ -3,7 +3,7 @@ FROM oven/bun:1
 WORKDIR /noddle
 
 COPY package.json bun.lock ./
-COPY apps/web/package.json apps/web/
+COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/worker/package.json apps/worker/
 COPY packages/backup/package.json packages/backup/
 COPY packages/crypto/package.json packages/crypto/
@@ -22,14 +22,14 @@ RUN bun install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY packages/ packages/
-COPY apps/web/ apps/web/
+COPY apps/dashboard/ apps/dashboard/
 
 ARG NODDLE_COMMIT=""
 ARG NODDLE_VERSION=""
 ENV NODDLE_COMMIT=$NODDLE_COMMIT
 ENV NODDLE_VERSION=$NODDLE_VERSION
 
-WORKDIR /noddle/apps/web
+WORKDIR /noddle/apps/dashboard
 
 RUN APP_KEY="$(head -c 32 /dev/urandom | base64)" \
     DATABASE_URL="postgres://build:build@localhost:5432/build" \

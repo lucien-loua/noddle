@@ -314,11 +314,11 @@ try {
   }
 
   const built = Bun.spawnSync(["bunx", "vite", "build"], {
-    cwd: join(repoRoot, "apps/web"),
+    cwd: join(repoRoot, "apps/dashboard"),
     env: process.env,
   });
   if (built.exitCode === 0) {
-    ok("apps/web built — the served bundle matches the repository");
+    ok("apps/dashboard built — the served bundle matches the repository");
   } else {
     ko(`vite build failed: ${built.stderr.toString().slice(-400)}`);
     throw new Error("aborting");
@@ -337,7 +337,7 @@ try {
       stdout: "pipe",
     }),
     Bun.spawn(["bun", "run", "server.ts"], {
-      cwd: join(repoRoot, "apps/web"),
+      cwd: join(repoRoot, "apps/dashboard"),
       env: { ...workerEnv, PORT: String(PORT) },
       stderr: "pipe",
       stdout: "pipe",

@@ -28,7 +28,7 @@ This seeds `apps/*/.env`, brings up Postgres/Redis/S3 in Docker, applies migrati
 ./scripts/adopt-local.sh     # register it as target server #1
 ```
 
-`apps/web` runs on Bun, `apps/worker` on Node — see the README for why. The worker loads its code once at startup; `bun run dev` uses `node --watch`, which reloads it.
+`apps/dashboard` runs on Bun, `apps/worker` on Node — see the README for why. The worker loads its code once at startup; `bun run dev` uses `node --watch`, which reloads it.
 
 ## Making a change
 

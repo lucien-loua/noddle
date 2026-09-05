@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { check, runVerify } from "@noddle/testing";
 
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..");
-const DOCKERFILES = ["apps/web/Dockerfile", "apps/worker/Dockerfile"];
+const DOCKERFILES = ["apps/dashboard/Dockerfile", "apps/worker/Dockerfile"];
 
 function workspaceMembers(): string[] {
   const dirs = (group: string) =>

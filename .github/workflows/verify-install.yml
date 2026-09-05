@@ -142,7 +142,7 @@ jobs:
           sudo docker inspect noddle-traefik-1 -f '{{json .Config.Cmd}}' || true
           echo "::endgroup::"
           echo "::group::web"
-          sudo docker logs noddle-web-1 --tail 60 2>&1 || true
+          sudo docker logs noddle-dashboard-1 --tail 60 2>&1 || true
           echo "::endgroup::"
           echo "::group::worker"
           sudo docker logs noddle-worker-1 --tail 60 2>&1 || true

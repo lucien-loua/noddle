@@ -24,16 +24,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - letsencrypt:/letsencrypt
 
-  web:
+  dashboard:
     environment:
       BETTER_AUTH_URL: https://${NODDLE_DOMAIN:?NODDLE_DOMAIN missing}
     labels:
       - traefik.enable=true
-      - traefik.http.services.noddle-web.loadbalancer.server.port=3000
-      - traefik.http.routers.noddle-web-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN missing}`)
-      - traefik.http.routers.noddle-web-tls.entrypoints=websecure
-      - traefik.http.routers.noddle-web-tls.tls=true
-      - traefik.http.routers.noddle-web-tls.tls.certresolver=le
+      - traefik.http.services.noddle-dashboard.loadbalancer.server.port=3000
+      - traefik.http.routers.noddle-dashboard-tls.rule=Host(`${NODDLE_DOMAIN:?NODDLE_DOMAIN missing}`)
+      - traefik.http.routers.noddle-dashboard-tls.entrypoints=websecure
+      - traefik.http.routers.noddle-dashboard-tls.tls=true
+      - traefik.http.routers.noddle-dashboard-tls.tls.certresolver=le
 
   worker:
     environment:

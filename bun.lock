@@ -16,8 +16,8 @@
         "vite-plus": "^0.2.9",
       },
     },
-    "apps/web": {
-      "name": "@noddle/web",
+    "apps/dashboard": {
+      "name": "@noddle/dashboard",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
         "@dagrejs/dagre": "^3.1.1",
@@ -540,6 +540,8 @@
 
     "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
 
+    "@noddle/dashboard": ["@noddle/dashboard@workspace:apps/dashboard"],
+
     "@noddle/db": ["@noddle/db@workspace:packages/db"],
 
     "@noddle/deploy-contract": ["@noddle/deploy-contract@workspace:packages/deploy-contract"],
@@ -559,8 +561,6 @@
     "@noddle/testing": ["@noddle/testing@workspace:packages/testing"],
 
     "@noddle/tsconfig": ["@noddle/tsconfig@workspace:packages/tsconfig"],
-
-    "@noddle/web": ["@noddle/web@workspace:apps/web"],
 
     "@noddle/worker": ["@noddle/worker@workspace:apps/worker"],
 

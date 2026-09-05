@@ -25,12 +25,12 @@ function verifyBuildDirectory(): void {
 
   check(
     "a subdirectory is appended",
-    resolveBuildDir(CLONE, "apps/web") === `${CLONE}/apps/web`
+    resolveBuildDir(CLONE, "apps/dashboard") === `${CLONE}/apps/dashboard`
   );
 
   check(
     "surrounding slashes are tolerated, not treated as absolute",
-    resolveBuildDir(CLONE, "/apps/web/") === `${CLONE}/apps/web`
+    resolveBuildDir(CLONE, "/apps/dashboard/") === `${CLONE}/apps/dashboard`
   );
 
   for (const outside of ["..", "../etc", "apps/../../etc", "apps//web"]) {

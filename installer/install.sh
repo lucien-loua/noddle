@@ -253,7 +253,7 @@ say "Migrations"
   node /noddle/packages/db/src/migrate.ts </dev/null
 
 say "Starting the control plane"
-"${COMPOSE[@]}" up -d </dev/null
+"${COMPOSE[@]}" up -d --remove-orphans </dev/null
 
 say "Adopting this machine as server #1"
 "${COMPOSE[@]}" run --rm --no-deps -T \
@@ -275,7 +275,7 @@ for _ in $(seq 1 30); do
   sleep 5
 done
 if [ -z "$HEALTH_CODE" ]; then
-  $SUDO docker logs noddle-web-1 --tail 40 2>&1 || true
+  $SUDO docker logs noddle-dashboard-1 --tail 40 2>&1 || true
   die "the dashboard never answered on :80. The new containers are already
   running in place of the old ones, so this install is not serving. The logs
   above are the dashboard's; \`${COMPOSE[*]} logs\` has the rest."

@@ -1,5 +1,5 @@
 {
-  "name": "@noddle/web",
+  "name": "@noddle/dashboard",
   "private": true,
   "type": "module",
   "imports": {

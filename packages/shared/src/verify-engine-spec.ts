@@ -52,7 +52,7 @@ await runVerify("EngineSpec ownership (C5)", () => {
     "utf-8"
   );
   const connectionUrl = readFileSync(
-    join(REPO, "../apps/web/src/server/databases/connection-url.ts"),
+    join(REPO, "../apps/dashboard/src/server/databases/connection-url.ts"),
     "utf-8"
   );
   const password = readFileSync(

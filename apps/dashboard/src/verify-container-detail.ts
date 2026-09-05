@@ -108,7 +108,7 @@ await runVerify("container detail (ps + inspect parsing)", () => {
     "Noddle's own compose project is control plane",
     classify({
       composeProject: "noddle",
-      name: "noddle-web-1",
+      name: "noddle-dashboard-1",
       swarmService: "",
     }) === "control-plane"
   );

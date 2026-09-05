@@ -8,6 +8,8 @@ Noddle deploys applications and databases to a server you own, from a single das
 
 **Target server**: A Linux host Noddle manages over SSH. The installer registers its own host as target server #1. _Avoid_: Node (ambiguous with Swarm/JS), machine, box, VPS (when meaning the managed record)
 
+**Dashboard**: The web application an operator signs in to — `apps/dashboard`, the container `noddle-dashboard-1`, the image `noddle-dashboard`. It is the only surface Noddle exposes to a person; every other process is a worker or a dependency. _Avoid_: web, UI, frontend, console
+
 **Self host**: The installer's own machine registered as the first target server (`isSelf`). Display fact only — deploy path is the same SSH executor as any other target. _Avoid_: Localhost special case, control plane host
 
 **Project**: A tenant-facing grouping of services the user deploys and operates together. A project is never without at least one environment.

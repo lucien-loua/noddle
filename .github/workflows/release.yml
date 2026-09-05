@@ -62,7 +62,7 @@ jobs:
       - name: Build and push the images
         run: |
           set -euo pipefail
-          for app in web worker; do
+          for app in dashboard worker; do
             image="$REGISTRY/noddle-$app"
             docker build \
               --file "apps/$app/Dockerfile" \
@@ -79,7 +79,7 @@ jobs:
       - name: The pushed images carry the version
         run: |
           set -euo pipefail
-          for app in web worker; do
+          for app in dashboard worker; do
             stamped="$(docker run --rm --entrypoint sh \
               "$REGISTRY/noddle-$app:$NODDLE_VERSION" \
               -c 'printf %s "$NODDLE_VERSION"')"

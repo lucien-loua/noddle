@@ -10,7 +10,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 WORKDIR /noddle
 
 COPY package.json bun.lock ./
-COPY apps/web/package.json apps/web/
+COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/worker/package.json apps/worker/
 COPY packages/backup/package.json packages/backup/
 COPY packages/crypto/package.json packages/crypto/
