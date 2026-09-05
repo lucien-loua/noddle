@@ -2,13 +2,14 @@ import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/secure-context";
 import { cn } from "@/lib/utils";
 
 export function useCopyFeedback(value: string) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(value);
+    await copyText(value);
     setCopied(true);
   }, [value]);
 

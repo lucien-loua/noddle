@@ -50,6 +50,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { randomId } from "@/lib/secure-context";
 import { cn } from "@/lib/utils";
 import type { EnvVarAttachment, EnvVarView } from "@/server/env-vars";
 
@@ -104,7 +105,7 @@ function mergeEnvPairs(rows: DraftVar[], pairs: EnvPair[]): DraftVar[] {
           attachedFrom: null,
           isSecret: true,
           key: pair.key,
-          uid: crypto.randomUUID(),
+          uid: randomId(),
           value: pair.value,
         },
       ];
@@ -122,7 +123,7 @@ function blankRow(): DraftVar {
     attachedFrom: null,
     isSecret: true,
     key: "",
-    uid: crypto.randomUUID(),
+    uid: randomId(),
     value: "",
   };
 }
@@ -192,7 +193,7 @@ function applyEnvPaste(
       attachedFrom: null,
       isSecret: true,
       key: pair.key,
-      uid: crypto.randomUUID(),
+      uid: randomId(),
       value: pair.value,
     });
     insertAt += 1;
