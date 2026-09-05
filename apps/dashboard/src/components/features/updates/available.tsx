@@ -1,7 +1,8 @@
 import { ArrowCircleUpIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
+import { UpdateDialog } from "@/components/features/updates/dialog";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { roles } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
@@ -15,6 +16,7 @@ const STALE_MS = 30 * 60 * 1000;
 export function UpdateAvailable({ role }: { role?: string | null }) {
   const known = role && role in roles ? (role as RoleName) : null;
   const canUpdate = useCan(known, "installation", "update");
+  const [open, setOpen] = useState(false);
 
   const { data } = useQuery<UpdateStatus>({
     enabled: canUpdate,
@@ -24,6 +26,8 @@ export function UpdateAvailable({ role }: { role?: string | null }) {
     retry: false,
     staleTime: STALE_MS,
   });
+
+  const handleOpen = useCallback(() => setOpen(true), []);
 
   if (!(canUpdate && data?.updatable)) {
     return null;
@@ -35,12 +39,13 @@ export function UpdateAvailable({ role }: { role?: string | null }) {
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton render={<Link to="/settings" />} tooltip={label}>
+      <SidebarMenuButton onClick={handleOpen} tooltip={label}>
         <ArrowCircleUpIcon data-icon="inline-start" weight="regular" />
         <span className="truncate group-data-[collapsible=icon]:hidden">
           {label}
         </span>
       </SidebarMenuButton>
+      <UpdateDialog data={data} onOpenChange={setOpen} open={open} />
     </SidebarMenuItem>
   );
 }
