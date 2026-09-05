@@ -16,6 +16,7 @@ import IORedis from "ioredis";
 
 import { recoverStaleDatabaseBackups } from "#backup-run/subjects/database";
 import { recoverStaleVolumeBackups } from "#backup-run/subjects/volume";
+import { recoverStaleDeployments } from "#deploy/recover";
 import { dispatch, handlers } from "#handlers";
 import { createLogBus } from "#log-bus";
 import { loadRegistryConfig } from "#registry";
@@ -59,6 +60,7 @@ const deps: WorkerDeps = { build, ctx, route };
 const { enqueue: enqueueDeploy, queue: deployQueue } =
   createDeployQueue(connection);
 
+await recoverStaleDeployments(ctx);
 const recoveredVolume = await recoverStaleVolumeBackups(ctx);
 const recoveredDatabase = await recoverStaleDatabaseBackups(ctx);
 const recovered = recoveredVolume + recoveredDatabase;
