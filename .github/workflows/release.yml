@@ -1,0 +1,114 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build, e.g. v0.1.0"
+        required: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Free up disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+          df -h /
+
+      - name: What is being released
+        env:
+          REQUESTED: ${{ inputs.tag || github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          version="$REQUESTED"
+          case "$version" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "not a release tag: $version"; exit 1 ;;
+          esac
+          {
+            echo "NODDLE_VERSION=$version"
+            echo "NODDLE_COMMIT=$(git rev-parse HEAD)"
+            echo "REGISTRY=ghcr.io/$OWNER"
+          } >> "$GITHUB_ENV"
+          echo "$version at $(git rev-parse --short HEAD)"
+
+      - name: Log in to GHCR
+        env:
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
+      - name: Build and push the images
+        run: |
+          set -euo pipefail
+          for app in web worker; do
+            image="$REGISTRY/noddle-$app"
+            docker build \
+              --file "apps/$app/Dockerfile" \
+              --build-arg "NODDLE_COMMIT=$NODDLE_COMMIT" \
+              --build-arg "NODDLE_VERSION=$NODDLE_VERSION" \
+              --tag "$image:$NODDLE_VERSION" \
+              --tag "$image:latest" \
+              .
+            docker push "$image:$NODDLE_VERSION"
+            docker push "$image:latest"
+            echo "pushed $image:$NODDLE_VERSION"
+          done
+
+      - name: The pushed images carry the version
+        run: |
+          set -euo pipefail
+          for app in web worker; do
+            stamped="$(docker run --rm --entrypoint sh \
+              "$REGISTRY/noddle-$app:$NODDLE_VERSION" \
+              -c 'printf %s "$NODDLE_VERSION"')"
+            [ "$stamped" = "$NODDLE_VERSION" ] \
+              || { echo "noddle-$app reports '$stamped'"; exit 1; }
+            echo "noddle-$app: $stamped"
+          done
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$NODDLE_VERSION" >/dev/null 2>&1; then
+            echo "release $NODDLE_VERSION already exists, leaving it alone"
+            exit 0
+          fi
+          gh release create "$NODDLE_VERSION" \
+            --title "$NODDLE_VERSION" \
+            --generate-notes
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### $NODDLE_VERSION"
+            echo
+            echo '| Image | Tag |'
+            echo '|---|---|'
+            echo "| noddle-web | \`$REGISTRY/noddle-web:$NODDLE_VERSION\` |"
+            echo "| noddle-worker | \`$REGISTRY/noddle-worker:$NODDLE_VERSION\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
