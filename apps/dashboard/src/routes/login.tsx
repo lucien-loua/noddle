@@ -16,9 +16,8 @@ import { FieldGroup } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import { TAGLINE } from "@/lib/brand";
+import { SOURCE_URL } from "@/lib/source";
 import { getAuthState } from "@/server/auth";
-
-const SOURCE_URL = "https://github.com/lucien-loua/noddle";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {

@@ -12,6 +12,7 @@ import {
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
+import { commitUrl, releaseUrl } from "@/lib/source";
 import { useCan } from "@/lib/use-permission";
 import { getUpdateStatus, startUpdate } from "@/server/updates";
 import type { UpdateStatus } from "@/server/updates";
@@ -35,11 +36,25 @@ function Commit({
   }
   return (
     <span className="flex items-baseline gap-2">
-      {version ? <span>{version}</span> : null}
+      {version ? (
+        <a
+          className="underline decoration-dotted underline-offset-2"
+          href={releaseUrl(version)}
+          rel="noopener"
+          target="_blank"
+        >
+          {version}
+        </a>
+      ) : null}
       {sha ? (
-        <span className="font-mono text-muted-foreground text-xs">
+        <a
+          className="font-mono text-muted-foreground text-xs underline decoration-dotted underline-offset-2"
+          href={commitUrl(sha)}
+          rel="noopener"
+          target="_blank"
+        >
           {sha.slice(0, SHORT)}
-        </span>
+        </a>
       ) : null}
     </span>
   );
