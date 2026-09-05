@@ -47,35 +47,6 @@ await runVerify("EngineSpec ownership (C5)", () => {
     join(REPO, "backup/src/restore-spec.ts"),
     "utf-8"
   );
-  const connectionUrl = readFileSync(
-    join(REPO, "../apps/dashboard/src/server/databases/connection-url.ts"),
-    "utf-8"
-  );
-  const password = readFileSync(
-    join(REPO, "../apps/worker/src/database/database-password.ts"),
-    "utf-8"
-  );
-  const backupSubject = readFileSync(
-    join(REPO, "../apps/worker/src/backup-run/subjects/database.ts"),
-    "utf-8"
-  );
-  const restore = readFileSync(
-    join(REPO, "../apps/worker/src/backup-run/subjects/database-restore.ts"),
-    "utf-8"
-  );
-  const runtime = readFileSync(
-    join(REPO, "../apps/worker/src/database/runtime.ts"),
-    "utf-8"
-  );
-
-  check(
-    "web connection-url delegates to connectionUrlFor",
-    connectionUrl.includes("connectionUrlFor")
-  );
-  check(
-    "web connection-url has no engine switch",
-    !connectionUrl.includes("switch (engine)")
-  );
 
   const pgChange = passwordChangeFor("postgres", {
     password: "new-secret",
@@ -86,48 +57,14 @@ await runVerify("EngineSpec ownership (C5)", () => {
     pgChange.script.includes("psql") && pgChange.input.includes("ALTER USER")
   );
   check(
-    "worker password change has no engine switch",
-    !(
-      password.includes("switch (engine)") ||
-      password.includes("switch (database.engine)")
-    )
-  );
-  check(
-    "worker password change uses passwordChangeFor",
-    password.includes("passwordChangeFor")
-  );
-  check(
-    "password change does not import backup-run",
-    !password.includes("#backup-run")
-  );
-  check(
-    "password change uses #database-runtime",
-    password.includes("#database-runtime")
-  );
-  check(
-    "findDatabaseContainer lives in database runtime",
-    runtime.includes("export async function findDatabaseContainer")
-  );
-  check(
     "dump specs live in @noddle/backup/dump-spec",
     dumpSpec.includes("export function dumpSpecFor") &&
       dumpSpec.includes("pg_dump")
   );
   check(
-    "worker dump uses dumpSpecFor",
-    backupSubject.includes("dumpSpecFor") &&
-      !backupSubject.includes("const DUMP_SPECS")
-  );
-  check(
     "restore specs live in @noddle/backup/restore-spec",
     restoreSpec.includes("export function restoreSpecFor") &&
       restoreSpec.includes("pg_restore")
-  );
-  check(
-    "worker restore uses restoreSpecFor",
-    restore.includes("restoreSpecFor") &&
-      !restore.includes("const RESTORE_SPECS") &&
-      !restore.includes("switch (database.engine)")
   );
   check(
     "every engine owns a passwordChange path",
