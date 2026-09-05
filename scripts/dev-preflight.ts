@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -32,13 +32,21 @@ if (docker.status === 0) {
   missing("docker is not running \u2014 the local stack needs it");
 }
 
-for (const app of ["web", "worker"]) {
+const apps = readdirSync(join(ROOT, "apps"), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .toSorted();
+
+for (const app of apps) {
   const env = join(ROOT, "apps", app, ".env");
+  const example = `${env}.example`;
   if (existsSync(env)) {
     ok(`apps/${app}/.env`);
-  } else {
-    copyFileSync(`${env}.example`, env);
+  } else if (existsSync(example)) {
+    copyFileSync(example, env);
     ok(`apps/${app}/.env ${DIM}created from .env.example${OFF}`);
+  } else {
+    missing(`apps/${app} has neither .env nor .env.example`);
   }
 }
 
