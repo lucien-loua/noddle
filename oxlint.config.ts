@@ -44,6 +44,34 @@ export default defineConfig({
       rules: { "no-restricted-imports": "off" },
     },
     {
+      files: [
+        "apps/dashboard/src/routes/projects_.*.services.*.tsx",
+        "apps/dashboard/src/routes/projects_.*.databases.*.tsx",
+        "apps/dashboard/src/routes/projects_.*.stacks.*.tsx",
+      ],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: [
+              {
+                importNames: ["TabsContent"],
+                message:
+                  "A detail route mounts its tabs through DetailTabContent, which gates the heavy ones behind ActiveTabPanel.",
+                name: "@/components/ui/tabs",
+              },
+              {
+                importNames: ["getAuthState"],
+                message:
+                  "resourceDetailBeforeLoad already establishes the session for a detail route.",
+                name: "@/server/auth",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       files: ["packages/db/src/schema/index.ts"],
       rules: { "no-barrel-file": "off" },
     },
