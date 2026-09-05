@@ -14,7 +14,7 @@ import type { RoleName } from "@/lib/permissions";
 import { queries } from "@/lib/queries";
 import { commitUrl, releaseUrl } from "@/lib/source";
 import { useCan } from "@/lib/use-permission";
-import { getUpdateStatus, startUpdate } from "@/server/updates";
+import { getUpdateStatus, startRollback, startUpdate } from "@/server/updates";
 import type { UpdateStatus } from "@/server/updates";
 
 const POLL_MS = 5000;
@@ -57,6 +57,64 @@ function Commit({
         </a>
       ) : null}
     </span>
+  );
+}
+
+function RollbackRow({
+  canUpdate,
+  data,
+  disabled,
+}: {
+  canUpdate: boolean;
+  data: UpdateStatus | undefined;
+  disabled: boolean;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const previous = data?.previousVersion ?? null;
+
+  const roll = useMutation({
+    mutationFn: () => startRollback(),
+    onError: (e: Error) => setFailed(errorMessage(e, "could not roll back")),
+    onSuccess: () => setFailed(null),
+  });
+
+  const handleRollback = useCallback(() => roll.mutate(), [roll]);
+
+  if (!(canUpdate && previous) || previous === data?.runningVersion) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-3">
+        <dt className="min-w-0 flex-1 text-muted-foreground">Previous</dt>
+        <dd className="flex items-center gap-2">
+          <a
+            className="underline decoration-dotted underline-offset-2"
+            href={releaseUrl(previous)}
+            rel="noopener"
+            target="_blank"
+          >
+            {previous}
+          </a>
+          <Button
+            disabled={disabled || roll.isPending}
+            onClick={handleRollback}
+            size="xs"
+            variant="outline"
+          >
+            Roll back
+          </Button>
+        </dd>
+      </div>
+      <FrameDescription>
+        Rolling back replaces the images. It does not undo migrations, so the
+        database keeps the newer schema.
+      </FrameDescription>
+      {failed ? (
+        <output className="block text-destructive text-xs">{failed}</output>
+      ) : null}
+    </>
   );
 }
 
@@ -171,6 +229,7 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
               />
             </dd>
           </div>
+          <RollbackRow canUpdate={canUpdate} data={data} disabled={inFlight} />
         </dl>
 
         <UpdateNotes

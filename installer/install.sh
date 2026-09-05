@@ -100,6 +100,20 @@ case "$NODDLE_REF" in
 esac
 export NODDLE_VERSION
 
+PREVIOUS_FILE="/etc/noddle/previous-version"
+RUNNING_VERSION="$($SUDO docker inspect noddle-dashboard-1 \
+  -f '{{.Config.Image}}' 2>/dev/null | sed 's/.*://' || true)"
+case "$RUNNING_VERSION" in
+  v[0-9]*)
+    if [ "$RUNNING_VERSION" != "$NODDLE_VERSION" ]; then
+      $SUDO mkdir -p /etc/noddle
+      printf '%s' "$RUNNING_VERSION" | $SUDO tee "$PREVIOUS_FILE" >/dev/null
+      echo "replacing $RUNNING_VERSION — recorded for rollback"
+    fi
+    ;;
+  *) ;;
+esac
+
 INSTALLED_SELF="$NODDLE_DIR/installer/install.sh"
 SELF_AFTER="$($SUDO sha256sum "$INSTALLED_SELF" | cut -d' ' -f1)"
 if [ -z "${NODDLE_REEXEC:-}" ] && [ "$SELF_BEFORE" != "$SELF_AFTER" ]; then

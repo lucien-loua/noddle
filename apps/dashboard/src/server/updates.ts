@@ -12,15 +12,19 @@ const UNTAGGED_REF = "main";
 
 const UPDATE_LOG = "/var/log/noddle-update.log";
 
+const PREVIOUS_FILE = "/etc/noddle/previous-version";
+
 const LOG_LINES = 40;
 
 const FIRST_FIELD = /\s+/;
 const TAG_LINE = /^([0-9a-f]{40})\s+refs\/tags\/(v\d+\.\d+\.\d+)(\^\{\})?$/;
+const VERSION_TAG = /^v\d+\.\d+\.\d+$/;
 
 export interface UpdateStatus {
   behind: boolean;
   log: string | null;
   remoteCommit: string | null;
+  previousVersion: string | null;
   remoteVersion: string | null;
   runningCommit: string | null;
   runningVersion: string | null;
@@ -74,6 +78,15 @@ function latestTag(stdout: string): Release | null {
   return version && commit ? { commit, version } : null;
 }
 
+async function readPreviousVersion(client: SshClient): Promise<string | null> {
+  const res = await execArgv(client, ["sudo", "cat", PREVIOUS_FILE]);
+  if (res.code !== 0) {
+    return null;
+  }
+  const recorded = res.stdout.trim();
+  return VERSION_TAG.test(recorded) ? recorded : null;
+}
+
 async function readRemoteRelease(client: SshClient): Promise<Release | null> {
   const tagged = await execArgv(client, [
     "sudo",
@@ -117,6 +130,7 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
       behind: false,
       log: null,
       remoteCommit: null,
+      previousVersion: null,
       remoteVersion: null,
       runningCommit: running,
       runningVersion: runningVersion(),
@@ -131,6 +145,7 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
         const release = await readRemoteRelease(client);
         status.remoteCommit = release?.commit ?? null;
         status.remoteVersion = release?.version ?? null;
+        status.previousVersion = await readPreviousVersion(client);
         const log = await execArgv(client, [
           "sudo",
           "tail",
@@ -172,6 +187,35 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
             );
           }
           return { started: true as const };
+        }),
+    })
+);
+
+export const startRollback = createServerFn({ method: "POST" }).handler(
+  async (): Promise<{ started: true; version: string }> =>
+    runGuarded({
+      permission: { action: "update", resource: "installation" },
+      run: async () =>
+        withSelfSession(async (client) => {
+          const version = await readPreviousVersion(client);
+          if (!version) {
+            throw new Error(
+              "no previous version is recorded on this machine, so there is nothing to roll back to"
+            );
+          }
+
+          const res = await execArgv(client, [
+            "sudo",
+            "sh",
+            "-c",
+            `setsid nohup env NODDLE_REF=${version} bash ${NODDLE_DIR}/installer/install.sh > ${UPDATE_LOG} 2>&1 < /dev/null &`,
+          ]);
+          if (res.code !== 0) {
+            throw new Error(
+              `could not start the rollback: ${res.stderr.trim() || res.stdout.trim()}`
+            );
+          }
+          return { started: true as const, version };
         }),
     })
 );

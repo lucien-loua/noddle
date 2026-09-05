@@ -104,7 +104,11 @@ function listServerTs(dir: string, prefix = ""): string[] {
 }
 
 const files = listServerTs(SERVER_DIR);
-const OBJECTLESS_MUTATIONS = new Set(["saveEnvVars", "startUpdate"]);
+const OBJECTLESS_MUTATIONS = new Set([
+  "saveEnvVars",
+  "startRollback",
+  "startUpdate",
+]);
 
 const unguardedPost: string[] = [];
 const untargetedPost: string[] = [];
