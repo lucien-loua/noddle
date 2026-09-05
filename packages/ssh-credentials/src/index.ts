@@ -1,11 +1,13 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
 import type { Database } from "@noddle/db";
-import { sshKeys } from "@noddle/db/schema";
+import { servers, sshKeys } from "@noddle/db/schema";
 import type { ServerCredentials } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
 export interface Reachable {
   host: string;
+  hostKeyFingerprint?: string | null;
+  id?: string;
   sshKeyId: string;
   sshPort: number;
   sshUser: string;
@@ -18,6 +20,7 @@ export function credentialsFromKey(
 ): ServerCredentials {
   return {
     host: server.host,
+    hostKeyFingerprint: server.hostKeyFingerprint ?? null,
     port: server.sshPort,
     privateKey: decryptSecret(
       key.privateKeyEncrypted,
@@ -39,5 +42,14 @@ export async function credentialsFor(
   if (!key) {
     throw new Error(`SSH key ${server.sshKeyId} not found`);
   }
-  return credentialsFromKey(appKey, server, key);
+  const creds = credentialsFromKey(appKey, server, key);
+  if (server.id && !creds.hostKeyFingerprint) {
+    creds.onHostKey = (fingerprint) => {
+      db.update(servers)
+        .set({ hostKeyFingerprint: fingerprint })
+        .where(eq(servers.id, server.id as string))
+        .catch(() => undefined);
+    };
+  }
+  return creds;
 }

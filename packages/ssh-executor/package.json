@@ -10,6 +10,7 @@
     "./keys": "./src/keys.ts"
   },
   "scripts": {
+    "verify:pure": "noddle-verify pure",
     "verify:vm": "noddle-verify vm"
   },
   "dependencies": {

@@ -33,6 +33,7 @@ export const servers = pgTable(
     dockerApiMinVersion: text("docker_api_min_version"),
     dockerVersion: text("docker_version"),
     host: text("host").notNull(),
+    hostKeyFingerprint: text("host_key_fingerprint"),
     id: uuid("id").primaryKey().defaultRandom(),
 
     isSelf: boolean("is_self").notNull().default(false),

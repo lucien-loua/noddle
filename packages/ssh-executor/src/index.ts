@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import http from "node:http";
 import type { Duplex } from "node:stream";
 
@@ -12,6 +13,8 @@ export type DockerApi = Docker;
 
 export interface ServerCredentials {
   host: string;
+  hostKeyFingerprint?: string | null;
+  onHostKey?: (fingerprint: string) => void;
   passphrase?: string;
   port?: number;
   privateKey: string;
@@ -37,9 +40,31 @@ export class SshError extends Error {
   }
 }
 
-function connectConfig(creds: ServerCredentials): ConnectConfig {
+export function hostKeyFingerprint(key: Buffer): string {
+  const digest = createHash("sha256").update(key).digest("base64");
+  return `SHA256:${digest.replace(/=+$/, "")}`;
+}
+
+interface HostKeyReport {
+  seen?: string;
+}
+
+function connectConfig(
+  creds: ServerCredentials,
+  report: HostKeyReport
+): ConnectConfig {
   return {
     host: creds.host,
+    hostVerifier: (key: Buffer) => {
+      const seen = hostKeyFingerprint(key);
+      report.seen = seen;
+      const pinned = creds.hostKeyFingerprint;
+      if (!pinned) {
+        creds.onHostKey?.(seen);
+        return true;
+      }
+      return pinned === seen;
+    },
     keepaliveCountMax: 8,
     keepaliveInterval: 15_000,
     passphrase: creds.passphrase,
@@ -54,8 +79,25 @@ export function connect(creds: ServerCredentials): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     const startedAt = Date.now();
+    const report: HostKeyReport = {};
     const onError = (err: Error) => {
       client.removeAllListeners();
+      const pinned = creds.hostKeyFingerprint;
+      if (pinned && report.seen && pinned !== report.seen) {
+        log.error("ssh.hostkey.mismatch", err, {
+          host: creds.host,
+          pinned,
+          seen: report.seen,
+        });
+        reject(
+          new SshError(
+            `the host key for ${creds.host} changed. Pinned ${pinned}, got ${report.seen}. Either the machine was rebuilt, or something is answering in its place — Noddle refuses to send credentials until this is resolved.`,
+            creds.host,
+            err
+          )
+        );
+        return;
+      }
       log.error("ssh.connect.failed", err, {
         host: creds.host,
         ms: Date.now() - startedAt,
@@ -75,7 +117,7 @@ export function connect(creds: ServerCredentials): Promise<Client> {
       resolve(client);
     });
     client.once("error", onError);
-    client.connect(connectConfig(creds));
+    client.connect(connectConfig(creds, report));
   });
 }
 
