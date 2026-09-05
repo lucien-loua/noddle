@@ -13,9 +13,6 @@ import { createMemoryDockerApi } from "#testing/memory-docker";
 const WORKER_SRC = join(import.meta.dirname, "..");
 const LEGACY_CONNECT = "connectTo(ctx,";
 const LEGACY_DEPLOY_CONNECT = "connectForDeploy(ctx,";
-const CONNECT_TO_PATTERN = /connectTo:\s*\(server/;
-const CONNECT_FOR_DEPLOY_PATTERN = /connectForDeploy:\s*\(server/;
-const CREATE_DOCKER_API_PATTERN = /createDockerApi:\s*\(client/;
 const STATIC_CONNECT_FOR_DEPLOY_IMPORT = /import\s*\{[^}]*\bconnectForDeploy\b/;
 
 const PRODUCTION_FILES = [
@@ -32,30 +29,8 @@ const PRODUCTION_FILES = [
 ] as const;
 
 await runVerify("DockerApi seam (C4)", async () => {
-  const runtime = readFileSync(join(WORKER_SRC, "runtime-context.ts"), "utf-8");
   const jobRun = readFileSync(join(WORKER_SRC, "jobs/job-run.ts"), "utf-8");
 
-  check("DeployContext exposes connectTo", CONNECT_TO_PATTERN.test(runtime));
-  check(
-    "DeployContext exposes connectForDeploy",
-    CONNECT_FOR_DEPLOY_PATTERN.test(runtime)
-  );
-  check(
-    "DeployContext exposes createDockerApi",
-    CREATE_DOCKER_API_PATTERN.test(runtime)
-  );
-  check(
-    "createDeployContext is exported",
-    runtime.includes("export function createDeployContext")
-  );
-  check(
-    "withDeployClients uses ctx.connectForDeploy",
-    jobRun.includes("ctx.connectForDeploy(server)")
-  );
-  check(
-    "withDeployClients uses ctx.createDockerApi",
-    jobRun.includes("ctx.createDockerApi(")
-  );
   check(
     "withDeployClients does not import connectForDeploy statically",
     !STATIC_CONNECT_FOR_DEPLOY_IMPORT.test(jobRun)

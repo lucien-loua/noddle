@@ -2,12 +2,20 @@
 import { readFileSync } from "node:fs";
 
 import { check, runVerify } from "@noddle/testing";
+import { parse } from "yaml";
 
 const at = (path: string) =>
   readFileSync(new URL(`../../../${path}`, import.meta.url).pathname, "utf-8");
 
-const PROD = at("installer/docker-compose.yml");
-const DEV = at("compose.dev.yml");
+interface ComposeFile {
+  services?: Record<
+    string,
+    { environment?: Record<string, string>; image?: string } | undefined
+  >;
+}
+
+const PROD = parse(at("installer/docker-compose.yml")) as ComposeFile;
+const DEV = parse(at("compose.dev.yml")) as ComposeFile;
 const WEB_ENV = at("apps/dashboard/.env.example");
 const WORKER_ENV = at("apps/worker/.env.example");
 
@@ -15,25 +23,12 @@ const SHARED_SERVICES = ["postgres", "redis"];
 
 const APP_KEY_BYTES = 32;
 
-const NEXT_SERVICE = /^ {2}\S/;
-const IMAGE_LINE = /^\s*image:\s*(\S+)/;
-const POSTGRES_USER = /POSTGRES_USER:\s*(\S+)/;
+function imageOf(compose: ComposeFile, service: string): string | undefined {
+  return compose.services?.[service]?.image;
+}
 
-function imageOf(compose: string, service: string): string | undefined {
-  const lines = compose.split("\n");
-  const start = lines.indexOf(`  ${service}:`);
-  if (start === -1) {
-    return;
-  }
-  for (const line of lines.slice(start + 1)) {
-    if (NEXT_SERVICE.test(line)) {
-      return;
-    }
-    const match = line.match(IMAGE_LINE);
-    if (match) {
-      return match[1];
-    }
-  }
+function postgresUser(compose: ComposeFile): string | undefined {
+  return compose.services?.postgres?.environment?.POSTGRES_USER;
 }
 
 function envValue(file: string, key: string): string | undefined {
@@ -89,8 +84,8 @@ await runVerify("compose parity", () => {
     `got ${Buffer.from(appKey, "base64").length} bytes`
   );
 
-  const devUser = imageOf(DEV, "postgres") && DEV.match(POSTGRES_USER)?.[1];
-  const prodUser = PROD.match(POSTGRES_USER)?.[1];
+  const devUser = postgresUser(DEV);
+  const prodUser = postgresUser(PROD);
   check(
     "development and production create the same Postgres role",
     devUser === prodUser,

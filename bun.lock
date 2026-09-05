@@ -183,6 +183,7 @@
       "devDependencies": {
         "@noddle/testing": "workspace:*",
         "@noddle/tsconfig": "workspace:*",
+        "yaml": "catalog:",
       },
     },
     "packages/ssh-credentials": {
