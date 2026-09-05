@@ -1,5 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { log } from "@noddle/shared/log";
 import type { DockerApi } from "@noddle/ssh-executor";
 
 import {
@@ -7,6 +8,7 @@ import {
   renderDockerodeHttpHealthcheck,
 } from "./deploy-policy.ts";
 import type { TraefikLabels } from "./proxy.ts";
+import { timed } from "./timed.ts";
 import { dockerodeWorkloadPolicy } from "./workload.ts";
 
 export interface DeploySpec {
@@ -117,23 +119,39 @@ export async function deployService(
 
   const auth = spec.registryAuth;
 
-  if (!existing) {
-    if (auth) {
-      await docker.createService(auth, serviceSpec(spec));
-    } else {
-      await docker.createService(serviceSpec(spec));
+  const outcome = await timed(
+    "swarm.deploy",
+    { created: !existing, image: spec.image, service: spec.serviceName },
+    async () => {
+      if (existing) {
+        const service = docker.getService(existing.ID);
+        await service.update({
+          ...serviceSpec(spec),
+          ...(auth ? { authconfig: auth } : {}),
+          version: existing.Version?.Index,
+        });
+        return await awaitSwarmVerdict(docker, spec.serviceName, {
+          created: false,
+        });
+      }
+
+      if (auth) {
+        await docker.createService(auth, serviceSpec(spec));
+      } else {
+        await docker.createService(serviceSpec(spec));
+      }
+      return await awaitSwarmVerdict(docker, spec.serviceName, {
+        created: true,
+      });
     }
-    return awaitSwarmVerdict(docker, spec.serviceName, { created: true });
-  }
+  );
 
-  const service = docker.getService(existing.ID);
-  await service.update({
-    ...serviceSpec(spec),
-    ...(auth ? { authconfig: auth } : {}),
-    version: existing.Version?.Index,
+  log.write("swarm.verdict", {
+    accepted: outcome.accepted,
+    service: spec.serviceName,
+    state: outcome.updateState,
   });
-
-  return awaitSwarmVerdict(docker, spec.serviceName, { created: false });
+  return outcome;
 }
 
 export async function readRunningNodeId(

@@ -4,6 +4,8 @@ import { request } from "node:https";
 import { execArgv, writeRemoteFile } from "@noddle/ssh-executor";
 import type { ExecOptions, SshClient } from "@noddle/ssh-executor";
 
+import { timed } from "./timed.ts";
+
 export const REGISTRY_USER = "noddle";
 
 export interface RegistryConfig {
@@ -89,24 +91,30 @@ export async function pushImage(
       `${dir}/config.json`,
       dockerConfigJson(registry)
     );
-    const res = await execArgv(
-      client,
-      ["sudo", "docker", "--config", dir, "push", o.imageTag],
-      {
-        onStderr: o.onStderr,
-        onStdout: o.onStdout,
+    await timed(
+      "registry.push",
+      { host: registry.host, image: o.imageTag },
+      async () => {
+        const res = await execArgv(
+          client,
+          ["sudo", "docker", "--config", dir, "push", o.imageTag],
+          {
+            onStderr: o.onStderr,
+            onStdout: o.onStdout,
+          }
+        );
+        if (res.code !== 0) {
+          const tail = (res.stderr || res.stdout)
+            .trim()
+            .split("\n")
+            .slice(-6)
+            .join("\n");
+          throw new Error(
+            `push to the registry failed (code ${res.code})\n${tail}`
+          );
+        }
       }
     );
-    if (res.code !== 0) {
-      const tail = (res.stderr || res.stdout)
-        .trim()
-        .split("\n")
-        .slice(-6)
-        .join("\n");
-      throw new Error(
-        `push to the registry failed (code ${res.code})\n${tail}`
-      );
-    }
   } finally {
     await execArgv(client, ["rm", "-rf", dir]);
   }

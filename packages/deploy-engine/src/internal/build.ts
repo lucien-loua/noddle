@@ -8,6 +8,8 @@ import {
 } from "@noddle/ssh-executor";
 import type { ExecOptions, ExecResult, SshClient } from "@noddle/ssh-executor";
 
+import { timed } from "./timed.ts";
+
 export class BuildError extends Error {
   readonly stage: string;
   readonly exitCode: number | null;
@@ -455,7 +457,9 @@ export async function buildImage(
     argv.push("--no-cache");
   }
 
-  check("railpack", await execArgv(client, argv, o));
+  await timed("build.railpack", { image: o.imageTag }, async () =>
+    check("railpack", await execArgv(client, argv, o))
+  );
 }
 
 export interface DockerfileBuildOptions extends ExecOptions {
@@ -473,17 +477,19 @@ export async function buildImageFromDockerfile(
   assertNotFlag(o.dockerfilePath, "Dockerfile path");
   assertNotFlag(o.imageTag, "image tag");
 
-  check(
-    "docker buildx build",
-    await exec(
-      client,
-      `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
-        ` --builder ${quoteArg(BUILDX_BUILDER)}` +
-        ` --progress=plain --load${
-          o.noCache ? " --no-cache" : ""
-        } -f ${quoteArg(o.dockerfilePath)}` +
-        ` -t ${quoteArg(o.imageTag)} .`,
-      o
+  await timed("build.dockerfile", { image: o.imageTag }, async () =>
+    check(
+      "docker buildx build",
+      await exec(
+        client,
+        `cd ${quoteArg(o.contextDir)} && sudo docker buildx build` +
+          ` --builder ${quoteArg(BUILDX_BUILDER)}` +
+          ` --progress=plain --load${
+            o.noCache ? " --no-cache" : ""
+          } -f ${quoteArg(o.dockerfilePath)}` +
+          ` -t ${quoteArg(o.imageTag)} .`,
+        o
+      )
     )
   );
 }
