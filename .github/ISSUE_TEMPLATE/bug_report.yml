@@ -1,34 +1,39 @@
 name: "Bug report"
-description: Report an issue
+description: Something Noddle does is wrong, or stops working
 title: "[bug]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        ### Thanks for taking the time to create a bug report. Please search open/closed issues before submitting, as the issue may have already been reported/addressed.
+        Please search open and closed issues first — infrastructure bugs are often already reported.
 
-  - type: markdown
-    attributes:
-      value: |
-        #### If you aren't sure this is a bug or not, please open a discussion instead:
-        - [Discussions](https://github.com/lucien-loua/noddle/discussions/new?category=general)
+        If you are not sure whether this is a bug, open a [discussion](https://github.com/lucien-loua/noddle/discussions/new?category=general) instead.
 
   - type: textarea
     id: bug-description
     attributes:
-      label: Describe the bug
-      description: A clear and concise description of what the bug is. If you intend to submit a PR for this issue, tell us how in the description. Thanks!
-      placeholder: Bug description
+      label: What happened
+      description: What you expected, and what happened instead. If you intend to open a pull request for this, say so here.
+      placeholder: "Deploying a service leaves it stuck at building, and the dashboard never shows a result."
     validations:
       required: true
 
-  - type: input
-    id: components-affected
+  - type: dropdown
+    id: area
     attributes:
-      label: Affected component/components
-      description: Which components are affected?
-      placeholder: ex. Button, Checkbox...
+      label: Where
+      description: Which part of Noddle. Pick the closest one.
+      options:
+        - Install or update
+        - Dashboard (a screen, a form, something visual)
+        - Deploying a service or a Compose stack
+        - Databases (provisioning, credentials, connection)
+        - Backups or restore
+        - Servers, SSH or the terminal
+        - Git providers, webhooks or previews
+        - Registry or image builds
+        - Something else
     validations:
       required: true
 
@@ -36,50 +41,68 @@ body:
     id: reproduction
     attributes:
       label: How to reproduce
-      description: A step-by-step description of how to reproduce the bug.
+      description: The steps you took. For a deploy, the kind of repository matters — say whether it has a Dockerfile, a Compose file, or is built by Railpack.
       placeholder: |
-        1. Go to '...'
-        2. Click on '....'
-        3. See error
+        1. Add a service from a Git repository with no Dockerfile
+        2. Deploy it
+        3. The log stops after "build.railpack" and nothing else happens
     validations:
       required: true
 
   - type: input
-    id: codesandbox-stackblitz
+    id: version
     attributes:
-      label: Link to a reproduction
-      description: |
-        A link to a CodeSandbox or StackBlitz that includes a minimal reproduction of the problem. In rare cases when not applicable, you can link to a GitHub repository that we can easily run to recreate the issue. If a report is vague and does not have a reproduction, it will be closed without warning. 
-
-        > [!CAUTION]
-        > If you skip this step, this issue might be **labeled** with `please add a reproduction` and **closed**.
+      label: Noddle version
+      description: "Settings shows it under Noddle, next to Running. If it predates version stamping, paste the commit shown there instead."
+      placeholder: "v0.1.6"
     validations:
-      required: false
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How it was installed
+      options:
+        - The installer script on a fresh machine
+        - The installer script over an existing install (an update)
+        - Cloned the repository and ran it myself
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: The machine
+      description: |
+        Noddle's own host, and the target server if it is a different one. `docker version --format '{{.Server.Version}}'`, the distribution, and how much memory the machine has — a build failing on a small server is a different bug from a build failing at all.
+      render: bash
+      placeholder: |
+        Host: Debian 13, 2 GB, Docker 29.7.1
+        Target: same machine (self host)
+        Dashboard reached over: plain HTTP on an IP
+    validations:
+      required: true
 
   - type: textarea
     id: logs
     attributes:
       label: Logs
-      description: "Please include browser console and server logs around the time this bug occurred. Optional if provided reproduction. Please try not to insert an image but copy paste the log text."
-      render: bash
+      description: |
+        `docker logs noddle-worker-1 --tail 100` and `docker logs noddle-dashboard-1 --tail 100`, from around the time it happened. For a failing deploy, the build log from the deployment page is the useful one. Paste the text rather than a screenshot.
 
-  - type: textarea
-    id: system-info
-    attributes:
-      label: System Info
-      description: Information about browsers, system or binaries that's relevant.
+        Noddle redacts credentials inside URLs, but read what you paste before posting it.
       render: bash
-      placeholder: System, Binaries, Browsers
     validations:
-      required: true
+      required: false
 
   - type: checkboxes
     id: terms
     attributes:
       label: Before submitting
-      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/ouestlabs/audio-ui/blob/main/CONTRIBUTING.md).
+      description: By submitting this issue you agree to follow the [contributing guidelines](https://github.com/lucien-loua/noddle/blob/main/CONTRIBUTING.md).
       options:
-        - label: I've made research efforts and searched the documentation
+        - label: I searched the existing issues
           required: true
-        - label: I've searched for existing issues
+        - label: I removed any secret from the logs and configuration I pasted
           required: true

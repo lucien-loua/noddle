@@ -1,45 +1,54 @@
 name: "Feature request"
-description: Create a feature request for noddle
+description: Something Noddle should do and does not
 title: "[feat]: "
-labels: ["area: request"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        ### Thanks for taking the time to create a feature request! Please search open/closed issues before submitting, as the issue may have already been reported/addressed.
+        Please search open and closed issues first.
 
-  - type: markdown
-    attributes:
-      value: |
-        #### If you aren't sure this is a bug or not, please open a discussion instead:
-        - [Discussions](https://github.com/lucien-loua/noddle/discussions/new?category=general)
+        Noddle chooses restraint over feature count — every screen answers "is it healthy" and "how do I ship". A request that makes one of those two questions easier to answer has a much better chance than one that adds a third.
 
   - type: textarea
-    id: feature-description
+    id: problem
     attributes:
-      label: Feature description
-      description: Tell us about your feature request
-      placeholder: "I think this feature would be great because..."
-      value: "Describe your feature request..."
+      label: What are you trying to do
+      description: The situation you are in, before any solution. What you reach for today, and why it does not work.
+      placeholder: "I run three services that share a database, and I cannot tell from the dashboard which of them is holding connections."
     validations:
       required: true
 
-  - type: input
-    id: components-affected
+  - type: textarea
+    id: proposal
     attributes:
-      label: Affected component/components
-      description: Is this feature request relevant to any of the already existing components?
-      placeholder: ex. dashboard, worker...
+      label: What you would like Noddle to do
+      description: Optional. If you already have a shape in mind, describe it — but the problem above matters more.
     validations:
       required: false
 
-  - type: textarea
-    id: context
+  - type: dropdown
+    id: area
     attributes:
-      label: Additional Context
-      description: Add any other context about the feature here.
-      placeholder: ex. screenshots, documentation links, forum links, etc.
-      value: "Additional details here..."
+      label: Where it belongs
+      options:
+        - Install or update
+        - Dashboard (a screen, a form, something visual)
+        - Deploying a service or a Compose stack
+        - Databases
+        - Backups or restore
+        - Servers, SSH or the terminal
+        - Git providers, webhooks or previews
+        - Registry or image builds
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: A workaround, another tool, or a manual step. This says a lot about how much the gap costs.
     validations:
       required: false
 
@@ -47,9 +56,7 @@ body:
     id: terms
     attributes:
       label: Before submitting
-      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/lucien-loua/noddle/blob/main/CONTRIBUTING.md).
+      description: By submitting this issue you agree to follow the [contributing guidelines](https://github.com/lucien-loua/noddle/blob/main/CONTRIBUTING.md).
       options:
-        - label: I've made research efforts and searched the documentation
-          required: true
-        - label: I've searched for existing issues and PRs
+        - label: I searched the existing issues
           required: true

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Get Help
+  - name: Question or help
     url: https://github.com/lucien-loua/noddle/discussions/new?category=general
-    about: If you can't get something to work the way you expect, open a question in our discussion forums.
+    about: Something will not work the way you expect, and you are not sure it is a bug.
+  - name: Security vulnerability
+    url: https://github.com/lucien-loua/noddle/security/advisories/new
+    about: Noddle holds SSH keys and secrets. Report privately, never as an issue.
