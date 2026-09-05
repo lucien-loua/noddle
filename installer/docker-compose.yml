@@ -78,6 +78,7 @@ services:
       - noddle-public
 
   dashboard:
+    image: ${NODDLE_REGISTRY:-ghcr.io/lucien-loua}/noddle-dashboard:${NODDLE_VERSION:-dev}
     build:
       context: ..
       dockerfile: apps/dashboard/Dockerfile
@@ -106,6 +107,7 @@ services:
       - noddle-public
 
   worker:
+    image: ${NODDLE_REGISTRY:-ghcr.io/lucien-loua}/noddle-worker:${NODDLE_VERSION:-dev}
     build:
       context: ..
       dockerfile: apps/worker/Dockerfile

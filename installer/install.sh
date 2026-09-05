@@ -255,7 +255,20 @@ NODDLE_COMMIT="$($SUDO git -C "$NODDLE_DIR" rev-parse HEAD 2>/dev/null || echo '
 export NODDLE_COMMIT
 [ -n "$NODDLE_COMMIT" ] && echo "version: ${NODDLE_COMMIT:0:12}"
 
-"${COMPOSE[@]}" build </dev/null
+PULLED=""
+if [ -n "$NODDLE_VERSION" ]; then
+  echo "looking for published images for $NODDLE_VERSION"
+  if "${COMPOSE[@]}" pull --quiet dashboard worker </dev/null 2>/dev/null; then
+    PULLED=1
+    echo "pulled $NODDLE_VERSION — nothing is built on this machine"
+  else
+    echo "no published image for $NODDLE_VERSION, falling back to a build"
+  fi
+fi
+
+if [ -z "$PULLED" ]; then
+  "${COMPOSE[@]}" build </dev/null
+fi
 
 "${COMPOSE[@]}" up -d --wait postgres </dev/null
 
