@@ -25,6 +25,7 @@ import type { LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 
+import { UpdateAvailable } from "@/components/features/updates/available";
 import { NoddleMark } from "@/components/noddle-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -247,6 +248,7 @@ export function AppShell({
 
         <SidebarFooter>
           <SidebarMenu>
+            <UpdateAvailable role={role} />
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger
