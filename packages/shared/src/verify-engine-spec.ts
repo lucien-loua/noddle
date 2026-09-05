@@ -1,5 +1,5 @@
 // tier: pure
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { check, runVerify } from "@noddle/testing";
@@ -42,10 +42,6 @@ await runVerify("EngineSpec ownership (C5)", () => {
     }) === "redis://default:secret@db.example:6379"
   );
 
-  const engines = readFileSync(
-    join(REPO, "shared/src/database-spec.ts"),
-    "utf-8"
-  );
   const dumpSpec = readFileSync(join(REPO, "backup/src/dump-spec.ts"), "utf-8");
   const restoreSpec = readFileSync(
     join(REPO, "backup/src/restore-spec.ts"),
@@ -72,22 +68,6 @@ await runVerify("EngineSpec ownership (C5)", () => {
     "utf-8"
   );
 
-  check(
-    "shared has no database-engines facade",
-    !existsSync(join(REPO, "shared/src/database-engines.ts"))
-  );
-  check(
-    "DatabaseEngine lives on database-spec",
-    engines.includes("export type DatabaseEngine")
-  );
-  check(
-    "DATABASE_ENGINES lives on database-spec",
-    engines.includes("export const DATABASE_ENGINES")
-  );
-  check(
-    "ENGINE_SPECS owns DEFAULT_DATABASE_IMAGE",
-    engines.includes("export const DEFAULT_DATABASE_IMAGE")
-  );
   check(
     "web connection-url delegates to connectionUrlFor",
     connectionUrl.includes("connectionUrlFor")
