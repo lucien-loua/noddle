@@ -15,6 +15,7 @@ import {
   withoutMark,
 } from "@/lib/resource-actions/core";
 import type { PendingEntry } from "@/lib/resource-actions/core";
+import { resourceName } from "@/lib/scope-rows";
 import type { ResourceRow } from "@/lib/scope-rows";
 
 const row = (over: Partial<ResourceRow> = {}): ResourceRow => ({
@@ -22,7 +23,7 @@ const row = (over: Partial<ResourceRow> = {}): ResourceRow => ({
   inFlightDeployment: null,
   kind: "service",
   label: "app",
-  name: "app",
+  name: resourceName("app"),
   serverName: "vps-1",
   status: "running",
   updatedAt: "T1",

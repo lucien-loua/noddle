@@ -9,6 +9,14 @@ import type { DatabaseRow } from "@/server/databases/read";
 
 export type ResourceKind = "database" | "service" | "stack";
 
+declare const resourceNameBrand: unique symbol;
+
+export type ResourceName = string & { readonly [resourceNameBrand]: true };
+
+export function resourceName(value: string): ResourceName {
+  return value as ResourceName;
+}
+
 const IN_FLIGHT_DEPLOYMENT = new Set(["queued", "building", "deploying"]);
 
 export interface ResourceRow {
@@ -16,7 +24,7 @@ export interface ResourceRow {
   inFlightDeployment: string | null;
   kind: ResourceKind;
   label: string;
-  name: string;
+  name: ResourceName;
   serverName: string;
   status: string;
   updatedAt: string;
@@ -41,7 +49,7 @@ export function serviceRow(s: ServiceRow): ResourceRow {
     inFlightDeployment: inFlightDeploymentOf(s.lastDeployment),
     kind: "service",
     label: displayNameOf(s),
-    name: s.name,
+    name: resourceName(s.name),
     serverName: s.serverName,
     status: s.status,
     updatedAt: s.updatedAt,
@@ -54,7 +62,7 @@ export function stackRow(s: StackRow): ResourceRow {
     inFlightDeployment: inFlightDeploymentOf(s.lastDeployment),
     kind: "stack",
     label: displayNameOf(s),
-    name: s.name,
+    name: resourceName(s.name),
     serverName: s.serverName,
     status: s.status,
     updatedAt: s.updatedAt,
@@ -67,7 +75,7 @@ export function databaseRow(d: DatabaseRow): ResourceRow {
     inFlightDeployment: null,
     kind: "database",
     label: displayNameOf(d),
-    name: d.name,
+    name: resourceName(d.name),
     serverName: d.serverName,
     status: d.status,
     updatedAt: d.updatedAt,

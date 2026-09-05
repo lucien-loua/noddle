@@ -37,7 +37,10 @@ export default defineConfig({
       rules: { complexity: "off", "no-restricted-imports": "off" },
     },
     {
-      files: ["apps/dashboard/src/lib/resource-actions/**"],
+      files: [
+        "apps/dashboard/src/lib/resource-actions/**",
+        "apps/dashboard/src/components/use-delete-resource-action.tsx",
+      ],
       rules: { "no-restricted-imports": "off" },
     },
     {
@@ -91,6 +94,26 @@ export default defineConfig({
     "no-restricted-imports": [
       "error",
       {
+        paths: [
+          {
+            importNames: ["deleteDatabase"],
+            message:
+              "Deleting goes through resource-actions, so the typed confirmation is checked in one place.",
+            name: "@/server/databases",
+          },
+          {
+            importNames: ["deleteService"],
+            message:
+              "Deleting goes through resource-actions, so the typed confirmation is checked in one place.",
+            name: "@/server/services",
+          },
+          {
+            importNames: ["deleteStack"],
+            message:
+              "Deleting goes through resource-actions, so the typed confirmation is checked in one place.",
+            name: "@/server/stacks",
+          },
+        ],
         patterns: [
           {
             group: ["**/resource-actions/core", "**/resource-actions/dispatch"],

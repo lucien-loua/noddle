@@ -12,7 +12,7 @@ import {
   RESOURCE_POLL_MS,
   useResourceActions,
 } from "@/lib/resource-actions/use-resource-actions";
-import { scopeRows } from "@/lib/scope-rows";
+import { resourceName, scopeRows } from "@/lib/scope-rows";
 import type { ResourceRow } from "@/lib/scope-rows";
 import type { Scope } from "@/server/dashboard";
 
@@ -55,11 +55,13 @@ export function useTopologyLifecycle(scope: Scope, role: RoleName | null) {
   });
 
   const remove = useMutation({
-    mutationFn: (confirmName: string) => {
+    mutationFn: (typed: string) => {
       if (!removing) {
         throw new Error("nothing to delete");
       }
-      return actions.run(removing, "delete", { confirmName });
+      return actions.run(removing, "delete", {
+        confirmName: resourceName(typed),
+      });
     },
     onError: (error: Error) => {
       setRemoving(null);

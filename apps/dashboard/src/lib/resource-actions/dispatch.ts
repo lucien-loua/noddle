@@ -1,11 +1,12 @@
 import type { Action, Target } from "@/lib/resource-actions/core";
+import type { ResourceName } from "@/lib/scope-rows";
 import { deleteDatabase, triggerDatabaseLifecycle } from "@/server/databases";
 import { triggerDeploy, triggerLifecycle } from "@/server/deployments";
 import { deleteService } from "@/server/services";
 import { deleteStack, triggerStackDeploy } from "@/server/stacks";
 
 export interface DispatchOptions {
-  confirmName?: string;
+  confirmName?: ResourceName;
 }
 
 export async function dispatch(

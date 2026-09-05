@@ -16,7 +16,7 @@ import { useDeleteResourceAction } from "@/components/use-delete-resource-action
 import { errorMessage } from "@/lib/format";
 import type { RoleName } from "@/lib/permissions";
 import type { ResourceActions } from "@/lib/resource-actions/use-resource-actions";
-import { databaseRow } from "@/lib/scope-rows";
+import { resourceName, databaseRow } from "@/lib/scope-rows";
 import type { DatabaseRow } from "@/server/databases";
 
 type ConfirmKind = "restart" | "start" | "stop";
@@ -80,7 +80,8 @@ export function DatabaseHeaderActions({
   });
 
   const runDelete = useCallback(
-    (confirmName: string) => actions.run(target, "delete", { confirmName }),
+    (typed: string) =>
+      actions.run(target, "delete", { confirmName: resourceName(typed) }),
     [actions, target]
   );
   const del = useDeleteResourceAction({

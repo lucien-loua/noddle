@@ -89,7 +89,7 @@ import type {
   ResourceActions,
 } from "@/lib/resource-actions/use-resource-actions";
 import { useResourceActions } from "@/lib/resource-actions/use-resource-actions";
-import { scopeRows } from "@/lib/scope-rows";
+import { resourceName, scopeRows } from "@/lib/scope-rows";
 import type { ResourceKind, ResourceRow } from "@/lib/scope-rows";
 import { useCan } from "@/lib/use-permission";
 import { cn } from "@/lib/utils";
@@ -1105,8 +1105,8 @@ function ResourceDeleteDialog({
   refreshScope: () => Promise<unknown>;
 }) {
   const remove = useMutation({
-    mutationFn: (confirmName: string) =>
-      actions.run(item, "delete", { confirmName }),
+    mutationFn: (typed: string) =>
+      actions.run(item, "delete", { confirmName: resourceName(typed) }),
     onError: (e: Error) => {
       onOpenChange(false);
       toast.add({
