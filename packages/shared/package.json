@@ -10,6 +10,7 @@
     "./database-spec": "./src/database-spec.ts",
     "./generate-domain": "./src/generate-domain.ts",
     "./lifecycle": "./src/lifecycle.ts",
+    "./log": "./src/log.ts",
     "./logs": "./src/logs.ts",
     "./noddle-containers": "./src/noddle-containers.ts",
     "./notify": "./src/notify.ts",

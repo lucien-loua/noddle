@@ -13,6 +13,7 @@
     "verify:vm": "noddle-verify vm"
   },
   "dependencies": {
+    "@noddle/shared": "workspace:*",
     "dockerode": "catalog:",
     "ssh2": "catalog:"
   },

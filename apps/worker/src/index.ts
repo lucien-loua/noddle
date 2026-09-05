@@ -9,6 +9,7 @@ import {
 import type { DeployJobData } from "@noddle/deploy-contract";
 import { createDeployQueue } from "@noddle/deploy-contract/queue";
 import { startSchedule } from "@noddle/deploy-contract/schedule";
+import { log } from "@noddle/shared/log";
 import { UnrecoverableError, Worker } from "bullmq";
 import { eq } from "drizzle-orm";
 import IORedis from "ioredis";
@@ -124,13 +125,17 @@ const running = await Promise.all(
       connection,
       deps: { ctx, enqueue: enqueueDeploy, route },
       onFailed: (queue, message) =>
-        process.stderr.write(`${queue}: ${message}\n`),
+        log.error("schedule.failed", message, { queue }),
     })
   )
 );
 
 deployWorker.on("failed", (job, err) => {
-  process.stderr.write(`job ${job?.id} failed: ${err.message}\n`);
+  log.error("job.failed", err, {
+    attempt: job?.attemptsMade,
+    job: job?.id,
+    kind: job?.name,
+  });
 });
 
 async function shutdown(): Promise<void> {
@@ -149,4 +154,4 @@ process.on("SIGINT", () => {
   shutdown().finally(() => process.exit(0));
 });
 
-process.stdout.write("noddle worker started\n");
+log.write("worker.started", { concurrency: DEPLOY_QUEUE_CONCURRENCY });

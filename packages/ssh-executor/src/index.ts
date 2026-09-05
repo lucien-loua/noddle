@@ -1,6 +1,7 @@
 import http from "node:http";
 import type { Duplex } from "node:stream";
 
+import { log } from "@noddle/shared/log";
 import Docker from "dockerode";
 import { Client } from "ssh2";
 import type { ClientChannel, ConnectConfig } from "ssh2";
@@ -52,14 +53,25 @@ function connectConfig(creds: ServerCredentials): ConnectConfig {
 export function connect(creds: ServerCredentials): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
+    const startedAt = Date.now();
     const onError = (err: Error) => {
       client.removeAllListeners();
+      log.error("ssh.connect.failed", err, {
+        host: creds.host,
+        ms: Date.now() - startedAt,
+        user: creds.user,
+      });
       reject(
         new SshError(`SSH connection failed: ${err.message}`, creds.host, err)
       );
     };
     client.once("ready", () => {
       client.removeListener("error", onError);
+      log.write("ssh.connect", {
+        host: creds.host,
+        ms: Date.now() - startedAt,
+        user: creds.user,
+      });
       resolve(client);
     });
     client.once("error", onError);

@@ -201,6 +201,7 @@
     "packages/ssh-executor": {
       "name": "@noddle/ssh-executor",
       "dependencies": {
+        "@noddle/shared": "workspace:*",
         "dockerode": "catalog:",
         "ssh2": "catalog:",
       },
