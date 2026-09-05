@@ -1,6 +1,4 @@
 // tier: pure
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 import { check, runVerify } from "@noddle/testing";
 
@@ -18,31 +16,6 @@ import {
 } from "@/lib/resource-actions/core";
 import type { PendingEntry } from "@/lib/resource-actions/core";
 import type { ResourceRow } from "@/lib/scope-rows";
-
-const WEB_SRC = join(import.meta.dirname);
-
-function listSourceFiles(dir: string, prefix = ""): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === "resource-actions") {
-      continue;
-    }
-    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...listSourceFiles(full, rel));
-      continue;
-    }
-    if (
-      entry.isFile() &&
-      (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) &&
-      !entry.name.startsWith("verify")
-    ) {
-      out.push(rel);
-    }
-  }
-  return out;
-}
 
 const row = (over: Partial<ResourceRow> = {}): ResourceRow => ({
   id: "r-1",
@@ -294,19 +267,5 @@ await runVerify("resource-actions core (C1)", () => {
   check(
     "a single row IS the scope for a detail route — its own transient status is enough",
     pollInterval([row({ status: "deleting" })], new Map(), 2000) === 2000
-  );
-
-  // --- the module is the only reader of its own internals ---
-  const offenders = listSourceFiles(WEB_SRC).filter((file) => {
-    const source = readFileSync(join(WEB_SRC, file), "utf-8");
-    return (
-      source.includes("resource-actions/core") ||
-      source.includes("resource-actions/dispatch")
-    );
-  });
-  check(
-    "nothing outside lib/resource-actions imports its internals directly",
-    offenders.length === 0,
-    offenders.join(", ")
   );
 });

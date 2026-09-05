@@ -34,7 +34,11 @@ export default defineConfig({
   overrides: [
     {
       files: ["**/verify*.ts"],
-      rules: { complexity: "off" },
+      rules: { complexity: "off", "no-restricted-imports": "off" },
+    },
+    {
+      files: ["apps/dashboard/src/lib/resource-actions/**"],
+      rules: { "no-restricted-imports": "off" },
     },
     {
       files: ["packages/db/src/schema/index.ts"],
@@ -84,6 +88,19 @@ export default defineConfig({
   ],
 
   rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["**/resource-actions/core", "**/resource-actions/dispatch"],
+            message:
+              "resource-actions owns its own internals. Go through use-resource-actions.",
+          },
+        ],
+      },
+    ],
+
     "no-empty": ["error", { allowEmptyCatch: true }],
     "no-empty-function": ["error", { allow: ["arrowFunctions"] }],
 
