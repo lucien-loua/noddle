@@ -25,14 +25,16 @@ else
 fi
 
 LOCK_DIR="/var/lock/noddle-install"
-if ! $SUDO mkdir "$LOCK_DIR" 2>/dev/null; then
-  HOLDER="$($SUDO cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-  if [ -n "$HOLDER" ] && kill -0 "$HOLDER" 2>/dev/null; then
-    die "an install or update is already running (pid $HOLDER)"
+if [ -z "${NODDLE_REEXEC:-}" ]; then
+  if ! $SUDO mkdir "$LOCK_DIR" 2>/dev/null; then
+    HOLDER="$($SUDO cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [ -n "$HOLDER" ] && kill -0 "$HOLDER" 2>/dev/null; then
+      die "an install or update is already running (pid $HOLDER)"
+    fi
+    echo "clearing a stale lock left by pid ${HOLDER:-unknown}"
   fi
-  echo "clearing a stale lock left by pid ${HOLDER:-unknown}"
+  printf '%s' "$$" | $SUDO tee "$LOCK_DIR/pid" >/dev/null
 fi
-printf '%s' "$$" | $SUDO tee "$LOCK_DIR/pid" >/dev/null
 trap '$SUDO rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 say "Docker"
@@ -95,6 +97,15 @@ case "$NODDLE_REF" in
   *) NODDLE_VERSION="" ;;
 esac
 export NODDLE_VERSION
+
+INSTALLED_SELF="$NODDLE_DIR/installer/install.sh"
+if [ -z "${NODDLE_REEXEC:-}" ] \
+  && ! $SUDO cmp -s "$0" "$INSTALLED_SELF" 2>/dev/null; then
+  say "The installer itself changed with this release"
+  echo "re-running $INSTALLED_SELF"
+  export NODDLE_REEXEC=1 NODDLE_REF
+  exec bash "$INSTALLED_SELF"
+fi
 
 say "Secrets"
 ENV_FILE="$NODDLE_DIR/installer/.env"
