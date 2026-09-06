@@ -2,7 +2,7 @@ import type { Readable } from "node:stream";
 
 import { uploadStream } from "@noddle/backup";
 import type { BackupDestination } from "@noddle/backup";
-import { servers } from "@noddle/db/schema";
+import { controlPlaneSettings, servers } from "@noddle/db/schema";
 import { log } from "@noddle/shared/log";
 import { disconnect, execStream, quoteArg } from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
@@ -10,6 +10,27 @@ import { eq } from "drizzle-orm";
 import type { DeployContext } from "#runtime-context";
 
 const POSTGRES_CONTAINER = "noddle-postgres-1";
+
+async function record(
+  ctx: DeployContext,
+  outcome: { bytes?: number; error?: string; key?: string }
+): Promise<void> {
+  const existing = await ctx.db.query.controlPlaneSettings.findFirst();
+  const patch = {
+    backupLastAt: new Date(),
+    backupLastBytes: outcome.bytes ?? null,
+    backupLastError: outcome.error ?? null,
+    backupLastKey: outcome.key ?? null,
+  };
+  if (existing) {
+    await ctx.db
+      .update(controlPlaneSettings)
+      .set(patch)
+      .where(eq(controlPlaneSettings.id, existing.id));
+    return;
+  }
+  await ctx.db.insert(controlPlaneSettings).values(patch);
+}
 
 export function controlPlaneDestination(): BackupDestination | null {
   const endpoint = process.env.CONTROL_PLANE_BACKUP_ENDPOINT;
@@ -50,6 +71,10 @@ export async function backupControlPlane(
 ): Promise<{ bytes: number; key: string } | null> {
   const destination = controlPlaneDestination();
   if (!destination) {
+    await record(ctx, {
+      error:
+        "not configured — set CONTROL_PLANE_BACKUP_ENDPOINT, _BUCKET, _ACCESS_KEY and _SECRET_KEY in installer/.env",
+    });
     return null;
   }
 
@@ -91,11 +116,15 @@ export async function backupControlPlane(
       key,
       ms: Date.now() - startedAt,
     });
+    await record(ctx, { bytes: result.value, key });
     return { bytes: result.value, key };
   } catch (error) {
     log.error("control-plane.backup.failed", error, {
       key,
       ms: Date.now() - startedAt,
+    });
+    await record(ctx, {
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   } finally {

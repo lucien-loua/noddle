@@ -9,6 +9,7 @@ import type { WorkerDeps } from "#runtime-context";
 export const handlerModules = {
   backup: () => import("#backup"),
   compose: () => import("#compose"),
+  controlPlaneBackup: () => import("#control-plane-backup"),
   containers: () => import("#containers"),
   "dashboard-domain": () => import("#target/dashboard-domain"),
   database: () => import("#database"),
@@ -106,6 +107,10 @@ export const handlers: Handlers = {
   "provision-server": async ({ ctx }, data) => {
     const { provisionServer } = await handlerModules.provision();
     await provisionServer(ctx, data.serverId);
+  },
+  "backup-control-plane": async ({ ctx }) => {
+    const { backupControlPlane } = await handlerModules.controlPlaneBackup();
+    await backupControlPlane(ctx);
   },
   "prune-docker": async ({ ctx }) => {
     const { pruneDocker } = await handlerModules.prune();

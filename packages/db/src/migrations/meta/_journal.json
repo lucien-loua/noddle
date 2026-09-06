@@ -29,6 +29,13 @@
       "when": 1788638966400,
       "tag": "0003_elite_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788707362459,
+      "tag": "0004_bouncy_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }

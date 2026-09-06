@@ -4,7 +4,6 @@ import type { ScheduleSpec } from "@noddle/deploy-contract/schedule";
 import { reconcileRepositoryHooks } from "@noddle/git-provider-credentials/hooks";
 
 import { sweepBackups } from "#backup-sweep";
-import { backupControlPlane } from "#control-plane-backup";
 import { collectMetrics } from "#metrics";
 import { sweepRegistryTrust } from "#registry";
 import type { DeployContext, RouteOptions } from "#runtime-context";
@@ -26,8 +25,8 @@ export const schedules: ScheduleSpec<SweepDeps>[] = [
     every: DAY,
     id: "control-plane-backup",
     queue: "noddle-control-plane-backup",
-    run: async ({ ctx }) => {
-      await backupControlPlane(ctx);
+    run: async ({ enqueue }) => {
+      await enqueue({ kind: "backup-control-plane" });
     },
   }),
 

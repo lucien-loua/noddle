@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/app-shell";
 import { DashboardDomain } from "@/components/features/servers/dashboard-domain";
+import { ControlPlaneBackup } from "@/components/features/settings/control-plane-backup";
 import { Maintenance } from "@/components/features/settings/maintenance";
 import { UpdatePanel } from "@/components/features/updates/panel";
 import { roles } from "@/lib/permissions";
@@ -31,6 +32,7 @@ function SettingsPage() {
       <div className="flex flex-col gap-4">
         <DashboardDomain canEdit={canAdmin} />
         <Maintenance canRun={canAdmin} />
+        <ControlPlaneBackup canRun={canAdmin} />
         <UpdatePanel role={known} />
       </div>
     </AppShell>

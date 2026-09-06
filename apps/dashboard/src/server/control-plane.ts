@@ -17,6 +17,10 @@ const HOSTNAME = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i;
 
 export interface ControlPlaneSettings {
   acmeEmail: string | null;
+  backupLastAt: string | null;
+  backupLastBytes: number | null;
+  backupLastError: string | null;
+  backupLastKey: string | null;
   domain: string | null;
   httpsEnabled: boolean;
   lastError: string | null;
@@ -49,6 +53,10 @@ export const getControlPlaneSettings = createServerFn({
   ]);
   return {
     acmeEmail: row?.acmeEmail ?? null,
+    backupLastAt: row?.backupLastAt?.toISOString() ?? null,
+    backupLastBytes: row?.backupLastBytes ?? null,
+    backupLastError: row?.backupLastError ?? null,
+    backupLastKey: row?.backupLastKey ?? null,
     domain: row?.domain ?? null,
     httpsEnabled: row?.httpsEnabled ?? false,
     lastError: row?.lastError ?? null,
@@ -95,7 +103,11 @@ export const saveDashboardDomain = createServerFn({ method: "POST" })
   });
 
 export const runMaintenance = createServerFn({ method: "POST" })
-  .validator(z.object({ task: z.enum(["prune-docker", "prune-registry"]) }))
+  .validator(
+    z.object({
+      task: z.enum(["backup-control-plane", "prune-docker", "prune-registry"]),
+    })
+  )
   .handler(async ({ data }): Promise<{ queued: true }> => {
     await requirePermission(CONTROL_PLANE_PERMISSION);
     await enqueueDeploy({ kind: data.task });

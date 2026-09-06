@@ -1,9 +1,11 @@
 import {
+  bigint,
   boolean,
   integer,
   pgEnum,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -65,6 +67,10 @@ export const servers = pgTable(
 
 export const controlPlaneSettings = pgTable("control_plane_settings", {
   acmeEmail: text("acme_email"),
+  backupLastAt: timestamp("backup_last_at", { withTimezone: true }),
+  backupLastBytes: bigint("backup_last_bytes", { mode: "number" }),
+  backupLastError: text("backup_last_error"),
+  backupLastKey: text("backup_last_key"),
   createdAt,
   domain: text("domain"),
   httpsEnabled: boolean("https_enabled").notNull().default(false),

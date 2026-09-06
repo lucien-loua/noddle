@@ -14,6 +14,7 @@ const ID = "11111111-1111-4111-8111-111111111111";
 
 const samples: { [K in JobKind]: PayloadOf<K> } = {
   backup: { backupId: ID, kind: "backup" },
+  "backup-control-plane": { kind: "backup-control-plane" },
   "change-database-password": {
     databaseId: ID,
     kind: "change-database-password",
@@ -95,7 +96,7 @@ await runVerify("worker dispatch", async () => {
     const entries = Object.entries(handlerModules);
     check(
       "the map covers every module",
-      entries.length === 17,
+      entries.length === 18,
       `${entries.length}`
     );
 
