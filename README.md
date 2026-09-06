@@ -61,20 +61,11 @@ The script installs Docker if it is missing, turns the node into a Swarm manager
 
 ### Backing up Noddle itself
 
-Noddle backs up the databases it provisions. Its own state — the SSH keys to your servers, every environment variable value, forge tokens — lives in its own Postgres, and is only worth having alongside the key that decrypts it.
+Noddle backs up the databases it provisions. Its own state — the SSH keys to your servers, every environment variable value, forge tokens — lives in its own Postgres.
 
-Set these in `installer/.env` and the control plane dumps itself to S3 once a day. Leave them empty and nothing is backed up.
+Add an S3 destination under **S3 destinations**, then pick it under **Settings → Backing up Noddle itself**. The control plane dumps itself there once a day, and the same screen starts one immediately so a new destination can be confirmed without waiting.
 
-|                                   |                          |
-| --------------------------------- | ------------------------ |
-| `CONTROL_PLANE_BACKUP_ENDPOINT`   | S3 endpoint              |
-| `CONTROL_PLANE_BACKUP_BUCKET`     | bucket                   |
-| `CONTROL_PLANE_BACKUP_ACCESS_KEY` | access key               |
-| `CONTROL_PLANE_BACKUP_SECRET_KEY` | secret key               |
-| `CONTROL_PLANE_BACKUP_REGION`     | optional, default `auto` |
-| `CONTROL_PLANE_BACKUP_PREFIX`     | optional key prefix      |
-
-They live in `.env` rather than in the dashboard on purpose: credentials stored in the database would be unreachable exactly when you need them, which is when the database is gone. Restoring needs the dump, the bucket, and `installer/.env` — keep all three somewhere that is not this machine.
+Restoring needs three things: the dump, the credentials for that bucket, and `installer/.env`. The last one holds `APP_KEY`, without which the dump is unreadable — and the bucket credentials are themselves stored encrypted under that key, so keep a copy of them where Noddle is not the only record.
 
 If `APP_KEY` ever leaks, it can be replaced:
 

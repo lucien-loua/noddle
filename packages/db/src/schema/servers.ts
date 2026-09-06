@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { createdAt, updatedAt } from "#schema/columns";
+import { s3Destinations } from "#schema/s3-destinations";
 import { sshKeys } from "#schema/ssh-keys";
 
 export const serverStatus = pgEnum("server_status", [
@@ -67,6 +68,10 @@ export const servers = pgTable(
 
 export const controlPlaneSettings = pgTable("control_plane_settings", {
   acmeEmail: text("acme_email"),
+  backupDestinationId: uuid("backup_destination_id").references(
+    () => s3Destinations.id,
+    { onDelete: "set null" }
+  ),
   backupLastAt: timestamp("backup_last_at", { withTimezone: true }),
   backupLastBytes: bigint("backup_last_bytes", { mode: "number" }),
   backupLastError: text("backup_last_error"),

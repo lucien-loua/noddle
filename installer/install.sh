@@ -154,9 +154,6 @@ EOF
 fi
 
 ensure_env REDIS_PASSWORD "$(openssl rand -hex 24)"
-for key in ENDPOINT BUCKET ACCESS_KEY SECRET_KEY REGION PREFIX; do
-  ensure_env "CONTROL_PLANE_BACKUP_$key" ""
-done
 ensure_env NODDLE_DOMAIN "${NODDLE_DOMAIN:-}"
 ensure_env ACME_EMAIL "${ACME_EMAIL:-}"
 ensure_env ACME_CASERVER "${ACME_CASERVER:-}"

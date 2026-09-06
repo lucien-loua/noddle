@@ -1,7 +1,6 @@
 import type { Readable } from "node:stream";
 
-import { uploadStream } from "@noddle/backup";
-import type { BackupDestination } from "@noddle/backup";
+import { resolveDestination, uploadStream } from "@noddle/backup";
 import { controlPlaneSettings, servers } from "@noddle/db/schema";
 import { log } from "@noddle/shared/log";
 import { disconnect, execStream, quoteArg } from "@noddle/ssh-executor";
@@ -10,6 +9,8 @@ import { eq } from "drizzle-orm";
 import type { DeployContext } from "#runtime-context";
 
 const POSTGRES_CONTAINER = "noddle-postgres-1";
+
+const CONTROL_PLANE_FOLDER = "noddle-control-plane";
 
 async function record(
   ctx: DeployContext,
@@ -32,27 +33,6 @@ async function record(
   await ctx.db.insert(controlPlaneSettings).values(patch);
 }
 
-export function controlPlaneDestination(): BackupDestination | null {
-  const endpoint = process.env.CONTROL_PLANE_BACKUP_ENDPOINT;
-  const bucket = process.env.CONTROL_PLANE_BACKUP_BUCKET;
-  const accessKeyId = process.env.CONTROL_PLANE_BACKUP_ACCESS_KEY;
-  const secretAccessKey = process.env.CONTROL_PLANE_BACKUP_SECRET_KEY;
-
-  if (!(endpoint && bucket && accessKeyId && secretAccessKey)) {
-    return null;
-  }
-
-  return {
-    accessKeyId,
-    bucket,
-    endpoint,
-    forcePathStyle: true,
-    prefix: process.env.CONTROL_PLANE_BACKUP_PREFIX ?? "noddle-control-plane",
-    region: process.env.CONTROL_PLANE_BACKUP_REGION ?? "auto",
-    secretAccessKey,
-  };
-}
-
 function credentials(): { database: string; user: string } {
   const raw = process.env.DATABASE_URL ?? "";
   try {
@@ -69,11 +49,21 @@ function credentials(): { database: string; user: string } {
 export async function backupControlPlane(
   ctx: DeployContext
 ): Promise<{ bytes: number; key: string } | null> {
-  const destination = controlPlaneDestination();
-  if (!destination) {
+  const settings = await ctx.db.query.controlPlaneSettings.findFirst();
+
+  let destination: Awaited<
+    ReturnType<typeof resolveDestination>
+  >["destination"];
+  try {
+    ({ destination } = await resolveDestination(
+      ctx.db,
+      ctx.appKey,
+      settings?.backupDestinationId
+    ));
+  } catch {
     await record(ctx, {
       error:
-        "not configured — set CONTROL_PLANE_BACKUP_ENDPOINT, _BUCKET, _ACCESS_KEY and _SECRET_KEY in installer/.env",
+        "no S3 destination — add one under S3 destinations, then choose it here",
     });
     return null;
   }
@@ -87,7 +77,10 @@ export async function backupControlPlane(
   }
 
   const { database, user } = credentials();
-  const key = `${destination.prefix}/${new Date().toISOString()}.dump`;
+  const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
+  const key = [destination.prefix, CONTROL_PLANE_FOLDER, `${stamp}.dump`]
+    .filter((part) => part !== "")
+    .join("/");
   const command = [
     "sudo",
     "docker",

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,23 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { byteSize, errorMessage, relativeTime } from "@/lib/format";
 import { queries } from "@/lib/queries";
+import { getDestinations } from "@/server/backups/destinations";
+import type { DestinationRow } from "@/server/backups/destinations";
 import {
   getControlPlaneSettings,
   runMaintenance,
+  saveBackupDestination,
 } from "@/server/control-plane";
 import type { ControlPlaneSettings } from "@/server/control-plane";
 
@@ -60,6 +71,7 @@ function Outcome({ settings }: { settings: ControlPlaneSettings | undefined }) {
 
 export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
   const [failed, setFailed] = useState<string | null>(null);
+  const client = useQueryClient();
 
   const settings = useQuery<ControlPlaneSettings>({
     queryFn: () => getControlPlaneSettings(),
@@ -74,6 +86,32 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
   });
 
   const handleStart = useCallback(() => start.mutate(), [start]);
+
+  const destinations = useQuery<DestinationRow[]>({
+    queryFn: () => getDestinations(),
+    queryKey: queries.destinations().queryKey,
+  });
+
+  const choose = useMutation({
+    mutationFn: (destinationId: string) =>
+      saveBackupDestination({ data: { destinationId } }),
+    onError: (e: Error) => setFailed(errorMessage(e, "could not save")),
+    onSuccess: async () => {
+      setFailed(null);
+      await client.invalidateQueries({
+        queryKey: queries.controlPlaneSettings().queryKey,
+      });
+    },
+  });
+
+  const handleChoose = useCallback(
+    (value: unknown) => {
+      if (typeof value === "string") {
+        choose.mutate(value);
+      }
+    },
+    [choose]
+  );
 
   return (
     <Frame variant="ghost">
@@ -99,6 +137,35 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
       </FrameHeader>
 
       <FramePanel className="space-y-3">
+        {canRun ? (
+          <div className="flex items-center gap-3 text-xs">
+            <span className="min-w-0 flex-1 text-muted-foreground">
+              Destination
+            </span>
+            <Select
+              onValueChange={handleChoose}
+              value={settings.data?.backupDestinationId ?? ""}
+            >
+              <SelectTrigger
+                aria-label="Backup destination"
+                className="w-56"
+                size="sm"
+              >
+                <SelectValue placeholder="Choose an S3 destination" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {(destinations.data ?? []).map((row) => (
+                    <SelectItem key={row.id} value={row.id}>
+                      {row.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
         <Outcome settings={settings.data} />
 
         {start.isSuccess ? (

@@ -17,6 +17,7 @@ const HOSTNAME = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i;
 
 export interface ControlPlaneSettings {
   acmeEmail: string | null;
+  backupDestinationId: string | null;
   backupLastAt: string | null;
   backupLastBytes: number | null;
   backupLastError: string | null;
@@ -43,6 +44,18 @@ const dashboardDomainSchema = z
     path: ["acmeEmail"],
   });
 
+type SettingsRow = typeof controlPlaneSettings.$inferSelect;
+
+function backupFields(row: SettingsRow | undefined) {
+  return {
+    backupDestinationId: row?.backupDestinationId ?? null,
+    backupLastAt: row?.backupLastAt?.toISOString() ?? null,
+    backupLastBytes: row?.backupLastBytes ?? null,
+    backupLastError: row?.backupLastError ?? null,
+    backupLastKey: row?.backupLastKey ?? null,
+  };
+}
+
 export const getControlPlaneSettings = createServerFn({
   method: "GET",
 }).handler(async (): Promise<ControlPlaneSettings> => {
@@ -53,10 +66,7 @@ export const getControlPlaneSettings = createServerFn({
   ]);
   return {
     acmeEmail: row?.acmeEmail ?? null,
-    backupLastAt: row?.backupLastAt?.toISOString() ?? null,
-    backupLastBytes: row?.backupLastBytes ?? null,
-    backupLastError: row?.backupLastError ?? null,
-    backupLastKey: row?.backupLastKey ?? null,
+    ...backupFields(row),
     domain: row?.domain ?? null,
     httpsEnabled: row?.httpsEnabled ?? false,
     lastError: row?.lastError ?? null,
@@ -129,3 +139,21 @@ export const reloadWebServer = createServerFn({ method: "POST" }).handler(
     return { queued: true };
   }
 );
+
+export const saveBackupDestination = createServerFn({ method: "POST" })
+  .validator(z.object({ destinationId: z.uuid().nullable() }))
+  .handler(async ({ data }): Promise<{ saved: true }> => {
+    await requirePermission(CONTROL_PLANE_PERMISSION);
+    const existing = await db.query.controlPlaneSettings.findFirst();
+    if (existing) {
+      await db
+        .update(controlPlaneSettings)
+        .set({ backupDestinationId: data.destinationId })
+        .where(eq(controlPlaneSettings.id, existing.id));
+    } else {
+      await db
+        .insert(controlPlaneSettings)
+        .values({ backupDestinationId: data.destinationId });
+    }
+    return { saved: true };
+  });

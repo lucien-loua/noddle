@@ -1,0 +1,2 @@
+ALTER TABLE "control_plane_settings" ADD COLUMN "backup_destination_id" uuid;--> statement-breakpoint
+ALTER TABLE "control_plane_settings" ADD CONSTRAINT "control_plane_settings_backup_destination_id_s3_destinations_id_fk" FOREIGN KEY ("backup_destination_id") REFERENCES "public"."s3_destinations"("id") ON DELETE set null ON UPDATE no action;
