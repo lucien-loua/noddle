@@ -56,7 +56,15 @@ function SettingsListEmpty({
   if (!isEmpty) {
     return null;
   }
-  return <Empty className={cn("h-full", className)}>{children}</Empty>;
+  return (
+    <Frame className="flex h-full min-h-0 flex-1 flex-col" variant="ghost">
+      <FramePanel className="flex min-h-0 flex-1 flex-col">
+        <Empty className={cn("min-h-0 flex-1 border-0", className)}>
+          {children}
+        </Empty>
+      </FramePanel>
+    </Frame>
+  );
 }
 
 function SettingsListBody({ children }: { children: ReactNode }) {

@@ -1,18 +1,8 @@
-import { ArchiveIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
-import { IconStack } from "@/components/icon-stack";
+import { NoDestinationEmpty } from "@/components/features/backups/no-destination-empty";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Frame,
   FrameDescription,
@@ -129,30 +119,7 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
 
   if (noDestinations) {
     return (
-      <Frame variant="ghost">
-        <FramePanel>
-          <Empty className="border-0">
-            <EmptyHeader>
-              <EmptyMedia>
-                <IconStack>
-                  <ArchiveIcon className="size-5" />
-                </IconStack>
-              </EmptyMedia>
-              <EmptyTitle>No S3 destination yet</EmptyTitle>
-              <EmptyDescription>
-                Noddle keeps a dump of its own database somewhere off this
-                machine. Add a destination, then choose it here.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button render={<Link to="/destinations" />}>
-                <ArchiveIcon data-icon="inline-start" weight="regular" />
-                Add a destination
-              </Button>
-            </EmptyContent>
-          </Empty>
-        </FramePanel>
-      </Frame>
+      <NoDestinationEmpty description="Noddle needs somewhere to push its own database dump before the daily backup can run. Add one under" />
     );
   }
 
