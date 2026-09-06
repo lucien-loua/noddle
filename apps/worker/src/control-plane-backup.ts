@@ -1,6 +1,12 @@
 import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
-import { resolveDestination, uploadStream } from "@noddle/backup";
+import {
+  downloadStream,
+  listObjects,
+  resolveDestination,
+  uploadStream,
+} from "@noddle/backup";
 import { controlPlaneSettings, servers } from "@noddle/db/schema";
 import { log } from "@noddle/shared/log";
 import {
@@ -161,6 +167,97 @@ export async function backupControlPlane(
     });
     await record(ctx, {
       error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  } finally {
+    disconnect(client);
+  }
+}
+
+export async function listControlPlaneBackups(
+  ctx: DeployContext
+): Promise<{ key: string; size: number; takenAt: string }[]> {
+  const settings = await ctx.db.query.controlPlaneSettings.findFirst();
+  const { destination } = await resolveDestination(
+    ctx.db,
+    ctx.appKey,
+    settings?.backupDestinationId
+  );
+  const objects = await listObjects(destination, {
+    prefix: CONTROL_PLANE_FOLDER,
+  });
+  return objects
+    .map((object) => ({
+      key: object.key,
+      size: object.sizeBytes,
+      takenAt: object.lastModified ?? "",
+    }))
+    .toSorted((a, b) => b.takenAt.localeCompare(a.takenAt));
+}
+
+export async function restoreControlPlane(
+  ctx: DeployContext,
+  key: string
+): Promise<void> {
+  const settings = await ctx.db.query.controlPlaneSettings.findFirst();
+  const { destination } = await resolveDestination(
+    ctx.db,
+    ctx.appKey,
+    settings?.backupDestinationId
+  );
+
+  const { database, host, user } = credentials();
+  if (NOT_AN_INSTALL.has(host)) {
+    throw new Error(
+      "this process talks to a local database, not an installed control plane"
+    );
+  }
+
+  const self = await ctx.db.query.servers.findFirst({
+    where: eq(servers.isSelf, true),
+  });
+  if (!self) {
+    throw new Error(
+      "no self host is registered, so there is nothing to restore onto"
+    );
+  }
+
+  const client = await ctx.connectTo(self);
+  const startedAt = Date.now();
+  try {
+    const container = await postgresContainer(client, host);
+    const body = await downloadStream(destination, key);
+    const command = [
+      "sudo",
+      "docker",
+      "exec",
+      "-i",
+      container,
+      "pg_restore",
+      "--clean",
+      "--if-exists",
+      "--single-transaction",
+      "--exit-on-error",
+      "-U",
+      quoteArg(user),
+      "-d",
+      quoteArg(database),
+    ].join(" ");
+
+    const result = await execStream(client, command, async (io) => {
+      io.stdout.resume();
+      await pipeline(body, io.stdin);
+    });
+    if (result.code !== 0) {
+      throw new Error(
+        `pg_restore exited ${result.code}: ${result.stderr.trim().slice(-400)}`
+      );
+    }
+    log.write("control-plane.restored", { key, ms: Date.now() - startedAt });
+  } catch (error) {
+    log.error("control-plane.restore.failed", error, {
+      key,
+      ms: Date.now() - startedAt,
     });
     throw error;
   } finally {

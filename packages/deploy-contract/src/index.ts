@@ -58,6 +58,10 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
     kind: z.literal("backup-control-plane"),
   }),
   z.strictObject({
+    key: z.string().min(1),
+    kind: z.literal("restore-control-plane"),
+  }),
+  z.strictObject({
     kind: z.literal("prune-docker"),
   }),
   z.strictObject({

@@ -157,3 +157,30 @@ export const saveBackupDestination = createServerFn({ method: "POST" })
     }
     return { saved: true };
   });
+
+export interface ControlPlaneBackupObject {
+  key: string;
+  size: number;
+  takenAt: string;
+}
+
+export const getControlPlaneBackups = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<ControlPlaneBackupObject[]> => {
+  await requirePermission(CONTROL_PLANE_PERMISSION);
+  const settings = await db.query.controlPlaneSettings.findFirst();
+  if (!settings?.backupDestinationId) {
+    return [];
+  }
+  const { listControlPlaneBackups } =
+    await import("@/lib/control-plane-backups.server");
+  return await listControlPlaneBackups(settings.backupDestinationId);
+});
+
+export const restoreControlPlane = createServerFn({ method: "POST" })
+  .validator(z.object({ key: z.string().min(1) }))
+  .handler(async ({ data }): Promise<{ queued: true }> => {
+    await requirePermission(CONTROL_PLANE_PERMISSION);
+    await enqueueDeploy({ key: data.key, kind: "restore-control-plane" });
+    return { queued: true };
+  });

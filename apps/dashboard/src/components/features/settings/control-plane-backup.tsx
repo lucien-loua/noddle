@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { NoDestinationEmpty } from "@/components/features/backups/no-destination-empty";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +26,16 @@ import { queries } from "@/lib/queries";
 import { getDestinations } from "@/server/backups/destinations";
 import type { DestinationRow } from "@/server/backups/destinations";
 import {
+  getControlPlaneBackups,
   getControlPlaneSettings,
+  restoreControlPlane,
   runMaintenance,
   saveBackupDestination,
 } from "@/server/control-plane";
-import type { ControlPlaneSettings } from "@/server/control-plane";
+import type {
+  ControlPlaneBackupObject,
+  ControlPlaneSettings,
+} from "@/server/control-plane";
 
 const POLL_MS = 5000;
 
@@ -120,6 +126,38 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
       }),
   });
 
+  const backups = useQuery<ControlPlaneBackupObject[]>({
+    enabled: canRun,
+    queryFn: () => getControlPlaneBackups(),
+    queryKey: ["control-plane-backups"],
+  });
+
+  const [restoring, setRestoring] = useState<ControlPlaneBackupObject | null>(
+    null
+  );
+
+  const restore = useMutation({
+    mutationFn: (key: string) => restoreControlPlane({ data: { key } }),
+    onError: (error: Error) =>
+      toast.add({
+        description: errorMessage(error, "restore failed"),
+        title: "Could not queue the restore",
+        type: "error",
+      }),
+    onSuccess: () => {
+      setRestoring(null);
+      toast.add({ title: "Restore queued", type: "success" });
+    },
+  });
+
+  const handleConfirmRestore = useCallback(() => {
+    if (restoring) {
+      restore.mutate(restoring.key);
+    }
+  }, [restore, restoring]);
+
+  const closeRestore = useCallback(() => setRestoring(null), []);
+
   const handleStart = useCallback(() => start.mutate(), [start]);
 
   const handleChoose = useCallback(
@@ -200,7 +238,43 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
         ) : null}
 
         <Outcome settings={settings.data} />
+
+        {canRun && (backups.data?.length ?? 0) > 0 ? (
+          <div className="space-y-1.5 border-t pt-3">
+            <p className="text-muted-foreground text-xs">Restore from</p>
+            {(backups.data ?? []).slice(0, 5).map((object) => (
+              <div
+                className="flex items-center justify-between gap-3 text-xs"
+                key={object.key}
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {object.takenAt ? relativeTime(object.takenAt) : object.key}
+                  <span className="ms-2 text-muted-foreground">
+                    {byteSize(object.size)}
+                  </span>
+                </span>
+                <Button
+                  onClick={() => setRestoring(object)}
+                  size="xs"
+                  variant="outline"
+                >
+                  Restore
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </FramePanel>
+
+      <ConfirmActionDialog
+        confirmLabel="Restore"
+        description={`This replaces every row in the control plane database with the contents of ${restoring?.key ?? ""}. Anything recorded since that dump — servers, deployments, secrets — is lost. The restore runs in a single transaction, so it either completes or changes nothing.`}
+        onConfirm={handleConfirmRestore}
+        onOpenChange={closeRestore}
+        open={restoring !== null}
+        pending={restore.isPending}
+        title="Restore the control plane"
+      />
     </Frame>
   );
 }

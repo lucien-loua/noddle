@@ -112,6 +112,10 @@ export const handlers: Handlers = {
     const { backupControlPlane } = await handlerModules.controlPlaneBackup();
     await backupControlPlane(ctx);
   },
+  "restore-control-plane": async ({ ctx }, data) => {
+    const { restoreControlPlane } = await handlerModules.controlPlaneBackup();
+    await restoreControlPlane(ctx, data.key);
+  },
   "prune-docker": async ({ ctx }) => {
     const { pruneDocker } = await handlerModules.prune();
     await pruneDocker(ctx);

@@ -15,6 +15,7 @@ const ID = "11111111-1111-4111-8111-111111111111";
 const samples: { [K in JobKind]: PayloadOf<K> } = {
   backup: { backupId: ID, kind: "backup" },
   "backup-control-plane": { kind: "backup-control-plane" },
+  "restore-control-plane": { key: "a.dump", kind: "restore-control-plane" },
   "change-database-password": {
     databaseId: ID,
     kind: "change-database-password",
