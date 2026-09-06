@@ -3,12 +3,45 @@ import type { Readable } from "node:stream";
 import { resolveDestination, uploadStream } from "@noddle/backup";
 import { controlPlaneSettings, servers } from "@noddle/db/schema";
 import { log } from "@noddle/shared/log";
-import { disconnect, execStream, quoteArg } from "@noddle/ssh-executor";
+import {
+  disconnect,
+  execArgv,
+  execStream,
+  quoteArg,
+} from "@noddle/ssh-executor";
 import { eq } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";
 
-const POSTGRES_CONTAINER = "noddle-postgres-1";
+const NOT_AN_INSTALL = new Set(["127.0.0.1", "::1", "localhost"]);
+
+async function postgresContainer(
+  client: Awaited<ReturnType<DeployContext["connectTo"]>>,
+  service: string
+): Promise<string> {
+  const found = await execArgv(client, [
+    "sudo",
+    "docker",
+    "ps",
+    "--filter",
+    `label=com.docker.compose.service=${service}`,
+    "--format",
+    "{{.Names}}",
+  ]);
+  const names = found.stdout.trim().split("\n").filter(Boolean);
+
+  if (names.length === 1 && names[0]) {
+    return names[0];
+  }
+  if (names.length === 0) {
+    throw new Error(
+      `no container runs the compose service "${service}" on this host. The control-plane backup dumps the installed stack, so it has nothing to dump here.`
+    );
+  }
+  throw new Error(
+    `several containers claim the compose service "${service}" (${names.join(", ")}), so which one holds the control plane is ambiguous.`
+  );
+}
 
 const CONTROL_PLANE_FOLDER = "noddle-control-plane";
 
@@ -33,16 +66,17 @@ async function record(
   await ctx.db.insert(controlPlaneSettings).values(patch);
 }
 
-function credentials(): { database: string; user: string } {
+function credentials(): { database: string; host: string; user: string } {
   const raw = process.env.DATABASE_URL ?? "";
   try {
     const url = new URL(raw);
     return {
       database: url.pathname.replace(/^\//, "") || "noddle",
+      host: url.hostname || "postgres",
       user: decodeURIComponent(url.username) || "noddle",
     };
   } catch {
-    return { database: "noddle", user: "noddle" };
+    return { database: "noddle", host: "postgres", user: "noddle" };
   }
 }
 
@@ -68,6 +102,15 @@ export async function backupControlPlane(
     return null;
   }
 
+  const { database, host, user } = credentials();
+  if (NOT_AN_INSTALL.has(host)) {
+    await record(ctx, {
+      error:
+        "this process talks to a local database, not an installed control plane, so there is nothing to back up",
+    });
+    return null;
+  }
+
   const self = await ctx.db.query.servers.findFirst({
     where: eq(servers.isSelf, true),
   });
@@ -76,26 +119,26 @@ export async function backupControlPlane(
     return null;
   }
 
-  const { database, user } = credentials();
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
   const key = [destination.prefix, CONTROL_PLANE_FOLDER, `${stamp}.dump`]
     .filter((part) => part !== "")
     .join("/");
-  const command = [
-    "sudo",
-    "docker",
-    "exec",
-    POSTGRES_CONTAINER,
-    "pg_dump",
-    "-Fc",
-    "-U",
-    quoteArg(user),
-    quoteArg(database),
-  ].join(" ");
-
   const client = await ctx.connectTo(self);
   const startedAt = Date.now();
   try {
+    const container = await postgresContainer(client, host);
+    const command = [
+      "sudo",
+      "docker",
+      "exec",
+      container,
+      "pg_dump",
+      "-Fc",
+      "-U",
+      quoteArg(user),
+      quoteArg(database),
+    ].join(" ");
+
     const result = await execStream(client, command, (io) =>
       uploadStream(destination, key, io.stdout as Readable)
     );

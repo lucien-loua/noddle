@@ -9,13 +9,37 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Frame, FramePanel } from "@/components/ui/frame";
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
+import { cn } from "@/lib/utils";
 
-export function NoDestinationEmpty({ description }: { description: string }) {
+export function NoDestinationEmpty({
+  description,
+  heading,
+  intro,
+}: {
+  description: string;
+  heading?: string;
+  intro?: string;
+}) {
   return (
-    <Frame className="flex h-full min-h-0 flex-1 flex-col" variant="ghost">
-      <FramePanel className="flex min-h-0 flex-1 flex-col">
-        <Empty className="min-h-0 flex-1 border-0">
+    <Frame
+      className={cn(!heading && "flex h-full min-h-0 flex-1 flex-col")}
+      variant="ghost"
+    >
+      {heading ? (
+        <FrameHeader>
+          <FrameTitle>{heading}</FrameTitle>
+          {intro ? <FrameDescription>{intro}</FrameDescription> : null}
+        </FrameHeader>
+      ) : null}
+      <FramePanel className={cn(!heading && "flex min-h-0 flex-1 flex-col")}>
+        <Empty className={cn("border-0", !heading && "min-h-0 flex-1")}>
           <EmptyHeader>
             <EmptyMedia>
               <IconStack>

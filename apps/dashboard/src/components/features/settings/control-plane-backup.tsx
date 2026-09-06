@@ -137,7 +137,11 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
 
   if (destinations.isSuccess && rows.length === 0) {
     return (
-      <NoDestinationEmpty description="Noddle needs somewhere to push its own database dump before the daily backup can run. Add one under" />
+      <NoDestinationEmpty
+        description="Noddle needs somewhere to push its own database dump before the daily backup can run. Add one under"
+        heading="Backing up Noddle itself"
+        intro="A dump of the control plane database, kept somewhere that is not this machine."
+      />
     );
   }
 
