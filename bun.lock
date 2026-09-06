@@ -123,6 +123,7 @@
     "packages/db": {
       "name": "@noddle/db",
       "dependencies": {
+        "@noddle/crypto": "workspace:*",
         "drizzle-orm": "catalog:",
         "postgres": "catalog:",
       },

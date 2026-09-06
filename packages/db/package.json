@@ -3,20 +3,24 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#*": "./src/*.ts"
+    "#*": "./src/*.ts",
+    "#encrypted-columns": "./src/encrypted-columns.ts"
   },
   "exports": {
     ".": "./src/index.ts",
+    "./encrypted-columns": "./src/encrypted-columns.ts",
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "migrate:down": "bun run src/migrate-down.ts",
+    "rotate-app-key": "bun run src/rotate-app-key.ts",
     "studio": "drizzle-kit studio",
     "verify:pure": "noddle-verify pure"
   },
   "dependencies": {
+    "@noddle/crypto": "workspace:*",
     "drizzle-orm": "catalog:",
     "postgres": "catalog:"
   },
