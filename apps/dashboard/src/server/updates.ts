@@ -14,6 +14,8 @@ const UPDATE_LOG = "/var/log/noddle-update.log";
 
 const PREVIOUS_FILE = "/etc/noddle/previous-version";
 
+const LOCK_PID_FILE = "/var/lock/noddle-install/pid";
+
 const LOG_LINES = 40;
 
 const FIRST_FIELD = /\s+/;
@@ -85,6 +87,21 @@ async function readPreviousVersion(client: SshClient): Promise<string | null> {
   }
   const recorded = res.stdout.trim();
   return VERSION_TAG.test(recorded) ? recorded : null;
+}
+
+async function assertNotRunning(client: SshClient): Promise<void> {
+  const held = await execArgv(client, [
+    "sudo",
+    "sh",
+    "-c",
+    `pid=$(cat ${LOCK_PID_FILE} 2>/dev/null) && kill -0 "$pid" 2>/dev/null && echo "$pid"`,
+  ]);
+  const pid = held.stdout.trim();
+  if (pid) {
+    throw new Error(
+      `an install or update is already running on this machine (pid ${pid}). Wait for it to finish — the log below follows it.`
+    );
+  }
 }
 
 async function readRemoteRelease(client: SshClient): Promise<Release | null> {
@@ -175,6 +192,7 @@ export const startUpdate = createServerFn({ method: "POST" }).handler(
       permission: { action: "update", resource: "installation" },
       run: async () =>
         withSelfSession(async (client) => {
+          await assertNotRunning(client);
           const res = await execArgv(client, [
             "sudo",
             "sh",
@@ -197,6 +215,7 @@ export const startRollback = createServerFn({ method: "POST" }).handler(
       permission: { action: "update", resource: "installation" },
       run: async () =>
         withSelfSession(async (client) => {
+          await assertNotRunning(client);
           const version = await readPreviousVersion(client);
           if (!version) {
             throw new Error(
