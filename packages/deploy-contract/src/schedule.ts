@@ -1,6 +1,8 @@
 import { Queue, Worker } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
 
+import { SCHEDULE_RETENTION } from "./index.ts";
+
 export interface ScheduleSpec<TDeps> {
   every: number;
   id: string;
@@ -40,7 +42,7 @@ export async function startSchedule<TDeps>(
   await queue.upsertJobScheduler(
     spec.id,
     { every: spec.every },
-    { name: spec.id }
+    { name: spec.id, opts: SCHEDULE_RETENTION }
   );
 
   return { close: () => worker.close(), queue: spec.queue };

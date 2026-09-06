@@ -96,6 +96,15 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bun -e "const r = await fetch('http://127.0.0.1:3000/api/healthz'); process.exit(r.ok ? 0 : 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     labels:
       - traefik.enable=true
       - traefik.http.routers.noddle-dashboard.entrypoints=web
@@ -131,6 +140,15 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     stop_grace_period: 600s
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          test $(( $(date +%s) - $(stat -c %Y /tmp/noddle-worker-heartbeat) )) -lt 60
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - noddle-control
 

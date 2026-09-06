@@ -1,7 +1,13 @@
 import { Queue } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
 
-import { DEPLOY_QUEUE_NAME, deployJobSchema } from "./index.ts";
+import {
+  DEPLOY_QUEUE_NAME,
+  deployJobSchema,
+  JOB_RETENTION,
+  JOB_RETRY,
+  RETRYABLE_KINDS,
+} from "./index.ts";
 import type { DeployJobData } from "./index.ts";
 
 export function createDeployQueue(connection: ConnectionOptions): {
@@ -12,7 +18,10 @@ export function createDeployQueue(connection: ConnectionOptions): {
 
   function enqueueDeploy(job: DeployJobData): Promise<unknown> {
     const parsed = deployJobSchema.parse(job);
-    return queue.add(parsed.kind, parsed);
+    return queue.add(parsed.kind, parsed, {
+      ...JOB_RETENTION,
+      ...(RETRYABLE_KINDS.has(parsed.kind) ? JOB_RETRY : {}),
+    });
   }
 
   return { enqueue: enqueueDeploy, queue };

@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+
 import { loadAppKey } from "@noddle/crypto";
 import { createDatabase } from "@noddle/db";
 import { deployments, stackDeployments } from "@noddle/db/schema";
@@ -141,6 +143,7 @@ deployWorker.on("failed", (job, err) => {
 });
 
 async function shutdown(): Promise<void> {
+  clearInterval(heartbeat);
   await Promise.all([
     deployWorker.close(),
     ...running.map((schedule) => schedule.close()),
@@ -155,5 +158,16 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   shutdown().finally(() => process.exit(0));
 });
+
+const HEARTBEAT_FILE = "/tmp/noddle-worker-heartbeat";
+const HEARTBEAT_MS = 15_000;
+
+function beat(): void {
+  writeFileSync(HEARTBEAT_FILE, String(Date.now()));
+}
+
+beat();
+const heartbeat = setInterval(beat, HEARTBEAT_MS);
+heartbeat.unref();
 
 log.write("worker.started", { concurrency: DEPLOY_QUEUE_CONCURRENCY });

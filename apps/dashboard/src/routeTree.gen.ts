@@ -23,6 +23,7 @@ import { Route as RegistriesRouteImport } from './routes/registries'
 import { Route as ServersRouteImport } from './routes/servers'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SshKeysRouteImport } from './routes/ssh-keys'
+import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects_.$projectId'
 import { Route as ServersServerIdRouteImport } from './routes/servers_.$serverId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -111,6 +112,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SshKeysRoute = SshKeysRouteImport.update({
   id: '/ssh-keys',
   path: '/ssh-keys',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthzRoute = ApiHealthzRouteImport.update({
+  id: '/api/healthz',
+  path: '/api/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/servers': typeof ServersRoute
   '/settings': typeof SettingsRoute
   '/ssh-keys': typeof SshKeysRoute
+  '/api/healthz': typeof ApiHealthzRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/servers': typeof ServersRoute
   '/settings': typeof SettingsRoute
   '/ssh-keys': typeof SshKeysRoute
+  '/api/healthz': typeof ApiHealthzRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/servers': typeof ServersRoute
   '/settings': typeof SettingsRoute
   '/ssh-keys': typeof SshKeysRoute
+  '/api/healthz': typeof ApiHealthzRoute
   '/projects_/$projectId': typeof ProjectsProjectIdRoute
   '/servers_/$serverId': typeof ServersServerIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/servers'
     | '/settings'
     | '/ssh-keys'
+    | '/api/healthz'
     | '/projects/$projectId'
     | '/servers/$serverId'
     | '/api/auth/$'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/servers'
     | '/settings'
     | '/ssh-keys'
+    | '/api/healthz'
     | '/projects/$projectId'
     | '/servers/$serverId'
     | '/api/auth/$'
@@ -413,6 +424,7 @@ export interface FileRouteTypes {
     | '/servers'
     | '/settings'
     | '/ssh-keys'
+    | '/api/healthz'
     | '/projects_/$projectId'
     | '/servers_/$serverId'
     | '/api/auth/$'
@@ -449,6 +461,7 @@ export interface RootRouteChildren {
   ServersRoute: typeof ServersRoute
   SettingsRoute: typeof SettingsRoute
   SshKeysRoute: typeof SshKeysRoute
+  ApiHealthzRoute: typeof ApiHealthzRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ServersServerIdRoute: typeof ServersServerIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -568,6 +581,13 @@ declare module '@tanstack/react-router' {
       path: '/ssh-keys'
       fullPath: '/ssh-keys'
       preLoaderRoute: typeof SshKeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/healthz': {
+      id: '/api/healthz'
+      path: '/api/healthz'
+      fullPath: '/api/healthz'
+      preLoaderRoute: typeof ApiHealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects_/$projectId': {
@@ -721,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServersRoute: ServersRoute,
   SettingsRoute: SettingsRoute,
   SshKeysRoute: SshKeysRoute,
+  ApiHealthzRoute: ApiHealthzRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ServersServerIdRoute: ServersServerIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

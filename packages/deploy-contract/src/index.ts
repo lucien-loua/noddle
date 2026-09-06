@@ -114,3 +114,26 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
 export type DeployJobData = z.infer<typeof deployJobSchema>;
 export type JobKind = DeployJobData["kind"];
 export type PayloadOf<K extends JobKind> = Extract<DeployJobData, { kind: K }>;
+
+const HOUR_SECONDS = 3600;
+const DAY_SECONDS = 24 * HOUR_SECONDS;
+
+export const JOB_RETENTION = {
+  removeOnComplete: { age: DAY_SECONDS, count: 200 },
+  removeOnFail: { age: 7 * DAY_SECONDS, count: 500 },
+} as const;
+
+export const SCHEDULE_RETENTION = {
+  removeOnComplete: { age: HOUR_SECONDS, count: 20 },
+  removeOnFail: { age: DAY_SECONDS, count: 50 },
+} as const;
+
+export const RETRYABLE_KINDS = new Set<DeployJobData["kind"]>([
+  "deploy",
+  "deploy-stack",
+]);
+
+export const JOB_RETRY = {
+  attempts: 3,
+  backoff: { delay: 15_000, type: "exponential" },
+} as const;
