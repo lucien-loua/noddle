@@ -4,21 +4,22 @@ import { useCallback, useState } from "react";
 import { NoDestinationEmpty } from "@/components/features/backups/no-destination-empty";
 import { Button } from "@/components/ui/button";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import {
   Frame,
   FrameDescription,
   FrameHeader,
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { byteSize, errorMessage, relativeTime } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import { getDestinations } from "@/server/backups/destinations";
@@ -30,12 +31,13 @@ import {
 } from "@/server/control-plane";
 import type { ControlPlaneSettings } from "@/server/control-plane";
 
+const POLL_MS = 5000;
+
 function Outcome({ settings }: { settings: ControlPlaneSettings | undefined }) {
   if (!settings?.backupLastAt) {
     return (
       <FrameDescription>
-        No backup has run yet. The first one runs within a day, or start one
-        now.
+        No backup has run yet. The next one runs within a day.
       </FrameDescription>
     );
   }
@@ -71,53 +73,69 @@ function Outcome({ settings }: { settings: ControlPlaneSettings | undefined }) {
 }
 
 export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
-  const [failed, setFailed] = useState<string | null>(null);
   const client = useQueryClient();
+  const [awaiting, setAwaiting] = useState<string | null | undefined>();
 
   const settings = useQuery<ControlPlaneSettings>({
     queryFn: () => getControlPlaneSettings(),
     queryKey: queries.controlPlaneSettings().queryKey,
+    refetchInterval: (query) =>
+      awaiting !== undefined && query.state.data?.backupLastAt === awaiting
+        ? POLL_MS
+        : false,
   });
-
-  const start = useMutation({
-    mutationFn: () =>
-      runMaintenance({ data: { task: "backup-control-plane" } }),
-    onError: (e: Error) => setFailed(errorMessage(e, "could not start")),
-    onSuccess: () => setFailed(null),
-  });
-
-  const handleStart = useCallback(() => start.mutate(), [start]);
 
   const destinations = useQuery<DestinationRow[]>({
     queryFn: () => getDestinations(),
     queryKey: queries.destinations().queryKey,
   });
 
-  const choose = useMutation({
-    mutationFn: (destinationId: string) =>
-      saveBackupDestination({ data: { destinationId } }),
-    onError: (e: Error) => setFailed(errorMessage(e, "could not save")),
-    onSuccess: async () => {
-      setFailed(null);
-      await client.invalidateQueries({
-        queryKey: queries.controlPlaneSettings().queryKey,
-      });
+  const start = useMutation({
+    mutationFn: () =>
+      runMaintenance({ data: { task: "backup-control-plane" } }),
+    onError: (error: Error) =>
+      toast.add({
+        description: errorMessage(error, "backup failed"),
+        title: "Could not queue the backup",
+        type: "error",
+      }),
+    onSuccess: () => {
+      setAwaiting(settings.data?.backupLastAt ?? null);
+      toast.add({ title: "Backup queued", type: "success" });
     },
   });
 
-  const noDestinations =
-    destinations.isSuccess && (destinations.data?.length ?? 0) === 0;
+  const choose = useMutation({
+    mutationFn: (destinationId: string) =>
+      saveBackupDestination({ data: { destinationId } }),
+    onError: (error: Error) =>
+      toast.add({
+        description: errorMessage(error, "could not save"),
+        title: "Could not change the destination",
+        type: "error",
+      }),
+    onSuccess: () =>
+      client.invalidateQueries({
+        queryKey: queries.controlPlaneSettings().queryKey,
+      }),
+  });
+
+  const handleStart = useCallback(() => start.mutate(), [start]);
 
   const handleChoose = useCallback(
-    (value: unknown) => {
-      if (typeof value === "string") {
-        choose.mutate(value);
+    (row: DestinationRow | null) => {
+      if (row) {
+        choose.mutate(row.id);
       }
     },
     [choose]
   );
 
-  if (noDestinations) {
+  const rows = destinations.data ?? [];
+  const selected =
+    rows.find((row) => row.id === settings.data?.backupDestinationId) ?? null;
+
+  if (destinations.isSuccess && rows.length === 0) {
     return (
       <NoDestinationEmpty description="Noddle needs somewhere to push its own database dump before the daily backup can run. Add one under" />
     );
@@ -152,41 +170,32 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
             <span className="min-w-0 flex-1 text-muted-foreground">
               Destination
             </span>
-            <Select
+            <Combobox
+              items={rows}
+              itemToStringLabel={(row: DestinationRow) => row.name}
+              itemToStringValue={(row: DestinationRow) => row.name}
               onValueChange={handleChoose}
-              value={settings.data?.backupDestinationId ?? ""}
+              value={selected}
             >
-              <SelectTrigger
+              <ComboboxInput
                 aria-label="Backup destination"
-                className="w-56"
-                size="sm"
-              >
-                <SelectValue placeholder="Choose an S3 destination" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {(destinations.data ?? []).map((row) => (
-                    <SelectItem key={row.id} value={row.id}>
+                placeholder="Choose an S3 destination"
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No destination matches.</ComboboxEmpty>
+                <ComboboxList>
+                  {(row: DestinationRow) => (
+                    <ComboboxItem key={row.id} value={row}>
                       {row.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
         ) : null}
 
         <Outcome settings={settings.data} />
-
-        {start.isSuccess ? (
-          <FrameDescription role="status">
-            Queued. Reload in a moment to see the result.
-          </FrameDescription>
-        ) : null}
-
-        {failed ? (
-          <output className="block text-destructive text-xs">{failed}</output>
-        ) : null}
       </FramePanel>
     </Frame>
   );
