@@ -189,8 +189,10 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
         <div>
           <FrameTitle>Backing up Noddle itself</FrameTitle>
           <FrameDescription>
-            A dump of the control plane database. Restoring it also needs
-            APP_KEY from installer/.env — without the key it cannot be read.
+            The control plane database, its SSH and registry keys, and APP_KEY,
+            in one archive — so a restore needs nothing else. Anyone who can
+            read this bucket can decrypt every secret Noddle holds: use one only
+            you can read.
           </FrameDescription>
         </div>
         {canRun ? (
@@ -268,7 +270,7 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
 
       <ConfirmActionDialog
         confirmLabel="Restore"
-        description={`This replaces every row in the control plane database with the contents of ${restoring?.key ?? ""}. Anything recorded since that dump — servers, deployments, secrets — is lost. The restore runs in a single transaction, so it either completes or changes nothing.`}
+        description={`This replaces the control plane database, /etc/noddle and APP_KEY with the contents of ${restoring?.key ?? ""}. Anything recorded since — servers, deployments, secrets — is lost, and the dashboard restarts to pick up the restored key. The database is restored in a single transaction, so it either completes or is left untouched.`}
         onConfirm={handleConfirmRestore}
         onOpenChange={closeRestore}
         open={restoring !== null}

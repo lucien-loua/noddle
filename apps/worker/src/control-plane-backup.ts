@@ -51,6 +51,9 @@ async function postgresContainer(
 
 const CONTROL_PLANE_FOLDER = "noddle-control-plane";
 
+const NODDLE_ETC = "/etc/noddle";
+const ENV_FILE = "/opt/noddle/installer/.env";
+
 async function record(
   ctx: DeployContext,
   outcome: { bytes?: number; error?: string; key?: string }
@@ -126,15 +129,14 @@ export async function backupControlPlane(
   }
 
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
-  const key = [destination.prefix, CONTROL_PLANE_FOLDER, `${stamp}.dump`]
+  const key = [destination.prefix, CONTROL_PLANE_FOLDER, `${stamp}.tar`]
     .filter((part) => part !== "")
     .join("/");
   const client = await ctx.connectTo(self);
   const startedAt = Date.now();
   try {
     const container = await postgresContainer(client, host);
-    const command = [
-      "sudo",
+    const dump = [
       "docker",
       "exec",
       container,
@@ -144,6 +146,18 @@ export async function backupControlPlane(
       quoteArg(user),
       quoteArg(database),
     ].join(" ");
+
+    const script = [
+      "set -e",
+      "d=$(mktemp -d)",
+      'trap "rm -rf $d" EXIT',
+      `${dump} > $d/database.dump`,
+      `cp -a ${NODDLE_ETC} $d/etc-noddle`,
+      `cp ${ENV_FILE} $d/env`,
+      'tar -cf - -C "$d" database.dump etc-noddle env',
+    ].join("; ");
+
+    const command = `sudo sh -c ${quoteArg(script)}`;
 
     const result = await execStream(client, command, (io) =>
       uploadStream(destination, key, io.stdout as Readable)
@@ -227,8 +241,8 @@ export async function restoreControlPlane(
   try {
     const container = await postgresContainer(client, host);
     const body = await downloadStream(destination, key);
-    const command = [
-      "sudo",
+
+    const restore = [
       "docker",
       "exec",
       "-i",
@@ -244,15 +258,38 @@ export async function restoreControlPlane(
       quoteArg(database),
     ].join(" ");
 
-    const result = await execStream(client, command, async (io) => {
-      io.stdout.resume();
-      await pipeline(body, io.stdin);
-    });
+    const script = [
+      "set -e",
+      "d=$(mktemp -d)",
+      'trap "rm -rf $d" EXIT',
+      'tar -xf - -C "$d"',
+      `${restore} < $d/database.dump`,
+      `rm -rf ${NODDLE_ETC}`,
+      `cp -a $d/etc-noddle ${NODDLE_ETC}`,
+      `for k in APP_KEY REGISTRY_PASSWORD; do v=$(grep "^$k=" $d/env | cut -d= -f2-); if [ -n "$v" ]; then sed -i "/^$k=/d" ${ENV_FILE}; printf "%s=%s\\n" "$k" "$v" >> ${ENV_FILE}; fi; done`,
+    ].join("; ");
+
+    const result = await execStream(
+      client,
+      `sudo sh -c ${quoteArg(script)}`,
+      async (io) => {
+        io.stdout.resume();
+        await pipeline(body, io.stdin);
+      }
+    );
     if (result.code !== 0) {
       throw new Error(
-        `pg_restore exited ${result.code}: ${result.stderr.trim().slice(-400)}`
+        `restore failed (${result.code}): ${result.stderr.trim().slice(-400)}`
       );
     }
+
+    await execArgv(client, [
+      "sudo",
+      "sh",
+      "-c",
+      `setsid nohup docker compose --project-directory /opt/noddle/installer --env-file ${ENV_FILE} -f /opt/noddle/installer/docker-compose.yml up -d --force-recreate dashboard worker > /var/log/noddle-restore.log 2>&1 < /dev/null &`,
+    ]);
+
     log.write("control-plane.restored", { key, ms: Date.now() - startedAt });
   } catch (error) {
     log.error("control-plane.restore.failed", error, {

@@ -65,7 +65,9 @@ Noddle backs up the databases it provisions. Its own state — the SSH keys to y
 
 Add an S3 destination under **S3 destinations**, then pick it under **Settings → Backing up Noddle itself**. The control plane dumps itself there once a day, and the same screen starts one immediately so a new destination can be confirmed without waiting.
 
-Restoring needs three things: the dump, the credentials for that bucket, and `installer/.env`. The last one holds `APP_KEY`, without which the dump is unreadable — and the bucket credentials are themselves stored encrypted under that key, so keep a copy of them where Noddle is not the only record.
+The archive holds the database, `/etc/noddle` — the SSH and registry keys — and `APP_KEY` itself, so restoring needs nothing but the archive. That is the point, and the cost: **anyone who can read that bucket can decrypt every secret Noddle holds.** Use one only you can read.
+
+Settings lists the archives and restores one. On a machine that is gone, install fresh and restore from the new dashboard.
 
 If `APP_KEY` ever leaks, it can be replaced:
 
