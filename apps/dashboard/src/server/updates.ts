@@ -16,15 +16,12 @@ const PREVIOUS_FILE = "/etc/noddle/previous-version";
 
 const LOCK_PID_FILE = "/var/lock/noddle-install/pid";
 
-const LOG_LINES = 40;
-
 const FIRST_FIELD = /\s+/;
 const TAG_LINE = /^([0-9a-f]{40})\s+refs\/tags\/(v\d+\.\d+\.\d+)(\^\{\})?$/;
 const VERSION_TAG = /^v\d+\.\d+\.\d+$/;
 
 export interface UpdateStatus {
   behind: boolean;
-  log: string | null;
   remoteCommit: string | null;
   previousVersion: string | null;
   remoteVersion: string | null;
@@ -99,7 +96,7 @@ async function assertNotRunning(client: SshClient): Promise<void> {
   const pid = held.stdout.trim();
   if (pid) {
     throw new Error(
-      `an install or update is already running on this machine (pid ${pid}). Wait for it to finish — the log below follows it.`
+      `an install or update is already running on this machine (pid ${pid}). Wait for it to finish.`
     );
   }
 }
@@ -145,7 +142,6 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
     const running = runningCommit();
     const status: UpdateStatus = {
       behind: false,
-      log: null,
       remoteCommit: null,
       previousVersion: null,
       remoteVersion: null,
@@ -163,14 +159,6 @@ export const getUpdateStatus = createServerFn({ method: "GET" }).handler(
         status.remoteCommit = release?.commit ?? null;
         status.remoteVersion = release?.version ?? null;
         status.previousVersion = await readPreviousVersion(client);
-        const log = await execArgv(client, [
-          "sudo",
-          "tail",
-          "-n",
-          String(LOG_LINES),
-          UPDATE_LOG,
-        ]);
-        status.log = log.code === 0 ? log.stdout.trimEnd() || null : null;
       });
     } catch (error) {
       unreachable = error instanceof Error ? error.message : String(error);

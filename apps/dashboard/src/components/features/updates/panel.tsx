@@ -21,9 +21,6 @@ const POLL_MS = 5000;
 
 const SHORT = 12;
 
-// oxlint-disable-next-line no-control-regex -- this is precisely the ESC character we're targeting
-const ANSI = /\u001B\[[0-9;]*m/g;
-
 function Commit({
   sha,
   version,
@@ -239,14 +236,6 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
           inFlight={inFlight}
           running={running}
         />
-
-        {data?.log ? (
-          <div className="rounded-md bg-muted">
-            <pre className="no-scrollbar scroll-fade max-h-48 overflow-auto p-3 font-mono text-[11px] leading-relaxed">
-              {data.log.replace(ANSI, "")}
-            </pre>
-          </div>
-        ) : null}
       </FramePanel>
     </Frame>
   );
