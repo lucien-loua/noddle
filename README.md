@@ -56,8 +56,35 @@ The script installs Docker if it is missing, turns the node into a Swarm manager
 | --------------- | ---------------------------------------------- |
 | `NODDLE_DOMAIN` | dashboard hostname; enables Let's Encrypt      |
 | `ACME_EMAIL`    | contact address, required when a domain is set |
-| `NODDLE_REF`    | branch or tag to install, default `main`       |
+| `NODDLE_REF`    | tag to install, default: the newest release    |
 | `NODDLE_DIR`    | where the sources go, default `/opt/noddle`    |
+
+### Backing up Noddle itself
+
+Noddle backs up the databases it provisions. Its own state — the SSH keys to your servers, every environment variable value, forge tokens — lives in its own Postgres, and is only worth having alongside the key that decrypts it.
+
+Set these in `installer/.env` and the control plane dumps itself to S3 once a day. Leave them empty and nothing is backed up.
+
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| `CONTROL_PLANE_BACKUP_ENDPOINT`   | S3 endpoint              |
+| `CONTROL_PLANE_BACKUP_BUCKET`     | bucket                   |
+| `CONTROL_PLANE_BACKUP_ACCESS_KEY` | access key               |
+| `CONTROL_PLANE_BACKUP_SECRET_KEY` | secret key               |
+| `CONTROL_PLANE_BACKUP_REGION`     | optional, default `auto` |
+| `CONTROL_PLANE_BACKUP_PREFIX`     | optional key prefix      |
+
+They live in `.env` rather than in the dashboard on purpose: credentials stored in the database would be unreachable exactly when you need them, which is when the database is gone. Restoring needs the dump, the bucket, and `installer/.env` — keep all three somewhere that is not this machine.
+
+If `APP_KEY` ever leaks, it can be replaced:
+
+```bash
+APP_KEY=current NEW_APP_KEY=replacement \
+  docker compose -f /opt/noddle/installer/docker-compose.yml \
+  run --rm --no-deps worker bun run --cwd /noddle/packages/db rotate-app-key
+```
+
+Every secret is re-encrypted in one transaction — if anything fails to decrypt, nothing is written. Put the new key in `.env` afterwards, or none of them can be read again.
 
 ## Status
 
