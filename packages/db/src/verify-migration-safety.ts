@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { check, runVerify } from "@noddle/testing";
 
 const MIGRATIONS = join(import.meta.dirname, "migrations");
+const DOWN = join(MIGRATIONS, "down");
+const INITIAL = "0000_init.sql";
 
 const UNSAFE = [
   {
@@ -47,8 +49,18 @@ await runVerify("migrations keep a rollback safe", () => {
     String(files.length)
   );
 
+  const downs = new Set(readdirSync(DOWN));
+
   for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS, file), "utf-8");
+
+    if (file !== INITIAL) {
+      check(
+        `${file} has a down migration beside it`,
+        downs.has(file),
+        "migrations/down is what makes a rollback reversible; without it the schema only moves forward"
+      );
+    }
 
     for (const { name, pattern, why } of UNSAFE) {
       const found = pattern.exec(sql);

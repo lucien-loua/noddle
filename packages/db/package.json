@@ -12,6 +12,7 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
+    "migrate:down": "bun run src/migrate-down.ts",
     "studio": "drizzle-kit studio",
     "verify:pure": "noddle-verify pure"
   },
