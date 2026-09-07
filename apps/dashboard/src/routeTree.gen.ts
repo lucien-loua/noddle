@@ -30,6 +30,8 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDatabaseLogsDatabaseIdRouteImport } from './routes/api/database-logs/$databaseId'
 import { Route as ApiLogsDeploymentIdRouteImport } from './routes/api/logs/$deploymentId'
 import { Route as ApiServiceLogsServiceIdRouteImport } from './routes/api/service-logs/$serviceId'
+import { Route as ApiV1ServersRouteImport } from './routes/api/v1/servers'
+import { Route as ApiV1ServicesRouteImport } from './routes/api/v1/services'
 import { Route as ApiV1WhoamiRouteImport } from './routes/api/v1/whoami'
 import { Route as ApiWebhooksGithubRouteImport } from './routes/api/webhooks/github'
 import { Route as ApiWebhooksGitlabRouteImport } from './routes/api/webhooks/gitlab'
@@ -37,10 +39,12 @@ import { Route as ProjectsProjectIdEnvironmentIdRouteImport } from './routes/pro
 import { Route as ApiContainerLogsServerIdContainerIdRouteImport } from './routes/api/container-logs/$serverId.$containerId'
 import { Route as ApiGitProvidersGithubCallbackRouteImport } from './routes/api/git-providers/github/callback'
 import { Route as ApiGitProvidersGitlabCallbackRouteImport } from './routes/api/git-providers/gitlab/callback'
+import { Route as ApiV1DeploymentsIdRouteImport } from './routes/api/v1/deployments.$id'
 import { Route as ApiWebhooksGithubGitProviderIdRouteImport } from './routes/api/webhooks/github_.$gitProviderId'
 import { Route as ApiWebhooksGitlabGitProviderIdRouteImport } from './routes/api/webhooks/gitlab_.$gitProviderId'
 import { Route as ApiWebhooksServiceServiceIdRouteImport } from './routes/api/webhooks/service/$serviceId'
 import { Route as ApiWebhooksStackStackIdRouteImport } from './routes/api/webhooks/stack/$stackId'
+import { Route as ApiV1ServicesIdDeployRouteImport } from './routes/api/v1/services.$id.deploy'
 import { Route as ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRouteImport } from './routes/projects_.$projectId_.$environmentId_.databases.$databaseId'
 import { Route as ProjectsProjectIdEnvironmentIdServicesServiceIdRouteImport } from './routes/projects_.$projectId_.$environmentId_.services.$serviceId'
 import { Route as ProjectsProjectIdEnvironmentIdStacksStackIdRouteImport } from './routes/projects_.$projectId_.$environmentId_.stacks.$stackId'
@@ -151,6 +155,16 @@ const ApiServiceLogsServiceIdRoute = ApiServiceLogsServiceIdRouteImport.update({
   path: '/api/service-logs/$serviceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ServersRoute = ApiV1ServersRouteImport.update({
+  id: '/api/v1/servers',
+  path: '/api/v1/servers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ServicesRoute = ApiV1ServicesRouteImport.update({
+  id: '/api/v1/services',
+  path: '/api/v1/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1WhoamiRoute = ApiV1WhoamiRouteImport.update({
   id: '/api/v1/whoami',
   path: '/api/v1/whoami',
@@ -190,6 +204,11 @@ const ApiGitProvidersGitlabCallbackRoute =
     path: '/api/git-providers/gitlab/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1DeploymentsIdRoute = ApiV1DeploymentsIdRouteImport.update({
+  id: '/api/v1/deployments/$id',
+  path: '/api/v1/deployments/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksGithubGitProviderIdRoute =
   ApiWebhooksGithubGitProviderIdRouteImport.update({
     id: '/api/webhooks/github_/$gitProviderId',
@@ -212,6 +231,11 @@ const ApiWebhooksStackStackIdRoute = ApiWebhooksStackStackIdRouteImport.update({
   id: '/api/webhooks/stack/$stackId',
   path: '/api/webhooks/stack/$stackId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ServicesIdDeployRoute = ApiV1ServicesIdDeployRouteImport.update({
+  id: '/$id/deploy',
+  path: '/$id/deploy',
+  getParentRoute: () => ApiV1ServicesRoute,
 } as any)
 const ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute =
   ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRouteImport.update({
@@ -254,6 +278,8 @@ export interface FileRoutesByFullPath {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/v1/servers': typeof ApiV1ServersRoute
+  '/api/v1/services': typeof ApiV1ServicesRouteWithChildren
   '/api/v1/whoami': typeof ApiV1WhoamiRoute
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/webhooks/gitlab': typeof ApiWebhooksGitlabRoute
@@ -261,10 +287,12 @@ export interface FileRoutesByFullPath {
   '/api/container-logs/$serverId/$containerId': typeof ApiContainerLogsServerIdContainerIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/v1/deployments/$id': typeof ApiV1DeploymentsIdRoute
   '/api/webhooks/github/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
+  '/api/v1/services/$id/deploy': typeof ApiV1ServicesIdDeployRoute
   '/projects/$projectId/$environmentId/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
   '/projects/$projectId/$environmentId/services/$serviceId': typeof ProjectsProjectIdEnvironmentIdServicesServiceIdRoute
   '/projects/$projectId/$environmentId/stacks/$stackId': typeof ProjectsProjectIdEnvironmentIdStacksStackIdRoute
@@ -291,6 +319,8 @@ export interface FileRoutesByTo {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/v1/servers': typeof ApiV1ServersRoute
+  '/api/v1/services': typeof ApiV1ServicesRouteWithChildren
   '/api/v1/whoami': typeof ApiV1WhoamiRoute
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/webhooks/gitlab': typeof ApiWebhooksGitlabRoute
@@ -298,10 +328,12 @@ export interface FileRoutesByTo {
   '/api/container-logs/$serverId/$containerId': typeof ApiContainerLogsServerIdContainerIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/v1/deployments/$id': typeof ApiV1DeploymentsIdRoute
   '/api/webhooks/github/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
+  '/api/v1/services/$id/deploy': typeof ApiV1ServicesIdDeployRoute
   '/projects/$projectId/$environmentId/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
   '/projects/$projectId/$environmentId/services/$serviceId': typeof ProjectsProjectIdEnvironmentIdServicesServiceIdRoute
   '/projects/$projectId/$environmentId/stacks/$stackId': typeof ProjectsProjectIdEnvironmentIdStacksStackIdRoute
@@ -329,6 +361,8 @@ export interface FileRoutesById {
   '/api/database-logs/$databaseId': typeof ApiDatabaseLogsDatabaseIdRoute
   '/api/logs/$deploymentId': typeof ApiLogsDeploymentIdRoute
   '/api/service-logs/$serviceId': typeof ApiServiceLogsServiceIdRoute
+  '/api/v1/servers': typeof ApiV1ServersRoute
+  '/api/v1/services': typeof ApiV1ServicesRouteWithChildren
   '/api/v1/whoami': typeof ApiV1WhoamiRoute
   '/api/webhooks/github': typeof ApiWebhooksGithubRoute
   '/api/webhooks/gitlab': typeof ApiWebhooksGitlabRoute
@@ -336,10 +370,12 @@ export interface FileRoutesById {
   '/api/container-logs/$serverId/$containerId': typeof ApiContainerLogsServerIdContainerIdRoute
   '/api/git-providers/github/callback': typeof ApiGitProvidersGithubCallbackRoute
   '/api/git-providers/gitlab/callback': typeof ApiGitProvidersGitlabCallbackRoute
+  '/api/v1/deployments/$id': typeof ApiV1DeploymentsIdRoute
   '/api/webhooks/github_/$gitProviderId': typeof ApiWebhooksGithubGitProviderIdRoute
   '/api/webhooks/gitlab_/$gitProviderId': typeof ApiWebhooksGitlabGitProviderIdRoute
   '/api/webhooks/service/$serviceId': typeof ApiWebhooksServiceServiceIdRoute
   '/api/webhooks/stack/$stackId': typeof ApiWebhooksStackStackIdRoute
+  '/api/v1/services/$id/deploy': typeof ApiV1ServicesIdDeployRoute
   '/projects_/$projectId_/$environmentId_/databases/$databaseId': typeof ProjectsProjectIdEnvironmentIdDatabasesDatabaseIdRoute
   '/projects_/$projectId_/$environmentId_/services/$serviceId': typeof ProjectsProjectIdEnvironmentIdServicesServiceIdRoute
   '/projects_/$projectId_/$environmentId_/stacks/$stackId': typeof ProjectsProjectIdEnvironmentIdStacksStackIdRoute
@@ -368,6 +404,8 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/v1/servers'
+    | '/api/v1/services'
     | '/api/v1/whoami'
     | '/api/webhooks/github'
     | '/api/webhooks/gitlab'
@@ -375,10 +413,12 @@ export interface FileRouteTypes {
     | '/api/container-logs/$serverId/$containerId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/v1/deployments/$id'
     | '/api/webhooks/github/$gitProviderId'
     | '/api/webhooks/gitlab/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
+    | '/api/v1/services/$id/deploy'
     | '/projects/$projectId/$environmentId/databases/$databaseId'
     | '/projects/$projectId/$environmentId/services/$serviceId'
     | '/projects/$projectId/$environmentId/stacks/$stackId'
@@ -405,6 +445,8 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/v1/servers'
+    | '/api/v1/services'
     | '/api/v1/whoami'
     | '/api/webhooks/github'
     | '/api/webhooks/gitlab'
@@ -412,10 +454,12 @@ export interface FileRouteTypes {
     | '/api/container-logs/$serverId/$containerId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/v1/deployments/$id'
     | '/api/webhooks/github/$gitProviderId'
     | '/api/webhooks/gitlab/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
+    | '/api/v1/services/$id/deploy'
     | '/projects/$projectId/$environmentId/databases/$databaseId'
     | '/projects/$projectId/$environmentId/services/$serviceId'
     | '/projects/$projectId/$environmentId/stacks/$stackId'
@@ -442,6 +486,8 @@ export interface FileRouteTypes {
     | '/api/database-logs/$databaseId'
     | '/api/logs/$deploymentId'
     | '/api/service-logs/$serviceId'
+    | '/api/v1/servers'
+    | '/api/v1/services'
     | '/api/v1/whoami'
     | '/api/webhooks/github'
     | '/api/webhooks/gitlab'
@@ -449,10 +495,12 @@ export interface FileRouteTypes {
     | '/api/container-logs/$serverId/$containerId'
     | '/api/git-providers/github/callback'
     | '/api/git-providers/gitlab/callback'
+    | '/api/v1/deployments/$id'
     | '/api/webhooks/github_/$gitProviderId'
     | '/api/webhooks/gitlab_/$gitProviderId'
     | '/api/webhooks/service/$serviceId'
     | '/api/webhooks/stack/$stackId'
+    | '/api/v1/services/$id/deploy'
     | '/projects_/$projectId_/$environmentId_/databases/$databaseId'
     | '/projects_/$projectId_/$environmentId_/services/$serviceId'
     | '/projects_/$projectId_/$environmentId_/stacks/$stackId'
@@ -480,6 +528,8 @@ export interface RootRouteChildren {
   ApiDatabaseLogsDatabaseIdRoute: typeof ApiDatabaseLogsDatabaseIdRoute
   ApiLogsDeploymentIdRoute: typeof ApiLogsDeploymentIdRoute
   ApiServiceLogsServiceIdRoute: typeof ApiServiceLogsServiceIdRoute
+  ApiV1ServersRoute: typeof ApiV1ServersRoute
+  ApiV1ServicesRoute: typeof ApiV1ServicesRouteWithChildren
   ApiV1WhoamiRoute: typeof ApiV1WhoamiRoute
   ApiWebhooksGithubRoute: typeof ApiWebhooksGithubRoute
   ApiWebhooksGitlabRoute: typeof ApiWebhooksGitlabRoute
@@ -487,6 +537,7 @@ export interface RootRouteChildren {
   ApiContainerLogsServerIdContainerIdRoute: typeof ApiContainerLogsServerIdContainerIdRoute
   ApiGitProvidersGithubCallbackRoute: typeof ApiGitProvidersGithubCallbackRoute
   ApiGitProvidersGitlabCallbackRoute: typeof ApiGitProvidersGitlabCallbackRoute
+  ApiV1DeploymentsIdRoute: typeof ApiV1DeploymentsIdRoute
   ApiWebhooksGithubGitProviderIdRoute: typeof ApiWebhooksGithubGitProviderIdRoute
   ApiWebhooksGitlabGitProviderIdRoute: typeof ApiWebhooksGitlabGitProviderIdRoute
   ApiWebhooksServiceServiceIdRoute: typeof ApiWebhooksServiceServiceIdRoute
@@ -645,6 +696,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiServiceLogsServiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/servers': {
+      id: '/api/v1/servers'
+      path: '/api/v1/servers'
+      fullPath: '/api/v1/servers'
+      preLoaderRoute: typeof ApiV1ServersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/services': {
+      id: '/api/v1/services'
+      path: '/api/v1/services'
+      fullPath: '/api/v1/services'
+      preLoaderRoute: typeof ApiV1ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/whoami': {
       id: '/api/v1/whoami'
       path: '/api/v1/whoami'
@@ -694,6 +759,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGitProvidersGitlabCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/deployments/$id': {
+      id: '/api/v1/deployments/$id'
+      path: '/api/v1/deployments/$id'
+      fullPath: '/api/v1/deployments/$id'
+      preLoaderRoute: typeof ApiV1DeploymentsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/github_/$gitProviderId': {
       id: '/api/webhooks/github_/$gitProviderId'
       path: '/api/webhooks/github/$gitProviderId'
@@ -722,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksStackStackIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/services/$id/deploy': {
+      id: '/api/v1/services/$id/deploy'
+      path: '/$id/deploy'
+      fullPath: '/api/v1/services/$id/deploy'
+      preLoaderRoute: typeof ApiV1ServicesIdDeployRouteImport
+      parentRoute: typeof ApiV1ServicesRoute
+    }
     '/projects_/$projectId_/$environmentId_/databases/$databaseId': {
       id: '/projects_/$projectId_/$environmentId_/databases/$databaseId'
       path: '/projects/$projectId/$environmentId/databases/$databaseId'
@@ -746,6 +825,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiV1ServicesRouteChildren {
+  ApiV1ServicesIdDeployRoute: typeof ApiV1ServicesIdDeployRoute
+}
+
+const ApiV1ServicesRouteChildren: ApiV1ServicesRouteChildren = {
+  ApiV1ServicesIdDeployRoute: ApiV1ServicesIdDeployRoute,
+}
+
+const ApiV1ServicesRouteWithChildren = ApiV1ServicesRoute._addFileChildren(
+  ApiV1ServicesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
@@ -768,6 +859,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDatabaseLogsDatabaseIdRoute: ApiDatabaseLogsDatabaseIdRoute,
   ApiLogsDeploymentIdRoute: ApiLogsDeploymentIdRoute,
   ApiServiceLogsServiceIdRoute: ApiServiceLogsServiceIdRoute,
+  ApiV1ServersRoute: ApiV1ServersRoute,
+  ApiV1ServicesRoute: ApiV1ServicesRouteWithChildren,
   ApiV1WhoamiRoute: ApiV1WhoamiRoute,
   ApiWebhooksGithubRoute: ApiWebhooksGithubRoute,
   ApiWebhooksGitlabRoute: ApiWebhooksGitlabRoute,
@@ -776,6 +869,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiContainerLogsServerIdContainerIdRoute,
   ApiGitProvidersGithubCallbackRoute: ApiGitProvidersGithubCallbackRoute,
   ApiGitProvidersGitlabCallbackRoute: ApiGitProvidersGitlabCallbackRoute,
+  ApiV1DeploymentsIdRoute: ApiV1DeploymentsIdRoute,
   ApiWebhooksGithubGitProviderIdRoute: ApiWebhooksGithubGitProviderIdRoute,
   ApiWebhooksGitlabGitProviderIdRoute: ApiWebhooksGitlabGitProviderIdRoute,
   ApiWebhooksServiceServiceIdRoute: ApiWebhooksServiceServiceIdRoute,
