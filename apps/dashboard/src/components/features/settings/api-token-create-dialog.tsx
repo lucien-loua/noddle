@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -219,37 +218,40 @@ export function ApiTokenCreateDialog({
               <FieldSet>
                 <div className="flex items-baseline justify-between gap-3">
                   <FieldLegend>Permissions</FieldLegend>
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    {chosen.length} selected
+                  <span className="flex items-center gap-3">
+                    {chosen.length > 0 ? (
+                      <Button
+                        className="h-auto p-0 text-xs"
+                        onClick={clearScopes}
+                        type="button"
+                        variant="link"
+                      >
+                        Clear
+                      </Button>
+                    ) : null}
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {chosen.length} selected
+                    </span>
                   </span>
                 </div>
                 <FieldDescription>
                   Nothing is selected by default, and this list already stops at
-                  what your own role allows.
-                </FieldDescription>
-
-                <ButtonGroup>
-                  {SCOPE_PRESETS.map((preset) => (
-                    <Button
-                      key={preset.label}
-                      onClick={() => applyPreset(preset)}
-                      size="xs"
-                      type="button"
-                      variant="outline"
-                    >
-                      {preset.label}
-                    </Button>
+                  what your own role allows. Start from{" "}
+                  {SCOPE_PRESETS.map((preset, index) => (
+                    <span key={preset.label}>
+                      {index > 0 ? " or " : null}
+                      <Button
+                        className="h-auto p-0 align-baseline text-xs"
+                        onClick={() => applyPreset(preset)}
+                        type="button"
+                        variant="link"
+                      >
+                        {preset.label.toLowerCase()}
+                      </Button>
+                    </span>
                   ))}
-                  <Button
-                    disabled={chosen.length === 0}
-                    onClick={clearScopes}
-                    size="xs"
-                    type="button"
-                    variant="outline"
-                  >
-                    Clear
-                  </Button>
-                </ButtonGroup>
+                  , or pick them yourself.
+                </FieldDescription>
 
                 <div className="gap-8 sm:columns-2 lg:columns-3 xl:columns-4">
                   {groups.map(([resource, scopes]) => (
