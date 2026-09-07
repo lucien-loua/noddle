@@ -162,7 +162,7 @@ export function ApiTokenCreateDialog({
           <Reveal onDone={close} token={issued} />
         ) : (
           <>
-            <FocusModalBody className="min-h-0 space-y-8 overflow-y-auto">
+            <FocusModalBody className="min-h-0 space-y-10 overflow-y-auto">
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="token-name">Name</FieldLabel>
@@ -209,20 +209,27 @@ export function ApiTokenCreateDialog({
               </FieldGroup>
 
               <FieldSet>
-                <FieldLegend>Permissions</FieldLegend>
+                <div className="flex items-baseline justify-between gap-3">
+                  <FieldLegend>Permissions</FieldLegend>
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    {chosen.length} selected
+                  </span>
+                </div>
                 <FieldDescription>
                   Nothing is selected by default, and this list already stops at
                   what your own role allows.
                 </FieldDescription>
 
-                <div className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {groups.map(([resource, scopes]) => (
-                    <div className="space-y-2" key={resource}>
-                      <p className="font-medium text-xs">{resource}</p>
-                      <div className="flex flex-col gap-2">
+                    <section
+                      className="space-y-2 rounded-2xl bg-muted p-3"
+                      key={resource}
+                    >
+                      <h3 className="text-sm">{resource}</h3>
+                      <div className="flex flex-col gap-1.5">
                         {scopes.map((scope) => {
                           const action = scope.split(":")[1] ?? scope;
-                          const destructive = DESTRUCTIVE_SCOPES.has(scope);
                           return (
                             <label
                               className="flex items-center gap-2 text-xs"
@@ -232,8 +239,10 @@ export function ApiTokenCreateDialog({
                                 checked={chosen.includes(scope)}
                                 onCheckedChange={() => toggle(scope)}
                               />
-                              <span className="font-mono">{action}</span>
-                              {destructive ? (
+                              <span className="min-w-0 flex-1 font-mono">
+                                {action}
+                              </span>
+                              {DESTRUCTIVE_SCOPES.has(scope) ? (
                                 <span className="text-destructive">
                                   destructive
                                 </span>
@@ -242,7 +251,7 @@ export function ApiTokenCreateDialog({
                           );
                         })}
                       </div>
-                    </div>
+                    </section>
                   ))}
                 </div>
               </FieldSet>
