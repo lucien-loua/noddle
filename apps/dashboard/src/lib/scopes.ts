@@ -3,7 +3,12 @@ import type { PermissionResource, RoleName } from "@/lib/permissions";
 
 export type Scope = string;
 
+export const NON_DELEGATABLE_RESOURCES: ReadonlySet<string> = new Set([
+  "apiToken",
+]);
+
 export const ALL_SCOPES: Scope[] = Object.entries(statement)
+  .filter(([resource]) => !NON_DELEGATABLE_RESOURCES.has(resource))
   .flatMap(([resource, actions]) =>
     (actions as readonly string[]).map((action) => `${resource}:${action}`)
   )
@@ -58,4 +63,31 @@ export function tokenAllows(
   action: string
 ): boolean {
   return narrowToRole(granted, role).includes(`${resource}:${action}`);
+}
+
+export function scopesToPermissions(
+  scopes: readonly Scope[]
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const scope of scopes) {
+    const parts = splitScope(scope);
+    if (parts) {
+      (out[parts.resource] ??= []).push(parts.action);
+    }
+  }
+  return out;
+}
+
+export function permissionsToScopes(
+  permissions: Record<string, string[]> | null | undefined
+): Scope[] {
+  if (!permissions) {
+    return [];
+  }
+  return Object.entries(permissions)
+    .flatMap(([resource, actions]) =>
+      actions.map((action) => `${resource}:${action}`)
+    )
+    .filter(isKnownScope)
+    .toSorted();
 }

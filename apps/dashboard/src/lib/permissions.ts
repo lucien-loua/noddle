@@ -4,6 +4,7 @@ import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 export const statement = {
   ...defaultStatements,
 
+  apiToken: ["read", "create", "delete"],
   audit: ["read"],
   backup: ["read", "create", "restore"],
 
@@ -27,6 +28,7 @@ export const statement = {
 export const ac = createAccessControl(statement);
 
 export const viewer = ac.newRole({
+  apiToken: ["read", "create", "delete"],
   backup: ["read"],
   database: ["read"],
   notification: ["read"],
@@ -35,6 +37,7 @@ export const viewer = ac.newRole({
 });
 
 export const deployer = ac.newRole({
+  apiToken: ["read", "create", "delete"],
   backup: ["read", "create"],
   container: ["operate", "shell"],
   database: ["read", "operate"],
@@ -45,6 +48,7 @@ export const deployer = ac.newRole({
 
 export const admin = ac.newRole({
   ...adminAc.statements,
+  apiToken: ["read", "create", "delete"],
   audit: ["read"],
   backup: ["read", "create", "restore"],
   container: ["operate", "delete", "shell"],

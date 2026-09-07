@@ -4,6 +4,7 @@ import { check, runVerify, suite } from "@noddle/testing";
 import { can, ROLE_ORDER, statement } from "@/lib/permissions";
 import {
   ALL_SCOPES,
+  NON_DELEGATABLE_RESOURCES,
   DESTRUCTIVE_SCOPES,
   grantableBy,
   isKnownScope,
@@ -11,18 +12,25 @@ import {
   tokenAllows,
 } from "@/lib/scopes";
 
-const fromStatement = Object.entries(statement)
+const delegatable = Object.entries(statement)
+  .filter(([resource]) => !NON_DELEGATABLE_RESOURCES.has(resource))
   .flatMap(([resource, actions]) =>
     (actions as readonly string[]).map((action) => `${resource}:${action}`)
   )
   .toSorted();
 
 await runVerify("api token scopes", async () => {
-  await suite("the vocabulary IS the permission statement", () => {
+  await suite("the vocabulary is the DELEGATABLE half of the statement", () => {
     check(
-      "every statement pair is a scope, and nothing else is",
-      ALL_SCOPES.join(",") === fromStatement.join(","),
-      `${ALL_SCOPES.length} scopes against ${fromStatement.length} pairs`
+      "every delegatable pair is a scope, and nothing else is",
+      ALL_SCOPES.join(",") === delegatable.join(","),
+      `${ALL_SCOPES.length} scopes against ${delegatable.length} pairs`
+    );
+    check(
+      "managing tokens is authorizable but never delegatable",
+      NON_DELEGATABLE_RESOURCES.has("apiToken") &&
+        !ALL_SCOPES.some((s) => s.startsWith("apiToken:")),
+      "a token that can mint tokens outlives its own revocation"
     );
     check("a made-up scope is not known", !isKnownScope("service:launch"));
     check("a malformed scope is not known", !isKnownScope("service"));

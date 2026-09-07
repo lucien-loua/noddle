@@ -130,22 +130,74 @@ async function record(
     userAgent = headers.get("user-agent") ?? null;
   } catch {}
 
+  await recordAudit({
+    action: permission.action,
+    actorEmail: session.user.email,
+    actorUserId: session.user.id,
+    ipAddress,
+    outcome,
+    resource: permission.resource,
+    resourceId: target?.resourceId ?? null,
+    resourceName: target?.resourceName ?? null,
+    role: roleOf(session),
+    userAgent,
+  });
+}
+
+export interface AuditEntry {
+  action: string;
+  actorEmail: string;
+  actorKind?: "session" | "token";
+  actorTokenId?: string | null;
+  actorTokenName?: string | null;
+  actorUserId: string | null;
+  ipAddress?: string | null;
+  outcome: "allowed" | "denied";
+  resource: string;
+  resourceId?: string | null;
+  resourceName?: string | null;
+  role: string | null;
+  userAgent?: string | null;
+}
+
+export async function recordAudit(entry: AuditEntry): Promise<void> {
   try {
     await db.insert(auditLog).values({
-      action: permission.action,
-      actorEmail: session.user.email,
-      actorUserId: session.user.id,
-      ipAddress,
-      outcome,
-      resource: permission.resource,
-      resourceId: target?.resourceId ?? null,
-      resourceName: target?.resourceName ?? null,
-      role: roleOf(session),
-      userAgent,
+      action: entry.action,
+      actorEmail: entry.actorEmail,
+      actorKind: entry.actorKind ?? "session",
+      actorTokenId: entry.actorTokenId ?? null,
+      actorTokenName: entry.actorTokenName ?? null,
+      actorUserId: entry.actorUserId,
+      ipAddress: entry.ipAddress ?? null,
+      outcome: entry.outcome,
+      resource: entry.resource,
+      resourceId: entry.resourceId ?? null,
+      resourceName: entry.resourceName ?? null,
+      role: entry.role,
+      userAgent: entry.userAgent ?? null,
     });
   } catch (error) {
     process.stderr.write(
       `audit log write failed: ${error instanceof Error ? error.message : String(error)}\n`
     );
+  }
+}
+
+export function requestActor(): {
+  ipAddress: string | null;
+  userAgent: string | null;
+} {
+  try {
+    const headers = getRequestHeaders();
+    return {
+      ipAddress:
+        headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        headers.get("x-real-ip") ??
+        null,
+      userAgent: headers.get("user-agent") ?? null,
+    };
+  } catch {
+    return { ipAddress: null, userAgent: null };
   }
 }
