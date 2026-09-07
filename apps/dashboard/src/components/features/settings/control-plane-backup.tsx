@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { NoDestinationEmpty } from "@/components/features/backups/no-destination-empty";
+import { ControlPlaneRestoreDialog } from "@/components/features/settings/control-plane-restore-dialog";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Combobox,
   ComboboxContent,
@@ -26,16 +27,11 @@ import { queries } from "@/lib/queries";
 import { getDestinations } from "@/server/backups/destinations";
 import type { DestinationRow } from "@/server/backups/destinations";
 import {
-  getControlPlaneBackups,
   getControlPlaneSettings,
-  restoreControlPlane,
   runMaintenance,
   saveBackupDestination,
 } from "@/server/control-plane";
-import type {
-  ControlPlaneBackupObject,
-  ControlPlaneSettings,
-} from "@/server/control-plane";
+import type { ControlPlaneSettings } from "@/server/control-plane";
 
 const POLL_MS = 5000;
 
@@ -126,37 +122,8 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
       }),
   });
 
-  const backups = useQuery<ControlPlaneBackupObject[]>({
-    enabled: canRun,
-    queryFn: () => getControlPlaneBackups(),
-    queryKey: ["control-plane-backups"],
-  });
-
-  const [restoring, setRestoring] = useState<ControlPlaneBackupObject | null>(
-    null
-  );
-
-  const restore = useMutation({
-    mutationFn: (key: string) => restoreControlPlane({ data: { key } }),
-    onError: (error: Error) =>
-      toast.add({
-        description: errorMessage(error, "restore failed"),
-        title: "Could not queue the restore",
-        type: "error",
-      }),
-    onSuccess: () => {
-      setRestoring(null);
-      toast.add({ title: "Restore queued", type: "success" });
-    },
-  });
-
-  const handleConfirmRestore = useCallback(() => {
-    if (restoring) {
-      restore.mutate(restoring.key);
-    }
-  }, [restore, restoring]);
-
-  const closeRestore = useCallback(() => setRestoring(null), []);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const openRestore = useCallback(() => setRestoreOpen(true), []);
 
   const handleStart = useCallback(() => start.mutate(), [start]);
 
@@ -188,23 +155,22 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <div>
           <FrameTitle>Backing up Noddle itself</FrameTitle>
-          <FrameDescription>
-            The control plane database, its SSH and registry keys, and APP_KEY,
-            in one archive — so a restore needs nothing else. Anyone who can
-            read this bucket can decrypt every secret Noddle holds: use one only
-            you can read.
-          </FrameDescription>
         </div>
         {canRun ? (
-          <Button
-            disabled={start.isPending}
-            onClick={handleStart}
-            size="xs"
-            variant="outline"
-          >
-            {start.isPending ? <Spinner /> : null}
-            Back up now
-          </Button>
+          <ButtonGroup>
+            <Button
+              disabled={start.isPending}
+              onClick={handleStart}
+              size="xs"
+              variant="outline"
+            >
+              {start.isPending ? <Spinner /> : null}
+              Back up now
+            </Button>
+            <Button onClick={openRestore} size="xs" variant="outline">
+              Restore
+            </Button>
+          </ButtonGroup>
         ) : null}
       </FrameHeader>
 
@@ -240,42 +206,11 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
         ) : null}
 
         <Outcome settings={settings.data} />
-
-        {canRun && (backups.data?.length ?? 0) > 0 ? (
-          <div className="space-y-1.5 border-t pt-3">
-            <p className="text-muted-foreground text-xs">Restore from</p>
-            {(backups.data ?? []).slice(0, 5).map((object) => (
-              <div
-                className="flex items-center justify-between gap-3 text-xs"
-                key={object.key}
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  {object.takenAt ? relativeTime(object.takenAt) : object.key}
-                  <span className="ms-2 text-muted-foreground">
-                    {byteSize(object.size)}
-                  </span>
-                </span>
-                <Button
-                  onClick={() => setRestoring(object)}
-                  size="xs"
-                  variant="outline"
-                >
-                  Restore
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </FramePanel>
 
-      <ConfirmActionDialog
-        confirmLabel="Restore"
-        description={`This replaces the control plane database, /etc/noddle and APP_KEY with the contents of ${restoring?.key ?? ""}. Anything recorded since — servers, deployments, secrets — is lost, and the dashboard restarts to pick up the restored key. The database is restored in a single transaction, so it either completes or is left untouched.`}
-        onConfirm={handleConfirmRestore}
-        onOpenChange={closeRestore}
-        open={restoring !== null}
-        pending={restore.isPending}
-        title="Restore the control plane"
+      <ControlPlaneRestoreDialog
+        onOpenChange={setRestoreOpen}
+        open={restoreOpen}
       />
     </Frame>
   );
