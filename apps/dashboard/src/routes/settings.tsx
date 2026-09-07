@@ -3,7 +3,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { DashboardDomain } from "@/components/features/servers/dashboard-domain";
 import { ControlPlaneBackup } from "@/components/features/settings/control-plane-backup";
-import { ControlPlaneRestart } from "@/components/features/settings/control-plane-restart";
 import { Maintenance } from "@/components/features/settings/maintenance";
 import { UpdatePanel } from "@/components/features/updates/panel";
 import { roles } from "@/lib/permissions";
@@ -30,12 +29,16 @@ function SettingsPage() {
 
   return (
     <AppShell email={email} role={role} title="Settings">
-      <div className="flex flex-col gap-4">
-        <DashboardDomain canEdit={canAdmin} />
-        <Maintenance canRun={canAdmin} />
-        <ControlPlaneBackup canRun={canAdmin} />
-        <ControlPlaneRestart canRun={canAdmin} />
-        <UpdatePanel role={known} />
+      <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-4">
+          <DashboardDomain canEdit={canAdmin} />
+          <UpdatePanel role={known} />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <ControlPlaneBackup canRun={canAdmin} />
+          <Maintenance canRun={canAdmin} />
+        </div>
       </div>
     </AppShell>
   );

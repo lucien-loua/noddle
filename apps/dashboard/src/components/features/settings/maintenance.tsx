@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Frame,
@@ -10,8 +11,9 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
-import { runMaintenance } from "@/server/control-plane";
+import { restartControlPlane, runMaintenance } from "@/server/control-plane";
 
 type Task = "prune-docker" | "prune-registry";
 
@@ -43,21 +45,40 @@ function TaskRow({
 }
 
 export function Maintenance({ canRun }: { canRun: boolean }) {
+  const [confirming, setConfirming] = useState(false);
+
   const run = useMutation({
     mutationFn: (task: Task) => runMaintenance({ data: { task } }),
   });
 
+  const restart = useMutation({
+    mutationFn: () => restartControlPlane(),
+    onError: (error: Error) =>
+      toast.add({
+        description: errorMessage(error, "restart failed"),
+        title: "Could not queue the restart",
+        type: "error",
+      }),
+    onSuccess: () => {
+      setConfirming(false);
+      toast.add({ title: "Restart queued", type: "success" });
+    },
+  });
+
   const pruneDocker = useCallback(() => run.mutate("prune-docker"), [run]);
   const pruneRegistry = useCallback(() => run.mutate("prune-registry"), [run]);
+  const askRestart = useCallback(() => setConfirming(true), []);
+  const closeRestart = useCallback(() => setConfirming(false), []);
+  const confirmRestart = useCallback(() => restart.mutate(), [restart]);
 
   const queued = run.isSuccess ? run.variables : null;
 
   return (
     <Frame stacked variant="ghost">
       <FrameHeader>
-        <FrameTitle>Disk</FrameTitle>
+        <FrameTitle>Maintenance</FrameTitle>
         <FrameDescription>
-          Every build leaves something behind. Reclaim it here.
+          Tasks you run when something needs it, not on a schedule.
         </FrameDescription>
       </FrameHeader>
 
@@ -81,6 +102,16 @@ export function Maintenance({ canRun }: { canRun: boolean }) {
         />
       ) : null}
 
+      {canRun ? (
+        <TaskRow
+          description="Restarts the dashboard and the worker. Postgres, Redis and Traefik keep running — you reached this page through them."
+          label="Restart"
+          onRun={askRestart}
+          pending={restart.isPending}
+          title="Restart Noddle"
+        />
+      ) : null}
+
       {run.isError ? (
         <FramePanel>
           <p className="text-destructive text-sm" role="alert">
@@ -95,6 +126,16 @@ export function Maintenance({ canRun }: { canRun: boolean }) {
           </p>
         </FramePanel>
       ) : null}
+
+      <ConfirmActionDialog
+        confirmLabel="Restart"
+        description="The dashboard and the worker restart together. This page drops for a few seconds, and any deploy running right now is interrupted and retried."
+        onConfirm={confirmRestart}
+        onOpenChange={closeRestart}
+        open={confirming}
+        pending={restart.isPending}
+        title="Restart Noddle"
+      />
     </Frame>
   );
 }

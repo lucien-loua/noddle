@@ -153,9 +153,7 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
   return (
     <Frame stacked variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
-        <div>
-          <FrameTitle>Backing up Noddle itself</FrameTitle>
-        </div>
+        <FrameTitle>Backup</FrameTitle>
         {canRun ? (
           <ButtonGroup>
             <Button

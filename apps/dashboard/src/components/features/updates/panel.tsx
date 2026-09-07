@@ -196,7 +196,7 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
   return (
     <Frame variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
-        <FrameTitle>Noddle</FrameTitle>
+        <FrameTitle>Version</FrameTitle>
         {canUpdate && !inFlight ? (
           <Button
             disabled={launch.isPending || !data?.updatable}
