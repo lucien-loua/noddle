@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -32,7 +33,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
-import { DESTRUCTIVE_SCOPES } from "@/lib/scopes";
+import { DESTRUCTIVE_SCOPES, presetScopes, SCOPE_PRESETS } from "@/lib/scopes";
 import { copyText } from "@/lib/secure-context";
 import { createApiToken, getGrantableScopes } from "@/server/api-tokens";
 
@@ -146,6 +147,13 @@ export function ApiTokenCreateDialog({
     );
   }, []);
 
+  const applyPreset = useCallback(
+    (preset: (typeof SCOPE_PRESETS)[number]) =>
+      setChosen(presetScopes(preset, grantable.data ?? [])),
+    [grantable.data]
+  );
+  const clearScopes = useCallback(() => setChosen([]), []);
+
   const submit = useCallback(() => create.mutate(), [create]);
   const ready = name.trim().length > 0 && chosen.length > 0;
 
@@ -219,6 +227,29 @@ export function ApiTokenCreateDialog({
                   Nothing is selected by default, and this list already stops at
                   what your own role allows.
                 </FieldDescription>
+
+                <ButtonGroup>
+                  {SCOPE_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      onClick={() => applyPreset(preset)}
+                      size="xs"
+                      type="button"
+                      variant="outline"
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                  <Button
+                    disabled={chosen.length === 0}
+                    onClick={clearScopes}
+                    size="xs"
+                    type="button"
+                    variant="outline"
+                  >
+                    Clear
+                  </Button>
+                </ButtonGroup>
 
                 <div className="gap-8 sm:columns-2 lg:columns-3 xl:columns-4">
                   {groups.map(([resource, scopes]) => (

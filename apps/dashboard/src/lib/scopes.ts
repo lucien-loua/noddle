@@ -91,3 +91,23 @@ export function permissionsToScopes(
     .filter(isKnownScope)
     .toSorted();
 }
+
+export interface ScopePreset {
+  from: RoleName;
+  label: string;
+}
+
+export const SCOPE_PRESETS: ScopePreset[] = [
+  { from: "viewer", label: "Read only" },
+  { from: "deployer", label: "Deploy" },
+];
+
+export function presetScopes(
+  preset: ScopePreset,
+  grantable: readonly Scope[]
+): Scope[] {
+  const mine = new Set(grantable);
+  return grantableBy(preset.from).filter(
+    (scope) => mine.has(scope) && !DESTRUCTIVE_SCOPES.has(scope)
+  );
+}

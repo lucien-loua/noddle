@@ -4,6 +4,8 @@ import { check, runVerify, suite } from "@noddle/testing";
 import { can, ROLE_ORDER, statement } from "@/lib/permissions";
 import {
   ALL_SCOPES,
+  presetScopes,
+  SCOPE_PRESETS,
   NON_DELEGATABLE_RESOURCES,
   DESTRUCTIVE_SCOPES,
   grantableBy,
@@ -104,6 +106,41 @@ await runVerify("api token scopes", async () => {
       );
     }
   );
+
+  await suite("a preset suggests, it never widens", () => {
+    for (const preset of SCOPE_PRESETS) {
+      for (const role of ROLE_ORDER) {
+        const mine = grantableBy(role);
+        const suggested = presetScopes(preset, mine);
+        check(
+          `${preset.label} for ${role}: never exceeds what the caller may grant`,
+          suggested.every((scope) => mine.includes(scope)),
+          suggested.filter((s) => !mine.includes(s)).join(", ")
+        );
+        check(
+          `${preset.label} for ${role}: offers nothing destructive`,
+          !suggested.some((scope) => DESTRUCTIVE_SCOPES.has(scope)),
+          suggested.filter((s) => DESTRUCTIVE_SCOPES.has(s)).join(", ")
+        );
+      }
+    }
+
+    check(
+      "a viewer pressing Deploy does not get service:deploy",
+      !presetScopes(
+        SCOPE_PRESETS.find(
+          (p) => p.label === "Deploy"
+        ) as (typeof SCOPE_PRESETS)[number],
+        grantableBy("viewer")
+      ).includes("service:deploy")
+    );
+    check(
+      "an unauthenticated caller gets an empty preset",
+      SCOPE_PRESETS.every(
+        (p) => presetScopes(p, grantableBy(null)).length === 0
+      )
+    );
+  });
 
   await suite("capabilities no role grants stay unreachable", () => {
     const anyRole = new Set(ROLE_ORDER.flatMap((role) => grantableBy(role)));
