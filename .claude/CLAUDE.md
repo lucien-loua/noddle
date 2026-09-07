@@ -265,22 +265,14 @@ The design system is deliberately constrained. Treat these as limits, not defaul
 
 ## Versioning
 
-Plain semver, and **a tag is a release, never a way to get images built**
-(2026-09-07, after six tags in one day). MINOR for a capability, PATCH for a
-fix; components are integers, so 0.1.9 is followed by 0.1.10.
+Plain semver, and **a tag is a release, never a way to get images built** (2026-09-07, after six tags in one day). MINOR for a capability, PATCH for a fix; components are integers, so 0.1.9 is followed by 0.1.10.
 
 Two habits produced that churn, both mine:
 
-- **Tagging to test.** Images only come from a `v*.*.*` tag, so verifying on a
-  VPS forced a version, the verification found a bug, and the fix forced
-  another. Verify on the dev stack first; when a released version does turn out
-  broken, the PATCH that follows is semver working, not churn.
-- **Splitting one capability across versions.** Machine access was not finished
-  when tokens existed — it was finished when there was an API to use them with.
-  That should have been one MINOR, not two.
+- **Tagging to test.** Images only come from a `v*.*.*` tag, so verifying on a VPS forced a version, the verification found a bug, and the fix forced another. Verify on the dev stack first; when a released version does turn out broken, the PATCH that follows is semver working, not churn.
+- **Splitting one capability across versions.** Machine access was not finished when tokens existed — it was finished when there was an API to use them with. That should have been one MINOR, not two.
 
-Batch related work into one version. A version number is a promise to someone
-downstream, and six a day says nothing.
+Batch related work into one version. A version number is a promise to someone downstream, and six a day says nothing.
 
 ---
 
