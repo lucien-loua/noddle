@@ -1,3 +1,6 @@
+import { log } from "@noddle/shared/log";
+
+import { apiError, renderHandlerError } from "@/lib/api-errors";
 import {
   idempotencyStore,
   readIdempotencyHeader,
@@ -9,23 +12,6 @@ import { resolveToken, tokenCan } from "@/lib/token-auth.server";
 import type { TokenActor } from "@/lib/token-auth.server";
 
 const NO_STORE = Object.freeze({ "cache-control": "no-store" });
-export interface ApiError {
-  error: string;
-  message: string;
-}
-
-export function apiError(
-  status: number,
-  error: string,
-  message: string,
-  headers: Record<string, string> = {}
-): Response {
-  return Response.json({ error, message } satisfies ApiError, {
-    headers: { ...NO_STORE, ...headers },
-    status,
-  });
-}
-
 interface Need {
   action: string;
   resource: PermissionResource;
@@ -99,7 +85,14 @@ export async function withToken(
     }
     return Response.json(body, { headers: NO_STORE });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return apiError(400, "request_failed", message);
+    const rendered = renderHandlerError(error);
+    if (rendered.status >= 500) {
+      log.error("api.v1.failed", error, {
+        action: need.action,
+        resource: need.resource,
+        tokenId: actor.tokenId,
+      });
+    }
+    return apiError(rendered.status, rendered.code, rendered.message);
   }
 }

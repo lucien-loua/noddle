@@ -2,6 +2,7 @@ import { deployments } from "@noddle/db/schema";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 
+import { notFound } from "@/lib/api-errors";
 import { withToken } from "@/lib/api-v1.server";
 import { db } from "@/lib/db.server";
 
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/api/v1/deployments/$id")({
               where: eq(deployments.id, params.id),
             });
             if (!row) {
-              throw new Error("deployment not found");
+              throw notFound("deployment");
             }
             return {
               commitSha: row.commitSha,
