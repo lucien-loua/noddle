@@ -1,5 +1,15 @@
+import { apiKey } from "@better-auth/api-key";
 import { deriveSubkey } from "@noddle/crypto";
 import * as schema from "@noddle/db/schema";
+import {
+  DEFAULT_TOKEN_LIFETIME_MS,
+  DISPLAY_PREFIX_LENGTH,
+  generateToken,
+  MAX_TOKEN_LIFETIME_DAYS,
+  TOKEN_PREFIX,
+  TOKEN_RATE_LIMIT_MAX,
+  TOKEN_RATE_LIMIT_WINDOW_MS,
+} from "@noddle/shared/api-token";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -78,6 +88,25 @@ export const auth = betterAuth({
       adminRoles: ["owner", "admin"],
       defaultRole: "viewer",
       roles,
+    }),
+    apiKey({
+      customKeyGenerator: () => generateToken(),
+      defaultPrefix: TOKEN_PREFIX,
+      enableSessionForAPIKeys: false,
+      keyExpiration: {
+        defaultExpiresIn: DEFAULT_TOKEN_LIFETIME_MS,
+        maxExpiresIn: MAX_TOKEN_LIFETIME_DAYS,
+      },
+      rateLimit: {
+        enabled: true,
+        maxRequests: TOKEN_RATE_LIMIT_MAX,
+        timeWindow: TOKEN_RATE_LIMIT_WINDOW_MS,
+      },
+      requireName: true,
+      startingCharactersConfig: {
+        charactersLength: DISPLAY_PREFIX_LENGTH,
+        shouldStore: true,
+      },
     }),
   ],
   rateLimit: { enabled: true },

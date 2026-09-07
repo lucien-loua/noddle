@@ -4,6 +4,7 @@ import { user } from "#schema/auth";
 import { createdAt } from "#schema/columns";
 
 export const auditOutcome = pgEnum("audit_outcome", ["allowed", "denied"]);
+export const auditActorKind = pgEnum("audit_actor_kind", ["session", "token"]);
 
 export const auditLog = pgTable(
   "audit_log",
@@ -11,6 +12,9 @@ export const auditLog = pgTable(
     action: text("action").notNull(),
 
     actorEmail: text("actor_email").notNull(),
+    actorKind: auditActorKind("actor_kind").default("session").notNull(),
+    actorTokenId: text("actor_token_id"),
+    actorTokenName: text("actor_token_name"),
     actorUserId: text("actor_user_id").references(() => user.id, {
       onDelete: "set null",
     }),

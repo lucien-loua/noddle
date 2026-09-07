@@ -6,6 +6,7 @@
     "#*": "./src/*.ts"
   },
   "exports": {
+    "./api-token": "./src/api-token.ts",
     "./build-spec": "./src/build-spec.ts",
     "./database-spec": "./src/database-spec.ts",
     "./generate-domain": "./src/generate-domain.ts",

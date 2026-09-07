@@ -42,3 +42,8 @@ export function isWellFormedToken(token: string): boolean {
     expected.length === presented.length && timingSafeEqual(expected, presented)
   );
 }
+
+export const DEFAULT_TOKEN_LIFETIME_MS = 90 * 24 * 60 * 60 * 1000;
+export const MAX_TOKEN_LIFETIME_DAYS = 365;
+export const TOKEN_RATE_LIMIT_WINDOW_MS = 60_000;
+export const TOKEN_RATE_LIMIT_MAX = 120;
