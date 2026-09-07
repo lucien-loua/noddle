@@ -4,7 +4,6 @@ import {
   MAX_TOKEN_LIFETIME_DAYS,
 } from "@noddle/shared/api-token";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -114,7 +113,6 @@ export const createApiToken = createServerFn({ method: "POST" })
               permissions: scopesToPermissions(scopes),
               userId: session.user.id,
             },
-            headers: getRequestHeaders(),
           });
 
           return { id: created.id, token: created.key };
