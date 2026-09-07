@@ -79,14 +79,46 @@ APP_KEY=current NEW_APP_KEY=replacement \
 
 Every secret is re-encrypted in one transaction — if anything fails to decrypt, nothing is written. Put the new key in `.env` afterwards, or none of them can be read again.
 
+## Drive it from a terminal, or from CI
+
+Grab the binary for your machine from the [latest release](https://github.com/lucien-loua/noddle/releases/latest) — it carries its own runtime, so there is nothing else to install:
+
+```sh
+curl -fsSL -o noddle \
+  https://github.com/lucien-loua/noddle/releases/latest/download/noddle-linux-x64
+chmod +x noddle && sudo mv noddle /usr/local/bin/
+```
+
+It talks to the HTTP API with a token you create under **Settings → API tokens**. A token can never do more than your own role allows, whatever you grant it, and it stops being able to the moment your role narrows.
+
+```sh
+export NODDLE_URL=https://noddle.example.com
+export NODDLE_TOKEN=noddle_pat_...
+
+noddle whoami          # who this token is, and what it may do
+noddle services        # what is running
+noddle deploy <id>     # deploy one
+```
+
+In a pipeline, `--wait` is the point: it blocks until the deployment settles and **exits non-zero if it failed or rolled back**, so the job fails with it.
+
+```yaml
+- run: noddle deploy $SERVICE --wait --timeout 600
+  env:
+    NODDLE_URL: ${{ vars.NODDLE_URL }}
+    NODDLE_TOKEN: ${{ secrets.NODDLE_TOKEN }}
+```
+
+Exit codes are the contract: `0` worked, `1` failed, `2` the command line was wrong. Add `--json` to anything for machine-readable output.
+
 ## Status
 
-The deploy loop works and has been run against real machines. Nothing has shipped a release yet.
+The deploy loop works and has been run against real machines, and there are tagged releases with images on GHCR. Nobody runs it in production yet.
 
 |  |  |
 | --- | --- |
-| ✅ Works | deploy loop, multi-server, databases, Compose stacks, backups, previews, registry builds, RBAC, audit log, notifications |
-| 🚧 Not built | CLI, teams and multi-tenancy |
+| ✅ Works | deploy loop, multi-server, databases, Compose stacks, backups, previews, registry builds, RBAC, audit log, notifications, API tokens, HTTP API, CLI |
+| 🚧 Not built | teams and multi-tenancy |
 | 🔬 Proven on | a Multipass VM at 2 GB, and a public VPS for the TLS path |
 | ⚠️ Not proven | long-lived production. Nobody runs this for real yet, us included |
 

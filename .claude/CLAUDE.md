@@ -92,11 +92,10 @@ Targets are **Multipass VMs** over real SSH — not DinD, not OrbStack.
 
 ## Current phase
 
-Phases 0–4 core are **done** (deploy loop, multi-server, backups, notifications, resources, RBAC, registry builds, previews, audit log).
+Phases 0–4 core are **done** (deploy loop, multi-server, backups, notifications, resources, RBAC, registry builds, previews, audit log), plus machine access: API tokens, `/api/v1`, and the `noddle` CLI.
 
 Still open:
 
-- **CLI**
 - **Teams / multi-tenancy** (distinct from RBAC)
 
 Phase 0 spike CI (`.github/workflows/spike.yml`) must stay green — do not let a red spike sit. Local Multipass remains the 2 GB pre-ship gate.

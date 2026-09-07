@@ -96,18 +96,49 @@ jobs:
             echo "noddle-$app: $stamped"
           done
 
+      - name: Build the CLI, with the bun the images are pinned to
+        run: |
+          set -euo pipefail
+          pinned="$(grep -oE 'BUN_VERSION = "[^"]+"' \
+            packages/shared/src/toolchain.ts | cut -d'"' -f2)"
+          curl -fsSL https://bun.sh/install | bash -s "bun-v${pinned}"
+          export PATH="$HOME/.bun/bin:$PATH"
+          [ "$(bun --version)" = "$pinned" ] \
+            || { echo "bun is $(bun --version), expected $pinned"; exit 1; }
+          bun install --frozen-lockfile
+          mkdir -p dist
+          for target in linux-x64 linux-arm64 darwin-arm64 darwin-x64; do
+            bun build --compile --minify \
+              --target="bun-$target" apps/cli/src/index.ts \
+              --outfile "dist/noddle-$target"
+          done
+          ls -l dist/
+
+      - name: The binaries run
+        run: |
+          set -euo pipefail
+          out="$(./dist/noddle-linux-x64 --help)"
+          case "$out" in *"noddle deploy"*) echo "help renders" ;;
+            *) echo "the binary does not print its help"; exit 1 ;;
+          esac
+          ./dist/noddle-linux-x64 whoami >/dev/null 2>&1 && {
+            echo "whoami should have failed without a token"; exit 1
+          }
+          echo "and exits non-zero without a token"
+
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           if gh release view "$NODDLE_VERSION" >/dev/null 2>&1; then
-            echo "release $NODDLE_VERSION already exists, leaving it alone"
+            gh release upload "$NODDLE_VERSION" dist/noddle-* --clobber
             exit 0
           fi
           gh release create "$NODDLE_VERSION" \
             --title "$NODDLE_VERSION" \
-            --generate-notes
+            --generate-notes \
+            dist/noddle-*
 
       - name: Summary
         if: always()
@@ -117,6 +148,6 @@ jobs:
             echo
             echo '| Image | Tag |'
             echo '|---|---|'
-            echo "| noddle-web | \`$REGISTRY/noddle-web:$NODDLE_VERSION\` |"
+            echo "| noddle-dashboard | \`$REGISTRY/noddle-dashboard:$NODDLE_VERSION\` |"
             echo "| noddle-worker | \`$REGISTRY/noddle-worker:$NODDLE_VERSION\` |"
           } >> "$GITHUB_STEP_SUMMARY"
