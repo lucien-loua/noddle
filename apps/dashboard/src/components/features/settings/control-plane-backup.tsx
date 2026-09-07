@@ -151,7 +151,7 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
   }
 
   return (
-    <Frame variant="ghost">
+    <Frame stacked variant="ghost">
       <FrameHeader className="flex-row items-center justify-between gap-3">
         <div>
           <FrameTitle>Backing up Noddle itself</FrameTitle>
@@ -174,37 +174,37 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
         ) : null}
       </FrameHeader>
 
-      <FramePanel className="space-y-3">
-        {canRun ? (
-          <div className="flex items-center gap-3 text-xs">
-            <span className="min-w-0 flex-1 text-muted-foreground">
-              Destination
-            </span>
-            <Combobox
-              items={rows}
-              itemToStringLabel={(row: DestinationRow) => row.name}
-              itemToStringValue={(row: DestinationRow) => row.name}
-              onValueChange={handleChoose}
-              value={selected}
-            >
-              <ComboboxInput
-                aria-label="Backup destination"
-                placeholder="Choose an S3 destination"
-              />
-              <ComboboxContent>
-                <ComboboxEmpty>No destination matches.</ComboboxEmpty>
-                <ComboboxList>
-                  {(row: DestinationRow) => (
-                    <ComboboxItem key={row.id} value={row}>
-                      {row.name}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </div>
-        ) : null}
+      {canRun ? (
+        <FramePanel className="flex flex-row items-center justify-between gap-3">
+          <span className="min-w-0 flex-1 text-muted-foreground text-xs">
+            Destination
+          </span>
+          <Combobox
+            items={rows}
+            itemToStringLabel={(row: DestinationRow) => row.name}
+            itemToStringValue={(row: DestinationRow) => row.name}
+            onValueChange={handleChoose}
+            value={selected}
+          >
+            <ComboboxInput
+              aria-label="Backup destination"
+              placeholder="Choose an S3 destination"
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>No destination matches.</ComboboxEmpty>
+              <ComboboxList>
+                {(row: DestinationRow) => (
+                  <ComboboxItem key={row.id} value={row}>
+                    {row.name}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </FramePanel>
+      ) : null}
 
+      <FramePanel>
         <Outcome settings={settings.data} />
       </FramePanel>
 
