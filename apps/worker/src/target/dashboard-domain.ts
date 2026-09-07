@@ -88,3 +88,51 @@ export async function configureDashboardDomain(
     throw error;
   }
 }
+
+const RESTART_SETTLE_SECONDS = 5;
+
+export async function restartControlPlane(ctx: DeployContext): Promise<void> {
+  const host = await ctx.db.query.servers.findFirst({
+    where: eq(servers.isSelf, true),
+  });
+  if (!host) {
+    throw new Error(
+      "this Noddle was not installed by install.sh, so it does not manage its own host"
+    );
+  }
+
+  const settings = await ctx.db.query.controlPlaneSettings.findFirst();
+  const files =
+    settings?.httpsEnabled && settings.domain
+      ? "-f docker-compose.yml -f docker-compose.tls.yml"
+      : "-f docker-compose.yml";
+
+  const restart = [
+    `sleep ${RESTART_SETTLE_SECONDS}`,
+    [
+      "docker compose",
+      `--project-directory ${quoteArg(`${NODDLE_DIR}/installer`)}`,
+      `--env-file ${quoteArg(`${NODDLE_DIR}/installer/.env`)}`,
+      files
+        .split(" ")
+        .map((part) =>
+          part === "-f" ? part : quoteArg(`${NODDLE_DIR}/installer/${part}`)
+        )
+        .join(" "),
+      "restart dashboard worker",
+    ].join(" "),
+  ].join(" && ");
+
+  const client = await ctx.connectTo(host);
+  try {
+    const result = await exec(
+      client,
+      `sudo sh -c ${quoteArg(`setsid nohup sh -c ${quoteArg(restart)} > /var/log/noddle-restart.log 2>&1 < /dev/null &`)}`
+    );
+    if (result.code !== 0) {
+      throw new Error(result.stderr.trim() || `exited ${result.code}`);
+    }
+  } finally {
+    client.end();
+  }
+}

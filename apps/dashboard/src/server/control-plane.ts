@@ -124,6 +124,22 @@ export const runMaintenance = createServerFn({ method: "POST" })
     return { queued: true };
   });
 
+export const restartControlPlane = createServerFn({ method: "POST" }).handler(
+  async (): Promise<{ queued: true }> => {
+    await requirePermission(CONTROL_PLANE_PERMISSION);
+    const host = await db.query.servers.findFirst({
+      where: eq(servers.isSelf, true),
+    });
+    if (!host) {
+      throw new Error(
+        "This Noddle was not installed by install.sh, so it cannot restart itself."
+      );
+    }
+    await enqueueDeploy({ kind: "restart-control-plane" });
+    return { queued: true };
+  }
+);
+
 export const saveBackupDestination = createServerFn({ method: "POST" })
   .validator(z.object({ destinationId: z.uuid().nullable() }))
   .handler(async ({ data }): Promise<{ saved: true }> => {

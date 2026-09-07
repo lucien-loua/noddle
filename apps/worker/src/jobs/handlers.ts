@@ -100,6 +100,10 @@ export const handlers: Handlers = {
       await handlerModules["dashboard-domain"]();
     await configureDashboardDomain(ctx);
   },
+  "restart-control-plane": async ({ ctx }) => {
+    const { restartControlPlane } = await handlerModules["dashboard-domain"]();
+    await restartControlPlane(ctx);
+  },
   "provision-server": async ({ ctx }, data) => {
     const { provisionServer } = await handlerModules.provision();
     await provisionServer(ctx, data.serverId);
