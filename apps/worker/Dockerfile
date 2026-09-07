@@ -1,12 +1,13 @@
+ARG BUN_VERSION=1.4.2
+FROM oven/bun:${BUN_VERSION} AS bun
+
 FROM node:24-slim
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl unzip \
+  && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-ARG BUN_VERSION=1.4.2
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
-ENV PATH="/root/.bun/bin:${PATH}"
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /noddle
 

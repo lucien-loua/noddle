@@ -59,7 +59,7 @@ jobs:
         run: |
           printf '%s' "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
 
-      - name: Build and push the images
+      - name: Build every image before pushing any
         run: |
           set -euo pipefail
           for app in dashboard worker; do
@@ -71,6 +71,14 @@ jobs:
               --tag "$image:$NODDLE_VERSION" \
               --tag "$image:latest" \
               .
+            echo "built $image:$NODDLE_VERSION"
+          done
+
+      - name: Push them
+        run: |
+          set -euo pipefail
+          for app in dashboard worker; do
+            image="$REGISTRY/noddle-$app"
             docker push "$image:$NODDLE_VERSION"
             docker push "$image:latest"
             echo "pushed $image:$NODDLE_VERSION"

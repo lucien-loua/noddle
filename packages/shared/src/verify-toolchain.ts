@@ -20,7 +20,7 @@ const INSTALLER = new URL("../../../installer/install.sh", import.meta.url)
 const DOCKERFILES = ["dashboard", "worker"].map(
   (app) => new URL(`../../../apps/${app}/Dockerfile`, import.meta.url).pathname
 );
-const FLOATING_BUN = /oven\/bun:\d+\s*$|bun\.sh\/install[^\n]*\|\s*bash\s*$/m;
+const FLOATING_BUN = /oven\/bun:(?!\$\{)|bun\.sh\/install/;
 
 await runVerify("toolchain pinning", () => {
   check(
