@@ -162,7 +162,7 @@ export function ApiTokenCreateDialog({
           <Reveal onDone={close} token={issued} />
         ) : (
           <>
-            <FocusModalBody className="min-h-0 space-y-10 overflow-y-auto">
+            <FocusModalBody className="min-h-0 space-y-14 overflow-y-auto">
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="token-name">Name</FieldLabel>
@@ -220,13 +220,15 @@ export function ApiTokenCreateDialog({
                   what your own role allows.
                 </FieldDescription>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="gap-8 sm:columns-2 lg:columns-3 xl:columns-4">
                   {groups.map(([resource, scopes]) => (
                     <section
-                      className="space-y-2 rounded-2xl bg-muted p-3"
+                      className="mb-6 break-inside-avoid space-y-2.5"
                       key={resource}
                     >
-                      <h3 className="text-sm">{resource}</h3>
+                      <h3 className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        {resource}
+                      </h3>
                       <div className="flex flex-col gap-1.5">
                         {scopes.map((scope) => {
                           const action = scope.split(":")[1] ?? scope;
