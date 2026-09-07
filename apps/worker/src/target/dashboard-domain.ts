@@ -88,37 +88,3 @@ export async function configureDashboardDomain(
     throw error;
   }
 }
-
-export async function reloadControlPlane(ctx: DeployContext): Promise<void> {
-  const host = await ctx.db.query.servers.findFirst({
-    where: eq(servers.isSelf, true),
-  });
-  if (!host) {
-    throw new Error(
-      "this Noddle was not installed by install.sh, so it does not manage its own host"
-    );
-  }
-
-  const settings = await ctx.db.query.controlPlaneSettings.findFirst();
-  const files =
-    settings?.httpsEnabled && settings.domain
-      ? "-f docker-compose.yml -f docker-compose.tls.yml"
-      : "-f docker-compose.yml";
-
-  const client = await ctx.connectTo(host);
-  try {
-    const result = await exec(
-      client,
-      [
-        "set -euo pipefail",
-        `cd ${quoteArg(`${NODDLE_DIR}/installer`)}`,
-        `sudo docker compose --env-file .env ${files} restart`,
-      ].join(" && ")
-    );
-    if (result.code !== 0) {
-      throw new Error(result.stderr.trim() || `exited ${result.code}`);
-    }
-  } finally {
-    client.end();
-  }
-}

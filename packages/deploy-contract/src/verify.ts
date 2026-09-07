@@ -29,7 +29,6 @@ const samples: { [K in JobKind]: PayloadOf<K> } = {
   lifecycle: { action: "restart", kind: "lifecycle", serviceId: ID },
   "provision-database": { databaseId: ID, kind: "provision-database" },
   "configure-dashboard-domain": { kind: "configure-dashboard-domain" },
-  "reload-control-plane": { kind: "reload-control-plane" },
   "provision-server": { kind: "provision-server", serverId: ID },
   "prune-docker": { kind: "prune-docker" },
   "prune-registry": { kind: "prune-registry" },

@@ -77,9 +77,6 @@ export const deployJobSchema = z.discriminatedUnion("kind", [
     kind: z.literal("configure-dashboard-domain"),
   }),
   z.strictObject({
-    kind: z.literal("reload-control-plane"),
-  }),
-  z.strictObject({
     kind: z.literal("provision-server"),
     serverId: z.uuid(),
   }),
