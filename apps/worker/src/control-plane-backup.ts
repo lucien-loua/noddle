@@ -283,11 +283,27 @@ export async function restoreControlPlane(
       );
     }
 
+    const version = process.env.NODDLE_VERSION;
+    if (!version) {
+      throw new Error(
+        "this process carries no NODDLE_VERSION, so recreating the containers would rebuild them from source instead of pulling the release"
+      );
+    }
+
+    const recreate = [
+      `NODDLE_VERSION=${quoteArg(version)}`,
+      "docker compose",
+      "--project-directory /opt/noddle/installer",
+      `--env-file ${ENV_FILE}`,
+      "-f /opt/noddle/installer/docker-compose.yml",
+      "up -d --no-build --force-recreate dashboard worker",
+    ].join(" ");
+
     await execArgv(client, [
       "sudo",
       "sh",
       "-c",
-      `setsid nohup docker compose --project-directory /opt/noddle/installer --env-file ${ENV_FILE} -f /opt/noddle/installer/docker-compose.yml up -d --force-recreate dashboard worker > /var/log/noddle-restore.log 2>&1 < /dev/null &`,
+      `setsid nohup sh -c ${quoteArg(recreate)} > /var/log/noddle-restore.log 2>&1 < /dev/null &`,
     ]);
 
     log.write("control-plane.restored", { key, ms: Date.now() - startedAt });
