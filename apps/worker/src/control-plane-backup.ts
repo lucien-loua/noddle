@@ -19,6 +19,46 @@ import { eq } from "drizzle-orm";
 
 import type { DeployContext } from "#runtime-context";
 
+export const KEYS_FROM_ARCHIVE = ["APP_KEY", "REGISTRY_PASSWORD"] as const;
+
+export function restoreScript(restoreCommand: string): string {
+  return [
+    "set -e",
+    "d=$(mktemp -d)",
+    'trap "rm -rf $d" EXIT',
+    'tar -xf - -C "$d"',
+    assertArchiveKeysScript("$d/env"),
+    `${restoreCommand} < $d/database.dump`,
+    `rm -rf ${NODDLE_ETC}`,
+    `cp -a $d/etc-noddle ${NODDLE_ETC}`,
+    mergeArchiveKeysScript("$d/env", ENV_FILE),
+  ].join("; ");
+}
+
+export function assertArchiveKeysScript(archiveEnv: string): string {
+  return (
+    `for k in ${KEYS_FROM_ARCHIVE.join(" ")}; do ` +
+    `n=$(grep -c "^$k=" ${archiveEnv} || true); ` +
+    'if [ "$n" != "1" ]; then ' +
+    `echo "restore aborted: ${archiveEnv} holds $n lines for $k, expected exactly 1" >&2; ` +
+    "exit 1; fi; done"
+  );
+}
+
+export function mergeArchiveKeysScript(
+  archiveEnv: string,
+  envFile: string
+): string {
+  return (
+    `for k in ${KEYS_FROM_ARCHIVE.join(" ")}; do ` +
+    `v=$(grep "^$k=" ${archiveEnv} | cut -d= -f2-); ` +
+    `if [ -n "$v" ]; then ` +
+    `sed -i "/^$k=/d" ${envFile}; ` +
+    `printf "%s=%s\\n" "$k" "$v" >> ${envFile}; ` +
+    "fi; done"
+  );
+}
+
 const NOT_AN_INSTALL = new Set(["127.0.0.1", "::1", "localhost"]);
 
 async function postgresContainer(
@@ -258,16 +298,7 @@ export async function restoreControlPlane(
       quoteArg(database),
     ].join(" ");
 
-    const script = [
-      "set -e",
-      "d=$(mktemp -d)",
-      'trap "rm -rf $d" EXIT',
-      'tar -xf - -C "$d"',
-      `${restore} < $d/database.dump`,
-      `rm -rf ${NODDLE_ETC}`,
-      `cp -a $d/etc-noddle ${NODDLE_ETC}`,
-      `for k in APP_KEY REGISTRY_PASSWORD; do v=$(grep "^$k=" $d/env | cut -d= -f2-); if [ -n "$v" ]; then sed -i "/^$k=/d" ${ENV_FILE}; printf "%s=%s\\n" "$k" "$v" >> ${ENV_FILE}; fi; done`,
-    ].join("; ");
+    const script = restoreScript(restore);
 
     const result = await execStream(
       client,
