@@ -274,6 +274,8 @@ Two habits produced that churn, both mine:
 
 Batch related work into one version. A version number is a promise to someone downstream, and six a day says nothing.
 
+**The test for a MINOR: would an operator change what they do?** A capability they did not have passes. Endpoints added to a surface that already exists, a screen made better, a fix to something already shipped — all PATCH, however much work they were. Effort is not the unit; what the operator gains is. `v0.8.0` (tokens) then `v0.9.0` (an API to use them with) spent two MINORs on one answer to one question, and the line moved 0.7 to 0.9 in a day while the product gained a single capability.
+
 ---
 
 ## Working conventions
