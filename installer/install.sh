@@ -37,7 +37,10 @@ if [ -z "${NODDLE_REEXEC:-}" ]; then
 fi
 trap '$SUDO rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
 
-SELF_BEFORE="$($SUDO sha256sum "$0" | cut -d' ' -f1)"
+SELF_BEFORE=""
+if [ -f "$0" ]; then
+  SELF_BEFORE="$($SUDO sha256sum "$0" | cut -d' ' -f1)"
+fi
 
 say "Docker"
 if command -v docker >/dev/null 2>&1; then
@@ -116,7 +119,8 @@ esac
 
 INSTALLED_SELF="$NODDLE_DIR/installer/install.sh"
 SELF_AFTER="$($SUDO sha256sum "$INSTALLED_SELF" | cut -d' ' -f1)"
-if [ -z "${NODDLE_REEXEC:-}" ] && [ "$SELF_BEFORE" != "$SELF_AFTER" ]; then
+if [ -n "$SELF_BEFORE" ] && [ -z "${NODDLE_REEXEC:-}" ] &&
+  [ "$SELF_BEFORE" != "$SELF_AFTER" ]; then
   say "The installer itself changed with this release"
   echo "re-running $INSTALLED_SELF"
   export NODDLE_REEXEC=1 NODDLE_REF

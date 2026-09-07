@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        privilege: [root, sudo]
+        privilege: [root, sudo, piped]
 
     steps:
       - uses: actions/checkout@v5
@@ -51,14 +51,21 @@ jobs:
       - name: Install as ${{ matrix.privilege }}
         run: |
           set -euo pipefail
-          if [ "${{ matrix.privilege }}" = "root" ]; then
-            sudo env -u SUDO_USER \
+          case "${{ matrix.privilege }}" in
+            root)
+              sudo env -u SUDO_USER \
+                NODDLE_REPO="$GITHUB_WORKSPACE" NODDLE_REF=ci-under-test \
+                bash installer/install.sh
+              ;;
+            sudo)
               NODDLE_REPO="$GITHUB_WORKSPACE" NODDLE_REF=ci-under-test \
-              bash installer/install.sh
-          else
-            NODDLE_REPO="$GITHUB_WORKSPACE" NODDLE_REF=ci-under-test \
-              bash installer/install.sh
-          fi
+                bash installer/install.sh
+              ;;
+            piped)
+              NODDLE_REPO="$GITHUB_WORKSPACE" NODDLE_REF=ci-under-test \
+                bash -c 'cat installer/install.sh | bash'
+              ;;
+          esac
 
       - name: The dashboard answers
         run: |
