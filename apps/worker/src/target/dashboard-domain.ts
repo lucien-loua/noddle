@@ -90,6 +90,29 @@ export async function configureDashboardDomain(
 }
 
 const RESTART_SETTLE_SECONDS = 5;
+const RESTART_SERVICES = "dashboard worker";
+
+export function restartCommand(https: boolean): string {
+  const files = https
+    ? ["docker-compose.yml", "docker-compose.tls.yml"]
+    : ["docker-compose.yml"];
+
+  const restart = [
+    `sleep ${RESTART_SETTLE_SECONDS}`,
+    [
+      "docker compose",
+      `--project-directory ${quoteArg(`${NODDLE_DIR}/installer`)}`,
+      `--env-file ${quoteArg(`${NODDLE_DIR}/installer/.env`)}`,
+      files
+        .map((f) => `-f ${quoteArg(`${NODDLE_DIR}/installer/${f}`)}`)
+        .join(" "),
+      `restart ${RESTART_SERVICES}`,
+    ].join(" "),
+  ].join(" && ");
+
+  const detached = `setsid nohup sh -c ${quoteArg(restart)} > /var/log/noddle-restart.log 2>&1 < /dev/null &`;
+  return `sudo sh -c ${quoteArg(detached)}`;
+}
 
 export async function restartControlPlane(ctx: DeployContext): Promise<void> {
   const host = await ctx.db.query.servers.findFirst({
@@ -102,33 +125,11 @@ export async function restartControlPlane(ctx: DeployContext): Promise<void> {
   }
 
   const settings = await ctx.db.query.controlPlaneSettings.findFirst();
-  const files =
-    settings?.httpsEnabled && settings.domain
-      ? "-f docker-compose.yml -f docker-compose.tls.yml"
-      : "-f docker-compose.yml";
-
-  const restart = [
-    `sleep ${RESTART_SETTLE_SECONDS}`,
-    [
-      "docker compose",
-      `--project-directory ${quoteArg(`${NODDLE_DIR}/installer`)}`,
-      `--env-file ${quoteArg(`${NODDLE_DIR}/installer/.env`)}`,
-      files
-        .split(" ")
-        .map((part) =>
-          part === "-f" ? part : quoteArg(`${NODDLE_DIR}/installer/${part}`)
-        )
-        .join(" "),
-      "restart dashboard worker",
-    ].join(" "),
-  ].join(" && ");
+  const https = Boolean(settings?.httpsEnabled && settings.domain);
 
   const client = await ctx.connectTo(host);
   try {
-    const result = await exec(
-      client,
-      `sudo sh -c ${quoteArg(`setsid nohup sh -c ${quoteArg(restart)} > /var/log/noddle-restart.log 2>&1 < /dev/null &`)}`
-    );
+    const result = await exec(client, restartCommand(https));
     if (result.code !== 0) {
       throw new Error(result.stderr.trim() || `exited ${result.code}`);
     }
