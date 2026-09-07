@@ -1,4 +1,5 @@
 export * from "#schema/audit";
+export * from "#schema/api-keys";
 export * from "#schema/auth";
 export * from "#schema/backups";
 export * from "#schema/databases";

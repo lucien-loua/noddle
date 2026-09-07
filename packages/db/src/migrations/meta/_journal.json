@@ -43,6 +43,13 @@
       "when": 1788709349802,
       "tag": "0005_fresh_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788796260427,
+      "tag": "0006_unusual_tyrannus",
+      "breakpoints": true
     }
   ]
 }
