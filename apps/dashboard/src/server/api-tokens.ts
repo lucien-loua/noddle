@@ -18,12 +18,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_NAME = 60;
 
 export interface ApiTokenRow {
-  createdAt: Date;
+  createdAt: string;
   effectiveScopes: string[];
-  expiresAt: Date | null;
+  expiresAt: string | null;
   grantedScopes: string[];
   id: string;
-  lastRequest: Date | null;
+  lastRequest: string | null;
   name: string;
   start: string | null;
 }
@@ -70,12 +70,12 @@ export const getApiTokens = createServerFn().handler(
           )
           .toSorted();
         return {
-          createdAt: row.createdAt,
+          createdAt: row.createdAt.toISOString(),
           effectiveScopes: narrowToRole(granted, role),
-          expiresAt: row.expiresAt,
+          expiresAt: row.expiresAt?.toISOString() ?? null,
           grantedScopes: granted,
           id: row.id,
-          lastRequest: row.lastRequest,
+          lastRequest: row.lastRequest?.toISOString() ?? null,
           name: row.name ?? "unnamed",
           start: row.start,
         };

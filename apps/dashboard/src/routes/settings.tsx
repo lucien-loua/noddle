@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/app-shell";
 import { DashboardDomain } from "@/components/features/servers/dashboard-domain";
+import { ApiTokensPanel } from "@/components/features/settings/api-tokens-panel";
 import { ControlPlaneBackup } from "@/components/features/settings/control-plane-backup";
 import { Maintenance } from "@/components/features/settings/maintenance";
 import { UpdatePanel } from "@/components/features/updates/panel";
@@ -37,6 +38,7 @@ function SettingsPage() {
 
         <div className="flex flex-col gap-4">
           <ControlPlaneBackup canRun={canAdmin} />
+          <ApiTokensPanel />
           <Maintenance canRun={canAdmin} />
         </div>
       </div>
