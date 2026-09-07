@@ -1,4 +1,5 @@
-FROM oven/bun:1
+ARG BUN_VERSION=1.4.2
+FROM oven/bun:${BUN_VERSION}
 
 WORKDIR /noddle
 

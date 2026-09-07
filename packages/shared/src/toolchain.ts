@@ -5,3 +5,5 @@ export function railpackInstallCommand(sudo = "sudo"): string {
 }
 
 export const BUILDKIT_IMAGE = "moby/buildkit:v0.27.0";
+
+export const BUN_VERSION = "1.4.2";

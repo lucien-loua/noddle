@@ -5,6 +5,7 @@ import { check, runVerify } from "@noddle/testing";
 
 import {
   BUILDKIT_IMAGE,
+  BUN_VERSION,
   RAILPACK_VERSION,
   railpackInstallCommand,
 } from "#toolchain";
@@ -16,6 +17,10 @@ const PINNED_IMAGE = /^moby\/buildkit:v\d+\.\d+\.\d+$/;
 
 const INSTALLER = new URL("../../../installer/install.sh", import.meta.url)
   .pathname;
+const DOCKERFILES = ["dashboard", "worker"].map(
+  (app) => new URL(`../../../apps/${app}/Dockerfile`, import.meta.url).pathname
+);
+const FLOATING_BUN = /oven\/bun:\d+\s*$|bun\.sh\/install[^\n]*\|\s*bash\s*$/m;
 
 await runVerify("toolchain pinning", () => {
   check(
@@ -56,4 +61,25 @@ await runVerify("toolchain pinning", () => {
     installer.includes(BUILDKIT_IMAGE),
     `installer does not carry ${BUILDKIT_IMAGE}`
   );
+
+  check(
+    "the bun version is pinned, not a range or a tag",
+    SEMVER.test(BUN_VERSION),
+    `got "${BUN_VERSION}"`
+  );
+
+  for (const path of DOCKERFILES) {
+    const dockerfile = readFileSync(path, "utf-8");
+    const app = path.split("/").at(-2);
+    check(
+      `the ${app} image pins the SAME bun`,
+      dockerfile.includes(`ARG BUN_VERSION=${BUN_VERSION}`),
+      `${app} does not carry ARG BUN_VERSION=${BUN_VERSION}`
+    );
+    check(
+      `the ${app} image never takes whatever bun is latest`,
+      !FLOATING_BUN.test(dockerfile),
+      `${app} still has a floating bun line`
+    );
+  }
 });
