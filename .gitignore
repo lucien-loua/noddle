@@ -43,6 +43,7 @@ test-results
 
 # Claude Code
 .playwright-mcp/
+/*.png
 plans/
 
 # Local issue tracker / agent scratch

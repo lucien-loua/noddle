@@ -1,0 +1,19 @@
+{
+  "name": "@noddle/cli",
+  "private": true,
+  "bin": {
+    "noddle": "./src/index.ts"
+  },
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "bun build --compile --minify src/index.ts --outfile dist/noddle",
+    "verify:pure": "noddle-verify pure"
+  },
+  "devDependencies": {
+    "@noddle/testing": "workspace:*",
+    "@noddle/tsconfig": "workspace:*"
+  }
+}

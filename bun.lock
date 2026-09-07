@@ -16,6 +16,16 @@
         "vite-plus": "^0.2.9",
       },
     },
+    "apps/cli": {
+      "name": "@noddle/cli",
+      "bin": {
+        "noddle": "./src/index.ts",
+      },
+      "devDependencies": {
+        "@noddle/testing": "workspace:*",
+        "@noddle/tsconfig": "workspace:*",
+      },
+    },
     "apps/dashboard": {
       "name": "@noddle/dashboard",
       "dependencies": {
@@ -543,6 +553,8 @@
     "@noble/hashes": ["@noble/hashes@2.2.0", "", {}, "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="],
 
     "@noddle/backup": ["@noddle/backup@workspace:packages/backup"],
+
+    "@noddle/cli": ["@noddle/cli@workspace:apps/cli"],
 
     "@noddle/crypto": ["@noddle/crypto@workspace:packages/crypto"],
 

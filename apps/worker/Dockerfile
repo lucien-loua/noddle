@@ -12,6 +12,7 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /noddle
 
 COPY package.json bun.lock ./
+COPY apps/cli/package.json apps/cli/
 COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/worker/package.json apps/worker/
 COPY packages/backup/package.json packages/backup/
