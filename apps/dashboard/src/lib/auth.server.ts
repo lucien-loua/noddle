@@ -18,12 +18,17 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin as adminPlugin } from "better-auth/plugins";
+import {
+  admin as adminPlugin,
+  organization as organizationPlugin,
+} from "better-auth/plugins";
 import { count } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { ac, roles } from "@/lib/permissions";
+
+const TEAM_LIMIT = 50;
 
 function forwardedOrigin(request: Request): string | null {
   const host =
@@ -88,6 +93,10 @@ export const auth = betterAuth({
       adminRoles: ["owner", "admin"],
       defaultRole: "viewer",
       roles,
+    }),
+    organizationPlugin({
+      allowUserToCreateOrganization: false,
+      organizationLimit: TEAM_LIMIT,
     }),
     apiKey({
       customKeyGenerator: () => generateToken(),

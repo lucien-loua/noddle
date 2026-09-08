@@ -18,4 +18,5 @@ export * from "#schema/service-domains";
 export * from "#schema/services";
 export * from "#schema/ssh-keys";
 export * from "#schema/stacks";
+export * from "#schema/teams";
 export * from "#schema/volume-backups";

@@ -12,6 +12,10 @@ Noddle deploys applications and databases to a server you own, from a single das
 
 **Self host**: The installer's own machine registered as the first target server (`isSelf`). Display fact only — deploy path is the same SSH executor as any other target. _Avoid_: Localhost special case, control plane host
 
+**Team**: The unit of isolation inside one installation. A Team owns Projects, and everything under them — Environments, Services, Databases, Deployments. It does NOT own machines: Target servers, SSH keys, registries and backup destinations belong to the installation, because the company buys and operates them and a product team does not bring its own. _Avoid_: organization, workspace, tenant (in prose)
+
+**In the database a Team is a row in `organization`**, with `member` and `invitation` beside it, because better-auth's organization plugin owns those tables and its own `team` already means a sub-group _inside_ an organization — which Noddle does not enable. Renaming them is not available: `invitation` carries `organizationId` AND `teamId`, so mapping one onto the other collides inside a single table. One word in the product, the plugin's words in the schema, and this paragraph is the join between them.
+
 **Project**: A tenant-facing grouping of services the user deploys and operates together. A project is never without at least one environment.
 
 **Environment**: A named slice of a Project (production, staging, …) that holds Services, Stacks and Databases. _Avoid_: stage, namespace
