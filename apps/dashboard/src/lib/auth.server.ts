@@ -1,6 +1,9 @@
+import { randomUUID } from "node:crypto";
+
 import { apiKey } from "@better-auth/api-key";
 import { deriveSubkey } from "@noddle/crypto";
 import * as schema from "@noddle/db/schema";
+import { DEFAULT_TEAM_ID } from "@noddle/db/schema";
 import {
   DEFAULT_TOKEN_LIFETIME_MS,
   DISPLAY_PREFIX_LENGTH,
@@ -22,7 +25,7 @@ import {
   admin as adminPlugin,
   organization as organizationPlugin,
 } from "better-auth/plugins";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
@@ -75,6 +78,39 @@ export const auth = betterAuth({
             });
           }
           return { data: { ...user, role: "owner" } };
+        },
+
+        after: async (created) => {
+          await db
+            .insert(schema.member)
+            .values({
+              id: randomUUID(),
+              organizationId: DEFAULT_TEAM_ID,
+              role: "member",
+              userId: created.id,
+            })
+            .onConflictDoNothing();
+        },
+      },
+    },
+
+    session: {
+      create: {
+        before: async (session) => {
+          const [membership] = await db
+            .select({ organizationId: schema.member.organizationId })
+            .from(schema.member)
+            .where(eq(schema.member.userId, session.userId))
+            .limit(1);
+
+          return membership
+            ? {
+                data: {
+                  ...session,
+                  activeOrganizationId: membership.organizationId,
+                },
+              }
+            : undefined;
         },
       },
     },
