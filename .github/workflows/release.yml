@@ -113,7 +113,8 @@ jobs:
               --target="bun-$target" apps/cli/src/index.ts \
               --outfile "dist/noddle-$target"
           done
-          ls -l dist/
+          ( cd dist && sha256sum noddle-* > checksums.txt )
+          cat dist/checksums.txt
 
       - name: The binaries run
         run: |
@@ -130,6 +131,8 @@ jobs:
           [ "$stamped" = "$NODDLE_VERSION" ] \
             || { echo "the binary reports '$stamped'"; exit 1; }
           echo "and knows it is $stamped"
+          ( cd dist && sha256sum --check checksums.txt )
+          echo "and the checksums match what was built"
 
       - name: GitHub Release
         env:
@@ -137,13 +140,13 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$NODDLE_VERSION" >/dev/null 2>&1; then
-            gh release upload "$NODDLE_VERSION" dist/noddle-* --clobber
+            gh release upload "$NODDLE_VERSION" dist/noddle-* dist/checksums.txt --clobber
             exit 0
           fi
           gh release create "$NODDLE_VERSION" \
             --title "$NODDLE_VERSION" \
             --generate-notes \
-            dist/noddle-*
+            dist/noddle-* dist/checksums.txt
 
       - name: Summary
         if: always()

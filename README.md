@@ -81,13 +81,23 @@ Every secret is re-encrypted in one transaction — if anything fails to decrypt
 
 ## Drive it from a terminal, or from CI
 
-Grab the binary for your machine from the [latest release](https://github.com/lucien-loua/noddle/releases/latest) — it carries its own runtime, so there is nothing else to install:
+Grab the binary for your machine from a [release](https://github.com/lucien-loua/noddle/releases) — it carries its own runtime, so there is nothing else to install. **Pin the version**, the same way you would pin anything else a pipeline depends on:
 
 ```sh
-curl -fsSL -o noddle \
-  https://github.com/lucien-loua/noddle/releases/latest/download/noddle-linux-x64
-chmod +x noddle && sudo mv noddle /usr/local/bin/
+NODDLE_CLI=v0.10.0
+BASE=https://github.com/lucien-loua/noddle/releases/download/$NODDLE_CLI
+
+curl -fsSL -O "$BASE/noddle-linux-x64"
+curl -fsSL -O "$BASE/checksums.txt"
+sha256sum --check --ignore-missing checksums.txt
+
+chmod +x noddle-linux-x64
+sudo mv noddle-linux-x64 /usr/local/bin/noddle
 ```
+
+On a macOS without `sha256sum`, `shasum -a 256 --check` reads the same file.
+
+`releases/latest/download/…` also resolves, but a pipeline written that way changes CLI version whenever this repository publishes one, with nothing in its own diff to say so.
 
 It talks to the HTTP API with a token you create under **Settings → API tokens**. A token can never do more than your own role allows, whatever you grant it, and it stops being able to the moment your role narrows.
 
@@ -103,11 +113,24 @@ noddle deploy <id>     # deploy one
 In a pipeline, `--wait` is the point: it blocks until the deployment settles and **exits non-zero if it failed or rolled back**, so the job fails with it.
 
 ```yaml
-- run: noddle deploy $SERVICE --wait --timeout 600
+- uses: actions/cache@v4
+  with:
+    path: ~/.local/bin/noddle
+    key: noddle-cli-v0.10.0
+- run: |
+    test -x ~/.local/bin/noddle || {
+      mkdir -p ~/.local/bin
+      curl -fsSL -o ~/.local/bin/noddle \
+        https://github.com/lucien-loua/noddle/releases/download/v0.10.0/noddle-linux-x64
+      chmod +x ~/.local/bin/noddle
+    }
+    ~/.local/bin/noddle deploy $SERVICE --wait --timeout 600
   env:
     NODDLE_URL: ${{ vars.NODDLE_URL }}
     NODDLE_TOKEN: ${{ secrets.NODDLE_TOKEN }}
 ```
+
+The binaries are 60–80 MB because they embed the runtime, so cache it rather than downloading it on every job.
 
 Exit codes are the contract: `0` worked, `1` failed, `2` the command line was wrong. Add `--json` to anything for machine-readable output.
 
