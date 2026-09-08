@@ -11,8 +11,10 @@ import {
 } from "#client";
 import { HELP } from "#help";
 import { table } from "#table";
+import { VERSION } from "#version";
 
 const POLL_MS = 3000;
+const MAX_POLL_FAILURES = 5;
 const EXIT_FAILURE = 1;
 const EXIT_USAGE = 2;
 
@@ -32,9 +34,27 @@ async function waitForDeployment(
 ): Promise<number> {
   const deadline = Date.now() + timeout;
   let last = "";
+  let consecutiveFailures = 0;
 
   while (Date.now() < deadline) {
-    const deployment = await client.deployment(id);
+    let deployment: Awaited<ReturnType<typeof client.deployment>>;
+    try {
+      deployment = await client.deployment(id);
+      consecutiveFailures = 0;
+    } catch (error) {
+      consecutiveFailures += 1;
+      if (consecutiveFailures > MAX_POLL_FAILURES) {
+        throw error;
+      }
+      if (!json) {
+        out(`  lost contact, retrying (${consecutiveFailures})`);
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, POLL_MS);
+      });
+      continue;
+    }
+
     if (deployment.status !== last) {
       last = deployment.status;
       if (!json) {
@@ -57,6 +77,11 @@ async function waitForDeployment(
 
 async function run(args: ParsedArgs): Promise<number> {
   const { flags } = args;
+
+  if (flags.version) {
+    out(VERSION);
+    return 0;
+  }
 
   if (flags.help || args.command === null) {
     out(HELP);
@@ -109,11 +134,11 @@ async function run(args: ParsedArgs): Promise<number> {
     return deployment.done ? deploymentExitCode(deployment.status) : 0;
   }
 
-  const [serviceId] = args.positional;
-  if (!serviceId) {
-    throw new UsageError("noddle deploy needs a service id.");
+  const [wanted] = args.positional;
+  if (!wanted) {
+    throw new UsageError("noddle deploy needs a service name or id.");
   }
-  const started = await client.deploy(serviceId, randomUUID());
+  const started = await client.deploy(wanted, randomUUID());
   if (!flags.json) {
     out(`deploying ${started.service.name} (${started.deploymentId})`);
   }

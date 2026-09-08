@@ -109,6 +109,7 @@ jobs:
           mkdir -p dist
           for target in linux-x64 linux-arm64 darwin-arm64 darwin-x64; do
             bun build --compile --minify \
+              --define "process.env.NODDLE_VERSION=\"$NODDLE_VERSION\"" \
               --target="bun-$target" apps/cli/src/index.ts \
               --outfile "dist/noddle-$target"
           done
@@ -125,6 +126,10 @@ jobs:
             echo "whoami should have failed without a token"; exit 1
           }
           echo "and exits non-zero without a token"
+          stamped="$(./dist/noddle-linux-x64 --version)"
+          [ "$stamped" = "$NODDLE_VERSION" ] \
+            || { echo "the binary reports '$stamped'"; exit 1; }
+          echo "and knows it is $stamped"
 
       - name: GitHub Release
         env:

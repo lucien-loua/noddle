@@ -135,6 +135,14 @@ await runVerify("noddle cli", async () => {
     );
   });
 
+  await suite("--version answers instead of being accepted and ignored", () => {
+    check("it parses", parseArgs(["--version"]).flags.version === true);
+    check(
+      "and it needs no command, so it cannot fall into the usage path",
+      parseArgs(["--version"]).command === null
+    );
+  });
+
   await suite("every command in the help is a command", () => {
     for (const command of COMMANDS) {
       check(`${command} parses`, parseArgs([command]).command === command);
