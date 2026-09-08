@@ -25,7 +25,7 @@
       "@types/react-dom": "^19.2.4",
       "@types/ssh2": "^1.15.5",
       "@vitejs/plugin-react": "^6.0.5",
-      "better-auth": "^1.6.25",
+      "better-auth": "^1.7.3",
       "d3-scale": "^4.0.2",
       "bullmq": "^6.0.5",
       "dockerode": "^5.0.1",

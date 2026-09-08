@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, readdirSync } from "node:fs";
+import { copyFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -32,9 +32,21 @@ if (docker.status === 0) {
   missing("docker is not running \u2014 the local stack needs it");
 }
 
+function hasDevScript(app: string): boolean {
+  const manifest = join(ROOT, "apps", app, "package.json");
+  if (!existsSync(manifest)) {
+    return false;
+  }
+  const parsed = JSON.parse(readFileSync(manifest, "utf-8")) as {
+    scripts?: Record<string, string>;
+  };
+  return Boolean(parsed.scripts?.dev);
+}
+
 const apps = readdirSync(join(ROOT, "apps"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
+  .filter(hasDevScript)
   .toSorted();
 
 for (const app of apps) {
