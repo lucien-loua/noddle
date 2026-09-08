@@ -96,7 +96,7 @@ Phases 0–4 core are **done** (deploy loop, multi-server, backups, notification
 
 Still open:
 
-- **Teams / multi-tenancy** (distinct from RBAC)
+- **Teams / multi-tenancy** (distinct from RBAC). **Every resource endpoint today looks a row up by id alone** — `/api/logs/$deploymentId` and `/api/v1/deployments/:id/logs` both do `where: eq(deployments.id, …)` with no owner filter, because an account sees the whole installation and there is no tenant to scope to. That is the current model, not an oversight, and an automated review will keep reporting it as an IDOR. It BECOMES one the day tenancy lands: the same read then crosses a boundary that exists. Whoever builds Teams owns auditing every by-id lookup, and 404 rather than 403 for a row outside the caller's scope, so ids cannot be enumerated.
 
 Phase 0 spike CI (`.github/workflows/spike.yml`) must stay green — do not let a red spike sit. Local Multipass remains the 2 GB pre-ship gate.
 
