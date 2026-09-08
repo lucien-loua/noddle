@@ -81,6 +81,10 @@ export function createClient(config: Config, fetcher: typeof fetch = fetch) {
         `/api/v1/services/${encodeURIComponent(serviceId)}/deploy`,
         { headers: { "idempotency-key": idempotencyKey }, method: "POST" }
       ),
+    deploymentLogs: (id: string) =>
+      request<{ done: boolean; log: string; source: string; status: string }>(
+        `/api/v1/deployments/${encodeURIComponent(id)}/logs`
+      ),
     deployment: (id: string) =>
       request<{
         done: boolean;

@@ -6,6 +6,7 @@ usage
   noddle services                 the services it runs
   noddle deploy <service>         deploy it, by name or by id
   noddle status <deployment-id>   how a deployment ended
+  noddle logs <deployment-id>     what it printed while it ran
 
 options
   --wait              with deploy, block until it finishes

@@ -4,6 +4,7 @@ export const COMMANDS = [
   "services",
   "deploy",
   "status",
+  "logs",
 ] as const;
 
 export type Command = (typeof COMMANDS)[number];

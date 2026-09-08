@@ -1,4 +1,6 @@
 // tier: pure
+import { readFileSync } from "node:fs";
+
 import { check, expectThrows, runVerify, suite } from "@noddle/testing";
 
 import { COMMANDS, parseArgs, UsageError, waitTimeoutMs } from "#args";
@@ -143,9 +145,28 @@ await runVerify("noddle cli", async () => {
     );
   });
 
-  await suite("every command in the help is a command", () => {
+  await suite("every command exists in the help and in the dispatch", () => {
+    const help = readFileSync(
+      new URL("help.ts", import.meta.url).pathname,
+      "utf-8"
+    );
+    const source = readFileSync(
+      new URL("index.ts", import.meta.url).pathname,
+      "utf-8"
+    );
+
     for (const command of COMMANDS) {
       check(`${command} parses`, parseArgs([command]).command === command);
+      check(
+        `${command} is documented`,
+        help.includes(`noddle ${command}`),
+        "a command nobody is told about is a command nobody uses"
+      );
+      check(
+        `${command} has a handler`,
+        new RegExp(`^  ${command}: `, "m").test(source),
+        "adding it to the type without implementing it would otherwise pass"
+      );
     }
   });
 });

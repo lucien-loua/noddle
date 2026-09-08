@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 
 import { parseArgs, UsageError, waitTimeoutMs } from "#args";
-import type { ParsedArgs } from "#args";
+import type { Command, ParsedArgs } from "#args";
 import {
   CliError,
   createClient,
@@ -75,24 +75,85 @@ async function waitForDeployment(
   );
 }
 
-async function run(args: ParsedArgs): Promise<number> {
-  const { flags } = args;
+type Client = ReturnType<typeof createClient>;
+type Handler = (client: Client, args: ParsedArgs) => Promise<number> | number;
 
-  if (flags.version) {
-    out(VERSION);
+function requireArg(args: ParsedArgs, what: string): string {
+  const [value] = args.positional;
+  if (!value) {
+    throw new UsageError(`noddle ${args.command} needs ${what}.`);
+  }
+  return value;
+}
+
+const HANDLERS: Record<Command, Handler> = {
+  deploy: async (client, args) => {
+    const wanted = requireArg(args, "a service name or id");
+    const started = await client.deploy(wanted, randomUUID());
+    if (!args.flags.json) {
+      out(`deploying ${started.service.name} (${started.deploymentId})`);
+    }
+    if (!args.flags.wait) {
+      emit(args.flags.json, started, () => "queued");
+      return 0;
+    }
+    return await waitForDeployment(
+      client,
+      started.deploymentId,
+      waitTimeoutMs(args.flags.timeout),
+      args.flags.json
+    );
+  },
+
+  logs: async (client, args) => {
+    const logs = await client.deploymentLogs(
+      requireArg(args, "a deployment id")
+    );
+    if (args.flags.json) {
+      out(JSON.stringify(logs, null, 2));
+    } else if (logs.log) {
+      process.stdout.write(
+        logs.log.endsWith("\n") ? logs.log : `${logs.log}\n`
+      );
+    } else {
+      out("(no logs kept for this deployment)");
+    }
+    return logs.done ? deploymentExitCode(logs.status) : 0;
+  },
+
+  servers: async (client, args) => {
+    const { servers } = await client.servers();
+    emit(args.flags.json, { servers }, () =>
+      table(
+        ["NAME", "HOST", "STATUS"],
+        servers.map((s) => [s.name, s.host, s.status])
+      )
+    );
     return 0;
-  }
+  },
 
-  if (flags.help || args.command === null) {
-    out(HELP);
-    return args.command === null && !flags.help ? EXIT_USAGE : 0;
-  }
+  services: async (client, args) => {
+    const { services } = await client.services();
+    emit(args.flags.json, { services }, () =>
+      table(
+        ["NAME", "STATUS", "ID"],
+        services.map((s) => [s.name, s.status, s.id])
+      )
+    );
+    return 0;
+  },
 
-  const client = createClient(resolveConfig(flags, process.env));
+  status: async (client, args) => {
+    const deployment = await client.deployment(
+      requireArg(args, "a deployment id")
+    );
+    emit(args.flags.json, deployment, () => deployment.status);
+    return deployment.done ? deploymentExitCode(deployment.status) : 0;
+  },
 
-  if (args.command === "whoami") {
+  whoami: async (client, args) => {
     const me = await client.whoami();
-    emit(flags.json, me, () =>
+    emit(args.flags.json, me, () =>
       [
         `${me.email} (${me.role ?? "no role"})`,
         `token: ${me.token.name}`,
@@ -100,58 +161,20 @@ async function run(args: ParsedArgs): Promise<number> {
       ].join("\n")
     );
     return 0;
-  }
+  },
+};
 
-  if (args.command === "servers") {
-    const { servers } = await client.servers();
-    emit(flags.json, { servers }, () =>
-      table(
-        ["NAME", "HOST", "STATUS"],
-        servers.map((s) => [s.name, s.host, s.status])
-      )
-    );
+async function run(args: ParsedArgs): Promise<number> {
+  if (args.flags.version) {
+    out(VERSION);
     return 0;
   }
-
-  if (args.command === "services") {
-    const { services } = await client.services();
-    emit(flags.json, { services }, () =>
-      table(
-        ["NAME", "STATUS", "ID"],
-        services.map((s) => [s.name, s.status, s.id])
-      )
-    );
-    return 0;
+  if (args.flags.help || args.command === null) {
+    out(HELP);
+    return args.command === null && !args.flags.help ? EXIT_USAGE : 0;
   }
-
-  if (args.command === "status") {
-    const [id] = args.positional;
-    if (!id) {
-      throw new UsageError("noddle status needs a deployment id.");
-    }
-    const deployment = await client.deployment(id);
-    emit(flags.json, deployment, () => deployment.status);
-    return deployment.done ? deploymentExitCode(deployment.status) : 0;
-  }
-
-  const [wanted] = args.positional;
-  if (!wanted) {
-    throw new UsageError("noddle deploy needs a service name or id.");
-  }
-  const started = await client.deploy(wanted, randomUUID());
-  if (!flags.json) {
-    out(`deploying ${started.service.name} (${started.deploymentId})`);
-  }
-  if (!flags.wait) {
-    emit(flags.json, started, () => "queued");
-    return 0;
-  }
-  return await waitForDeployment(
-    client,
-    started.deploymentId,
-    waitTimeoutMs(flags.timeout),
-    flags.json
-  );
+  const client = createClient(resolveConfig(args.flags, process.env));
+  return await HANDLERS[args.command](client, args);
 }
 
 try {
