@@ -1,3 +1,4 @@
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
@@ -20,6 +21,12 @@ import {
   FocusModalTitle,
 } from "@/components/ui/focus-modal";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -61,24 +68,41 @@ function Reveal({ onDone, token }: { onDone: () => void; token: string }) {
 
   return (
     <>
-      <FocusModalBody className="space-y-4">
-        <p className="text-sm">
-          Copy it now. Noddle stores only a hash, so this is the only time it
-          can be shown.
-        </p>
-        <code className="block break-all rounded-2xl bg-muted p-3 font-mono text-xs">
-          {token}
-        </code>
-        <FieldDescription>
-          Send it as <code className="font-mono">Authorization: Bearer …</code>{" "}
-          and check it with{" "}
-          <code className="font-mono">GET /api/v1/whoami</code>.
-        </FieldDescription>
+      <FocusModalBody>
+        <div className="mx-auto max-w-xl space-y-4 py-8">
+          <p className="text-sm">
+            Copy it now. Noddle keeps only a hash, so this is the only time it
+            can be shown.
+          </p>
+
+          <InputGroup>
+            <InputGroupInput
+              aria-label="Your new token"
+              className="font-mono"
+              readOnly
+              value={token}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                aria-label="Copy the token"
+                onClick={copy}
+                size="icon-xs"
+                variant="outline"
+              >
+                {copied ? <CheckIcon weight="regular" /> : <CopyIcon />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+
+          <FieldDescription>
+            Send it as{" "}
+            <code className="font-mono">Authorization: Bearer …</code>, or give
+            it to the CLI as <code className="font-mono">NODDLE_TOKEN</code>.
+            Check it with <code className="font-mono">noddle whoami</code>.
+          </FieldDescription>
+        </div>
       </FocusModalBody>
       <FocusModalFooter>
-        <Button onClick={copy} variant="outline">
-          {copied ? "Copied" : "Copy token"}
-        </Button>
         <Button onClick={onDone}>Done</Button>
       </FocusModalFooter>
     </>
