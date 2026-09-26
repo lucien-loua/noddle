@@ -26,13 +26,9 @@ const TEAM_TABLES = [
 ];
 
 const DIRECT_READ = new RegExp(
-  `db\\.query\\.(${TEAM_TABLES.join("|")})\\.find|\\.from\\((${TEAM_TABLES.join("|")})\\)`
+  `\\.query\\.(${TEAM_TABLES.join("|")})\\.find|\\.from\\((${TEAM_TABLES.join("|")})\\)`
 );
 
-// Files that still read a team-owned table directly, and must be scoped.
-// This list only ever shrinks: a file leaves it when its reads go through
-// team-queries.server.ts, and the bench fails if one is left here after
-// that, so the list cannot rot into a record of things already done.
 const NOT_YET_SCOPED = [
   "routes/api/database-logs/$databaseId.ts",
   "routes/api/logs/$deploymentId.ts",
@@ -57,7 +53,6 @@ const NOT_YET_SCOPED = [
   "server/databases/read.ts",
   "server/dependencies.ts",
   "server/deployments.ts",
-  "server/env-vars.ts",
   "server/git-providers.ts",
   "server/registries.ts",
   "server/servers.ts",
@@ -68,8 +63,6 @@ const NOT_YET_SCOPED = [
   "server/webhooks.ts",
 ];
 
-// Files that read team-owned tables on purpose, outside any team. Each needs
-// a reason, because an entry here is a decision that a read crosses teams.
 const DELIBERATELY_UNSCOPED: Record<string, string> = {};
 
 function walk(dir: string): string[] {

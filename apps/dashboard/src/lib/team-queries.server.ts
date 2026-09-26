@@ -1,14 +1,17 @@
-import type { createDatabase } from "@noddle/db";
 import {
   databases,
+  envVars,
   environments,
   projects,
+  serviceDependencies,
   services,
   stacks,
 } from "@noddle/db/schema";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import type * as schema from "@noddle/db/schema";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
-export type Db = ReturnType<typeof createDatabase>;
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 export async function listProjects(db: Db, teamId: string) {
   return await db.query.projects.findMany({
@@ -105,4 +108,75 @@ export async function environmentNameTaken(
     ),
   });
   return row !== undefined;
+}
+
+function environmentsOfTeam(db: Db, teamId: string) {
+  return db
+    .select({ id: environments.id })
+    .from(environments)
+    .where(inArray(environments.projectId, projectsOfTeam(db, teamId)));
+}
+
+function servicesOfTeam(db: Db, teamId: string) {
+  return db
+    .select({ id: services.id })
+    .from(services)
+    .where(inArray(services.environmentId, environmentsOfTeam(db, teamId)));
+}
+
+function databasesOfTeam(db: Db, teamId: string) {
+  return db
+    .select({ id: databases.id })
+    .from(databases)
+    .where(inArray(databases.environmentId, environmentsOfTeam(db, teamId)));
+}
+
+export interface EnvVarTargetRef {
+  databaseId?: string;
+  serviceId?: string;
+}
+
+export async function listEnvVars(
+  db: Db,
+  teamId: string,
+  target: EnvVarTargetRef
+) {
+  const owned = target.serviceId
+    ? and(
+        eq(envVars.serviceId, target.serviceId),
+        isNull(envVars.databaseId),
+        inArray(envVars.serviceId, servicesOfTeam(db, teamId))
+      )
+    : and(
+        eq(envVars.databaseId, target.databaseId ?? ""),
+        isNull(envVars.serviceId),
+        inArray(envVars.databaseId, databasesOfTeam(db, teamId))
+      );
+  return await db.query.envVars.findMany({
+    orderBy: envVars.key,
+    where: owned,
+  });
+}
+
+export async function envVarAttachments(db: Db, envVarIds: string[]) {
+  if (envVarIds.length === 0) {
+    return [];
+  }
+  return await db.query.serviceDependencies.findMany({
+    where: inArray(serviceDependencies.envVarId, envVarIds),
+    with: { dependsOnDatabase: { with: { environment: true } } },
+  });
+}
+
+export async function databaseInTeam(
+  db: Db,
+  teamId: string,
+  databaseId: string
+) {
+  return await db.query.databases.findFirst({
+    where: and(
+      eq(databases.id, databaseId),
+      inArray(databases.id, databasesOfTeam(db, teamId))
+    ),
+  });
 }

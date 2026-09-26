@@ -3,10 +3,12 @@ import { randomBytes } from "node:crypto";
 
 import { createDatabase } from "@noddle/db";
 import {
+  envVars,
   environments,
   organization,
   projects,
   servers,
+  services,
   sshKeys,
   stacks,
 } from "@noddle/db/schema";
@@ -17,6 +19,7 @@ import { inArray } from "drizzle-orm";
 import {
   environmentNameTaken,
   environmentsHold,
+  listEnvVars,
   listProjectEnvironments,
   listProjects,
   projectNameTaken,
@@ -59,6 +62,20 @@ const [server] = await db
     sshUser: `noddle-${tag}`,
   })
   .returning();
+const [serviceB] = await db
+  .insert(services)
+  .values({
+    environmentId: envB?.id as string,
+    name: `iso-svc-${tag}`,
+    serverId: server?.id as string,
+    sourceType: "docker_image",
+  })
+  .returning();
+await db.insert(envVars).values({
+  key: "DATABASE_PASSWORD",
+  serviceId: serviceB?.id as string,
+  valueEncrypted: "ciphertext-of-a-secret",
+});
 await db.insert(stacks).values({
   environmentId: envB?.id as string,
   gitRepoUrl: "https://example.invalid/repo.git",
@@ -116,6 +133,25 @@ await runVerify("team isolation", async () => {
       }
     );
 
+    await suite("another team's secrets are out of reach", async () => {
+      const ownRead = await listEnvVars(db, teamB, {
+        serviceId: serviceB?.id as string,
+      });
+      check(
+        "B reads its own service's variables",
+        ownRead.some((row) => row.key === "DATABASE_PASSWORD"),
+        "without a variable here the next check proves nothing"
+      );
+      const foreignRead = await listEnvVars(db, teamA, {
+        serviceId: serviceB?.id as string,
+      });
+      check(
+        "A passing B's service id reads none of its variables",
+        foreignRead.length === 0,
+        "A read another team's env vars, which are returned decrypted"
+      );
+    });
+
     await suite("a project name is not an oracle for other teams", async () => {
       const nameOfB = `proj-b-${tag}`;
       check(
@@ -145,6 +181,12 @@ await runVerify("team isolation", async () => {
       }
     );
   } finally {
+    await db
+      .delete(envVars)
+      .where(inArray(envVars.serviceId, [serviceB?.id as string]));
+    await db
+      .delete(services)
+      .where(inArray(services.id, [serviceB?.id as string]));
     await db
       .delete(stacks)
       .where(inArray(stacks.environmentId, [envB?.id as string]));

@@ -1,5 +1,5 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import { databases, envVars, serviceDependencies } from "@noddle/db/schema";
+import { envVars } from "@noddle/db/schema";
 import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { ENGINE_ENV_PREFIX } from "@noddle/shared/database-spec";
 import { envVarKeySchema } from "@noddle/shared/validation/env-var";
@@ -10,7 +10,14 @@ import { z } from "zod";
 import { db } from "@/lib/db.server";
 import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
+import { guarded } from "@/lib/guarded.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
+import {
+  databaseInTeam,
+  envVarAttachments,
+  listEnvVars,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export const envVarTargetSchema = z
   .object({
@@ -49,31 +56,37 @@ export interface EnvVarView {
   value: string;
 }
 
+function targetLoader(target: EnvVarTarget): {
+  load: () => Promise<{ id: string } | undefined>;
+  notFoundMessage: string;
+} {
+  const loader = target.serviceId
+    ? guarded.service(target.serviceId)
+    : guarded.database(target.databaseId ?? "");
+  return {
+    load: async () => {
+      const row = await loader.load();
+      return row ? { id: row.id } : undefined;
+    },
+    notFoundMessage: loader.notFoundMessage,
+  };
+}
+
 export const getEnvVars = createServerFn({ method: "GET" })
   .validator((data: EnvVarTarget) => envVarTargetSchema.parse(data))
   .handler(async ({ data }): Promise<EnvVarView[]> =>
     runRead({
+      ...targetLoader(data),
       permission: { action: "read", resource: "envVar" },
       read: async () => {
-        const rows = await db.query.envVars.findMany({
-          orderBy: envVars.key,
-          where: ownedBy(data),
-        });
+        const rows = await listEnvVars(db, await activeTeamId(), data);
 
-        const edges =
-          data.serviceId && rows.length > 0
-            ? await db.query.serviceDependencies.findMany({
-                where: inArray(
-                  serviceDependencies.envVarId,
-                  rows.map((row) => row.id)
-                ),
-                with: {
-                  dependsOnDatabase: {
-                    with: { environment: true },
-                  },
-                },
-              })
-            : [];
+        const edges = data.serviceId
+          ? await envVarAttachments(
+              db,
+              rows.map((row) => row.id)
+            )
+          : [];
         const attached = new Map(
           edges.flatMap((edge): [string, EnvVarAttachment][] => {
             const database = edge.dependsOnDatabase;
@@ -136,9 +149,7 @@ async function assertNoReservedKeys(
   databaseId: string,
   vars: { key: string }[]
 ): Promise<void> {
-  const database = await db.query.databases.findFirst({
-    where: eq(databases.id, databaseId),
-  });
+  const database = await databaseInTeam(db, await activeTeamId(), databaseId);
   if (!database) {
     throw new Error("database not found");
   }
@@ -220,6 +231,7 @@ export const saveEnvVars = createServerFn({ method: "POST" })
   .validator(saveEnvVarsSchema)
   .handler(async ({ data }): Promise<EnvVarSaveResult> =>
     runGuarded({
+      ...targetLoader(data),
       permission: { action: "write", resource: "envVar" },
       run: async () => {
         if (data.databaseId) {
@@ -244,10 +256,9 @@ export const saveEnvVars = createServerFn({ method: "POST" })
           serviceId: data.serviceId ?? null,
         };
 
+        const teamId = await activeTeamId();
         await db.transaction(async (tx) => {
-          const existing = await tx.query.envVars.findMany({
-            where: ownedBy(data),
-          });
+          const existing = await listEnvVars(tx, teamId, data);
           const byKey = new Map(existing.map((row) => [row.key, row]));
 
           for (const incoming of data.vars) {
