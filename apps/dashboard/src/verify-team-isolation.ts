@@ -15,7 +15,9 @@ import { devStack } from "@noddle/testing/dev-stack";
 import { inArray } from "drizzle-orm";
 
 import {
+  environmentNameTaken,
   environmentsHold,
+  listProjectEnvironments,
   listProjects,
   projectNameTaken,
 } from "@/lib/team-queries.server";
@@ -82,6 +84,37 @@ await runVerify("team isolation", async () => {
       check("B sees its own project", seenByB.has(projectB?.id as string));
       check("B does not see A's project", !seenByB.has(projectA?.id as string));
     });
+
+    await suite(
+      "a project reached by id is checked against the team",
+      async () => {
+        const ownEnvs = await listProjectEnvironments(
+          db,
+          teamA,
+          projectA?.id as string
+        );
+        check("A lists its own project's environments", ownEnvs.length === 1);
+        const foreignEnvs = await listProjectEnvironments(
+          db,
+          teamA,
+          projectB?.id as string
+        );
+        check(
+          "A passing B's project id gets nothing",
+          foreignEnvs.length === 0,
+          "the direct link to another team's project opened it"
+        );
+        check(
+          "and B's environment names are not an oracle to A",
+          !(await environmentNameTaken(
+            db,
+            teamA,
+            projectB?.id as string,
+            "production"
+          ))
+        );
+      }
+    );
 
     await suite("a project name is not an oracle for other teams", async () => {
       const nameOfB = `proj-b-${tag}`;

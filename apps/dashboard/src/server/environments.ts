@@ -1,4 +1,4 @@
-import { databases, environments, services, stacks } from "@noddle/db/schema";
+import { environments } from "@noddle/db/schema";
 import {
   createEnvironmentSchema,
   duplicateEnvironmentSchema,
@@ -6,7 +6,7 @@ import {
   renameEnvironmentSchema,
 } from "@noddle/shared/validation/project";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import {
@@ -18,6 +18,12 @@ import { insertProjectEnvironment } from "@/lib/environment.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
+import {
+  environmentNameTaken,
+  environmentsHold,
+  listProjectEnvironments,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export interface EnvironmentView {
   description: string | null;
@@ -30,10 +36,11 @@ export const getProjectEnvironments = createServerFn({ method: "GET" })
   .validator((data: { projectId: string }) => data)
   .handler(async ({ data }): Promise<EnvironmentView[]> => {
     await requireSession();
-    const rows = await db.query.environments.findMany({
-      orderBy: environments.name,
-      where: eq(environments.projectId, data.projectId),
-    });
+    const rows = await listProjectEnvironments(
+      db,
+      await activeTeamId(),
+      data.projectId
+    );
     return rows.map((e) => ({
       description: e.description,
       id: e.id,
@@ -49,13 +56,14 @@ export const createEnvironment = createServerFn({ method: "POST" })
       ...guarded.project(data.projectId),
       permission: { action: "create", resource: "service" },
       run: async () => {
-        const existing = await db.query.environments.findFirst({
-          where: and(
-            eq(environments.projectId, data.projectId),
-            eq(environments.name, data.name)
-          ),
-        });
-        if (existing) {
+        if (
+          await environmentNameTaken(
+            db,
+            await activeTeamId(),
+            data.projectId,
+            data.name
+          )
+        ) {
           throw new Error(`"${data.name}" already exists in this project`);
         }
 
@@ -79,13 +87,13 @@ export const renameEnvironment = createServerFn({ method: "POST" })
       permission: { action: "create", resource: "service" },
       run: async ({ row: environment }) => {
         assertNotDefaultEnvironment(environment, "rename");
-        const existing = await db.query.environments.findFirst({
-          where: and(
-            eq(environments.projectId, environment.projectId),
-            eq(environments.name, data.name),
-            ne(environments.id, environment.id)
-          ),
-        });
+        const existing = await environmentNameTaken(
+          db,
+          await activeTeamId(),
+          environment.projectId,
+          data.name,
+          environment.id
+        );
         if (existing) {
           throw new Error(`"${data.name}" already exists in this project`);
         }
@@ -108,18 +116,9 @@ export const deleteEnvironment = createServerFn({ method: "POST" })
       permission: { action: "delete", resource: "service" },
       run: async ({ row: environment }) => {
         assertNotDefaultEnvironment(environment, "delete");
-        const [service, stack, database] = await Promise.all([
-          db.query.services.findFirst({
-            where: eq(services.environmentId, environment.id),
-          }),
-          db.query.stacks.findFirst({
-            where: eq(stacks.environmentId, environment.id),
-          }),
-          db.query.databases.findFirst({
-            where: eq(databases.environmentId, environment.id),
-          }),
-        ]);
-        if (service || stack || database) {
+        if (
+          await environmentsHold(db, await activeTeamId(), [environment.id])
+        ) {
           throw new Error(
             "this environment still has services, stacks or databases: remove them first"
           );

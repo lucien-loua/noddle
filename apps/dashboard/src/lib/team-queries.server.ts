@@ -73,3 +73,36 @@ function projectsOfTeam(db: Db, teamId: string) {
     .from(projects)
     .where(eq(projects.teamId, teamId));
 }
+
+export async function listProjectEnvironments(
+  db: Db,
+  teamId: string,
+  projectId: string
+) {
+  return await db.query.environments.findMany({
+    orderBy: environments.name,
+    where: and(
+      eq(environments.projectId, projectId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function environmentNameTaken(
+  db: Db,
+  teamId: string,
+  projectId: string,
+  name: string,
+  exceptEnvironmentId?: string
+): Promise<boolean> {
+  const row = await db.query.environments.findFirst({
+    columns: { id: true },
+    where: and(
+      eq(environments.projectId, projectId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId)),
+      eq(environments.name, name),
+      exceptEnvironmentId ? ne(environments.id, exceptEnvironmentId) : undefined
+    ),
+  });
+  return row !== undefined;
+}
