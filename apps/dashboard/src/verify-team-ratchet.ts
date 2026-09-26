@@ -35,7 +35,6 @@ const NOT_YET_SCOPED = [
   "lib/duplicate-environment.server.ts",
   "lib/environment.server.ts",
   "lib/preview.server.ts",
-  "lib/terminal.server.ts",
   "lib/webhook-intake.server.ts",
   "routes/api/v1/deployments.$id.logs.ts",
   "routes/api/v1/deployments.$id.ts",

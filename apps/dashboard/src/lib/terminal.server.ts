@@ -1,4 +1,4 @@
-import { auditLog, databases, servers, services } from "@noddle/db/schema";
+import { auditLog, servers } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import {
   execArgv,
@@ -16,6 +16,8 @@ import { db } from "@/lib/db.server";
 import { can } from "@/lib/permissions";
 import type { Permission } from "@/lib/permissions";
 import { connectToServer } from "@/lib/ssh.server";
+import { databaseInContext, serviceInContext } from "@/lib/team-queries.server";
+import { teamOfSession } from "@/lib/team-scope.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const ALLOWED_SHELLS = new Set(["sh", "bash", "ash"]);
@@ -309,11 +311,9 @@ async function openContainerTerminal(
     return { message: "invalid target", ok: false, status: 400 };
   }
 
+  const teamId = await teamOfSession(session);
   if (target === "database") {
-    const database = await db.query.databases.findFirst({
-      where: eq(databases.id, id),
-      with: { server: true },
-    });
+    const database = await databaseInContext(db, teamId, id);
     if (!database) {
       return { message: "database not found", ok: false, status: 404 };
     }
@@ -328,10 +328,7 @@ async function openContainerTerminal(
     });
   }
 
-  const service = await db.query.services.findFirst({
-    where: eq(services.id, id),
-    with: { server: true },
-  });
+  const service = await serviceInContext(db, teamId, id);
   if (!service) {
     return { message: "service not found", ok: false, status: 404 };
   }
