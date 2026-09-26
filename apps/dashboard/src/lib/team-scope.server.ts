@@ -1,4 +1,10 @@
-import { databases, environments, projects, services } from "@noddle/db/schema";
+import {
+  databases,
+  environments,
+  member,
+  projects,
+  services,
+} from "@noddle/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
@@ -17,11 +23,20 @@ export class NoActiveTeamError extends Error {
  */
 export async function activeTeamId(): Promise<string> {
   const session = await requireSession();
-  const id = session.session.activeOrganizationId;
-  if (!id) {
+  const fromSession = session.session.activeOrganizationId;
+  if (fromSession) {
+    return fromSession;
+  }
+
+  const [membership] = await db
+    .select({ organizationId: member.organizationId })
+    .from(member)
+    .where(eq(member.userId, session.user.id))
+    .limit(1);
+  if (!membership) {
     throw new NoActiveTeamError();
   }
-  return id;
+  return membership.organizationId;
 }
 
 export function projectsOfTeam(teamId: string) {
