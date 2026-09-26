@@ -70,7 +70,7 @@ export async function environmentsHold(
   return Boolean(service || stack || database);
 }
 
-function projectsOfTeam(db: Db, teamId: string) {
+export function projectsOfTeam(db: Db, teamId: string) {
   return db
     .select({ id: projects.id })
     .from(projects)
@@ -110,21 +110,21 @@ export async function environmentNameTaken(
   return row !== undefined;
 }
 
-function environmentsOfTeam(db: Db, teamId: string) {
+export function environmentsOfTeam(db: Db, teamId: string) {
   return db
     .select({ id: environments.id })
     .from(environments)
     .where(inArray(environments.projectId, projectsOfTeam(db, teamId)));
 }
 
-function servicesOfTeam(db: Db, teamId: string) {
+export function servicesOfTeam(db: Db, teamId: string) {
   return db
     .select({ id: services.id })
     .from(services)
     .where(inArray(services.environmentId, environmentsOfTeam(db, teamId)));
 }
 
-function databasesOfTeam(db: Db, teamId: string) {
+export function databasesOfTeam(db: Db, teamId: string) {
   return db
     .select({ id: databases.id })
     .from(databases)

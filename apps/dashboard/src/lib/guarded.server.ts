@@ -21,12 +21,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import type { AuditTarget } from "@/lib/permission.server";
 import {
-  activeTeamId,
   databasesOfTeam,
   environmentsOfTeam,
   projectsOfTeam,
   servicesOfTeam,
-} from "@/lib/team-scope.server";
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export function identityTarget(ctx: {
   row: { id: string; name: string };
@@ -73,7 +73,7 @@ export const guarded = {
       db.query.backups.findFirst({
         where: and(
           eq(backups.id, backupId),
-          inArray(backups.databaseId, databasesOfTeam(await activeTeamId()))
+          inArray(backups.databaseId, databasesOfTeam(db, await activeTeamId()))
         ),
       }),
     notFoundMessage: "backup not found",
@@ -86,7 +86,7 @@ export const guarded = {
           eq(backupConfigs.id, configId),
           inArray(
             backupConfigs.databaseId,
-            databasesOfTeam(await activeTeamId())
+            databasesOfTeam(db, await activeTeamId())
           )
         ),
         with: { database: true },
@@ -101,7 +101,7 @@ export const guarded = {
           eq(databases.id, databaseId),
           inArray(
             databases.environmentId,
-            environmentsOfTeam(await activeTeamId())
+            environmentsOfTeam(db, await activeTeamId())
           )
         ),
       }),
@@ -113,7 +113,10 @@ export const guarded = {
       db.query.environments.findFirst({
         where: and(
           eq(environments.id, environmentId),
-          inArray(environments.projectId, projectsOfTeam(await activeTeamId()))
+          inArray(
+            environments.projectId,
+            projectsOfTeam(db, await activeTeamId())
+          )
         ),
       }),
     notFoundMessage: "environment not found",
@@ -174,7 +177,7 @@ export const guarded = {
           eq(services.id, serviceId),
           inArray(
             services.environmentId,
-            environmentsOfTeam(await activeTeamId())
+            environmentsOfTeam(db, await activeTeamId())
           )
         ),
       }),
@@ -194,7 +197,7 @@ export const guarded = {
           eq(stacks.id, stackId),
           inArray(
             stacks.environmentId,
-            environmentsOfTeam(await activeTeamId())
+            environmentsOfTeam(db, await activeTeamId())
           )
         ),
       }),
@@ -208,7 +211,7 @@ export const guarded = {
           eq(volumeBackupConfigs.id, configId),
           inArray(
             volumeBackupConfigs.serviceId,
-            servicesOfTeam(await activeTeamId())
+            servicesOfTeam(db, await activeTeamId())
           )
         ),
         with: { service: true },
@@ -221,7 +224,10 @@ export const guarded = {
       db.query.volumeBackups.findFirst({
         where: and(
           eq(volumeBackups.id, backupId),
-          inArray(volumeBackups.serviceId, servicesOfTeam(await activeTeamId()))
+          inArray(
+            volumeBackups.serviceId,
+            servicesOfTeam(db, await activeTeamId())
+          )
         ),
       }),
     notFoundMessage: "volume backup not found",

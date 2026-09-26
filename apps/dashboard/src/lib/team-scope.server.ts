@@ -1,11 +1,5 @@
-import {
-  databases,
-  environments,
-  member,
-  projects,
-  services,
-} from "@noddle/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { member } from "@noddle/db/schema";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
@@ -33,40 +27,4 @@ export async function activeTeamId(): Promise<string> {
     throw new NoActiveTeamError();
   }
   return membership.organizationId;
-}
-
-export function projectsOfTeam(teamId: string) {
-  return db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.teamId, teamId));
-}
-
-export function environmentsOfTeam(teamId: string) {
-  return db
-    .select({ id: environments.id })
-    .from(environments)
-    .where(inArray(environments.projectId, projectsOfTeam(teamId)));
-}
-
-export async function inActiveTeamProjects() {
-  return inArray(projects.id, projectsOfTeam(await activeTeamId()));
-}
-
-export async function inActiveTeamEnvironments() {
-  return inArray(environments.id, environmentsOfTeam(await activeTeamId()));
-}
-
-export function databasesOfTeam(teamId: string) {
-  return db
-    .select({ id: databases.id })
-    .from(databases)
-    .where(inArray(databases.environmentId, environmentsOfTeam(teamId)));
-}
-
-export function servicesOfTeam(teamId: string) {
-  return db
-    .select({ id: services.id })
-    .from(services)
-    .where(inArray(services.environmentId, environmentsOfTeam(teamId)));
 }
