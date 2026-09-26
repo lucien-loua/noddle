@@ -1,11 +1,12 @@
 // tier: pure
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { check, runVerify, suite } from "@noddle/testing";
 
 const ROOT = new URL("./", import.meta.url).pathname;
-const SCANNED = ["server", "routes/api"];
+const SOURCE_FILE = /\.tsx?$/;
+const BENCH_FILE = /(^|\/)verify-[^/]*\.ts$/;
 
 const TEAM_TABLES = [
   "projects",
@@ -30,6 +31,12 @@ const DIRECT_READ = new RegExp(
 );
 
 const NOT_YET_SCOPED = [
+  "lib/deploy-queue.server.ts",
+  "lib/duplicate-environment.server.ts",
+  "lib/environment.server.ts",
+  "lib/preview.server.ts",
+  "lib/terminal.server.ts",
+  "lib/webhook-intake.server.ts",
   "routes/api/database-logs/$databaseId.ts",
   "routes/api/logs/$deploymentId.ts",
   "routes/api/service-logs/$serviceId.ts",
@@ -63,19 +70,25 @@ const NOT_YET_SCOPED = [
 
 const DELIBERATELY_UNSCOPED: Record<string, string> = {};
 
+const SCOPE_MODULES: Record<string, string> = {
+  "lib/guarded.server.ts": "verify-team-scope.ts",
+  "lib/team-queries.server.ts": "verify-team-isolation.ts",
+};
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) {
       return walk(path);
     }
-    return path.endsWith(".ts") ? [path] : [];
+    return SOURCE_FILE.test(path) ? [path] : [];
   });
 }
 
-const offenders = SCANNED.flatMap((dir) => walk(join(ROOT, dir)))
-  .filter((path) => DIRECT_READ.test(readFileSync(path, "utf-8")))
+const offenders = walk(ROOT)
   .map((path) => relative(ROOT, path))
+  .filter((file) => !BENCH_FILE.test(file) && !(file in SCOPE_MODULES))
+  .filter((file) => DIRECT_READ.test(readFileSync(join(ROOT, file), "utf-8")))
   .toSorted();
 
 await runVerify("team scope ratchet", async () => {
@@ -90,6 +103,16 @@ await runVerify("team scope ratchet", async () => {
       fresh.length === 0,
       `new direct reads, scope them or justify them: ${fresh.join(", ")}`
     );
+  });
+
+  await suite("a module that applies the scope names its proof", () => {
+    for (const [module, bench] of Object.entries(SCOPE_MODULES)) {
+      check(
+        `${module} is proven by ${bench}`,
+        existsSync(join(ROOT, module)) && existsSync(join(ROOT, bench)),
+        "an exemption without a behavioural bench is an unchecked read"
+      );
+    }
   });
 
   await suite("the to-do list only shrinks", () => {
