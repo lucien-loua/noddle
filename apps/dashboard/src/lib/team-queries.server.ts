@@ -321,12 +321,14 @@ export async function serviceDeploymentsOf(
 export async function stackDeploymentsOf(
   db: Db,
   teamId: string,
-  stackIds: string[]
+  stackIds: string[],
+  limit?: number
 ) {
   if (stackIds.length === 0) {
     return [];
   }
   return await db.query.stackDeployments.findMany({
+    limit,
     orderBy: desc(stackDeployments.createdAt),
     where: and(
       inArray(stackDeployments.stackId, stackIds),
@@ -554,5 +556,20 @@ export async function serviceWithGitProvider(
       inArray(services.environmentId, environmentsOfTeam(db, teamId))
     ),
     with: { gitProvider: true },
+  });
+}
+
+export async function stackDeploymentOf(
+  db: Db,
+  teamId: string,
+  stackId: string,
+  deploymentId: string
+) {
+  return await db.query.stackDeployments.findFirst({
+    where: and(
+      eq(stackDeployments.id, deploymentId),
+      eq(stackDeployments.stackId, stackId),
+      inArray(stackDeployments.stackId, stacksOfTeam(db, teamId))
+    ),
   });
 }

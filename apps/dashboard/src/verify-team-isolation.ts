@@ -45,6 +45,7 @@ import {
   serviceInTeam,
   serviceNamesIn,
   serviceWithGitProvider,
+  stackDeploymentOf,
   stackDeploymentsOf,
   teamActivityCounts,
 } from "@/lib/team-queries.server";
@@ -377,6 +378,23 @@ await runVerify("team isolation", async () => {
         "the deployment log shows every team's stack deploys"
       );
     });
+
+    await suite(
+      "a stack rolls back only to its team's deployment",
+      async () => {
+        check(
+          "B finds its stack deployment as a rollback source",
+          (await stackDeploymentOf(db, teamB, B.stack, B.stackDeployment)) !==
+            undefined
+        );
+        check(
+          "A passing B's stack and deployment ids gets nothing",
+          (await stackDeploymentOf(db, teamA, B.stack, B.stackDeployment)) ===
+            undefined,
+          "triggerStackRollback reads another team's compose source"
+        );
+      }
+    );
 
     await suite("a deployment's log opens only inside its team", async () => {
       const kinds = [

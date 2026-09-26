@@ -1,4 +1,5 @@
-import { stackDeployments, stacks } from "@noddle/db/schema";
+import { stacks } from "@noddle/db/schema";
+import type { stackDeployments } from "@noddle/db/schema";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { renameStackSchema } from "@noddle/shared/validation/service";
@@ -9,7 +10,7 @@ import {
   stackRollbackRequestSchema,
 } from "@noddle/shared/validation/stack";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { queueStackDeploy } from "@/lib/deploy-queue.server";
@@ -17,13 +18,16 @@ import { insertProjectEnvironment } from "@/lib/environment.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
-import { requireSession } from "@/lib/session.server";
 import {
   environmentByName,
   findOrCreateTeamProject,
+  stackDeploymentOf,
+  stackDeploymentsOf,
 } from "@/lib/team-queries.server";
 import { activeTeamId } from "@/lib/team-scope.server";
 import type { DeploymentSummary } from "@/server/dashboard";
+
+const STACK_HISTORY_LIMIT = 50;
 
 export const connectStack = createServerFn({ method: "POST" })
   .validator(connectStackSchema)
@@ -98,12 +102,12 @@ export const triggerStackRollback = createServerFn({ method: "POST" })
       ...guarded.stack(data.stackId),
       permission: { action: "rollback", resource: "service" },
       run: async () => {
-        const target = await db.query.stackDeployments.findFirst({
-          where: and(
-            eq(stackDeployments.id, data.sourceDeploymentId),
-            eq(stackDeployments.stackId, data.stackId)
-          ),
-        });
+        const target = await stackDeploymentOf(
+          db,
+          await activeTeamId(),
+          data.stackId,
+          data.sourceDeploymentId
+        );
         if (!target) {
           throw new Error("deployment not found for this stack");
         }
@@ -143,12 +147,12 @@ function toSummary(
 export const getStackDeployments = createServerFn({ method: "GET" })
   .validator((data: { stackId: string }) => data)
   .handler(async ({ data }): Promise<DeploymentSummary[]> => {
-    await requireSession();
-    const rows = await db.query.stackDeployments.findMany({
-      limit: 50,
-      orderBy: desc(stackDeployments.createdAt),
-      where: eq(stackDeployments.stackId, data.stackId),
-    });
+    const rows = await stackDeploymentsOf(
+      db,
+      await activeTeamId(),
+      [data.stackId],
+      STACK_HISTORY_LIMIT
+    );
     return rows.map(toSummary);
   });
 
