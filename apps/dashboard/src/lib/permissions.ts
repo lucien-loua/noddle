@@ -93,6 +93,12 @@ export function can(
   }).success;
 }
 
+export function seesWholeInstallation(
+  role: RoleName | string | null | undefined
+): boolean {
+  return can(role, "installation", "update");
+}
+
 export function isPermissionUniversal(
   resource: PermissionResource,
   action: string

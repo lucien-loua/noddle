@@ -34,6 +34,9 @@ import {
 } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
+import { toSwarmNames } from "@/lib/swarm-ownership";
+import type { SwarmNames } from "@/lib/swarm-ownership";
+
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 export async function listProjects(db: Db, teamId: string) {
@@ -872,5 +875,31 @@ export async function serviceDeploymentById(
       eq(deployments.id, deploymentId),
       inArray(deployments.serviceId, servicesOfTeam(db, teamId))
     ),
+  });
+}
+
+export async function swarmNamesOfTeam(
+  db: Db,
+  teamId: string
+): Promise<SwarmNames> {
+  const inTeam = environmentsOfTeam(db, teamId);
+  const [serviceRows, databaseRows, stackRows] = await Promise.all([
+    db
+      .select({ id: services.id, name: services.name })
+      .from(services)
+      .where(inArray(services.environmentId, inTeam)),
+    db
+      .select({ swarmName: databases.swarmName })
+      .from(databases)
+      .where(inArray(databases.environmentId, inTeam)),
+    db
+      .select({ swarmName: stacks.swarmName })
+      .from(stacks)
+      .where(inArray(stacks.environmentId, inTeam)),
+  ]);
+  return toSwarmNames({
+    databases: databaseRows,
+    services: serviceRows,
+    stacks: stackRows,
   });
 }

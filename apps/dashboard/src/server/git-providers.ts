@@ -5,7 +5,6 @@ import {
   githubProviders,
   gitlabProviders,
   gitProviders,
-  services,
 } from "@noddle/db/schema";
 import { isConnected, providerFor } from "@noddle/git-provider-credentials";
 import {
@@ -23,6 +22,10 @@ import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { githubAppCredentials } from "@/lib/git-provider.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
+import {
+  gitProviderOfServices,
+  servicesCloningWith,
+} from "@/lib/installation-queries.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 import { requestOrigin } from "@/lib/request-origin.server";
 
@@ -46,7 +49,7 @@ export const getGitProviders = createServerFn({ method: "GET" }).handler(
             orderBy: desc(gitProviders.createdAt),
             with: { github: true, gitlab: true },
           }),
-          db.query.services.findMany({ columns: { gitProviderId: true } }),
+          gitProviderOfServices(db),
         ]);
 
         return rows.map((row) => ({
@@ -221,9 +224,7 @@ export const deleteGitProvider = createServerFn({ method: "POST" })
       ...guarded.gitProvider(data.gitProviderId),
       permission: { action: "delete", resource: "gitProvider" },
       run: async ({ row }) => {
-        const used = await db.query.services.findMany({
-          where: eq(services.gitProviderId, row.id),
-        });
+        const used = await servicesCloningWith(db, { gitProviderId: row.id });
         if (used.length > 0) {
           throw new Error(
             `this connection still clones for ${used.length} service(s): ${used

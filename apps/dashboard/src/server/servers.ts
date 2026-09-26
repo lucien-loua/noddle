@@ -1,10 +1,4 @@
-import {
-  databases,
-  servers,
-  services,
-  sshKeys,
-  stacks,
-} from "@noddle/db/schema";
+import { servers, sshKeys } from "@noddle/db/schema";
 import { RAILPACK_VERSION } from "@noddle/shared/toolchain";
 import {
   deleteServerSchema,
@@ -17,6 +11,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
+import { serverHolds } from "@/lib/installation-queries.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
@@ -148,15 +143,11 @@ export const deleteServer = createServerFn({ method: "POST" })
   );
 
 async function heldBy(serverId: string): Promise<string | null> {
-  const [svc, stk, dbs] = await Promise.all([
-    db.query.services.findMany({ where: eq(services.serverId, serverId) }),
-    db.query.stacks.findMany({ where: eq(stacks.serverId, serverId) }),
-    db.query.databases.findMany({ where: eq(databases.serverId, serverId) }),
-  ]);
+  const holds = await serverHolds(db, serverId);
   const held = [
-    svc.length ? `${svc.length} service(s)` : "",
-    stk.length ? `${stk.length} stack(s)` : "",
-    dbs.length ? `${dbs.length} database(s)` : "",
+    holds.services ? `${holds.services} service(s)` : "",
+    holds.stacks ? `${holds.stacks} stack(s)` : "",
+    holds.databases ? `${holds.databases} database(s)` : "",
   ].filter(Boolean);
   return held.length > 0 ? held.join(", ") : null;
 }

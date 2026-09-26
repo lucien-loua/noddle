@@ -1,5 +1,5 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import { servers, services, sshKeys } from "@noddle/db/schema";
+import { servers, sshKeys } from "@noddle/db/schema";
 import {
   deleteSshKeySchema,
   sshKeyInputSchema,
@@ -11,6 +11,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
+import { servicesCloningWith } from "@/lib/installation-queries.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 
 export interface SshKeyView {
@@ -99,8 +100,8 @@ export const deleteSshKey = createServerFn({ method: "POST" })
           );
         }
 
-        const deploying = await db.query.services.findMany({
-          where: eq(services.deployKeyId, data.sshKeyId),
+        const deploying = await servicesCloningWith(db, {
+          deployKeyId: data.sshKeyId,
         });
         if (deploying.length > 0) {
           throw new Error(

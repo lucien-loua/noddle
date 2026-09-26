@@ -26,6 +26,7 @@ import {
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
+import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { check, runVerify, suite } from "@noddle/testing";
 import { devStack } from "@noddle/testing/dev-stack";
 import { eq, inArray } from "drizzle-orm";
@@ -34,6 +35,7 @@ import {
   destinationHolds,
   hostsInUse,
 } from "@/lib/installation-queries.server";
+import { containerVisibleTo, ownsSwarmService } from "@/lib/swarm-ownership";
 import {
   backupConfigsOfDatabase,
   backupOfTeam,
@@ -75,6 +77,7 @@ import {
   stackDeploymentOf,
   stackDeploymentsOf,
   stackWebhookConfigured,
+  swarmNamesOfTeam,
   teamActivityCounts,
   tokenActorRow,
   volumeBackupConfigsOfService,
@@ -764,6 +767,43 @@ await runVerify("team isolation", async () => {
         "GET /api/v1/deployments/:id and its logs read another team's deployment"
       );
     });
+
+    await suite(
+      "a container is visible only to its resource's team",
+      async () => {
+        const serviceTask = swarmServiceName({
+          id: B.service,
+          name: `iso-svc-${tag}`,
+        });
+        const databaseTask = `iso-db-${tag}`;
+        const stackTask = `iso-stack-${tag}_web`;
+        const ofB = await swarmNamesOfTeam(db, teamB);
+        check(
+          "B owns its service, database and stack tasks",
+          [serviceTask, databaseTask, stackTask].every((name) =>
+            ownsSwarmService(ofB, name)
+          ),
+          "without them here the checks below prove nothing"
+        );
+        const ofA = await swarmNamesOfTeam(db, teamA);
+        check(
+          "A owns none of them",
+          [serviceTask, databaseTask, stackTask].every(
+            (name) => !ownsSwarmService(ofA, name)
+          ),
+          "an Operator of A lists, inspects, restarts or shells into B's containers"
+        );
+        check(
+          "a container outside every resource is hidden from a team",
+          !containerVisibleTo(ofB, { kind: "unmanaged", serviceName: null }),
+          "an Operator stops the installation's own containers"
+        );
+        check(
+          "and shown to an admin, who sees the installation",
+          containerVisibleTo(null, { kind: "unmanaged", serviceName: null })
+        );
+      }
+    );
 
     await suite("the overview counts only the team", async () => {
       const ofA = await teamActivityCounts(db, teamA, SINCE_EPOCH);

@@ -30,12 +30,7 @@ const DIRECT_READ = new RegExp(
   `\\.query\\.(${TEAM_TABLES.join("|")})\\.find|\\.from\\((${TEAM_TABLES.join("|")})\\)`
 );
 
-const NOT_YET_SCOPED = [
-  "server/containers.ts",
-  "server/git-providers.ts",
-  "server/servers.ts",
-  "server/ssh-keys.ts",
-];
+const NOT_YET_SCOPED: string[] = [];
 
 const DELIBERATELY_UNSCOPED: Record<string, string> = {
   "lib/deploy-queue.server.ts":
@@ -43,7 +38,7 @@ const DELIBERATELY_UNSCOPED: Record<string, string> = {
   "lib/environment.server.ts":
     "reads only whether the project it is handed already has a default environment; every caller resolves that project through the team",
   "lib/installation-queries.server.ts":
-    "one Traefik routes the whole installation, so a host is unique across every team",
+    "hosts, destinations, servers, keys and git connections are shared by every team: a host is unique across teams, and what uses a shared thing is counted across teams before an admin removes it",
   "lib/preview.server.ts":
     "reached only from signed forge webhooks, which act on every service that deploys the repository",
   "lib/webhook-intake.server.ts":

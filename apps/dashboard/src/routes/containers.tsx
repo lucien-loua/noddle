@@ -53,7 +53,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Tone } from "@/lib/format";
-import { roles } from "@/lib/permissions";
+import { roles, seesWholeInstallation } from "@/lib/permissions";
 import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
@@ -329,9 +329,9 @@ function ContainersPage() {
               </Badge>
             </FrameTitle>
             <FrameDescription>
-              Every container across every connected server: Swarm services,
-              Noddle&apos;s own control plane, and anything else running
-              underneath.
+              {seesWholeInstallation(role)
+                ? "Every container across every connected server: Swarm services, Noddle's own control plane, and anything else running underneath."
+                : "The containers of your team's applications, stacks and databases, across every connected server."}
             </FrameDescription>
           </FrameHeader>
 

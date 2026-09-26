@@ -16,8 +16,9 @@ import { db } from "@/lib/db.server";
 import { can } from "@/lib/permissions";
 import type { Permission } from "@/lib/permissions";
 import { connectToServer } from "@/lib/ssh.server";
+import { containerVisibleTo } from "@/lib/swarm-ownership";
 import { databaseInContext, serviceInContext } from "@/lib/team-queries.server";
-import { teamOfSession } from "@/lib/team-scope.server";
+import { swarmScopeOf, teamOfSession } from "@/lib/team-scope.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const ALLOWED_SHELLS = new Set(["sh", "bash", "ash"]);
@@ -257,7 +258,7 @@ async function openServerContainerTerminal(
   const ssh = await connectToServer(server);
   try {
     const found = await readKind(ssh, containerId);
-    if (!found) {
+    if (!(found && containerVisibleTo(await swarmScopeOf(session), found))) {
       ssh.end();
       return { message: "container not found", ok: false, status: 404 };
     }

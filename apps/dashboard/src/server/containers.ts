@@ -1,5 +1,4 @@
-import { databases, servers } from "@noddle/db/schema";
-import { swarmServiceName } from "@noddle/shared/swarm-names";
+import { servers } from "@noddle/db/schema";
 import { execArgv } from "@noddle/ssh-executor";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
@@ -17,10 +16,13 @@ import type {
   ContainerRow,
 } from "@/lib/container-read.server";
 import { db } from "@/lib/db.server";
+import { swarmNamesOfInstallation } from "@/lib/installation-queries.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
 import { withServerSession, withServerSessionById } from "@/lib/ssh.server";
+import { containerVisibleTo, ownsSwarmService } from "@/lib/swarm-ownership";
+import { swarmScopeOf } from "@/lib/team-scope.server";
 
 export type {
   ContainerDetail,
@@ -35,7 +37,7 @@ export interface ContainersView {
 
 export const getContainers = createServerFn({ method: "GET" }).handler(
   async (): Promise<ContainersView> => {
-    await requireSession();
+    const scope = await swarmScopeOf(await requireSession());
 
     const view: ContainersView = { containers: [], unreachable: [] };
     const connected = await db.query.servers.findMany({
@@ -57,7 +59,11 @@ export const getContainers = createServerFn({ method: "GET" }).handler(
           if (res.code !== 0) {
             throw new Error(res.stderr.trim() || "docker ps failed");
           }
-          view.containers.push(...parsePs(res.stdout, server));
+          view.containers.push(
+            ...parsePs(res.stdout, server).filter((row) =>
+              containerVisibleTo(scope, row)
+            )
+          );
         });
       } catch (error) {
         view.unreachable.push({
@@ -79,8 +85,14 @@ const inspectSchema = z.object({
 export const inspectContainer = createServerFn({ method: "GET" })
   .validator(inspectSchema)
   .handler(async ({ data }): Promise<ContainerDetail> => {
-    await requireSession();
+    const scope = await swarmScopeOf(await requireSession());
     return withServerSessionById(data.serverId, async (client) => {
+      if (scope) {
+        const found = await readKind(client, data.containerId);
+        if (!(found && containerVisibleTo(scope, found))) {
+          throw new Error("container not found");
+        }
+      }
       const res = await execArgv(client, [
         "sudo",
         "docker",
@@ -114,10 +126,11 @@ export const containerAction = createServerFn({ method: "POST" })
 
     const guarded = await runGuarded({
       permission,
-      run: async () =>
-        withServerSessionById(data.serverId, async (client) => {
+      run: async ({ session }) => {
+        const scope = await swarmScopeOf(session);
+        return await withServerSessionById(data.serverId, async (client) => {
           const found = await readKind(client, data.containerId);
-          if (!found) {
+          if (!(found && containerVisibleTo(scope, found))) {
             throw new Error("container not found");
           }
           if (found.kind !== "unmanaged") {
@@ -139,7 +152,8 @@ export const containerAction = createServerFn({ method: "POST" })
             );
           }
           return { containerName: found.name, done: true as const };
-        }),
+        });
+      },
       target: ({ result }) => ({
         id: data.containerId,
         name: result.containerName,
@@ -153,35 +167,15 @@ const restartServiceSchema = z.object({
   serviceName: z.string().min(1, "Enter the service name."),
 });
 
-async function isManagedSwarmService(serviceName: string): Promise<boolean> {
-  const [svcRows, dbRow, stackRows] = await Promise.all([
-    db.query.services.findMany({ columns: { id: true, name: true } }),
-    db.query.databases.findFirst({
-      columns: { id: true },
-      where: eq(databases.swarmName, serviceName),
-    }),
-    db.query.stacks.findMany({ columns: { swarmName: true } }),
-  ]);
-
-  if (svcRows.some((s) => swarmServiceName(s) === serviceName)) {
-    return true;
-  }
-  if (dbRow) {
-    return true;
-  }
-  return stackRows.some(
-    (s) =>
-      serviceName === s.swarmName || serviceName.startsWith(`${s.swarmName}_`)
-  );
-}
-
 export const restartSwarmService = createServerFn({ method: "POST" })
   .validator(restartServiceSchema)
   .handler(async ({ data }): Promise<{ queued: true }> =>
     runGuarded({
       permission: { action: "operate", resource: "container" },
-      run: async () => {
-        if (!(await isManagedSwarmService(data.serviceName))) {
+      run: async ({ session }) => {
+        const names =
+          (await swarmScopeOf(session)) ?? (await swarmNamesOfInstallation(db));
+        if (!ownsSwarmService(names, data.serviceName)) {
           throw new Error(
             `${data.serviceName} is not a Noddle-managed Swarm service and cannot be restarted from here.`
           );

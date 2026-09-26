@@ -262,7 +262,11 @@ export function parseInspect(stdout: string): ContainerDetail {
 export async function readKind(
   client: SshClient,
   containerId: string
-): Promise<{ kind: ContainerKind; name: string } | null> {
+): Promise<{
+  kind: ContainerKind;
+  name: string;
+  serviceName: string | null;
+} | null> {
   const res = await execArgv(client, [
     "sudo",
     "docker",
@@ -278,5 +282,7 @@ export async function readKind(
     return null;
   }
   const [row] = parsePs(res.stdout, { id: "", name: "" });
-  return row ? { kind: row.kind, name: row.name } : null;
+  return row
+    ? { kind: row.kind, name: row.name, serviceName: row.serviceName }
+    : null;
 }

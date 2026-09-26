@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 
 import type { Session } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
+import { seesWholeInstallation } from "@/lib/permissions";
 import { requireSession } from "@/lib/session.server";
+import type { SwarmNames } from "@/lib/swarm-ownership";
+import { swarmNamesOfTeam } from "@/lib/team-queries.server";
 
 export class NoActiveTeamError extends Error {
   constructor() {
@@ -32,4 +35,13 @@ export async function teamOfSession(session: Session): Promise<string> {
     throw new NoActiveTeamError();
   }
   return membership.organizationId;
+}
+
+export async function swarmScopeOf(
+  session: Session
+): Promise<SwarmNames | null> {
+  if (seesWholeInstallation(session.user.role)) {
+    return null;
+  }
+  return await swarmNamesOfTeam(db, await teamOfSession(session));
 }
