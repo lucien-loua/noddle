@@ -7,33 +7,34 @@ import {
   volumeRestoreRequestSchema,
 } from "@noddle/shared/validation/volume-backup";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
-import { requireSession } from "@/lib/session.server";
+import {
+  volumeBackupOfTeam,
+  volumeBackupsOfService,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import { assertRestorableRun, toBackupRunRow } from "@/server/backups/policy";
 import type { BackupRunRow } from "@/server/backups/policy";
 import { deleteBackupRun } from "@/server/backups/shared";
 
 export type VolumeBackupRow = BackupRunRow;
 
+const VOLUME_BACKUP_HISTORY_LIMIT = 50;
+
 export const getVolumeBackups = createServerFn({ method: "GET" })
   .validator(listVolumeBackupsSchema)
   .handler(async ({ data }): Promise<VolumeBackupRow[]> => {
-    await requireSession();
-    const rows = await db.query.volumeBackups.findMany({
-      limit: 50,
-      orderBy: desc(volumeBackups.createdAt),
-      where: data.configId
-        ? and(
-            eq(volumeBackups.serviceId, data.serviceId),
-            eq(volumeBackups.configId, data.configId)
-          )
-        : eq(volumeBackups.serviceId, data.serviceId),
-    });
+    const rows = await volumeBackupsOfService(
+      db,
+      await activeTeamId(),
+      { configId: data.configId, serviceId: data.serviceId },
+      VOLUME_BACKUP_HISTORY_LIMIT
+    );
     return rows.map(toBackupRunRow);
   });
 
@@ -99,9 +100,11 @@ export const triggerVolumeRestore = createServerFn({ method: "POST" })
       permission: { action: "restore", resource: "backup" },
       run: async ({ row: service }) => {
         if (data.backupId) {
-          const backup = await db.query.volumeBackups.findFirst({
-            where: eq(volumeBackups.id, data.backupId),
-          });
+          const backup = await volumeBackupOfTeam(
+            db,
+            await activeTeamId(),
+            data.backupId
+          );
           assertRestorableRun(backup, backup?.serviceId === service.id, {
             noun: "volume backup",
             owner: "service",

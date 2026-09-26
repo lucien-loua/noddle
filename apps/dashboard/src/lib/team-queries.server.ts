@@ -1,4 +1,6 @@
 import {
+  backupConfigs,
+  backups,
   databaseDeployments,
   databases,
   deployments,
@@ -10,6 +12,8 @@ import {
   services,
   stackDeployments,
   stacks,
+  volumeBackupConfigs,
+  volumeBackups,
 } from "@noddle/db/schema";
 import type * as schema from "@noddle/db/schema";
 import {
@@ -658,5 +662,91 @@ export async function domainInTeam(db: Db, teamId: string, domainId: string) {
       inArray(serviceDomains.serviceId, servicesOfTeam(db, teamId))
     ),
     with: { service: true },
+  });
+}
+
+export async function backupConfigsOfDatabase(
+  db: Db,
+  teamId: string,
+  databaseId: string
+) {
+  return await db.query.backupConfigs.findMany({
+    orderBy: desc(backupConfigs.createdAt),
+    where: and(
+      eq(backupConfigs.databaseId, databaseId),
+      inArray(backupConfigs.databaseId, databasesOfTeam(db, teamId))
+    ),
+    with: { destination: true },
+  });
+}
+
+export async function backupsOfDatabase(
+  db: Db,
+  teamId: string,
+  filter: { configId?: string; databaseId: string },
+  limit: number
+) {
+  return await db.query.backups.findMany({
+    limit,
+    orderBy: desc(backups.createdAt),
+    where: and(
+      eq(backups.databaseId, filter.databaseId),
+      inArray(backups.databaseId, databasesOfTeam(db, teamId)),
+      filter.configId ? eq(backups.configId, filter.configId) : undefined
+    ),
+  });
+}
+
+export async function backupOfTeam(db: Db, teamId: string, backupId: string) {
+  return await db.query.backups.findFirst({
+    where: and(
+      eq(backups.id, backupId),
+      inArray(backups.databaseId, databasesOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function volumeBackupConfigsOfService(
+  db: Db,
+  teamId: string,
+  serviceId: string
+) {
+  return await db.query.volumeBackupConfigs.findMany({
+    orderBy: desc(volumeBackupConfigs.createdAt),
+    where: and(
+      eq(volumeBackupConfigs.serviceId, serviceId),
+      inArray(volumeBackupConfigs.serviceId, servicesOfTeam(db, teamId))
+    ),
+    with: { destination: true },
+  });
+}
+
+export async function volumeBackupsOfService(
+  db: Db,
+  teamId: string,
+  filter: { configId?: string; serviceId: string },
+  limit: number
+) {
+  return await db.query.volumeBackups.findMany({
+    limit,
+    orderBy: desc(volumeBackups.createdAt),
+    where: and(
+      eq(volumeBackups.serviceId, filter.serviceId),
+      inArray(volumeBackups.serviceId, servicesOfTeam(db, teamId)),
+      filter.configId ? eq(volumeBackups.configId, filter.configId) : undefined
+    ),
+  });
+}
+
+export async function volumeBackupOfTeam(
+  db: Db,
+  teamId: string,
+  backupId: string
+) {
+  return await db.query.volumeBackups.findFirst({
+    where: and(
+      eq(volumeBackups.id, backupId),
+      inArray(volumeBackups.serviceId, servicesOfTeam(db, teamId))
+    ),
   });
 }

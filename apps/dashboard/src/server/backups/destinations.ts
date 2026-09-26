@@ -1,6 +1,6 @@
 import { resolveDestinationSecret, checkDestination } from "@noddle/backup";
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import { backupConfigs, backups, s3Destinations } from "@noddle/db/schema";
+import { s3Destinations } from "@noddle/db/schema";
 import {
   destinationIdSchema,
   s3DestinationCreateSchema,
@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
+import { destinationHolds } from "@/lib/installation-queries.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -60,18 +61,13 @@ export const deleteDestination = createServerFn({ method: "POST" })
       ...guarded.destination(data.id),
       permission: { action: "create", resource: "backup" },
       run: async ({ row }) => {
-        const heldRun = await db.query.backups.findFirst({
-          where: eq(backups.destinationId, data.id),
-        });
-        if (heldRun) {
+        const holds = await destinationHolds(db, data.id);
+        if (holds.runs) {
           throw new Error(
             "This destination still holds backups. Delete them first, or they could never be restored."
           );
         }
-        const heldConfig = await db.query.backupConfigs.findFirst({
-          where: eq(backupConfigs.destinationId, data.id),
-        });
-        if (heldConfig) {
+        if (holds.configs) {
           throw new Error(
             "This destination is still used by a backup config. Delete the config first."
           );

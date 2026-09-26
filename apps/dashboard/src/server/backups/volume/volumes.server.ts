@@ -1,10 +1,8 @@
-import { services } from "@noddle/db/schema";
 import { listServiceVolumeMounts } from "@noddle/deploy-engine/ops";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { dockerClient } from "@noddle/ssh-executor";
-import { eq } from "drizzle-orm";
 
-import { db } from "@/lib/db.server";
+import { guarded } from "@/lib/guarded.server";
 import { withManagerSession } from "@/lib/ssh.server";
 
 import type { ServiceVolumeRow } from "./volumes";
@@ -12,9 +10,7 @@ import type { ServiceVolumeRow } from "./volumes";
 export async function loadServiceVolumeMounts(
   serviceId: string
 ): Promise<ServiceVolumeRow[]> {
-  const service = await db.query.services.findFirst({
-    where: eq(services.id, serviceId),
-  });
+  const service = await guarded.service(serviceId).load();
   if (!service) {
     throw new Error("service not found");
   }

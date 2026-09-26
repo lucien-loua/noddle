@@ -13,14 +13,15 @@ import {
   restoreRequestSchema,
 } from "@noddle/shared/validation/backup";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded, runRead } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
-import { requireSession } from "@/lib/session.server";
+import { backupOfTeam, backupsOfDatabase } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import { assertRestorableRun, toBackupRunRow } from "@/server/backups/policy";
 import type { BackupRunRow } from "@/server/backups/policy";
 import { deleteBackupRun } from "@/server/backups/shared";
@@ -33,20 +34,17 @@ export interface BackupObjectRow {
   sizeBytes: number;
 }
 
+const BACKUP_HISTORY_LIMIT = 50;
+
 export const getBackups = createServerFn({ method: "GET" })
   .validator(listBackupsSchema)
   .handler(async ({ data }): Promise<BackupRow[]> => {
-    await requireSession();
-    const rows = await db.query.backups.findMany({
-      limit: 50,
-      orderBy: desc(backups.createdAt),
-      where: data.configId
-        ? and(
-            eq(backups.databaseId, data.databaseId),
-            eq(backups.configId, data.configId)
-          )
-        : eq(backups.databaseId, data.databaseId),
-    });
+    const rows = await backupsOfDatabase(
+      db,
+      await activeTeamId(),
+      { configId: data.configId, databaseId: data.databaseId },
+      BACKUP_HISTORY_LIMIT
+    );
     return rows.map(toBackupRunRow);
   });
 
@@ -126,9 +124,11 @@ export const triggerRestore = createServerFn({ method: "POST" })
       permission: { action: "restore", resource: "backup" },
       run: async ({ row: database }) => {
         if (data.backupId) {
-          const backup = await db.query.backups.findFirst({
-            where: eq(backups.id, data.backupId),
-          });
+          const backup = await backupOfTeam(
+            db,
+            await activeTeamId(),
+            data.backupId
+          );
           assertRestorableRun(backup, backup?.databaseId === database.id, {
             noun: "backup",
             owner: "database",

@@ -5,13 +5,14 @@ import {
   volumeBackupConfigIdSchema,
 } from "@noddle/shared/validation/volume-backup";
 import { createServerFn } from "@tanstack/react-start";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { guarded } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
-import { requireSession } from "@/lib/session.server";
+import { volumeBackupConfigsOfService } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import { assertDestinationExists } from "@/server/backups/shared";
 
 export interface VolumeBackupConfigRow {
@@ -59,12 +60,11 @@ async function resolveMountPath(
 export const listVolumeBackupConfigs = createServerFn({ method: "GET" })
   .validator(z.object({ serviceId: z.uuid("Choose a service.") }))
   .handler(async ({ data }): Promise<VolumeBackupConfigRow[]> => {
-    await requireSession();
-    const rows = await db.query.volumeBackupConfigs.findMany({
-      orderBy: desc(volumeBackupConfigs.createdAt),
-      where: eq(volumeBackupConfigs.serviceId, data.serviceId),
-      with: { destination: true },
-    });
+    const rows = await volumeBackupConfigsOfService(
+      db,
+      await activeTeamId(),
+      data.serviceId
+    );
     return rows.map((row) => ({
       createdAt: row.createdAt.toISOString(),
       destinationId: row.destinationId,

@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 
 import { createDatabase } from "@noddle/db";
 import {
+  backupConfigs,
+  backups,
   databaseDeployments,
   databases,
   deployments,
@@ -10,6 +12,7 @@ import {
   environments,
   organization,
   projects,
+  s3Destinations,
   serviceDependencies,
   serviceDomains,
   servers,
@@ -17,13 +20,21 @@ import {
   sshKeys,
   stackDeployments,
   stacks,
+  volumeBackupConfigs,
+  volumeBackups,
 } from "@noddle/db/schema";
 import { check, runVerify, suite } from "@noddle/testing";
 import { devStack } from "@noddle/testing/dev-stack";
 import { inArray } from "drizzle-orm";
 
-import { hostsInUse } from "@/lib/installation-queries.server";
 import {
+  destinationHolds,
+  hostsInUse,
+} from "@/lib/installation-queries.server";
+import {
+  backupConfigsOfDatabase,
+  backupOfTeam,
+  backupsOfDatabase,
   databaseDeploymentsOf,
   databaseDependents,
   databaseInContext,
@@ -56,6 +67,9 @@ import {
   stackDeploymentOf,
   stackDeploymentsOf,
   teamActivityCounts,
+  volumeBackupConfigsOfService,
+  volumeBackupOfTeam,
+  volumeBackupsOfService,
 } from "@/lib/team-queries.server";
 
 const db = createDatabase({ url: devStack().databaseUrl });
@@ -159,7 +173,53 @@ await db.insert(serviceDependencies).values({
   serviceId: serviceB?.id as string,
 });
 
+const [destination] = await db
+  .insert(s3Destinations)
+  .values({
+    accessKeyId: "not-a-real-key",
+    bucket: `iso-${tag}`,
+    endpoint: "https://s3.example.invalid",
+    name: `iso-dest-${tag}`,
+    secretAccessKeyEncrypted: "not-a-real-secret",
+  })
+  .returning();
+const [backupConfigB] = await db
+  .insert(backupConfigs)
+  .values({
+    databaseId: databaseB?.id as string,
+    databaseName: "app",
+    destinationId: destination?.id as string,
+    schedule: "0 3 * * *",
+  })
+  .returning();
+const [backupB] = await db
+  .insert(backups)
+  .values({
+    configId: backupConfigB?.id as string,
+    databaseId: databaseB?.id as string,
+    destinationId: destination?.id as string,
+    objectKey: `iso-${tag}/app.dump`,
+  })
+  .returning();
+await db.insert(volumeBackupConfigs).values({
+  destinationId: destination?.id as string,
+  mountPath: "/data",
+  schedule: "0 4 * * *",
+  serviceId: serviceB?.id as string,
+  volumeName: `iso-vol-${tag}`,
+});
+const [volumeBackupB] = await db
+  .insert(volumeBackups)
+  .values({
+    destinationId: destination?.id as string,
+    objectKey: `iso-${tag}/data.tar`,
+    serviceId: serviceB?.id as string,
+    volumeName: `iso-vol-${tag}`,
+  })
+  .returning();
+
 const B = {
+  backup: backupB?.id as string,
   database: databaseB?.id as string,
   databaseDeployment: databaseDeploymentB?.id as string,
   deployment: deploymentB?.id as string,
@@ -170,6 +230,7 @@ const B = {
   service: serviceB?.id as string,
   stack: stackB?.id as string,
   stackDeployment: stackDeploymentB?.id as string,
+  volumeBackup: volumeBackupB?.id as string,
 };
 const RECENT = 200;
 const SINCE_EPOCH = new Date(0);
@@ -534,6 +595,49 @@ await runVerify("team isolation", async () => {
       );
     });
 
+    await suite("backups stay inside the team", async () => {
+      const HISTORY = 50;
+      const ofB = await Promise.all([
+        backupConfigsOfDatabase(db, teamB, B.database),
+        backupsOfDatabase(db, teamB, { databaseId: B.database }, HISTORY),
+        volumeBackupConfigsOfService(db, teamB, B.service),
+        volumeBackupsOfService(db, teamB, { serviceId: B.service }, HISTORY),
+      ]);
+      check(
+        "B lists its database and volume backup configs and runs",
+        ofB.every((rows) => rows.length === 1),
+        "without them here the checks below prove nothing"
+      );
+      const ofA = await Promise.all([
+        backupConfigsOfDatabase(db, teamA, B.database),
+        backupsOfDatabase(db, teamA, { databaseId: B.database }, HISTORY),
+        volumeBackupConfigsOfService(db, teamA, B.service),
+        volumeBackupsOfService(db, teamA, { serviceId: B.service }, HISTORY),
+      ]);
+      check(
+        "A passing B's ids lists none of them",
+        ofA.every((rows) => rows.length === 0),
+        "listBackupConfigs, getBackups and their volume twins read another team's backups"
+      );
+      check(
+        "B finds its runs as restore sources",
+        (await backupOfTeam(db, teamB, B.backup)) !== undefined &&
+          (await volumeBackupOfTeam(db, teamB, B.volumeBackup)) !== undefined
+      );
+      check(
+        "A does not",
+        (await backupOfTeam(db, teamA, B.backup)) === undefined &&
+          (await volumeBackupOfTeam(db, teamA, B.volumeBackup)) === undefined,
+        "a restore read another team's backup run"
+      );
+      const holds = await destinationHolds(db, destination?.id as string);
+      check(
+        "a destination holding B's backups stays undeletable for everyone, on purpose",
+        holds.runs && holds.configs,
+        "destinations belong to the installation; deleting one would strand B's backups"
+      );
+    });
+
     await suite("the overview counts only the team", async () => {
       const ofA = await teamActivityCounts(db, teamA, SINCE_EPOCH);
       const ofB = await teamActivityCounts(db, teamB, SINCE_EPOCH);
@@ -614,6 +718,9 @@ await runVerify("team isolation", async () => {
     await db
       .delete(databases)
       .where(inArray(databases.environmentId, [envB?.id as string]));
+    await db
+      .delete(s3Destinations)
+      .where(inArray(s3Destinations.id, [destination?.id as string]));
     await db.delete(servers).where(inArray(servers.id, [server?.id as string]));
     await db.delete(sshKeys).where(inArray(sshKeys.id, [key?.id as string]));
     await db.delete(projects).where(inArray(projects.teamId, [teamA, teamB]));

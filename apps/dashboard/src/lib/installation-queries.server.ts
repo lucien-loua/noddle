@@ -1,5 +1,5 @@
-import { serviceDomains } from "@noddle/db/schema";
-import { and, inArray, ne } from "drizzle-orm";
+import { backupConfigs, backups, serviceDomains } from "@noddle/db/schema";
+import { and, eq, inArray, ne } from "drizzle-orm";
 
 import type { Db } from "@/lib/team-queries.server";
 
@@ -21,4 +21,23 @@ export async function hostsInUse(
       )
     );
   return new Set(rows.map((row) => row.host));
+}
+
+export async function destinationHolds(
+  db: Db,
+  destinationId: string
+): Promise<{ configs: boolean; runs: boolean }> {
+  const [run, config] = await Promise.all([
+    db
+      .select({ id: backups.id })
+      .from(backups)
+      .where(eq(backups.destinationId, destinationId))
+      .limit(1),
+    db
+      .select({ id: backupConfigs.id })
+      .from(backupConfigs)
+      .where(eq(backupConfigs.destinationId, destinationId))
+      .limit(1),
+  ]);
+  return { configs: config.length > 0, runs: run.length > 0 };
 }

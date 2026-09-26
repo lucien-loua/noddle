@@ -5,13 +5,14 @@ import {
   updateBackupConfigSchema,
 } from "@noddle/shared/validation/backup";
 import { createServerFn } from "@tanstack/react-start";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { guarded } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
-import { requireSession } from "@/lib/session.server";
+import { backupConfigsOfDatabase } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import { assertDestinationExists } from "@/server/backups/shared";
 
 export interface BackupConfigRow {
@@ -31,12 +32,11 @@ export interface BackupConfigRow {
 export const listBackupConfigs = createServerFn({ method: "GET" })
   .validator(z.object({ databaseId: z.uuid("Choose a database.") }))
   .handler(async ({ data }): Promise<BackupConfigRow[]> => {
-    await requireSession();
-    const rows = await db.query.backupConfigs.findMany({
-      orderBy: desc(backupConfigs.createdAt),
-      where: eq(backupConfigs.databaseId, data.databaseId),
-      with: { destination: true },
-    });
+    const rows = await backupConfigsOfDatabase(
+      db,
+      await activeTeamId(),
+      data.databaseId
+    );
     return rows.map((row) => ({
       createdAt: row.createdAt.toISOString(),
       databaseId: row.databaseId,
