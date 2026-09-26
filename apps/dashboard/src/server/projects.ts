@@ -12,6 +12,8 @@ import { insertProjectEnvironment } from "@/lib/environment.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
+import { listProjects } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export interface ProjectView {
   createdAt: string;
@@ -23,7 +25,7 @@ export interface ProjectView {
 export const getProjects = createServerFn({ method: "GET" }).handler(
   async (): Promise<ProjectView[]> => {
     await requireSession();
-    const rows = await db.query.projects.findMany({ orderBy: projects.name });
+    const rows = await listProjects(db, await activeTeamId());
     return rows.map((p) => ({
       createdAt: p.createdAt.toISOString(),
       description: p.description,
