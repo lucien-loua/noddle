@@ -8,8 +8,13 @@ import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
+import { guarded } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
-import { requireSession } from "@/lib/session.server";
+import {
+  serviceWebhookConfigured,
+  stackWebhookConfigured,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 const SECRET_BYTES = 32;
 
@@ -27,26 +32,20 @@ const stackIdSchema = z.object({ stackId: z.uuid("Choose a stack.") });
 
 export const getServiceWebhook = createServerFn({ method: "GET" })
   .validator(serviceIdSchema)
-  .handler(async ({ data }): Promise<WebhookStatus> => {
-    await requireSession();
-    const service = await db.query.services.findFirst({
-      where: eq(services.id, data.serviceId),
-    });
-    return {
-      configured: Boolean(service?.webhookSecretEncrypted),
-      path: `/api/webhooks/service/${data.serviceId}`,
-    };
-  });
+  .handler(async ({ data }): Promise<WebhookStatus> => ({
+    configured: await serviceWebhookConfigured(
+      db,
+      await activeTeamId(),
+      data.serviceId
+    ),
+    path: `/api/webhooks/service/${data.serviceId}`,
+  }));
 
 export const generateServiceWebhook = createServerFn({ method: "POST" })
   .validator(serviceIdSchema)
   .handler(async ({ data }): Promise<{ path: string; secret: string }> =>
     runGuarded({
-      load: () =>
-        db.query.services.findFirst({
-          where: eq(services.id, data.serviceId),
-        }),
-      notFoundMessage: "service not found",
+      ...guarded.service(data.serviceId),
       permission: { action: "create", resource: "service" },
       run: async ({ row }) => {
         const secret = newSecret();
@@ -68,24 +67,20 @@ export const generateServiceWebhook = createServerFn({ method: "POST" })
 
 export const getStackWebhook = createServerFn({ method: "GET" })
   .validator(stackIdSchema)
-  .handler(async ({ data }): Promise<WebhookStatus> => {
-    await requireSession();
-    const stack = await db.query.stacks.findFirst({
-      where: eq(stacks.id, data.stackId),
-    });
-    return {
-      configured: Boolean(stack?.webhookSecretEncrypted),
-      path: `/api/webhooks/stack/${data.stackId}`,
-    };
-  });
+  .handler(async ({ data }): Promise<WebhookStatus> => ({
+    configured: await stackWebhookConfigured(
+      db,
+      await activeTeamId(),
+      data.stackId
+    ),
+    path: `/api/webhooks/stack/${data.stackId}`,
+  }));
 
 export const generateStackWebhook = createServerFn({ method: "POST" })
   .validator(stackIdSchema)
   .handler(async ({ data }): Promise<{ path: string; secret: string }> =>
     runGuarded({
-      load: () =>
-        db.query.stacks.findFirst({ where: eq(stacks.id, data.stackId) }),
-      notFoundMessage: "stack not found",
+      ...guarded.stack(data.stackId),
       permission: { action: "create", resource: "service" },
       run: async ({ row }) => {
         const secret = newSecret();

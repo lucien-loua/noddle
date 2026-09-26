@@ -37,10 +37,8 @@ const NOT_YET_SCOPED = [
   "routes/api/v1/services.ts",
   "server/containers.ts",
   "server/git-providers.ts",
-  "server/registries.ts",
   "server/servers.ts",
   "server/ssh-keys.ts",
-  "server/webhooks.ts",
 ];
 
 const DELIBERATELY_UNSCOPED: Record<string, string> = {

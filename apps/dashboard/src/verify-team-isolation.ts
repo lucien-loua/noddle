@@ -64,9 +64,11 @@ import {
   serviceInContext,
   serviceInTeam,
   serviceNamesIn,
+  serviceWebhookConfigured,
   serviceWithGitProvider,
   stackDeploymentOf,
   stackDeploymentsOf,
+  stackWebhookConfigured,
   teamActivityCounts,
   volumeBackupConfigsOfService,
   volumeBackupOfTeam,
@@ -117,6 +119,7 @@ const [serviceB] = await db
     name: `iso-svc-${tag}`,
     serverId: server?.id as string,
     sourceType: "docker_image",
+    webhookSecretEncrypted: "not-a-real-secret",
   })
   .returning();
 const [envVarB] = await db
@@ -135,6 +138,7 @@ const [stackB] = await db
     name: `iso-stack-${tag}`,
     serverId: server?.id as string,
     swarmName: `iso-stack-${tag}`,
+    webhookSecretEncrypted: "not-a-real-secret",
   })
   .returning();
 const [databaseB] = await db
@@ -650,6 +654,22 @@ await runVerify("team isolation", async () => {
         "a destination holding B's backups stays undeletable for everyone, on purpose",
         holds.runs && holds.configs,
         "destinations belong to the installation; deleting one would strand B's backups"
+      );
+    });
+
+    await suite("a webhook's state is read only by its team", async () => {
+      check(
+        "B sees its service and stack webhooks configured",
+        (await serviceWebhookConfigured(db, teamB, B.service)) &&
+          (await stackWebhookConfigured(db, teamB, B.stack))
+      );
+      check(
+        "A passing B's ids sees neither",
+        !(
+          (await serviceWebhookConfigured(db, teamA, B.service)) ||
+          (await stackWebhookConfigured(db, teamA, B.stack))
+        ),
+        "getServiceWebhook and getStackWebhook report another team's webhook"
       );
     });
 

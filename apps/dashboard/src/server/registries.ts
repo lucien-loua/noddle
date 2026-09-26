@@ -241,11 +241,7 @@ export const setServiceRegistry = createServerFn({ method: "POST" })
   .validator(serviceRegistrySchema)
   .handler(async ({ data }): Promise<{ ok: true }> =>
     runGuarded({
-      load: () =>
-        db.query.services.findFirst({
-          where: eq(services.id, data.serviceId),
-        }),
-      notFoundMessage: "service not found",
+      ...guarded.service(data.serviceId),
       permission: { action: "create", resource: "service" },
       run: async ({ row }) => {
         await db

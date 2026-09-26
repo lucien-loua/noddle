@@ -768,3 +768,33 @@ export async function environmentForDuplicate(
     },
   });
 }
+
+export async function serviceWebhookConfigured(
+  db: Db,
+  teamId: string,
+  serviceId: string
+): Promise<boolean> {
+  const row = await db.query.services.findFirst({
+    columns: { webhookSecretEncrypted: true },
+    where: and(
+      eq(services.id, serviceId),
+      inArray(services.environmentId, environmentsOfTeam(db, teamId))
+    ),
+  });
+  return Boolean(row?.webhookSecretEncrypted);
+}
+
+export async function stackWebhookConfigured(
+  db: Db,
+  teamId: string,
+  stackId: string
+): Promise<boolean> {
+  const row = await db.query.stacks.findFirst({
+    columns: { webhookSecretEncrypted: true },
+    where: and(
+      eq(stacks.id, stackId),
+      inArray(stacks.environmentId, environmentsOfTeam(db, teamId))
+    ),
+  });
+  return Boolean(row?.webhookSecretEncrypted);
+}
