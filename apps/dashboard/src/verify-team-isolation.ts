@@ -23,8 +23,11 @@ import { inArray } from "drizzle-orm";
 import {
   databaseDeploymentsOf,
   databaseInContext,
+  environmentByName,
   environmentNameTaken,
   environmentOfProject,
+  envVarOfService,
+  findOrCreateTeamProject,
   environmentsHold,
   listDatabasesInContext,
   listEnvVars,
@@ -37,6 +40,7 @@ import {
   recentStackDeployments,
   serviceDeploymentsOf,
   serviceInContext,
+  serviceInTeam,
   stackDeploymentsOf,
   teamActivityCounts,
 } from "@/lib/team-queries.server";
@@ -303,7 +307,7 @@ await runVerify("team isolation", async () => {
         check(
           "A passing B's database id gets nothing",
           (await databaseInContext(db, teamA, B.database)) === undefined,
-          "getDatabase returns another team's database"
+          "getDatabase and getDatabaseCredentials return another team's database, root password included"
         );
         check(
           "A passing B's project and environment ids gets nothing",
@@ -382,6 +386,59 @@ await runVerify("team isolation", async () => {
         `${ofA.projects} projects, ${ofA.environments} environments, ${ofA.deploys} deploys`
       );
     });
+
+    await suite(
+      "creating by name stays inside the team, and so does attaching",
+      async () => {
+        const reused = await findOrCreateTeamProject(
+          db,
+          teamB,
+          `proj-b-${tag}`
+        );
+        check(
+          "B naming its own project gets that project back",
+          reused.id === B.project
+        );
+        const created = await findOrCreateTeamProject(
+          db,
+          teamA,
+          `proj-b-${tag}`
+        );
+        check(
+          "A naming B's project gets a new project of its own",
+          created.id !== B.project && created.teamId === teamA,
+          "connectRepo, connectStack and connectDatabase filed A's resource under B's project"
+        );
+        check(
+          "B's environment is found by name inside B",
+          (await environmentByName(db, teamB, B.project, "production"))?.id ===
+            B.environment
+        );
+        check(
+          "but not by A passing B's project id",
+          (await environmentByName(db, teamA, B.project, "production")) ===
+            undefined,
+          "a create by name placed A's resource in B's environment"
+        );
+        check("B's service is B's", await serviceInTeam(db, teamB, B.service));
+        check(
+          "A cannot name B's service as an attach target",
+          !(await serviceInTeam(db, teamA, B.service)),
+          "attachDatabase wrote a connection string into another team's service"
+        );
+        check(
+          "B finds its variable by key",
+          (await envVarOfService(db, teamB, B.service, "DATABASE_PASSWORD")) !==
+            undefined
+        );
+        check(
+          "A does not",
+          (await envVarOfService(db, teamA, B.service, "DATABASE_PASSWORD")) ===
+            undefined,
+          "attachDatabase overwrote another team's variable of the same key"
+        );
+      }
+    );
   } finally {
     await db
       .delete(envVars)
@@ -397,9 +454,7 @@ await runVerify("team isolation", async () => {
       .where(inArray(databases.environmentId, [envB?.id as string]));
     await db.delete(servers).where(inArray(servers.id, [server?.id as string]));
     await db.delete(sshKeys).where(inArray(sshKeys.id, [key?.id as string]));
-    await db
-      .delete(projects)
-      .where(inArray(projects.id, [projectA?.id, projectB?.id] as string[]));
+    await db.delete(projects).where(inArray(projects.teamId, [teamA, teamB]));
     await db
       .delete(organization)
       .where(inArray(organization.id, [teamA, teamB]));

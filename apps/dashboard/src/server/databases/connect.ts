@@ -1,5 +1,5 @@
 import { encryptSecret, secretContext } from "@noddle/crypto";
-import { databases, environments, projects } from "@noddle/db/schema";
+import { databases } from "@noddle/db/schema";
 import {
   DEFAULT_DATABASE_IMAGE,
   DEFAULT_DATABASE_USER,
@@ -10,13 +10,18 @@ import { newDatabaseSwarmName } from "@noddle/shared/swarm-names";
 import { connectDatabaseSchema } from "@noddle/shared/validation/database";
 import type { ConnectDatabaseInput } from "@noddle/shared/validation/database";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { queueDatabaseProvision } from "@/lib/deploy-queue.server";
 import { env } from "@/lib/env.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { runGuarded } from "@/lib/permission.server";
+import {
+  environmentByName,
+  findOrCreateTeamProject,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 const NON_IDENTIFIER = /[^a-z0-9_]/g;
 const STARTS_LEGALLY = /^[a-z_]/;
@@ -26,39 +31,23 @@ function defaultIdentifier(serviceName: string): string {
   return STARTS_LEGALLY.test(folded) ? folded : `db_${folded}`;
 }
 
-async function createDatabaseRows(data: ConnectDatabaseInput): Promise<{
+async function createDatabaseRows(
+  data: ConnectDatabaseInput,
+  teamId: string
+): Promise<{
   databaseId: string;
   deploymentId: string;
   environmentId: string;
   name: string;
   projectId: string;
 }> {
-  let project = await db.query.projects.findFirst({
-    where: eq(projects.name, data.projectName),
-  });
-  if (!project) {
-    const [created] = await db
-      .insert(projects)
-      .values({ name: data.projectName })
-      .returning();
-    if (!created) {
-      throw new Error("could not create project");
-    }
-    project = created;
-  }
-
-  let environment = await db.query.environments.findFirst({
-    where: and(
-      eq(environments.projectId, project.id),
-      eq(environments.name, data.environmentName)
-    ),
-  });
-  if (!environment) {
-    environment = await insertProjectEnvironment({
+  const project = await findOrCreateTeamProject(db, teamId, data.projectName);
+  const environment =
+    (await environmentByName(db, teamId, project.id, data.environmentName)) ??
+    (await insertProjectEnvironment({
       name: data.environmentName,
       projectId: project.id,
-    });
-  }
+    }));
 
   const password = data.rootPassword ?? generateDatabasePassword();
   const hasNamedDatabase = HAS_NAMED_DATABASE[data.engine];
@@ -122,7 +111,7 @@ export const connectDatabase = createServerFn({ method: "POST" })
     }> => {
       const guarded = await runGuarded({
         permission: { action: "create", resource: "database" },
-        run: () => createDatabaseRows(data),
+        run: async () => createDatabaseRows(data, await activeTeamId()),
         target: ({ result }) => ({ id: result.databaseId, name: result.name }),
       });
       return {

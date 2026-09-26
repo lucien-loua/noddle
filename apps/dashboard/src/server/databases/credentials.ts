@@ -1,12 +1,12 @@
 import { decryptSecret, secretContext } from "@noddle/crypto";
-import { databases } from "@noddle/db/schema";
 import { DATABASE_PORT } from "@noddle/shared/database-spec";
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { runRead } from "@/lib/permission.server";
+import { databaseInContext } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 import { connectionString, maskedConnectionString } from "./connection-url";
 
@@ -26,11 +26,8 @@ export const getDatabaseCredentials = createServerFn({ method: "GET" })
   .validator((data: { databaseId: string }) => data)
   .handler(async ({ data }): Promise<DatabaseCredentials> =>
     runRead({
-      load: () =>
-        db.query.databases.findFirst({
-          where: eq(databases.id, data.databaseId),
-          with: { server: true },
-        }),
+      load: async () =>
+        databaseInContext(db, await activeTeamId(), data.databaseId),
       notFoundMessage: "database not found",
       permission: { action: "read", resource: "envVar" },
       read: ({ row: database }) => {

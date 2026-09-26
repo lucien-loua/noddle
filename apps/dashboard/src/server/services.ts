@@ -1,4 +1,4 @@
-import { environments, projects, services } from "@noddle/db/schema";
+import { environments, services } from "@noddle/db/schema";
 import { ensureRepositoryHook } from "@noddle/git-provider-credentials/hooks";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { toResourceSlug, uniqueResourceSlug } from "@noddle/shared/slug";
@@ -20,6 +20,11 @@ import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { gitlabHookUrl } from "@/lib/request-origin.server";
+import {
+  environmentByName,
+  findOrCreateTeamProject,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 interface ServiceSettingsPatch {
   autoDeploy?: boolean;
@@ -89,32 +94,23 @@ export const connectRepo = createServerFn({ method: "POST" })
       const outcome = await runGuarded({
         permission: { action: "create", resource: "service" },
         run: async () => {
-          let project = await db.query.projects.findFirst({
-            where: eq(projects.name, data.projectName),
-          });
-          if (!project) {
-            const [created] = await db
-              .insert(projects)
-              .values({ name: data.projectName })
-              .returning();
-            if (!created) {
-              throw new Error("could not create project");
-            }
-            project = created;
-          }
-
-          let environment = await db.query.environments.findFirst({
-            where: and(
-              eq(environments.projectId, project.id),
-              eq(environments.name, data.environmentName)
-            ),
-          });
-          if (!environment) {
-            environment = await insertProjectEnvironment({
+          const teamId = await activeTeamId();
+          const project = await findOrCreateTeamProject(
+            db,
+            teamId,
+            data.projectName
+          );
+          const environment =
+            (await environmentByName(
+              db,
+              teamId,
+              project.id,
+              data.environmentName
+            )) ??
+            (await insertProjectEnvironment({
               name: data.environmentName,
               projectId: project.id,
-            });
-          }
+            }));
 
           const wanted = toResourceSlug(data.name) || "app";
           const siblings = await db.query.services.findMany({

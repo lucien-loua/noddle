@@ -415,3 +415,71 @@ export async function teamActivityCounts(
     projects: projectRows[0]?.value ?? 0,
   };
 }
+
+export async function findOrCreateTeamProject(
+  db: Db,
+  teamId: string,
+  name: string
+) {
+  const inTeam = and(eq(projects.teamId, teamId), eq(projects.name, name));
+  const existing = await db.query.projects.findFirst({ where: inTeam });
+  if (existing) {
+    return existing;
+  }
+  const [created] = await db
+    .insert(projects)
+    .values({ name, teamId })
+    .onConflictDoNothing()
+    .returning();
+  const project =
+    created ?? (await db.query.projects.findFirst({ where: inTeam }));
+  if (!project) {
+    throw new Error("could not create project");
+  }
+  return project;
+}
+
+export async function environmentByName(
+  db: Db,
+  teamId: string,
+  projectId: string,
+  name: string
+) {
+  return await db.query.environments.findFirst({
+    where: and(
+      eq(environments.projectId, projectId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId)),
+      eq(environments.name, name)
+    ),
+  });
+}
+
+export async function serviceInTeam(
+  db: Db,
+  teamId: string,
+  serviceId: string
+): Promise<boolean> {
+  const row = await db.query.services.findFirst({
+    columns: { id: true },
+    where: and(
+      eq(services.id, serviceId),
+      inArray(services.environmentId, environmentsOfTeam(db, teamId))
+    ),
+  });
+  return row !== undefined;
+}
+
+export async function envVarOfService(
+  db: Db,
+  teamId: string,
+  serviceId: string,
+  key: string
+) {
+  return await db.query.envVars.findFirst({
+    where: and(
+      eq(envVars.serviceId, serviceId),
+      inArray(envVars.serviceId, servicesOfTeam(db, teamId)),
+      eq(envVars.key, key)
+    ),
+  });
+}

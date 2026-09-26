@@ -1,9 +1,4 @@
-import {
-  environments,
-  projects,
-  stackDeployments,
-  stacks,
-} from "@noddle/db/schema";
+import { stackDeployments, stacks } from "@noddle/db/schema";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
 import { renameStackSchema } from "@noddle/shared/validation/service";
@@ -23,6 +18,11 @@ import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
 import { requireSession } from "@/lib/session.server";
+import {
+  environmentByName,
+  findOrCreateTeamProject,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import type { DeploymentSummary } from "@/server/dashboard";
 
 export const connectStack = createServerFn({ method: "POST" })
@@ -31,32 +31,23 @@ export const connectStack = createServerFn({ method: "POST" })
     const outcome = await runGuarded({
       permission: { action: "create", resource: "service" },
       run: async () => {
-        let project = await db.query.projects.findFirst({
-          where: eq(projects.name, data.projectName),
-        });
-        if (!project) {
-          const [created] = await db
-            .insert(projects)
-            .values({ name: data.projectName })
-            .returning();
-          if (!created) {
-            throw new Error("could not create project");
-          }
-          project = created;
-        }
-
-        let environment = await db.query.environments.findFirst({
-          where: and(
-            eq(environments.projectId, project.id),
-            eq(environments.name, data.environmentName)
-          ),
-        });
-        if (!environment) {
-          environment = await insertProjectEnvironment({
+        const teamId = await activeTeamId();
+        const project = await findOrCreateTeamProject(
+          db,
+          teamId,
+          data.projectName
+        );
+        const environment =
+          (await environmentByName(
+            db,
+            teamId,
+            project.id,
+            data.environmentName
+          )) ??
+          (await insertProjectEnvironment({
             name: data.environmentName,
             projectId: project.id,
-          });
-        }
+          }));
 
         const [stack] = await db
           .insert(stacks)
