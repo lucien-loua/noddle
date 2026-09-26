@@ -573,3 +573,90 @@ export async function stackDeploymentOf(
     ),
   });
 }
+
+export async function serviceDeploymentOf(
+  db: Db,
+  teamId: string,
+  serviceId: string,
+  deploymentId: string
+) {
+  return await db.query.deployments.findFirst({
+    where: and(
+      eq(deployments.id, deploymentId),
+      eq(deployments.serviceId, serviceId),
+      inArray(deployments.serviceId, servicesOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function environmentResourceIds(
+  db: Db,
+  teamId: string,
+  environmentId: string
+): Promise<{ databases: string[]; services: string[] }> {
+  const inTeam = inArray(environments.id, environmentsOfTeam(db, teamId));
+  const owned = db
+    .select({ id: environments.id })
+    .from(environments)
+    .where(and(eq(environments.id, environmentId), inTeam));
+  const [serviceRows, databaseRows] = await Promise.all([
+    db
+      .select({ id: services.id })
+      .from(services)
+      .where(inArray(services.environmentId, owned)),
+    db
+      .select({ id: databases.id })
+      .from(databases)
+      .where(inArray(databases.environmentId, owned)),
+  ]);
+  return {
+    databases: databaseRows.map((row) => row.id),
+    services: serviceRows.map((row) => row.id),
+  };
+}
+
+export async function dependenciesOfServices(
+  db: Db,
+  teamId: string,
+  serviceIds: string[]
+) {
+  if (serviceIds.length === 0) {
+    return [];
+  }
+  return await db
+    .select()
+    .from(serviceDependencies)
+    .where(
+      and(
+        inArray(serviceDependencies.serviceId, serviceIds),
+        inArray(serviceDependencies.serviceId, servicesOfTeam(db, teamId))
+      )
+    );
+}
+
+export async function databaseDependents(
+  db: Db,
+  teamId: string,
+  databaseId: string
+) {
+  return await db.query.serviceDependencies.findMany({
+    where: and(
+      eq(serviceDependencies.dependsOnDatabaseId, databaseId),
+      inArray(
+        serviceDependencies.dependsOnDatabaseId,
+        databasesOfTeam(db, teamId)
+      )
+    ),
+    with: { envVar: true, service: true },
+  });
+}
+
+export async function domainInTeam(db: Db, teamId: string, domainId: string) {
+  return await db.query.serviceDomains.findFirst({
+    where: and(
+      eq(serviceDomains.id, domainId),
+      inArray(serviceDomains.serviceId, servicesOfTeam(db, teamId))
+    ),
+    with: { service: true },
+  });
+}

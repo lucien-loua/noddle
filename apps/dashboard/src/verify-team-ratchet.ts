@@ -50,17 +50,17 @@ const NOT_YET_SCOPED = [
   "server/backups/volume/runs.ts",
   "server/backups/volume/volumes.server.ts",
   "server/containers.ts",
-  "server/dependencies.ts",
-  "server/deployments.ts",
   "server/git-providers.ts",
   "server/registries.ts",
   "server/servers.ts",
-  "server/service-domains.ts",
   "server/ssh-keys.ts",
   "server/webhooks.ts",
 ];
 
-const DELIBERATELY_UNSCOPED: Record<string, string> = {};
+const DELIBERATELY_UNSCOPED: Record<string, string> = {
+  "lib/installation-queries.server.ts":
+    "one Traefik routes the whole installation, so a host is unique across every team",
+};
 
 const SCOPE_MODULES: Record<string, string> = {
   "lib/guarded.server.ts": "verify-team-scope.ts",

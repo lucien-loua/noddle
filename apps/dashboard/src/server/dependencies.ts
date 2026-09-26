@@ -1,17 +1,18 @@
-import {
-  databases,
-  envVars,
-  serviceDependencies,
-  services,
-} from "@noddle/db/schema";
+import { envVars, serviceDependencies } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import z from "zod";
 
 import { db } from "@/lib/db.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
-import { requireSession } from "@/lib/session.server";
+import {
+  databaseDependents,
+  dependenciesOfServices,
+  environmentResourceIds,
+  serviceInTeam,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export interface DependencyEdge {
   from: string;
@@ -22,29 +23,20 @@ export interface DependencyEdge {
 export const getEnvironmentDependencies = createServerFn({ method: "GET" })
   .validator(z.object({ environmentId: z.uuid("Choose an environment.") }))
   .handler(async ({ data }): Promise<DependencyEdge[]> => {
-    await requireSession();
-
-    const [serviceRows, databaseRows] = await Promise.all([
-      db
-        .select({ id: services.id })
-        .from(services)
-        .where(eq(services.environmentId, data.environmentId)),
-      db
-        .select({ id: databases.id })
-        .from(databases)
-        .where(eq(databases.environmentId, data.environmentId)),
-    ]);
-    if (serviceRows.length === 0) {
+    const teamId = await activeTeamId();
+    const inScope = await environmentResourceIds(
+      db,
+      teamId,
+      data.environmentId
+    );
+    if (inScope.services.length === 0) {
       return [];
     }
 
-    const inScopeServices = new Set(serviceRows.map((r) => r.id));
-    const inScopeDatabases = new Set(databaseRows.map((r) => r.id));
+    const inScopeServices = new Set(inScope.services);
+    const inScopeDatabases = new Set(inScope.databases);
 
-    const rows = await db
-      .select()
-      .from(serviceDependencies)
-      .where(inArray(serviceDependencies.serviceId, [...inScopeServices]));
+    const rows = await dependenciesOfServices(db, teamId, inScope.services);
 
     const edges: DependencyEdge[] = [];
     for (const row of rows) {
@@ -81,12 +73,11 @@ export interface DatabaseDependent {
 export const getDatabaseDependents = createServerFn({ method: "GET" })
   .validator(z.object({ databaseId: z.uuid("Choose a database.") }))
   .handler(async ({ data }): Promise<DatabaseDependent[]> => {
-    await requireSession();
-
-    const rows = await db.query.serviceDependencies.findMany({
-      where: eq(serviceDependencies.dependsOnDatabaseId, data.databaseId),
-      with: { envVar: true, service: true },
-    });
+    const rows = await databaseDependents(
+      db,
+      await activeTeamId(),
+      data.databaseId
+    );
 
     return rows
       .map((row) => ({
@@ -109,6 +100,9 @@ export const detachDatabase = createServerFn({ method: "POST" })
       ...guarded.database(data.databaseId),
       permission: { action: "attach", resource: "database" },
       run: async () => {
+        if (!(await serviceInTeam(db, await activeTeamId(), data.serviceId))) {
+          throw new Error("service not found");
+        }
         const [edge] = await db
           .delete(serviceDependencies)
           .where(

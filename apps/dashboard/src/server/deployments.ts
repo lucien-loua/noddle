@@ -1,17 +1,17 @@
-import { deployments } from "@noddle/db/schema";
 import {
   deployRequestSchema,
   lifecycleRequestSchema,
   rollbackRequestSchema,
 } from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { enqueueDeploy } from "@/lib/queue.server";
+import { serviceDeploymentOf } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export const triggerDeploy = createServerFn({ method: "POST" })
   .validator(deployRequestSchema)
@@ -53,12 +53,12 @@ export const triggerRollback = createServerFn({ method: "POST" })
       ...guarded.service(data.serviceId),
       permission: { action: "rollback", resource: "service" },
       run: async () => {
-        const target = await db.query.deployments.findFirst({
-          where: and(
-            eq(deployments.id, data.deploymentId),
-            eq(deployments.serviceId, data.serviceId)
-          ),
-        });
+        const target = await serviceDeploymentOf(
+          db,
+          await activeTeamId(),
+          data.serviceId,
+          data.deploymentId
+        );
         if (!target) {
           throw new Error("deployment not found for this service");
         }

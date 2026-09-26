@@ -7,27 +7,24 @@ import {
   updateServiceDomainSchema,
 } from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
+import { guarded } from "@/lib/guarded.server";
+import { hostsInUse } from "@/lib/installation-queries.server";
 import { runGuarded } from "@/lib/permission.server";
+import { domainInTeam, serviceInContext } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 async function assertHostAvailable(host: string, exceptId?: string) {
-  const taken = await db.query.serviceDomains.findFirst({
-    where: exceptId
-      ? and(eq(serviceDomains.host, host), ne(serviceDomains.id, exceptId))
-      : eq(serviceDomains.host, host),
-  });
-  if (taken) {
+  const taken = await hostsInUse(db, [host], exceptId);
+  if (taken.size > 0) {
     throw new Error(`"${host}" is already used by another application`);
   }
 }
 
-function loadDomain(domainId: string) {
-  return db.query.serviceDomains.findFirst({
-    where: eq(serviceDomains.id, domainId),
-    with: { service: true },
-  });
+async function loadDomain(domainId: string) {
+  return await domainInTeam(db, await activeTeamId(), domainId);
 }
 
 function normalizePathInput(path: string | undefined): string {
@@ -68,11 +65,7 @@ export const createServiceDomain = createServerFn({ method: "POST" })
   .validator(createServiceDomainSchema)
   .handler(async ({ data }): Promise<{ id: string }> =>
     runGuarded({
-      load: () =>
-        db.query.services.findFirst({
-          where: eq(services.id, data.serviceId),
-        }),
-      notFoundMessage: "service not found",
+      ...guarded.service(data.serviceId),
       permission: { action: "deploy", resource: "service" },
       run: async ({ row: service }) => {
         await assertHostAvailable(data.host);
@@ -132,11 +125,8 @@ export const generateServiceDomainHost = createServerFn({ method: "POST" })
   .validator(generateServiceDomainHostSchema)
   .handler(async ({ data }): Promise<{ host: string }> =>
     runGuarded({
-      load: () =>
-        db.query.services.findFirst({
-          where: eq(services.id, data.serviceId),
-          with: { server: true },
-        }),
+      load: async () =>
+        serviceInContext(db, await activeTeamId(), data.serviceId),
       notFoundMessage: "service not found",
       permission: { action: "deploy", resource: "service" },
       run: async ({ row: service }) => {
@@ -146,10 +136,7 @@ export const generateServiceDomainHost = createServerFn({ method: "POST" })
             serverHost: service.server.host,
           })
         );
-        const taken = await db.query.serviceDomains.findMany({
-          where: inArray(serviceDomains.host, candidates),
-        });
-        const takenHosts = new Set(taken.map((row) => row.host));
+        const takenHosts = await hostsInUse(db, candidates);
         const host = candidates.find((candidate) => !takenHosts.has(candidate));
         if (!host) {
           throw new Error(

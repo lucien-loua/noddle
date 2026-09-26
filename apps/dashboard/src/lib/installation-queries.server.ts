@@ -1,0 +1,24 @@
+import { serviceDomains } from "@noddle/db/schema";
+import { and, inArray, ne } from "drizzle-orm";
+
+import type { Db } from "@/lib/team-queries.server";
+
+export async function hostsInUse(
+  db: Db,
+  hosts: string[],
+  exceptDomainId?: string
+): Promise<Set<string>> {
+  if (hosts.length === 0) {
+    return new Set();
+  }
+  const rows = await db
+    .select({ host: serviceDomains.host })
+    .from(serviceDomains)
+    .where(
+      and(
+        inArray(serviceDomains.host, hosts),
+        exceptDomainId ? ne(serviceDomains.id, exceptDomainId) : undefined
+      )
+    );
+  return new Set(rows.map((row) => row.host));
+}

@@ -10,6 +10,8 @@ import {
   environments,
   organization,
   projects,
+  serviceDependencies,
+  serviceDomains,
   servers,
   services,
   sshKeys,
@@ -20,14 +22,19 @@ import { check, runVerify, suite } from "@noddle/testing";
 import { devStack } from "@noddle/testing/dev-stack";
 import { inArray } from "drizzle-orm";
 
+import { hostsInUse } from "@/lib/installation-queries.server";
 import {
   databaseDeploymentsOf,
+  databaseDependents,
   databaseInContext,
+  dependenciesOfServices,
   deploymentOfTeam,
+  domainInTeam,
   environmentByName,
   environmentInTeam,
   environmentNameTaken,
   environmentOfProject,
+  environmentResourceIds,
   envVarOfService,
   findOrCreateTeamProject,
   environmentsHold,
@@ -40,6 +47,7 @@ import {
   projectNameTaken,
   recentServiceDeployments,
   recentStackDeployments,
+  serviceDeploymentOf,
   serviceDeploymentsOf,
   serviceInContext,
   serviceInTeam,
@@ -96,11 +104,14 @@ const [serviceB] = await db
     sourceType: "docker_image",
   })
   .returning();
-await db.insert(envVars).values({
-  key: "DATABASE_PASSWORD",
-  serviceId: serviceB?.id as string,
-  valueEncrypted: "ciphertext-of-a-secret",
-});
+const [envVarB] = await db
+  .insert(envVars)
+  .values({
+    key: "DATABASE_PASSWORD",
+    serviceId: serviceB?.id as string,
+    valueEncrypted: "ciphertext-of-a-secret",
+  })
+  .returning();
 const [stackB] = await db
   .insert(stacks)
   .values({
@@ -135,10 +146,25 @@ const [databaseDeploymentB] = await db
   .values({ databaseId: databaseB?.id as string })
   .returning();
 
+const [domainB] = await db
+  .insert(serviceDomains)
+  .values({
+    host: `iso-${tag}.example.invalid`,
+    serviceId: serviceB?.id as string,
+  })
+  .returning();
+await db.insert(serviceDependencies).values({
+  dependsOnDatabaseId: databaseB?.id as string,
+  envVarId: envVarB?.id as string,
+  serviceId: serviceB?.id as string,
+});
+
 const B = {
   database: databaseB?.id as string,
   databaseDeployment: databaseDeploymentB?.id as string,
   deployment: deploymentB?.id as string,
+  domain: domainB?.id as string,
+  host: domainB?.host as string,
   environment: envB?.id as string,
   project: projectB?.id as string,
   service: serviceB?.id as string,
@@ -395,6 +421,70 @@ await runVerify("team isolation", async () => {
         );
       }
     );
+
+    await suite("a service rolls back only to its own deployment", async () => {
+      check(
+        "B finds its deployment as a rollback source",
+        (await serviceDeploymentOf(db, teamB, B.service, B.deployment)) !==
+          undefined
+      );
+      check(
+        "A passing B's service and deployment ids gets nothing",
+        (await serviceDeploymentOf(db, teamA, B.service, B.deployment)) ===
+          undefined,
+        "triggerRollback redeploys from another team's image"
+      );
+    });
+
+    await suite("a domain is edited only by its service's team", async () => {
+      check(
+        "B opens its domain",
+        (await domainInTeam(db, teamB, B.domain)) !== undefined
+      );
+      check(
+        "A passing B's domain id gets nothing",
+        (await domainInTeam(db, teamA, B.domain)) === undefined,
+        "updateServiceDomain and deleteServiceDomain rewrite another team's routing"
+      );
+      check(
+        "a host stays taken for every team, on purpose",
+        (await hostsInUse(db, [B.host])).has(B.host),
+        "one Traefik routes the whole installation, so A must not claim B's host"
+      );
+    });
+
+    await suite("dependencies are drawn only inside the team", async () => {
+      const ofB = await environmentResourceIds(db, teamB, B.environment);
+      check(
+        "B's environment lists its service and database",
+        ofB.services.includes(B.service) && ofB.databases.includes(B.database)
+      );
+      const ofA = await environmentResourceIds(db, teamA, B.environment);
+      check(
+        "A passing B's environment id gets no resource ids",
+        ofA.services.length === 0 && ofA.databases.length === 0,
+        "getEnvironmentDependencies draws another team's topology"
+      );
+      check(
+        "B's service depends on its database, for B",
+        (await dependenciesOfServices(db, teamB, [B.service])).length === 1
+      );
+      check(
+        "not for A",
+        (await dependenciesOfServices(db, teamA, [B.service])).length === 0
+      );
+      const dependents = await databaseDependents(db, teamB, B.database);
+      check(
+        "B sees which of its services use its database",
+        dependents.length === 1 &&
+          dependents[0]?.envVar?.key === "DATABASE_PASSWORD"
+      );
+      check(
+        "A passing B's database id learns no service name or key",
+        (await databaseDependents(db, teamA, B.database)).length === 0,
+        "getDatabaseDependents names another team's services and variables"
+      );
+    });
 
     await suite("a deployment's log opens only inside its team", async () => {
       const kinds = [
