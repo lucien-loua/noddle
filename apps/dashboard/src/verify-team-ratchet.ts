@@ -31,17 +31,10 @@ const DIRECT_READ = new RegExp(
 );
 
 const NOT_YET_SCOPED = [
-  "lib/deploy-queue.server.ts",
-  "lib/duplicate-environment.server.ts",
-  "lib/environment.server.ts",
-  "lib/preview.server.ts",
-  "lib/webhook-intake.server.ts",
   "routes/api/v1/deployments.$id.logs.ts",
   "routes/api/v1/deployments.$id.ts",
   "routes/api/v1/services.$id.deploy.ts",
   "routes/api/v1/services.ts",
-  "routes/api/webhooks/service/$serviceId.ts",
-  "routes/api/webhooks/stack/$stackId.ts",
   "server/containers.ts",
   "server/git-providers.ts",
   "server/registries.ts",
@@ -51,8 +44,20 @@ const NOT_YET_SCOPED = [
 ];
 
 const DELIBERATELY_UNSCOPED: Record<string, string> = {
+  "lib/deploy-queue.server.ts":
+    "enqueues work for an id its caller already authorized: a scoped loader, a verified webhook signature, or an API token",
+  "lib/environment.server.ts":
+    "reads only whether the project it is handed already has a default environment; every caller resolves that project through the team",
   "lib/installation-queries.server.ts":
     "one Traefik routes the whole installation, so a host is unique across every team",
+  "lib/preview.server.ts":
+    "reached only from signed forge webhooks, which act on every service that deploys the repository",
+  "lib/webhook-intake.server.ts":
+    "reached only from signed forge webhooks, which act on every service that deploys the repository",
+  "routes/api/webhooks/service/$serviceId.ts":
+    "authenticated by the service's own webhook secret; the caller is a forge, not a session, and has no team",
+  "routes/api/webhooks/stack/$stackId.ts":
+    "authenticated by the stack's own webhook secret; the caller is a forge, not a session, and has no team",
 };
 
 const SCOPE_MODULES: Record<string, string> = {
