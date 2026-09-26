@@ -156,6 +156,7 @@ const HANDLERS: Record<Command, Handler> = {
     emit(args.flags.json, me, () =>
       [
         `${me.email} (${me.role ?? "no role"})`,
+        ...(me.team ? [`team: ${me.team.name}`] : []),
         `token: ${me.token.name}`,
         `scopes: ${me.scopes.join(", ") || "none"}`,
       ].join("\n")

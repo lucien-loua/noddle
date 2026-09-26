@@ -110,6 +110,7 @@ export function createClient(config: Config, fetcher: typeof fetch = fetch) {
         email: string;
         role: string | null;
         scopes: string[];
+        team?: { id: string; name: string };
         token: { name: string };
       }>("/api/v1/whoami"),
   };
