@@ -29,6 +29,7 @@ const selectedJsPlugins = {
 };
 
 export default defineConfig({
+  plugins: ["react"],
   extends: [core, react, tanstack, vitest, selectedJsPlugins],
   ignorePatterns: core.ignorePatterns,
   overrides: [
