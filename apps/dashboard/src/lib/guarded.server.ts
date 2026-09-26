@@ -16,10 +16,17 @@ import {
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import type { AuditTarget } from "@/lib/permission.server";
+import {
+  activeTeamId,
+  databasesOfTeam,
+  environmentsOfTeam,
+  projectsOfTeam,
+  servicesOfTeam,
+} from "@/lib/team-scope.server";
 
 export function identityTarget(ctx: {
   row: { id: string; name: string };
@@ -33,42 +40,93 @@ export function emailTarget(ctx: {
   return { id: ctx.row.id, name: ctx.row.email };
 }
 
+/**
+ * Which loaders read a row a Team owns, and which read the installation's own
+ * things. Every key of `guarded` must appear in exactly one of these, so a new
+ * loader cannot be added without deciding — the bench refuses an unclassified
+ * one rather than defaulting it to unscoped, which would leak silently.
+ */
+export const TEAM_SCOPED_LOADERS = [
+  "backup",
+  "backupConfig",
+  "database",
+  "environment",
+  "project",
+  "service",
+  "stack",
+  "volumeBackup",
+  "volumeBackupConfig",
+] as const;
+
+export const INSTALLATION_LOADERS = [
+  "account",
+  "destination",
+  "gitProvider",
+  "notificationChannel",
+  "registry",
+  "server",
+  "sshKey",
+] as const;
+
 export const guarded = {
   account: (userId: string) => ({
-    load: () => db.query.user.findFirst({ where: eq(user.id, userId) }),
+    load: async () => db.query.user.findFirst({ where: eq(user.id, userId) }),
     notFoundMessage: "This account no longer exists.",
   }),
 
   backup: (backupId: string) => ({
-    load: () => db.query.backups.findFirst({ where: eq(backups.id, backupId) }),
+    load: async () =>
+      db.query.backups.findFirst({
+        where: and(
+          eq(backups.id, backupId),
+          inArray(backups.databaseId, databasesOfTeam(await activeTeamId()))
+        ),
+      }),
     notFoundMessage: "backup not found",
   }),
 
   backupConfig: (configId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.backupConfigs.findFirst({
-        where: eq(backupConfigs.id, configId),
+        where: and(
+          eq(backupConfigs.id, configId),
+          inArray(
+            backupConfigs.databaseId,
+            databasesOfTeam(await activeTeamId())
+          )
+        ),
         with: { database: true },
       }),
     notFoundMessage: "backup config not found",
   }),
 
   database: (databaseId: string) => ({
-    load: () =>
-      db.query.databases.findFirst({ where: eq(databases.id, databaseId) }),
+    load: async () =>
+      db.query.databases.findFirst({
+        where: and(
+          eq(databases.id, databaseId),
+          inArray(
+            databases.environmentId,
+            environmentsOfTeam(await activeTeamId())
+          )
+        ),
+      }),
     notFoundMessage: "database not found",
   }),
 
   environment: (environmentId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.environments.findFirst({
-        where: eq(environments.id, environmentId),
+        where: and(
+          eq(environments.id, environmentId),
+          inArray(environments.projectId, projectsOfTeam(await activeTeamId()))
+        ),
       }),
     notFoundMessage: "environment not found",
   }),
 
   destination: (destinationId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.s3Destinations.findFirst({
         where: eq(s3Destinations.id, destinationId),
       }),
@@ -76,7 +134,7 @@ export const guarded = {
   }),
 
   gitProvider: (gitProviderId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.gitProviders.findFirst({
         where: eq(gitProviders.id, gitProviderId),
       }),
@@ -84,16 +142,19 @@ export const guarded = {
   }),
 
   project: (projectId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.projects.findFirst({
-        where: eq(projects.id, projectId),
+        where: and(
+          eq(projects.id, projectId),
+          eq(projects.teamId, await activeTeamId())
+        ),
         with: { environments: true },
       }),
     notFoundMessage: "project not found",
   }),
 
   notificationChannel: (channelId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.notificationChannels.findFirst({
         where: eq(notificationChannels.id, channelId),
       }),
@@ -101,45 +162,73 @@ export const guarded = {
   }),
 
   registry: (registryId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.registries.findFirst({ where: eq(registries.id, registryId) }),
     notFoundMessage: "registry not found",
   }),
 
   server: (serverId: string) => ({
-    load: () => db.query.servers.findFirst({ where: eq(servers.id, serverId) }),
+    load: async () =>
+      db.query.servers.findFirst({ where: eq(servers.id, serverId) }),
     notFoundMessage: "server not found",
   }),
 
   service: (serviceId: string) => ({
-    load: () =>
-      db.query.services.findFirst({ where: eq(services.id, serviceId) }),
+    load: async () =>
+      db.query.services.findFirst({
+        where: and(
+          eq(services.id, serviceId),
+          inArray(
+            services.environmentId,
+            environmentsOfTeam(await activeTeamId())
+          )
+        ),
+      }),
     notFoundMessage: "service not found",
   }),
 
   sshKey: (sshKeyId: string) => ({
-    load: () => db.query.sshKeys.findFirst({ where: eq(sshKeys.id, sshKeyId) }),
+    load: async () =>
+      db.query.sshKeys.findFirst({ where: eq(sshKeys.id, sshKeyId) }),
     notFoundMessage: "ssh key not found",
   }),
 
   stack: (stackId: string) => ({
-    load: () => db.query.stacks.findFirst({ where: eq(stacks.id, stackId) }),
+    load: async () =>
+      db.query.stacks.findFirst({
+        where: and(
+          eq(stacks.id, stackId),
+          inArray(
+            stacks.environmentId,
+            environmentsOfTeam(await activeTeamId())
+          )
+        ),
+      }),
     notFoundMessage: "stack not found",
   }),
 
   volumeBackupConfig: (configId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.volumeBackupConfigs.findFirst({
-        where: eq(volumeBackupConfigs.id, configId),
+        where: and(
+          eq(volumeBackupConfigs.id, configId),
+          inArray(
+            volumeBackupConfigs.serviceId,
+            servicesOfTeam(await activeTeamId())
+          )
+        ),
         with: { service: true },
       }),
     notFoundMessage: "volume backup config not found",
   }),
 
   volumeBackup: (backupId: string) => ({
-    load: () =>
+    load: async () =>
       db.query.volumeBackups.findFirst({
-        where: eq(volumeBackups.id, backupId),
+        where: and(
+          eq(volumeBackups.id, backupId),
+          inArray(volumeBackups.serviceId, servicesOfTeam(await activeTeamId()))
+        ),
       }),
     notFoundMessage: "volume backup not found",
   }),
