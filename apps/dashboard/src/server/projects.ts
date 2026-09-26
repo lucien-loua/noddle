@@ -1,18 +1,22 @@
-import { databases, projects, services, stacks } from "@noddle/db/schema";
+import { projects } from "@noddle/db/schema";
 import {
   createProjectSchema,
   projectIdSchema,
   renameProjectSchema,
 } from "@noddle/shared/validation/project";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
-import { listProjects } from "@/lib/team-queries.server";
+import {
+  environmentsHold,
+  listProjects,
+  projectNameTaken,
+} from "@/lib/team-queries.server";
 import { activeTeamId } from "@/lib/team-scope.server";
 
 export interface ProjectView {
@@ -42,16 +46,14 @@ export const createProject = createServerFn({ method: "POST" })
       runGuarded({
         permission: { action: "create", resource: "service" },
         run: async () => {
-          const existing = await db.query.projects.findFirst({
-            where: eq(projects.name, data.name),
-          });
-          if (existing) {
+          const teamId = await activeTeamId();
+          if (await projectNameTaken(db, teamId, data.name)) {
             throw new Error(`a project called "${data.name}" already exists`);
           }
 
           const [project] = await db
             .insert(projects)
-            .values({ description: data.description, name: data.name })
+            .values({ description: data.description, name: data.name, teamId })
             .returning();
           if (!project) {
             throw new Error("could not create project");
@@ -82,10 +84,7 @@ export const renameProject = createServerFn({ method: "POST" })
       ...guarded.project(data.projectId),
       permission: { action: "create", resource: "service" },
       run: async ({ row: project }) => {
-        const clash = await db.query.projects.findFirst({
-          where: and(eq(projects.name, data.name), ne(projects.id, project.id)),
-        });
-        if (clash) {
+        if (await projectNameTaken(db, project.teamId, data.name, project.id)) {
           throw new Error(`a project called "${data.name}" already exists`);
         }
 
@@ -107,23 +106,10 @@ export const deleteProject = createServerFn({ method: "POST" })
       permission: { action: "delete", resource: "service" },
       run: async ({ row: project }) => {
         const environmentIds = project.environments.map((e) => e.id);
-        if (environmentIds.length > 0) {
-          const [service, stack, database] = await Promise.all([
-            db.query.services.findFirst({
-              where: inArray(services.environmentId, environmentIds),
-            }),
-            db.query.stacks.findFirst({
-              where: inArray(stacks.environmentId, environmentIds),
-            }),
-            db.query.databases.findFirst({
-              where: inArray(databases.environmentId, environmentIds),
-            }),
-          ]);
-          if (service || stack || database) {
-            throw new Error(
-              "this project still has services, stacks or databases: remove them first"
-            );
-          }
+        if (await environmentsHold(db, project.teamId, environmentIds)) {
+          throw new Error(
+            "this project still has services, stacks or databases: remove them first"
+          );
         }
 
         await db.delete(projects).where(eq(projects.id, project.id));

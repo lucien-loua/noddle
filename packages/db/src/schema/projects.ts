@@ -27,7 +27,7 @@ export const projects = pgTable(
     updatedAt,
   },
   (t) => [
-    uniqueIndex("projects_name_idx").on(t.name),
+    uniqueIndex("projects_team_name_idx").on(t.teamId, t.name),
     index("projects_team_idx").on(t.teamId),
   ]
 );

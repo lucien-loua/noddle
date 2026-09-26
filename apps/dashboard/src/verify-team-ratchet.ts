@@ -60,7 +60,6 @@ const NOT_YET_SCOPED = [
   "server/env-vars.ts",
   "server/environments.ts",
   "server/git-providers.ts",
-  "server/projects.ts",
   "server/registries.ts",
   "server/servers.ts",
   "server/service-domains.ts",
