@@ -483,3 +483,34 @@ export async function envVarOfService(
     ),
   });
 }
+
+export async function deploymentOfTeam(
+  db: Db,
+  teamId: string,
+  deploymentId: string
+) {
+  const [service, stack, database] = await Promise.all([
+    db.query.deployments.findFirst({
+      columns: { status: true },
+      where: and(
+        eq(deployments.id, deploymentId),
+        inArray(deployments.serviceId, servicesOfTeam(db, teamId))
+      ),
+    }),
+    db.query.stackDeployments.findFirst({
+      columns: { status: true },
+      where: and(
+        eq(stackDeployments.id, deploymentId),
+        inArray(stackDeployments.stackId, stacksOfTeam(db, teamId))
+      ),
+    }),
+    db.query.databaseDeployments.findFirst({
+      columns: { status: true },
+      where: and(
+        eq(databaseDeployments.id, deploymentId),
+        inArray(databaseDeployments.databaseId, databasesOfTeam(db, teamId))
+      ),
+    }),
+  ]);
+  return service ?? stack ?? database;
+}

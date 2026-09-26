@@ -1,6 +1,4 @@
-import { databases, servers } from "@noddle/db/schema";
 import { createFileRoute } from "@tanstack/react-router";
-import { eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth.server";
 import {
@@ -11,6 +9,8 @@ import {
   RESOURCE_UUID,
 } from "@/lib/container-logs.server";
 import { db } from "@/lib/db.server";
+import { databaseInContext } from "@/lib/team-queries.server";
+import { teamOfSession } from "@/lib/team-scope.server";
 
 export const Route = createFileRoute("/api/database-logs/$databaseId")({
   server: {
@@ -30,21 +30,16 @@ export const Route = createFileRoute("/api/database-logs/$databaseId")({
         const tail = parseTail(url.searchParams.get("tail"));
         const since = parseSince(url.searchParams.get("since"));
 
-        const database = await db.query.databases.findFirst({
-          where: eq(databases.id, databaseId),
-        });
+        const database = await databaseInContext(
+          db,
+          await teamOfSession(session),
+          databaseId
+        );
         if (!database) {
           return new Response("database not found", { status: 404 });
         }
 
-        const server = await db.query.servers.findFirst({
-          where: eq(servers.id, database.serverId),
-        });
-        if (!server) {
-          return new Response("server not found", { status: 404 });
-        }
-
-        return containerLogStream(request, server, (channel, client) =>
+        return containerLogStream(request, database.server, (channel, client) =>
           followContainerLogs(channel, client, database.swarmName, tail, since)
         );
       },

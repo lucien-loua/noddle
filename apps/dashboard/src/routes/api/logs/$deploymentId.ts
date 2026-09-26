@@ -1,12 +1,6 @@
-import {
-  databaseDeployments,
-  deployments,
-  stackDeployments,
-} from "@noddle/db/schema";
 import { isTerminalStatus, LOG_BUFFER_MAX_ENTRIES } from "@noddle/shared/logs";
 import type { LogEntry } from "@noddle/shared/logs";
 import { createFileRoute } from "@tanstack/react-router";
-import { eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
@@ -16,6 +10,8 @@ import { OMITTED_NOTICE, parseLastEventId, planReplay } from "@/lib/log-replay";
 import { logHub } from "@/lib/redis.server";
 import { sseChannel } from "@/lib/sse-channel.server";
 import type { SseChannel } from "@/lib/sse-channel.server";
+import { deploymentOfTeam } from "@/lib/team-queries.server";
+import { teamOfSession } from "@/lib/team-scope.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -66,16 +62,11 @@ export const Route = createFileRoute("/api/logs/$deploymentId")({
           return new Response("invalid id", { status: 400 });
         }
 
-        const deployment =
-          (await db.query.deployments.findFirst({
-            where: eq(deployments.id, deploymentId),
-          })) ??
-          (await db.query.stackDeployments.findFirst({
-            where: eq(stackDeployments.id, deploymentId),
-          })) ??
-          (await db.query.databaseDeployments.findFirst({
-            where: eq(databaseDeployments.id, deploymentId),
-          }));
+        const deployment = await deploymentOfTeam(
+          db,
+          await teamOfSession(session),
+          deploymentId
+        );
         if (!deployment) {
           return new Response("deployment not found", { status: 404 });
         }

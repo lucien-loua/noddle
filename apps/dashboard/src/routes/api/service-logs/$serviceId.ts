@@ -1,7 +1,5 @@
-import { servers, services } from "@noddle/db/schema";
 import { swarmServiceName } from "@noddle/shared/swarm-names";
 import { createFileRoute } from "@tanstack/react-router";
-import { eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth.server";
 import {
@@ -12,6 +10,8 @@ import {
   RESOURCE_UUID,
 } from "@/lib/container-logs.server";
 import { db } from "@/lib/db.server";
+import { serviceInContext } from "@/lib/team-queries.server";
+import { teamOfSession } from "@/lib/team-scope.server";
 
 export const Route = createFileRoute("/api/service-logs/$serviceId")({
   server: {
@@ -31,21 +31,16 @@ export const Route = createFileRoute("/api/service-logs/$serviceId")({
         const tail = parseTail(url.searchParams.get("tail"));
         const since = parseSince(url.searchParams.get("since"));
 
-        const service = await db.query.services.findFirst({
-          where: eq(services.id, serviceId),
-        });
+        const service = await serviceInContext(
+          db,
+          await teamOfSession(session),
+          serviceId
+        );
         if (!service) {
           return new Response("service not found", { status: 404 });
         }
 
-        const server = await db.query.servers.findFirst({
-          where: eq(servers.id, service.serverId),
-        });
-        if (!server) {
-          return new Response("server not found", { status: 404 });
-        }
-
-        return containerLogStream(request, server, (channel, client) =>
+        return containerLogStream(request, service.server, (channel, client) =>
           followContainerLogs(
             channel,
             client,

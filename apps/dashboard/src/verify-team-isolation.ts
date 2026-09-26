@@ -23,6 +23,7 @@ import { inArray } from "drizzle-orm";
 import {
   databaseDeploymentsOf,
   databaseInContext,
+  deploymentOfTeam,
   environmentByName,
   environmentNameTaken,
   environmentOfProject,
@@ -125,12 +126,14 @@ const [stackDeploymentB] = await db
   .insert(stackDeployments)
   .values({ stackId: stackB?.id as string })
   .returning();
-await db
+const [databaseDeploymentB] = await db
   .insert(databaseDeployments)
-  .values({ databaseId: databaseB?.id as string });
+  .values({ databaseId: databaseB?.id as string })
+  .returning();
 
 const B = {
   database: databaseB?.id as string,
+  databaseDeployment: databaseDeploymentB?.id as string,
   deployment: deploymentB?.id as string,
   environment: envB?.id as string,
   project: projectB?.id as string,
@@ -370,6 +373,26 @@ await runVerify("team isolation", async () => {
           !idsOf(stackRecentOfA).has(B.stackDeployment),
         "the deployment log shows every team's stack deploys"
       );
+    });
+
+    await suite("a deployment's log opens only inside its team", async () => {
+      const kinds = [
+        ["service", B.deployment],
+        ["stack", B.stackDeployment],
+        ["database", B.databaseDeployment],
+      ] as const;
+      for (const [kind, id] of kinds) {
+        check(
+          `B opens its ${kind} deployment`,
+          (await deploymentOfTeam(db, teamB, id)) !== undefined,
+          "without it here the next check proves nothing"
+        );
+        check(
+          `A passing B's ${kind} deployment id gets nothing`,
+          (await deploymentOfTeam(db, teamA, id)) === undefined,
+          "/api/logs streams another team's build log"
+        );
+      }
     });
 
     await suite("the overview counts only the team", async () => {

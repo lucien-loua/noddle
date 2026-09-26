@@ -1,6 +1,7 @@
 import { member } from "@noddle/db/schema";
 import { eq } from "drizzle-orm";
 
+import type { Session } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
 import { requireSession } from "@/lib/session.server";
 
@@ -13,6 +14,10 @@ export class NoActiveTeamError extends Error {
 
 export async function activeTeamId(): Promise<string> {
   const session = await requireSession();
+  return await teamOfSession(session);
+}
+
+export async function teamOfSession(session: Session): Promise<string> {
   const fromSession = session.session.activeOrganizationId;
   if (fromSession) {
     return fromSession;
