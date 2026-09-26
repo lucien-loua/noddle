@@ -56,7 +56,6 @@ const NOT_YET_SCOPED = [
   "server/registries.ts",
   "server/servers.ts",
   "server/service-domains.ts",
-  "server/services.ts",
   "server/ssh-keys.ts",
   "server/stacks.ts",
   "server/webhooks.ts",

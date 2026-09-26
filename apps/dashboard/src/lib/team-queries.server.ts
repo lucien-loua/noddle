@@ -514,3 +514,45 @@ export async function deploymentOfTeam(
   ]);
   return service ?? stack ?? database;
 }
+
+export async function environmentInTeam(
+  db: Db,
+  teamId: string,
+  environmentId: string
+) {
+  return await db.query.environments.findFirst({
+    where: and(
+      eq(environments.id, environmentId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function serviceNamesIn(
+  db: Db,
+  teamId: string,
+  environmentId: string
+): Promise<string[]> {
+  const rows = await db.query.services.findMany({
+    columns: { name: true },
+    where: and(
+      eq(services.environmentId, environmentId),
+      inArray(services.environmentId, environmentsOfTeam(db, teamId))
+    ),
+  });
+  return rows.map((row) => row.name);
+}
+
+export async function serviceWithGitProvider(
+  db: Db,
+  teamId: string,
+  serviceId: string
+) {
+  return await db.query.services.findFirst({
+    where: and(
+      eq(services.id, serviceId),
+      inArray(services.environmentId, environmentsOfTeam(db, teamId))
+    ),
+    with: { gitProvider: true },
+  });
+}

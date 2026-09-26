@@ -1,4 +1,4 @@
-import { environments, services } from "@noddle/db/schema";
+import { services } from "@noddle/db/schema";
 import { ensureRepositoryHook } from "@noddle/git-provider-credentials/hooks";
 import { markDeleting } from "@noddle/shared/lifecycle";
 import { toResourceSlug, uniqueResourceSlug } from "@noddle/shared/slug";
@@ -10,7 +10,7 @@ import {
   updateServiceSettingsSchema,
 } from "@noddle/shared/validation/service";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { z } from "zod";
 
 import { db } from "@/lib/db.server";
@@ -22,7 +22,10 @@ import { enqueueDeploy } from "@/lib/queue.server";
 import { gitlabHookUrl } from "@/lib/request-origin.server";
 import {
   environmentByName,
+  environmentInTeam,
   findOrCreateTeamProject,
+  serviceNamesIn,
+  serviceWithGitProvider,
 } from "@/lib/team-queries.server";
 import { activeTeamId } from "@/lib/team-scope.server";
 
@@ -113,13 +116,9 @@ export const connectRepo = createServerFn({ method: "POST" })
             }));
 
           const wanted = toResourceSlug(data.name) || "app";
-          const siblings = await db.query.services.findMany({
-            columns: { name: true },
-            where: eq(services.environmentId, environment.id),
-          });
           const slug = uniqueResourceSlug(
             wanted,
-            siblings.map((row) => row.name)
+            await serviceNamesIn(db, teamId, environment.id)
           );
 
           const [service] = await db
@@ -158,10 +157,11 @@ export const connectRepo = createServerFn({ method: "POST" })
   );
 
 async function armRepositoryHook(serviceId: string): Promise<void> {
-  const service = await db.query.services.findFirst({
-    where: eq(services.id, serviceId),
-    with: { gitProvider: true },
-  });
+  const service = await serviceWithGitProvider(
+    db,
+    await activeTeamId(),
+    serviceId
+  );
   const provider = service?.gitProvider;
   if (
     provider?.providerType !== "gitlab" ||
@@ -242,9 +242,8 @@ export const moveService = createServerFn({ method: "POST" })
       ...guarded.service(data.serviceId),
       permission: { action: "create", resource: "service" },
       run: async ({ row: service }) => {
-        const target = await db.query.environments.findFirst({
-          where: eq(environments.id, data.environmentId),
-        });
+        const teamId = await activeTeamId();
+        const target = await environmentInTeam(db, teamId, data.environmentId);
         if (!target) {
           throw new Error("environment not found");
         }
@@ -252,14 +251,8 @@ export const moveService = createServerFn({ method: "POST" })
           return { ok: true as const };
         }
 
-        const collision = await db.query.services.findFirst({
-          where: and(
-            eq(services.environmentId, target.id),
-            eq(services.name, service.name),
-            ne(services.id, service.id)
-          ),
-        });
-        if (collision) {
+        const taken = await serviceNamesIn(db, teamId, target.id);
+        if (taken.includes(service.name)) {
           throw new Error(
             `"${service.name}" already exists in the target environment`
           );

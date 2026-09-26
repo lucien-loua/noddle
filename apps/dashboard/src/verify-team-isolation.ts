@@ -25,6 +25,7 @@ import {
   databaseInContext,
   deploymentOfTeam,
   environmentByName,
+  environmentInTeam,
   environmentNameTaken,
   environmentOfProject,
   envVarOfService,
@@ -42,6 +43,8 @@ import {
   serviceDeploymentsOf,
   serviceInContext,
   serviceInTeam,
+  serviceNamesIn,
+  serviceWithGitProvider,
   stackDeploymentsOf,
   teamActivityCounts,
 } from "@/lib/team-queries.server";
@@ -393,6 +396,34 @@ await runVerify("team isolation", async () => {
           "/api/logs streams another team's build log"
         );
       }
+    });
+
+    await suite("a service cannot be moved into another team", async () => {
+      check(
+        "B's environment is a move target for B",
+        (await environmentInTeam(db, teamB, B.environment)) !== undefined
+      );
+      check(
+        "but not for A",
+        (await environmentInTeam(db, teamA, B.environment)) === undefined,
+        "moveService moved A's service into another team's environment"
+      );
+      check(
+        "B sees the names in its environment",
+        (await serviceNamesIn(db, teamB, B.environment)).includes(
+          `iso-svc-${tag}`
+        )
+      );
+      check(
+        "A learns none of them",
+        (await serviceNamesIn(db, teamA, B.environment)).length === 0,
+        "the collision check is an oracle for another team's service names"
+      );
+      check(
+        "a repository hook is armed only for the team's own service",
+        (await serviceWithGitProvider(db, teamB, B.service)) !== undefined &&
+          (await serviceWithGitProvider(db, teamA, B.service)) === undefined
+      );
     });
 
     await suite("the overview counts only the team", async () => {
