@@ -40,12 +40,6 @@ export function emailTarget(ctx: {
   return { id: ctx.row.id, name: ctx.row.email };
 }
 
-/**
- * Which loaders read a row a Team owns, and which read the installation's own
- * things. Every key of `guarded` must appear in exactly one of these, so a new
- * loader cannot be added without deciding — the bench refuses an unclassified
- * one rather than defaulting it to unscoped, which would leak silently.
- */
 export const TEAM_SCOPED_LOADERS = [
   "backup",
   "backupConfig",

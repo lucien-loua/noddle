@@ -17,10 +17,6 @@ export class NoActiveTeamError extends Error {
   }
 }
 
-/**
- * The team every scoped read filters by. It comes from the session, never from
- * the caller, so a request cannot ask for another team's rows.
- */
 export async function activeTeamId(): Promise<string> {
   const session = await requireSession();
   const fromSession = session.session.activeOrganizationId;
