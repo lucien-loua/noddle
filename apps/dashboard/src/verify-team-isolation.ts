@@ -42,6 +42,7 @@ import {
   deploymentOfTeam,
   domainInTeam,
   environmentByName,
+  environmentForDuplicate,
   environmentInTeam,
   environmentNameTaken,
   environmentOfProject,
@@ -565,6 +566,20 @@ await runVerify("team isolation", async () => {
           "/api/logs streams another team's build log"
         );
       }
+    });
+
+    await suite("an environment is duplicated only by its team", async () => {
+      const own = await environmentForDuplicate(db, teamB, B.environment);
+      check(
+        "B loads its environment with what a copy would carry",
+        own?.services.length === 1 && own.stacks.length === 1,
+        "without them here the next check proves nothing"
+      );
+      check(
+        "A passing B's environment id loads nothing",
+        (await environmentForDuplicate(db, teamA, B.environment)) === undefined,
+        "duplicateEnvironment copied another team's services and variables into its project"
+      );
     });
 
     await suite("a service cannot be moved into another team", async () => {

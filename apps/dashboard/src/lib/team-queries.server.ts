@@ -750,3 +750,21 @@ export async function volumeBackupOfTeam(
     ),
   });
 }
+
+export async function environmentForDuplicate(
+  db: Db,
+  teamId: string,
+  environmentId: string
+) {
+  return await db.query.environments.findFirst({
+    where: and(
+      eq(environments.id, environmentId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId))
+    ),
+    with: {
+      databases: true,
+      services: { with: { envVars: true } },
+      stacks: true,
+    },
+  });
+}

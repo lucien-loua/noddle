@@ -9,16 +9,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
-import {
-  copyEnvironment,
-  loadEnvironmentForDuplicate,
-} from "@/lib/duplicate-environment.server";
+import { copyEnvironment } from "@/lib/duplicate-environment.server";
 import { assertNotDefaultEnvironment } from "@/lib/environment-guard";
 import { insertProjectEnvironment } from "@/lib/environment.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";
 import { runGuarded } from "@/lib/permission.server";
 import { requireSession } from "@/lib/session.server";
 import {
+  environmentForDuplicate,
   environmentNameTaken,
   environmentsHold,
   listProjectEnvironments,
@@ -145,10 +143,12 @@ export const duplicateEnvironment = createServerFn({ method: "POST" })
       stacksCopied: number;
     }> =>
       runGuarded({
-        load: () => loadEnvironmentForDuplicate(data.environmentId),
+        load: async () =>
+          environmentForDuplicate(db, await activeTeamId(), data.environmentId),
         notFoundMessage: "environment not found",
         permission: { action: "create", resource: "service" },
-        run: ({ row: source }) => copyEnvironment(source, data),
+        run: async ({ row: source }) =>
+          copyEnvironment(source, data, await activeTeamId()),
         target: ({ result }) => ({
           id: result.environmentId,
           name: result.environmentName,

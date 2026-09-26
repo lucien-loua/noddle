@@ -1,31 +1,23 @@
 import { decryptSecret, encryptSecret, secretContext } from "@noddle/crypto";
-import { environments, envVars, services, stacks } from "@noddle/db/schema";
+import { envVars, services, stacks } from "@noddle/db/schema";
 import { buildSpecOf } from "@noddle/shared/build-spec";
 import { newStackSwarmName } from "@noddle/shared/swarm-names";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
 import { env } from "@/lib/env.server";
 import { insertProjectEnvironment } from "@/lib/environment.server";
+import type { environmentForDuplicate } from "@/lib/team-queries.server";
+import { environmentNameTaken } from "@/lib/team-queries.server";
 
 export type DuplicateSource = NonNullable<
-  Awaited<ReturnType<typeof loadEnvironmentForDuplicate>>
+  Awaited<ReturnType<typeof environmentForDuplicate>>
 >;
-
-export function loadEnvironmentForDuplicate(environmentId: string) {
-  return db.query.environments.findFirst({
-    where: eq(environments.id, environmentId),
-    with: {
-      databases: true,
-      services: { with: { envVars: true } },
-      stacks: true,
-    },
-  });
-}
 
 export async function copyEnvironment(
   source: DuplicateSource,
-  data: { name: string }
+  data: { name: string },
+  teamId: string
 ): Promise<{
   databasesSkipped: number;
   environmentId: string;
@@ -33,13 +25,7 @@ export async function copyEnvironment(
   servicesCopied: number;
   stacksCopied: number;
 }> {
-  const nameTaken = await db.query.environments.findFirst({
-    where: and(
-      eq(environments.projectId, source.projectId),
-      eq(environments.name, data.name)
-    ),
-  });
-  if (nameTaken) {
+  if (await environmentNameTaken(db, teamId, source.projectId, data.name)) {
     throw new Error(`"${data.name}" already exists in this project`);
   }
 
