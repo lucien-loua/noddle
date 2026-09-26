@@ -1,23 +1,28 @@
-import {
-  databaseDeployments,
-  deployments,
-  environments,
-  projects,
-  serviceDomains,
-  services,
-  stackDeployments,
-  stacks,
-} from "@noddle/db/schema";
+import type { deployments, stackDeployments } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { and, asc, count, desc, eq, gte, inArray } from "drizzle-orm";
 import z from "zod";
 
 import { loadDatabaseDashboardRows } from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";
-import { requireSession } from "@/lib/session.server";
+import {
+  databaseDeploymentsOf,
+  environmentOfProject,
+  listServicesInContext,
+  listStacksInContext,
+  recentServiceDeployments,
+  recentStackDeployments,
+  serviceDeploymentsOf,
+  serviceInContext,
+  stackDeploymentsOf,
+  teamActivityCounts,
+} from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 import type { DatabaseRow } from "@/server/databases/read";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const DEPLOYMENT_HISTORY_LIMIT = 50;
+const DEPLOYMENT_LOG_LIMIT = 200;
+const OVERVIEW_ACTIVITY_LIMIT = 10;
 
 export interface DeploymentSummary {
   commitSha: string | null;
@@ -257,31 +262,20 @@ function hookErrorOf(
 }
 
 async function loadServiceDashboard(
+  teamId: string,
   environmentId?: string
 ): Promise<ServiceRow[]> {
-  const rows = await db.query.services.findMany({
-    orderBy: services.name,
-    where: environmentId
-      ? eq(services.environmentId, environmentId)
-      : undefined,
-    with: {
-      domains: { orderBy: asc(serviceDomains.createdAt) },
-      environment: { with: { project: true } },
-      server: true,
-    },
-  });
+  const rows = await listServicesInContext(db, teamId, environmentId);
   if (rows.length === 0) {
     return [];
   }
 
   const [recent, nodes] = await Promise.all([
-    db.query.deployments.findMany({
-      orderBy: desc(deployments.createdAt),
-      where: inArray(
-        deployments.serviceId,
-        rows.map((r) => r.id)
-      ),
-    }),
+    serviceDeploymentsOf(
+      db,
+      teamId,
+      rows.map((r) => r.id)
+    ),
     nodeNames(),
   ]);
   const latest = new Map<string, typeof deployments.$inferSelect>();
@@ -309,33 +303,20 @@ async function loadServiceDashboard(
 }
 
 export const getDashboard = createServerFn({ method: "GET" }).handler(
-  async (): Promise<ServiceRow[]> => {
-    await requireSession();
-    return loadServiceDashboard();
-  }
+  async (): Promise<ServiceRow[]> => loadServiceDashboard(await activeTeamId())
 );
 
 export const getService = createServerFn({ method: "GET" })
   .validator((data: { serviceId: string }) => data)
   .handler(async ({ data }): Promise<ServiceRow | null> => {
-    await requireSession();
-    const row = await db.query.services.findFirst({
-      where: eq(services.id, data.serviceId),
-      with: {
-        domains: { orderBy: asc(serviceDomains.createdAt) },
-        environment: { with: { project: true } },
-        server: true,
-      },
-    });
+    const teamId = await activeTeamId();
+    const row = await serviceInContext(db, teamId, data.serviceId);
     if (!row) {
       return null;
     }
 
-    const [last, nodes] = await Promise.all([
-      db.query.deployments.findFirst({
-        orderBy: desc(deployments.createdAt),
-        where: eq(deployments.serviceId, row.id),
-      }),
+    const [[last], nodes] = await Promise.all([
+      serviceDeploymentsOf(db, teamId, [row.id], 1),
       nodeNames(),
     ]);
     const watching = Boolean(
@@ -350,26 +331,20 @@ export const getService = createServerFn({ method: "GET" })
     );
   });
 
-async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
-  const rows = await db.query.stacks.findMany({
-    orderBy: stacks.name,
-    where: environmentId ? eq(stacks.environmentId, environmentId) : undefined,
-    with: {
-      environment: { with: { project: true } },
-      server: true,
-    },
-  });
+async function loadStackDashboard(
+  teamId: string,
+  environmentId?: string
+): Promise<StackRow[]> {
+  const rows = await listStacksInContext(db, teamId, environmentId);
   if (rows.length === 0) {
     return [];
   }
 
-  const recent = await db.query.stackDeployments.findMany({
-    orderBy: desc(stackDeployments.createdAt),
-    where: inArray(
-      stackDeployments.stackId,
-      rows.map((r) => r.id)
-    ),
-  });
+  const recent = await stackDeploymentsOf(
+    db,
+    teamId,
+    rows.map((r) => r.id)
+  );
 
   const latest = new Map<string, typeof stackDeployments.$inferSelect>();
   const now = Date.now();
@@ -409,22 +384,19 @@ async function loadStackDashboard(environmentId?: string): Promise<StackRow[]> {
 }
 
 export const getStackDashboard = createServerFn({ method: "GET" }).handler(
-  async (): Promise<StackRow[]> => {
-    await requireSession();
-    return loadStackDashboard();
-  }
+  async (): Promise<StackRow[]> => loadStackDashboard(await activeTeamId())
 );
 
 export const getDeployments = createServerFn({ method: "GET" })
   .validator((data: { serviceId: string }) => data)
   .handler(async ({ data }): Promise<DeploymentSummary[]> => {
-    await requireSession();
     const [rows, nodes] = await Promise.all([
-      db.query.deployments.findMany({
-        limit: 50,
-        orderBy: desc(deployments.createdAt),
-        where: eq(deployments.serviceId, data.serviceId),
-      }),
+      serviceDeploymentsOf(
+        db,
+        await activeTeamId(),
+        [data.serviceId],
+        DEPLOYMENT_HISTORY_LIMIT
+      ),
       nodeNames(),
     ]);
     return rows.map((row) => toSummary(row, nodes));
@@ -433,12 +405,12 @@ export const getDeployments = createServerFn({ method: "GET" })
 export const getDatabaseDeployments = createServerFn({ method: "GET" })
   .validator((data: { databaseId: string }) => data)
   .handler(async ({ data }): Promise<DeploymentSummary[]> => {
-    await requireSession();
-    const rows = await db.query.databaseDeployments.findMany({
-      limit: 50,
-      orderBy: desc(databaseDeployments.createdAt),
-      where: eq(databaseDeployments.databaseId, data.databaseId),
-    });
+    const rows = await databaseDeploymentsOf(
+      db,
+      await activeTeamId(),
+      data.databaseId,
+      DEPLOYMENT_HISTORY_LIMIT
+    );
     return rows.map((row) => ({
       commitSha: null,
       createdAt: row.createdAt.toISOString(),
@@ -479,11 +451,11 @@ export interface DashboardData {
   statusCounts: Record<string, number>;
 }
 
-async function buildDashboardData(): Promise<DashboardData> {
+async function buildDashboardData(teamId: string): Promise<DashboardData> {
   const [serviceRows, stackRows, databaseRows] = await Promise.all([
-    loadServiceDashboard(),
-    loadStackDashboard(),
-    loadDatabaseDashboardRows(),
+    loadServiceDashboard(teamId),
+    loadStackDashboard(teamId),
+    loadDatabaseDashboardRows(teamId),
   ]);
 
   const scopes = new Map<string, Scope>();
@@ -580,10 +552,7 @@ async function buildDashboardData(): Promise<DashboardData> {
 }
 
 export const getDashboardGroups = createServerFn({ method: "GET" }).handler(
-  async (): Promise<DashboardData> => {
-    await requireSession();
-    return buildDashboardData();
-  }
+  async (): Promise<DashboardData> => buildDashboardData(await activeTeamId())
 );
 
 export const getEnvironmentScope = createServerFn({ method: "GET" })
@@ -593,24 +562,22 @@ export const getEnvironmentScope = createServerFn({ method: "GET" })
       projectId: z.uuid("Choose a project."),
     })
   )
-  .handler(async ({ data }): Promise<Scope> => {
-    await requireSession();
-
-    const environment = await db.query.environments.findFirst({
-      where: and(
-        eq(environments.id, data.environmentId),
-        eq(environments.projectId, data.projectId)
-      ),
-      with: { project: true },
-    });
+  .handler(async ({ data }): Promise<Scope | null> => {
+    const teamId = await activeTeamId();
+    const environment = await environmentOfProject(
+      db,
+      teamId,
+      data.projectId,
+      data.environmentId
+    );
     if (!environment) {
-      throw new Error("environment not found");
+      return null;
     }
 
     const [serviceRows, stackRows, databaseRows] = await Promise.all([
-      loadServiceDashboard(data.environmentId),
-      loadStackDashboard(data.environmentId),
-      loadDatabaseDashboardRows(data.environmentId),
+      loadServiceDashboard(teamId, data.environmentId),
+      loadStackDashboard(teamId, data.environmentId),
+      loadDatabaseDashboardRows(teamId, data.environmentId),
     ]);
 
     return {
@@ -644,27 +611,10 @@ export interface DeploymentLogRow {
 
 export const getDeploymentLog = createServerFn({ method: "GET" }).handler(
   async (): Promise<DeploymentLogRow[]> => {
-    await requireSession();
-
+    const teamId = await activeTeamId();
     const [serviceRows, stackRows] = await Promise.all([
-      db.query.deployments.findMany({
-        limit: 200,
-        orderBy: desc(deployments.createdAt),
-        with: {
-          service: {
-            with: { environment: { with: { project: true } }, server: true },
-          },
-        },
-      }),
-      db.query.stackDeployments.findMany({
-        limit: 200,
-        orderBy: desc(stackDeployments.createdAt),
-        with: {
-          stack: {
-            with: { environment: { with: { project: true } }, server: true },
-          },
-        },
-      }),
+      recentServiceDeployments(db, teamId, DEPLOYMENT_LOG_LIMIT),
+      recentStackDeployments(db, teamId, DEPLOYMENT_LOG_LIMIT),
     ]);
 
     const merged: DeploymentLogRow[] = [
@@ -703,7 +653,7 @@ export const getDeploymentLog = createServerFn({ method: "GET" }).handler(
     ];
 
     merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return merged.slice(0, 200);
+    return merged.slice(0, DEPLOYMENT_LOG_LIMIT);
   }
 );
 
@@ -779,8 +729,8 @@ function collectAttention(
 
 export const getOverview = createServerFn({ method: "GET" }).handler(
   async (): Promise<Overview> => {
-    await requireSession();
-    const { groups, statusCounts } = await buildDashboardData();
+    const teamId = await activeTeamId();
+    const { groups, statusCounts } = await buildDashboardData(teamId);
 
     const attention: Overview["attention"] = [];
     for (const group of groups) {
@@ -796,26 +746,11 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
       }
     }
 
-    const rows = await db.query.deployments.findMany({
-      limit: 10,
-      orderBy: desc(deployments.createdAt),
-      with: {
-        service: { with: { environment: { with: { project: true } } } },
-      },
-    });
-
     const since = new Date(Date.now() - SEVEN_DAYS_MS);
-    const [deployRows, projectRows, environmentRows] = await Promise.all([
-      db
-        .select({ value: count() })
-        .from(deployments)
-        .where(gte(deployments.createdAt, since)),
-      db.select({ value: count() }).from(projects),
-      db.select({ value: count() }).from(environments),
+    const [rows, activityCounts] = await Promise.all([
+      recentServiceDeployments(db, teamId, OVERVIEW_ACTIVITY_LIMIT),
+      teamActivityCounts(db, teamId, since),
     ]);
-    const deploys7d = deployRows[0]?.value ?? 0;
-    const projectCount = projectRows[0]?.value ?? 0;
-    const environmentCount = environmentRows[0]?.value ?? 0;
 
     let serviceCount = 0;
     let stackCount = 0;
@@ -845,9 +780,9 @@ export const getOverview = createServerFn({ method: "GET" }).handler(
       attention,
       counts: {
         databases: databaseCount,
-        deploys7d: deploys7d ?? 0,
-        environments: environmentCount,
-        projects: projectCount,
+        deploys7d: activityCounts.deploys,
+        environments: activityCounts.environments,
+        projects: activityCounts.projects,
         services: serviceCount,
         stacks: stackCount,
       },

@@ -1,12 +1,11 @@
-import { databases } from "@noddle/db/schema";
 import type {
   DatabaseExtraMount,
   DatabaseSwarmSettings,
 } from "@noddle/db/schema";
 import type { DatabaseEngine } from "@noddle/shared/database-spec";
-import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db.server";
+import { listDatabasesInContext } from "@/lib/team-queries.server";
 import type { DatabaseRow } from "@/server/databases/read";
 
 export interface DatabaseJoined {
@@ -65,17 +64,9 @@ export function toDatabaseRow(d: DatabaseJoined): DatabaseRow {
 }
 
 export async function loadDatabaseDashboardRows(
+  teamId: string,
   environmentId?: string
 ): Promise<DatabaseRow[]> {
-  const rows = await db.query.databases.findMany({
-    orderBy: databases.name,
-    where: environmentId
-      ? eq(databases.environmentId, environmentId)
-      : undefined,
-    with: {
-      environment: { with: { project: true } },
-      server: true,
-    },
-  });
+  const rows = await listDatabasesInContext(db, teamId, environmentId);
   return rows.map(toDatabaseRow);
 }

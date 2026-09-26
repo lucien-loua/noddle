@@ -1,18 +1,17 @@
-import { databases } from "@noddle/db/schema";
 import type {
   DatabaseExtraMount,
   DatabaseSwarmSettings,
 } from "@noddle/db/schema";
 import type { DatabaseEngine } from "@noddle/shared/database-spec";
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
 
 import {
   loadDatabaseDashboardRows,
   toDatabaseRow,
 } from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";
-import { requireSession } from "@/lib/session.server";
+import { databaseInContext } from "@/lib/team-queries.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 export interface DatabaseRow {
   displayName: string | null;
@@ -43,22 +42,17 @@ export interface DatabaseRow {
 }
 
 export const getDatabaseDashboard = createServerFn({ method: "GET" }).handler(
-  async (): Promise<DatabaseRow[]> => {
-    await requireSession();
-    return loadDatabaseDashboardRows();
-  }
+  async (): Promise<DatabaseRow[]> =>
+    loadDatabaseDashboardRows(await activeTeamId())
 );
 
 export const getDatabase = createServerFn({ method: "GET" })
   .validator((data: { databaseId: string }) => data)
   .handler(async ({ data }): Promise<DatabaseRow | null> => {
-    await requireSession();
-    const row = await db.query.databases.findFirst({
-      where: eq(databases.id, data.databaseId),
-      with: {
-        environment: { with: { project: true } },
-        server: true,
-      },
-    });
+    const row = await databaseInContext(
+      db,
+      await activeTeamId(),
+      data.databaseId
+    );
     return row ? toDatabaseRow(row) : null;
   });

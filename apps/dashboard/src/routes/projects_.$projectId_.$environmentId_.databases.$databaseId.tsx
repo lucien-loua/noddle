@@ -94,7 +94,7 @@ export const Route = createFileRoute(
         },
       }),
     ]);
-    if (!database) {
+    if (!(database && scope)) {
       throw notFound();
     }
     return {

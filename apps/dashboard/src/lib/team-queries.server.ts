@@ -1,14 +1,28 @@
 import {
+  databaseDeployments,
   databases,
+  deployments,
   envVars,
   environments,
   projects,
   serviceDependencies,
+  serviceDomains,
   services,
+  stackDeployments,
   stacks,
 } from "@noddle/db/schema";
 import type * as schema from "@noddle/db/schema";
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  ne,
+} from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -179,4 +193,225 @@ export async function databaseInTeam(
       inArray(databases.id, databasesOfTeam(db, teamId))
     ),
   });
+}
+
+export function stacksOfTeam(db: Db, teamId: string) {
+  return db
+    .select({ id: stacks.id })
+    .from(stacks)
+    .where(inArray(stacks.environmentId, environmentsOfTeam(db, teamId)));
+}
+
+export async function listServicesInContext(
+  db: Db,
+  teamId: string,
+  environmentId?: string
+) {
+  return await db.query.services.findMany({
+    orderBy: services.name,
+    where: and(
+      inArray(services.environmentId, environmentsOfTeam(db, teamId)),
+      environmentId ? eq(services.environmentId, environmentId) : undefined
+    ),
+    with: {
+      domains: { orderBy: asc(serviceDomains.createdAt) },
+      environment: { with: { project: true } },
+      server: true,
+    },
+  });
+}
+
+export async function serviceInContext(
+  db: Db,
+  teamId: string,
+  serviceId: string
+) {
+  return await db.query.services.findFirst({
+    where: and(
+      eq(services.id, serviceId),
+      inArray(services.environmentId, environmentsOfTeam(db, teamId))
+    ),
+    with: {
+      domains: { orderBy: asc(serviceDomains.createdAt) },
+      environment: { with: { project: true } },
+      server: true,
+    },
+  });
+}
+
+export async function listStacksInContext(
+  db: Db,
+  teamId: string,
+  environmentId?: string
+) {
+  return await db.query.stacks.findMany({
+    orderBy: stacks.name,
+    where: and(
+      inArray(stacks.environmentId, environmentsOfTeam(db, teamId)),
+      environmentId ? eq(stacks.environmentId, environmentId) : undefined
+    ),
+    with: { environment: { with: { project: true } }, server: true },
+  });
+}
+
+export async function listDatabasesInContext(
+  db: Db,
+  teamId: string,
+  environmentId?: string
+) {
+  return await db.query.databases.findMany({
+    orderBy: databases.name,
+    where: and(
+      inArray(databases.environmentId, environmentsOfTeam(db, teamId)),
+      environmentId ? eq(databases.environmentId, environmentId) : undefined
+    ),
+    with: { environment: { with: { project: true } }, server: true },
+  });
+}
+
+export async function databaseInContext(
+  db: Db,
+  teamId: string,
+  databaseId: string
+) {
+  return await db.query.databases.findFirst({
+    where: and(
+      eq(databases.id, databaseId),
+      inArray(databases.environmentId, environmentsOfTeam(db, teamId))
+    ),
+    with: { environment: { with: { project: true } }, server: true },
+  });
+}
+
+export async function environmentOfProject(
+  db: Db,
+  teamId: string,
+  projectId: string,
+  environmentId: string
+) {
+  return await db.query.environments.findFirst({
+    where: and(
+      eq(environments.id, environmentId),
+      eq(environments.projectId, projectId),
+      inArray(environments.projectId, projectsOfTeam(db, teamId))
+    ),
+    with: { project: true },
+  });
+}
+
+export async function serviceDeploymentsOf(
+  db: Db,
+  teamId: string,
+  serviceIds: string[],
+  limit?: number
+) {
+  if (serviceIds.length === 0) {
+    return [];
+  }
+  return await db.query.deployments.findMany({
+    limit,
+    orderBy: desc(deployments.createdAt),
+    where: and(
+      inArray(deployments.serviceId, serviceIds),
+      inArray(deployments.serviceId, servicesOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function stackDeploymentsOf(
+  db: Db,
+  teamId: string,
+  stackIds: string[]
+) {
+  if (stackIds.length === 0) {
+    return [];
+  }
+  return await db.query.stackDeployments.findMany({
+    orderBy: desc(stackDeployments.createdAt),
+    where: and(
+      inArray(stackDeployments.stackId, stackIds),
+      inArray(stackDeployments.stackId, stacksOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function databaseDeploymentsOf(
+  db: Db,
+  teamId: string,
+  databaseId: string,
+  limit: number
+) {
+  return await db.query.databaseDeployments.findMany({
+    limit,
+    orderBy: desc(databaseDeployments.createdAt),
+    where: and(
+      eq(databaseDeployments.databaseId, databaseId),
+      inArray(databaseDeployments.databaseId, databasesOfTeam(db, teamId))
+    ),
+  });
+}
+
+export async function recentServiceDeployments(
+  db: Db,
+  teamId: string,
+  limit: number
+) {
+  return await db.query.deployments.findMany({
+    limit,
+    orderBy: desc(deployments.createdAt),
+    where: inArray(deployments.serviceId, servicesOfTeam(db, teamId)),
+    with: {
+      service: {
+        with: { environment: { with: { project: true } }, server: true },
+      },
+    },
+  });
+}
+
+export async function recentStackDeployments(
+  db: Db,
+  teamId: string,
+  limit: number
+) {
+  return await db.query.stackDeployments.findMany({
+    limit,
+    orderBy: desc(stackDeployments.createdAt),
+    where: inArray(stackDeployments.stackId, stacksOfTeam(db, teamId)),
+    with: {
+      stack: {
+        with: { environment: { with: { project: true } }, server: true },
+      },
+    },
+  });
+}
+
+export async function teamActivityCounts(
+  db: Db,
+  teamId: string,
+  since: Date
+): Promise<{ deploys: number; environments: number; projects: number }> {
+  const [deployRows, projectRows, environmentRows] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(deployments)
+      .where(
+        and(
+          gte(deployments.createdAt, since),
+          inArray(deployments.serviceId, servicesOfTeam(db, teamId))
+        )
+      ),
+    db
+      .select({ value: count() })
+      .from(projects)
+      .where(eq(projects.teamId, teamId)),
+    db
+      .select({ value: count() })
+      .from(environments)
+      .where(inArray(environments.projectId, projectsOfTeam(db, teamId))),
+  ]);
+  return {
+    deploys: deployRows[0]?.value ?? 0,
+    environments: environmentRows[0]?.value ?? 0,
+    projects: projectRows[0]?.value ?? 0,
+  };
 }

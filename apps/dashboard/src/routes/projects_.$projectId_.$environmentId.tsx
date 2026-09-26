@@ -66,7 +66,7 @@ export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
 
     const project = allProjects.find((p) => p.id === params.projectId);
     const current = environments.find((e) => e.id === params.environmentId);
-    if (!(project && current)) {
+    if (!(project && current && scope)) {
       throw notFound();
     }
 

@@ -18,6 +18,12 @@ const REQUIRE_PERM_RESOURCE_FIRST =
 const GUARDED_MUTATION_PERM =
   /permission:\s*\{\s*action:\s*"([^"]+)"\s*,\s*resource:\s*"([^"]+)"/;
 const EXPECT_FALSE_LABEL = /CANNOT|cannot|denies|NOTHING|^a viewer cannot/;
+const ACTIVE_TEAM_OPENS_WITH_SESSION =
+  /export async function activeTeamId\(\)[^{]*\{\s*const session = await requireSession\(\);/;
+
+const activeTeamIsSessionGuard = ACTIVE_TEAM_OPENS_WITH_SESSION.test(
+  readFileSync(join(import.meta.dirname, "lib/team-scope.server.ts"), "utf-8")
+);
 
 const RESTRICTED_SOURCE_MARKERS: {
   action: string;
@@ -124,7 +130,8 @@ for (const file of files) {
     const perm = parseRequirePermission(decl.body);
     const hasSession =
       decl.body.includes("requireSession(") ||
-      decl.body.includes("getSession(");
+      decl.body.includes("getSession(") ||
+      (activeTeamIsSessionGuard && decl.body.includes("activeTeamId()"));
 
     if (decl.method === "POST") {
       mutating += 1;
@@ -173,6 +180,12 @@ for (const file of files) {
       }
     }
   }
+}
+
+if (activeTeamIsSessionGuard) {
+  ok("activeTeamId() opens with requireSession(), so it guards a GET");
+} else {
+  ko("activeTeamId() no longer opens with requireSession(); it guards nothing");
 }
 
 if (mutating === 0) {
