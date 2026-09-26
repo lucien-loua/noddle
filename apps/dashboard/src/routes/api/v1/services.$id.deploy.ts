@@ -1,23 +1,15 @@
-import { services } from "@noddle/db/schema";
 import { createFileRoute } from "@tanstack/react-router";
-import { eq, or } from "drizzle-orm";
 
 import { ApiClientError } from "@/lib/api-errors";
 import { withToken } from "@/lib/api-v1.server";
 import { db } from "@/lib/db.server";
 import { queueServiceDeploy } from "@/lib/deploy-queue.server";
+import { servicesNamed } from "@/lib/team-queries.server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function resolveService(wanted: string) {
-  const matches = await db
-    .select({ id: services.id, name: services.name })
-    .from(services)
-    .where(
-      UUID.test(wanted)
-        ? or(eq(services.id, wanted), eq(services.name, wanted))
-        : eq(services.name, wanted)
-    );
+async function resolveService(teamId: string, wanted: string) {
+  const matches = await servicesNamed(db, teamId, wanted, UUID.test(wanted));
 
   const [only] = matches;
   if (matches.length === 1 && only) {
@@ -44,8 +36,8 @@ export const Route = createFileRoute("/api/v1/services/$id/deploy")({
         withToken(
           request,
           { action: "deploy", resource: "service" },
-          async () => {
-            const service = await resolveService(params.id);
+          async (actor) => {
+            const service = await resolveService(actor.team.id, params.id);
             const { deploymentId } = await queueServiceDeploy(service.id, {
               trigger: "manual",
             });

@@ -31,10 +31,6 @@ const DIRECT_READ = new RegExp(
 );
 
 const NOT_YET_SCOPED = [
-  "routes/api/v1/deployments.$id.logs.ts",
-  "routes/api/v1/deployments.$id.ts",
-  "routes/api/v1/services.$id.deploy.ts",
-  "routes/api/v1/services.ts",
   "server/containers.ts",
   "server/git-providers.ts",
   "server/servers.ts",

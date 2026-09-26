@@ -1,12 +1,11 @@
-import { deployments } from "@noddle/db/schema";
 import { createFileRoute } from "@tanstack/react-router";
-import { eq } from "drizzle-orm";
 
 import { ApiClientError } from "@/lib/api-errors";
 import { withToken } from "@/lib/api-v1.server";
 import { db } from "@/lib/db.server";
 import { readArchive } from "@/lib/log-archive.server";
 import { logHub } from "@/lib/redis.server";
+import { serviceDeploymentById } from "@/lib/team-queries.server";
 
 const TERMINAL = new Set([
   "succeeded",
@@ -22,10 +21,12 @@ export const Route = createFileRoute("/api/v1/deployments/$id/logs")({
         withToken(
           request,
           { action: "read", resource: "service" },
-          async () => {
-            const row = await db.query.deployments.findFirst({
-              where: eq(deployments.id, params.id),
-            });
+          async (actor) => {
+            const row = await serviceDeploymentById(
+              db,
+              actor.team.id,
+              params.id
+            );
             if (!row) {
               throw new ApiClientError(
                 404,

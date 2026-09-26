@@ -12,6 +12,7 @@ import { db } from "@/lib/db.server";
 import { runGuarded } from "@/lib/permission.server";
 import { grantableBy, narrowToRole, scopesToPermissions } from "@/lib/scopes";
 import { requireSession } from "@/lib/session.server";
+import { activeTeamId } from "@/lib/team-scope.server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_NAME = 60;
@@ -104,6 +105,7 @@ export const createApiToken = createServerFn({ method: "POST" })
             );
           }
 
+          const teamId = await activeTeamId();
           const created = await auth.api.createApiKey({
             body: {
               expiresIn: data.expiresInDays
@@ -114,6 +116,11 @@ export const createApiToken = createServerFn({ method: "POST" })
               userId: session.user.id,
             },
           });
+
+          await db
+            .update(apikey)
+            .set({ teamId })
+            .where(eq(apikey.id, created.id));
 
           return { id: created.id, token: created.key };
         },

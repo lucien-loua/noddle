@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 
 import { createDatabase } from "@noddle/db";
 import {
+  apikey,
   backupConfigs,
   backups,
   databaseDeployments,
@@ -10,6 +11,7 @@ import {
   deployments,
   envVars,
   environments,
+  member,
   organization,
   projects,
   s3Destinations,
@@ -20,12 +22,13 @@ import {
   sshKeys,
   stackDeployments,
   stacks,
+  user,
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
 import { check, runVerify, suite } from "@noddle/testing";
 import { devStack } from "@noddle/testing/dev-stack";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import {
   destinationHolds,
@@ -54,22 +57,26 @@ import {
   listEnvVars,
   listProjectEnvironments,
   listProjects,
+  listServiceSummaries,
   listServicesInContext,
   listStacksInContext,
   projectNameTaken,
   recentServiceDeployments,
   recentStackDeployments,
+  serviceDeploymentById,
   serviceDeploymentOf,
   serviceDeploymentsOf,
   serviceInContext,
   serviceInTeam,
   serviceNamesIn,
+  servicesNamed,
   serviceWebhookConfigured,
   serviceWithGitProvider,
   stackDeploymentOf,
   stackDeploymentsOf,
   stackWebhookConfigured,
   teamActivityCounts,
+  tokenActorRow,
   volumeBackupConfigsOfService,
   volumeBackupOfTeam,
   volumeBackupsOfService,
@@ -222,6 +229,27 @@ const [volumeBackupB] = await db
     volumeName: `iso-vol-${tag}`,
   })
   .returning();
+
+const ownerB = `iso-user-${tag}`;
+await db.insert(user).values({
+  email: `${ownerB}@example.invalid`,
+  id: ownerB,
+  name: "Isolation owner",
+});
+await db.insert(member).values({
+  id: `iso-member-${tag}`,
+  organizationId: teamB,
+  role: "member",
+  userId: ownerB,
+});
+const tokenB = `iso-key-${tag}`;
+await db.insert(apikey).values({
+  id: tokenB,
+  key: `not-a-real-hash-${tag}`,
+  name: "isolation",
+  referenceId: ownerB,
+  teamId: teamB,
+});
 
 const B = {
   backup: backupB?.id as string,
@@ -673,6 +701,70 @@ await runVerify("team isolation", async () => {
       );
     });
 
+    await suite(
+      "a token acts for its team, and only while a member",
+      async () => {
+        check(
+          "B's token resolves to B while its owner is a member",
+          (await tokenActorRow(db, tokenB))?.teamId === teamB
+        );
+        await db
+          .update(apikey)
+          .set({ teamId: teamA })
+          .where(eq(apikey.id, tokenB));
+        check(
+          "pointed at a team its owner is not in, it resolves to nothing",
+          (await tokenActorRow(db, tokenB)) === undefined,
+          "a token reached a team its owner never joined"
+        );
+        await db
+          .update(apikey)
+          .set({ teamId: null })
+          .where(eq(apikey.id, tokenB));
+        check(
+          "a token with no team resolves to nothing",
+          (await tokenActorRow(db, tokenB)) === undefined,
+          "a token without a team fell back to some team"
+        );
+        await db
+          .update(apikey)
+          .set({ teamId: teamB })
+          .where(eq(apikey.id, tokenB));
+        await db.delete(member).where(eq(member.userId, ownerB));
+        check(
+          "once its owner leaves B, it stops working",
+          (await tokenActorRow(db, tokenB)) === undefined,
+          "removing someone from a team left their token acting on it"
+        );
+      }
+    );
+
+    await suite("/api/v1 answers only with the token's team", async () => {
+      check(
+        "B's service list holds its service, A's does not",
+        idsOf(await listServiceSummaries(db, teamB)).has(B.service) &&
+          !idsOf(await listServiceSummaries(db, teamA)).has(B.service),
+        "GET /api/v1/services lists every team's services"
+      );
+      const name = `iso-svc-${tag}`;
+      check(
+        "B deploys its service by name, A cannot name it",
+        (await servicesNamed(db, teamB, name, false)).length === 1 &&
+          (await servicesNamed(db, teamA, name, false)).length === 0,
+        "POST /api/v1/services/:name/deploy reaches, or lists in a 409, another team's service"
+      );
+      check(
+        "nor by id",
+        (await servicesNamed(db, teamA, B.service, true)).length === 0
+      );
+      check(
+        "B reads its deployment, A does not",
+        (await serviceDeploymentById(db, teamB, B.deployment)) !== undefined &&
+          (await serviceDeploymentById(db, teamA, B.deployment)) === undefined,
+        "GET /api/v1/deployments/:id and its logs read another team's deployment"
+      );
+    });
+
     await suite("the overview counts only the team", async () => {
       const ofA = await teamActivityCounts(db, teamA, SINCE_EPOCH);
       const ofB = await teamActivityCounts(db, teamB, SINCE_EPOCH);
@@ -741,6 +833,8 @@ await runVerify("team isolation", async () => {
       }
     );
   } finally {
+    await db.delete(apikey).where(eq(apikey.id, tokenB));
+    await db.delete(user).where(eq(user.id, ownerB));
     await db
       .delete(envVars)
       .where(inArray(envVars.serviceId, [serviceB?.id as string]));

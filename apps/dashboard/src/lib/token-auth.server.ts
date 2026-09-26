@@ -1,16 +1,16 @@
-import { apikey, user } from "@noddle/db/schema";
 import { isWellFormedToken } from "@noddle/shared/api-token";
-import { eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth.server";
 import { db } from "@/lib/db.server";
 import type { PermissionResource } from "@/lib/permissions";
 import { narrowToRole, permissionsToScopes } from "@/lib/scopes";
+import { tokenActorRow } from "@/lib/team-queries.server";
 
 export interface TokenActor {
   email: string;
   role: string | null;
   scopes: string[];
+  team: { id: string; name: string };
   tokenId: string;
   tokenName: string;
   userId: string;
@@ -37,18 +37,7 @@ export async function resolveToken(
     return null;
   }
 
-  const [row] = await db
-    .select({
-      email: user.email,
-      name: apikey.name,
-      permissions: apikey.permissions,
-      role: user.role,
-      userId: user.id,
-    })
-    .from(apikey)
-    .innerJoin(user, eq(user.id, apikey.referenceId))
-    .where(eq(apikey.id, verified.key.id));
-
+  const row = await tokenActorRow(db, verified.key.id);
   if (!row) {
     return null;
   }
@@ -61,6 +50,7 @@ export async function resolveToken(
     email: row.email,
     role: row.role,
     scopes: narrowToRole(granted, row.role),
+    team: { id: row.teamId, name: row.teamName },
     tokenId: verified.key.id,
     tokenName: row.name ?? "unnamed",
     userId: row.userId,

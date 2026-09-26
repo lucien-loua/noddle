@@ -31,6 +31,7 @@ export const Route = createFileRoute("/api/v1/whoami")({
             email: actor.email,
             role: actor.role,
             scopes: actor.scopes,
+            team: actor.team,
             token: { id: actor.tokenId, name: actor.tokenName },
             userId: actor.userId,
           },

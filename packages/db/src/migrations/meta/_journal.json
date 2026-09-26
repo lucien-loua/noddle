@@ -78,6 +78,13 @@
       "when": 1790414534062,
       "tag": "0010_tan_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790432213388,
+      "tag": "0011_famous_ben_grimm",
+      "breakpoints": true
     }
   ]
 }

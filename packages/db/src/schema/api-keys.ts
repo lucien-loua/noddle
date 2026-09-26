@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { user } from "#schema/auth";
+import { organization } from "#schema/teams";
 
 export const apikey = pgTable(
   "apikey",
@@ -34,6 +35,9 @@ export const apikey = pgTable(
     remaining: integer("remaining"),
     requestCount: integer("request_count").default(0).notNull(),
     start: text("start"),
+    teamId: text("team_id").references(() => organization.id, {
+      onDelete: "cascade",
+    }),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
@@ -43,6 +47,7 @@ export const apikey = pgTable(
     index("apikey_key_idx").on(t.key),
     index("apikey_reference_idx").on(t.referenceId),
     index("apikey_config_idx").on(t.configId),
+    index("apikey_team_idx").on(t.teamId),
   ]
 );
 
@@ -50,5 +55,9 @@ export const apikeyRelations = relations(apikey, ({ one }) => ({
   owner: one(user, {
     fields: [apikey.referenceId],
     references: [user.id],
+  }),
+  team: one(organization, {
+    fields: [apikey.teamId],
+    references: [organization.id],
   }),
 }));

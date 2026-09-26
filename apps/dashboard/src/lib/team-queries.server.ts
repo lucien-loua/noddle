@@ -1,4 +1,5 @@
 import {
+  apikey,
   backupConfigs,
   backups,
   databaseDeployments,
@@ -6,12 +7,15 @@ import {
   deployments,
   envVars,
   environments,
+  member,
+  organization,
   projects,
   serviceDependencies,
   serviceDomains,
   services,
   stackDeployments,
   stacks,
+  user,
   volumeBackupConfigs,
   volumeBackups,
 } from "@noddle/db/schema";
@@ -26,6 +30,7 @@ import {
   inArray,
   isNull,
   ne,
+  or,
 } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
@@ -797,4 +802,75 @@ export async function stackWebhookConfigured(
     ),
   });
   return Boolean(row?.webhookSecretEncrypted);
+}
+
+export async function tokenActorRow(db: Db, apiKeyId: string) {
+  const [row] = await db
+    .select({
+      email: user.email,
+      name: apikey.name,
+      permissions: apikey.permissions,
+      role: user.role,
+      teamId: organization.id,
+      teamName: organization.name,
+      userId: user.id,
+    })
+    .from(apikey)
+    .innerJoin(user, eq(user.id, apikey.referenceId))
+    .innerJoin(
+      member,
+      and(
+        eq(member.userId, apikey.referenceId),
+        eq(member.organizationId, apikey.teamId)
+      )
+    )
+    .innerJoin(organization, eq(organization.id, member.organizationId))
+    .where(eq(apikey.id, apiKeyId));
+  return row;
+}
+
+export async function listServiceSummaries(db: Db, teamId: string) {
+  return await db
+    .select({
+      displayName: services.displayName,
+      environmentId: services.environmentId,
+      id: services.id,
+      name: services.name,
+      status: services.status,
+    })
+    .from(services)
+    .where(inArray(services.environmentId, environmentsOfTeam(db, teamId)))
+    .orderBy(asc(services.name));
+}
+
+export async function servicesNamed(
+  db: Db,
+  teamId: string,
+  wanted: string,
+  orId: boolean
+) {
+  return await db
+    .select({ id: services.id, name: services.name })
+    .from(services)
+    .where(
+      and(
+        inArray(services.environmentId, environmentsOfTeam(db, teamId)),
+        orId
+          ? or(eq(services.id, wanted), eq(services.name, wanted))
+          : eq(services.name, wanted)
+      )
+    );
+}
+
+export async function serviceDeploymentById(
+  db: Db,
+  teamId: string,
+  deploymentId: string
+) {
+  return await db.query.deployments.findFirst({
+    where: and(
+      eq(deployments.id, deploymentId),
+      inArray(deployments.serviceId, servicesOfTeam(db, teamId))
+    ),
+  });
 }
