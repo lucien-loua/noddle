@@ -66,11 +66,11 @@ export const ServerPruneToggle = ({
   return (
     <FramePanel>
       {error ? (
-        <output className="block mb-3 text-destructive text-sm">{error}</output>
+        <output className="text-destructive mb-3 block text-sm">{error}</output>
       ) : null}
 
       <FieldLabel
-        className="has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 has-data-checked:bg-transparent *:data-[slot=field]:p-0"
+        className="has-data-checked:bg-transparent has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:p-0"
         htmlFor={id}
       >
         <Field orientation="horizontal">

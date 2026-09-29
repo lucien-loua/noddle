@@ -9,8 +9,8 @@ export const TabRail = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="w-fit max-w-full shrink-0 rounded-full bg-muted p-1">
-      <div className="scroll-fade-x no-scrollbar -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1">
+    <div className="bg-muted w-fit max-w-full shrink-0 rounded-full p-1">
+      <div className="no-scrollbar scroll-fade-x -m-1 scroll-px-10 overflow-x-auto overflow-y-hidden p-1">
         <TabsList
           className="bg-transparent p-0 group-data-horizontal/tabs:h-7"
           onFocus={keepInView}

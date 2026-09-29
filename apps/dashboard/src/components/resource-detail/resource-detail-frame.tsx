@@ -17,7 +17,7 @@ export const ResourceDetailFrame = ({
   teardownError,
 }: ResourceDetailFrameProps) => (
   <div className="flex h-full min-h-0 min-w-0 flex-col">
-    <div className="mb-3 text-muted-foreground text-sm">{subtitle}</div>
+    <div className="text-muted-foreground mb-3 text-sm">{subtitle}</div>
     <TeardownError message={teardownError ?? null} />
     {deleteError ? (
       <Alert className="mb-3" variant="destructive">

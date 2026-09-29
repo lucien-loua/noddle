@@ -124,7 +124,7 @@ export const DatabaseClusterSettings = ({
           </FieldGroup>
 
           {save.isError ? (
-            <p className="mt-3 text-destructive text-sm" role="alert">
+            <p className="text-destructive mt-3 text-sm" role="alert">
               {errorMessage(save.error, "could not save")}
             </p>
           ) : null}

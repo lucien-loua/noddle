@@ -111,7 +111,7 @@ const ProjectCount = ({
   }
   return (
     <span className="flex items-center gap-1.5 text-sm">
-      <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
       <span className="font-medium tabular-nums">{value}</span>
       <span className="text-muted-foreground">{label}</span>
     </span>
@@ -189,7 +189,7 @@ const ProjectCard = ({
         ) : null}
       </FramePanel>
       <FrameFooter>
-        <p className="flex flex-wrap items-center gap-x-1.5 text-muted-foreground text-xs">
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-xs">
           <span>
             Created{" "}
             <RelativeTime

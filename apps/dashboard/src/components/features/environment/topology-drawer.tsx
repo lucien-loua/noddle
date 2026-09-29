@@ -94,7 +94,7 @@ const RouteRow = ({ route }: { route: Route }) => (
     <div className="flex items-start justify-between gap-2">
       {route.url ? (
         <a
-          className="min-w-0 truncate font-medium text-sm hover:underline"
+          className="min-w-0 truncate text-sm font-medium hover:underline"
           href={route.url}
           rel="noopener"
           target="_blank"
@@ -102,7 +102,7 @@ const RouteRow = ({ route }: { route: Route }) => (
           {route.host}
         </a>
       ) : (
-        <span className="min-w-0 truncate font-medium text-sm">
+        <span className="min-w-0 truncate text-sm font-medium">
           {route.host}
         </span>
       )}
@@ -112,7 +112,7 @@ const RouteRow = ({ route }: { route: Route }) => (
         </Badge>
       ) : null}
     </div>
-    <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+    <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
       <ArrowRightIcon aria-hidden className="size-3.5 shrink-0" />
       <span className="truncate">{route.to}</span>
       {route.port === null ? null : (
@@ -188,7 +188,7 @@ export const TopologyDrawer = ({
                   {panel.kind === "routing" ? (
                     <GlobeIcon
                       aria-hidden
-                      className="size-4 shrink-0 text-muted-foreground"
+                      className="text-muted-foreground size-4 shrink-0"
                     />
                   ) : null}
                   <span className="truncate">{panelTitle(panel)}</span>
@@ -197,7 +197,7 @@ export const TopologyDrawer = ({
               </div>
               <DrawerClose
                 aria-label="Close"
-                className="-me-1 shrink-0 rounded-4xl p-1 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 -me-1 shrink-0 rounded-4xl p-1 transition-colors outline-none focus-visible:ring-3"
               >
                 <XIcon className="size-4" />
               </DrawerClose>

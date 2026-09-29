@@ -145,17 +145,17 @@ const AccountLine = ({
           <span className="truncate font-medium">{account.name}</span>
           {account.isSelf ? <Badge variant="outline">you</Badge> : null}
         </span>
-        <span className="block truncate text-muted-foreground text-xs">
+        <span className="text-muted-foreground block truncate text-xs">
           {account.email}
         </span>
         {error ? (
-          <output className="mt-1 block whitespace-normal text-destructive text-xs">
+          <output className="text-destructive mt-1 block text-xs whitespace-normal">
             {error}
           </output>
         ) : null}
       </TableCell>
 
-      <TableCell className="hidden text-muted-foreground text-xs sm:table-cell">
+      <TableCell className="text-muted-foreground hidden text-xs sm:table-cell">
         <RelativeTime iso={account.createdAt} />
       </TableCell>
 
@@ -283,7 +283,7 @@ const RoleSelect = ({
             <SelectItem key={role} value={role}>
               <span className="flex flex-col gap-0.5 whitespace-normal">
                 <span>{ROLE_LABELS[role]}</span>
-                <span className="font-normal text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-xs font-normal">
                   {ROLE_DESCRIPTIONS[role]}
                 </span>
               </span>

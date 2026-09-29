@@ -31,7 +31,7 @@ const emptyMediaVariants = cva(
     variants: {
       variant: {
         default: "bg-transparent",
-        icon: "flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground [&_svg:not([class*='size-'])]:size-5",
+        icon: "bg-muted text-foreground flex size-10 shrink-0 items-center justify-center rounded-xl [&_svg:not([class*='size-'])]:size-5",
       },
     },
   }
@@ -52,7 +52,7 @@ const EmptyMedia = ({
 
 const EmptyTitle = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
-    className={cn("font-heading font-medium text-lg tracking-tight", className)}
+    className={cn("font-heading text-lg font-medium tracking-tight", className)}
     data-slot="empty-title"
     {...props}
   />
@@ -64,7 +64,7 @@ const EmptyDescription = ({
 }: React.ComponentProps<"p">) => (
   <div
     className={cn(
-      "text-muted-foreground text-sm/relaxed [&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4",
+      "text-muted-foreground [&>a:hover]:text-primary text-sm/relaxed [&>a]:underline [&>a]:underline-offset-4",
       className
     )}
     data-slot="empty-description"
@@ -75,7 +75,7 @@ const EmptyDescription = ({
 const EmptyContent = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     className={cn(
-      "flex w-full min-w-0 max-w-sm flex-col items-center gap-4 text-balance text-sm",
+      "flex w-full max-w-sm min-w-0 flex-col items-center gap-4 text-sm text-balance",
       className
     )}
     data-slot="empty-content"

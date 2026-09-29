@@ -44,7 +44,7 @@ const Fact = ({
   label: string;
 }) => (
   <div className="min-w-0">
-    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dt className="text-muted-foreground mb-0.5 text-xs">{label}</dt>
     <dd className="truncate text-sm">{children}</dd>
   </div>
 );
@@ -89,7 +89,7 @@ const ServerDetail = () => {
       title={server.name}
     >
       <section className="space-y-3">
-        <h2 className="font-medium text-sm">Machine</h2>
+        <h2 className="text-sm font-medium">Machine</h2>
         <Frame variant="ghost">
           <FrameHeader>
             <FrameTitle>Machine details</FrameTitle>
@@ -112,7 +112,7 @@ const ServerDetail = () => {
             </dl>
 
             {server.status === "unreachable" && server.lastError ? (
-              <output className="block mt-4 text-destructive text-sm">
+              <output className="text-destructive mt-4 block text-sm">
                 {server.lastError}
               </output>
             ) : null}
@@ -129,7 +129,7 @@ const ServerDetail = () => {
       <section className="mt-8 space-y-3">
         <Collapsible onOpenChange={setUsageOpen} open={usageOpen}>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-medium text-sm">Usage</h2>
+            <h2 className="text-sm font-medium">Usage</h2>
             <CollapsibleTrigger
               render={
                 <Button size="sm" variant="ghost">

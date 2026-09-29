@@ -248,7 +248,7 @@ const EnvironmentRow = ({
         <span
           className={
             current
-              ? "size-1.5 shrink-0 rounded-full bg-primary"
+              ? "bg-primary size-1.5 shrink-0 rounded-full"
               : "size-1.5 shrink-0"
           }
         />
@@ -256,7 +256,7 @@ const EnvironmentRow = ({
         <span className="text-muted-foreground text-xs">({count})</span>
       </span>
       {canWrite ? (
-        <span className="flex w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-[width,opacity] focus-within:w-auto focus-within:opacity-100 group-hover/dropdown-menu-item:w-auto group-hover/dropdown-menu-item:opacity-100">
+        <span className="flex w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-[width,opacity] group-hover/dropdown-menu-item:w-auto group-hover/dropdown-menu-item:opacity-100 focus-within:w-auto focus-within:opacity-100">
           <Button
             aria-label={`Duplicate ${env.name}`}
             className="size-6"

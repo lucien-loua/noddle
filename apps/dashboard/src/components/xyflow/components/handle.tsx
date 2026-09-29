@@ -12,7 +12,7 @@ export const Handle = ({
   <HandlePrimitive
     isConnectable={false}
     className={cn(
-      "z-1 border! h-5! rounded-xs! border-border! bg-clip-border! bg-background!",
+      "border-border! bg-background! z-1 h-5! rounded-xs! border! bg-clip-border!",
       className
     )}
     {...props}

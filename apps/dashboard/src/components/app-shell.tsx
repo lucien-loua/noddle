@@ -125,7 +125,7 @@ export const AppShell = ({
       defaultOpen={sidebarOpen}
     >
       <a
-        className="sr-only z-50 rounded-2xl bg-popover px-4 py-2 font-medium text-sm shadow-lg ring-1 ring-border focus:not-sr-only focus:fixed focus:top-3 focus:inset-s-3"
+        className="bg-popover ring-border sr-only z-50 rounded-2xl px-4 py-2 text-sm font-medium shadow-lg ring-1 focus:not-sr-only focus:fixed focus:inset-s-3 focus:top-3"
         href="#content"
       >
         Skip to content
@@ -266,7 +266,7 @@ export const AppShell = ({
                     {email}
                   </span>
                   <CaretUpDownIcon
-                    className="ms-auto shrink-0 text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
+                    className="text-sidebar-foreground/60 ms-auto shrink-0 group-data-[collapsible=icon]:hidden"
                     data-icon="inline-end"
                     weight="regular"
                   />
@@ -293,7 +293,7 @@ export const AppShell = ({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-h-0 overflow-hidden md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-border">
+      <SidebarInset className="md:peer-data-[variant=inset]:ring-border min-h-0 overflow-hidden md:peer-data-[variant=inset]:ring-1">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ms-1" size="icon" />
           {breadcrumb ? (
@@ -302,14 +302,14 @@ export const AppShell = ({
               {breadcrumb}
             </>
           ) : (
-            <h1 className="font-medium text-sm tracking-tight">{title}</h1>
+            <h1 className="text-sm font-medium tracking-tight">{title}</h1>
           )}
           <div className="ms-auto flex min-w-0 items-center gap-2">
             {actions}
           </div>
         </header>
         <div
-          className="scroll-fade no-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto p-4"
+          className="no-scrollbar scroll-fade min-h-0 min-w-0 flex-1 overflow-y-auto p-4"
           id="content"
         >
           {children}

@@ -112,7 +112,7 @@ export const ServerDiskUsage = ({
       <FramePanel className="space-y-3">
         <div
           aria-hidden="true"
-          className="flex h-2 w-full overflow-hidden rounded-full bg-muted"
+          className="bg-muted flex h-2 w-full overflow-hidden rounded-full"
         >
           {disk.categories.map((c) =>
             c.bytes > 0 ? (
@@ -138,13 +138,13 @@ export const ServerDiskUsage = ({
                   SHADES[c.key]
                 )}
               />
-              <dt className="min-w-0 flex-1 truncate text-muted-foreground">
+              <dt className="text-muted-foreground min-w-0 flex-1 truncate">
                 {LABELS[c.key]}
-                <span className="ms-1.5 text-muted-foreground/60">
+                <span className="text-muted-foreground/60 ms-1.5">
                   ({c.count})
                 </span>
               </dt>
-              <dd className="w-28 shrink-0 text-end text-muted-foreground tabular-nums">
+              <dd className="text-muted-foreground w-28 shrink-0 text-end tabular-nums">
                 {size(c.reclaimableBytes)} free
               </dd>
               <dd className="w-20 shrink-0 text-end tabular-nums">

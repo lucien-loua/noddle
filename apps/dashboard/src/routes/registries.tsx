@@ -73,7 +73,7 @@ export const Route = createFileRoute("/registries")({
   },
   component: RegistriesPage,
   errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
+    <p className="text-muted-foreground p-6 text-sm">
       Your role does not allow reading registries.
     </p>
   ),

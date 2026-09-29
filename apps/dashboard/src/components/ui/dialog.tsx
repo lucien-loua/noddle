@@ -28,7 +28,7 @@ const DialogOverlay = ({
   <DialogPrimitive.Backdrop
     data-slot="dialog-overlay"
     className={cn(
-      "fixed inset-0 isolate z-50 bg-black/30 duration-100 supports-backdrop-filter:backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+      "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/30 duration-100 supports-backdrop-filter:backdrop-blur-sm",
       className
     )}
     {...props}
@@ -48,7 +48,7 @@ const DialogContent = ({
     <DialogPrimitive.Popup
       data-slot="dialog-content"
       className={cn(
-        "fixed top-1/2 inset-s-1/2 z-50 flex max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-6 rounded-4xl bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md rtl:translate-x-1/2 dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+        "bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed inset-s-1/2 top-1/2 z-50 flex max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-6 rounded-4xl p-6 text-sm shadow-xl ring-1 duration-100 outline-none sm:max-w-md rtl:translate-x-1/2",
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ const DialogContent = ({
           render={
             <Button
               variant="ghost"
-              className="absolute top-4 inset-e-4 bg-secondary"
+              className="bg-secondary absolute inset-e-4 top-4"
               size="icon-sm"
             />
           }
@@ -85,7 +85,7 @@ const DialogBody = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="dialog-body"
     className={cn(
-      "scroll-fade no-scrollbar -mx-6 -my-2 min-h-0 flex-1 overflow-y-auto px-6 py-2",
+      "no-scrollbar scroll-fade -mx-6 -my-2 min-h-0 flex-1 overflow-y-auto px-6 py-2",
       className
     )}
     {...props}
@@ -140,7 +140,7 @@ const DialogDescription = ({
   <DialogPrimitive.Description
     data-slot="dialog-description"
     className={cn(
-      "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+      "text-muted-foreground *:[a]:hover:text-foreground text-sm *:[a]:underline *:[a]:underline-offset-3",
       className
     )}
     {...props}

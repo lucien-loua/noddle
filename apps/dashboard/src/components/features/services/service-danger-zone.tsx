@@ -57,7 +57,7 @@ export const ServiceDangerZone = ({
           <FrameTitle>Danger zone</FrameTitle>
         </FrameHeader>
         <FramePanel>
-          <h3 className="mb-1 font-semibold text-sm">Delete application</h3>
+          <h3 className="mb-1 text-sm font-semibold">Delete application</h3>
           <p className="text-muted-foreground text-sm">
             Stops the running container and removes every deployment, build log,
             environment variable and registry image for {target.name}. This

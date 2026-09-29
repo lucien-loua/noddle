@@ -199,7 +199,7 @@ const AttachBody = ({
                 renderItem={(service) => (
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate">{service.name}</span>
-                    <span className="font-normal text-muted-foreground text-xs">
+                    <span className="text-muted-foreground text-xs font-normal">
                       {service.project} / {service.environment}
                     </span>
                   </span>

@@ -142,7 +142,7 @@ const KeyRow = ({
       }
       title={
         <>
-          <h2 className="truncate font-semibold text-sm">{sshKey.name}</h2>
+          <h2 className="truncate text-sm font-semibold">{sshKey.name}</h2>
           <Badge variant={used ? "secondary" : "outline"}>
             {used
               ? `opens ${sshKey.serverCount} server${sshKey.serverCount > 1 ? "s" : ""}`
@@ -159,7 +159,7 @@ const KeyRow = ({
         />
       </ResourceCardMeta>
       {error ? (
-        <output className="block mt-2 text-destructive text-xs">{error}</output>
+        <output className="text-destructive mt-2 block text-xs">{error}</output>
       ) : null}
     </ResourceCard>
   );

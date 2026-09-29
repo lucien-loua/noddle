@@ -198,7 +198,7 @@ const TerminalSession = ({
       <Suspense fallback={null}>
         <Terminal
           autoResize
-          className="scroll-fade-y no-scrollbar min-h-0 flex-1"
+          className="no-scrollbar scroll-fade-y min-h-0 flex-1"
           cursorBlink
           onData={handleData}
           onError={handleError}
@@ -274,7 +274,7 @@ export const TerminalDialog = ({
             </FocusModalTitle>
           </div>
         </FocusModalHeader>
-        <FocusModalBody className="mask-none flex min-h-0 flex-col overflow-hidden p-0">
+        <FocusModalBody className="flex min-h-0 flex-col overflow-hidden mask-none p-0">
           {target && settled ? (
             <TerminalSession
               onStatus={handleStatus}
@@ -293,7 +293,7 @@ export const TerminalDialog = ({
           >
             {kindLabel} · {statusLabel(status)}
           </FocusModalDescription>
-          <p className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <Kbd>Esc</Kbd>
             <span>to close</span>
           </p>

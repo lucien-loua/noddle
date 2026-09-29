@@ -76,7 +76,7 @@ function httpUrlOrNull(candidate: string): string | null {
 const Meta = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="min-w-0">
     <dt className="text-muted-foreground text-xs">{label}</dt>
-    <dd className="truncate font-medium text-sm">{value}</dd>
+    <dd className="truncate text-sm font-medium">{value}</dd>
   </div>
 );
 
@@ -137,7 +137,7 @@ const ProviderRow = ({
             ) : (
               <GithubIcon />
             )}
-            <h2 className="truncate font-semibold text-sm">{provider.name}</h2>
+            <h2 className="truncate text-sm font-semibold">{provider.name}</h2>
             {provider.connected ? (
               <Badge variant="secondary">Connected</Badge>
             ) : (
@@ -152,7 +152,7 @@ const ProviderRow = ({
             />
           </dl>
           {error ? (
-            <output className="block mt-2 text-destructive text-xs">
+            <output className="text-destructive mt-2 block text-xs">
               {error}
             </output>
           ) : null}

@@ -26,7 +26,7 @@ function selectSubmitting(state: { isSubmitting: boolean }) {
 const Brand = ({ className }: { className?: string }) => (
   <div className={className}>
     <NoddleMark className="size-7 shrink-0" />
-    <span className="font-semibold text-xl">Noddle</span>
+    <span className="text-xl font-semibold">Noddle</span>
   </div>
 );
 
@@ -73,15 +73,15 @@ const LoginPage = () => {
 
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
-      <div className="hidden flex-col justify-between border-r bg-muted/40 p-10 lg:flex">
+      <div className="bg-muted/40 hidden flex-col justify-between border-r p-10 lg:flex">
         <Brand className="flex items-center gap-2" />
 
         <div className="flex flex-col items-start gap-4">
-          <p className="max-w-xs text-muted-foreground leading-snug">
+          <p className="text-muted-foreground max-w-xs leading-snug">
             {TAGLINE}
           </p>
           <a
-            className="flex items-center gap-2 text-muted-foreground text-sm underline-offset-4 hover:text-foreground hover:underline"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm underline-offset-4 hover:underline"
             href={SOURCE_URL}
             rel="noreferrer"
             target="_blank"
@@ -97,7 +97,7 @@ const LoginPage = () => {
           <Brand className="mb-8 flex items-center justify-center gap-2 lg:hidden" />
 
           <div className="mb-6 flex flex-col gap-1.5">
-            <h1 className="font-semibold text-xl">
+            <h1 className="text-xl font-semibold">
               {needsSetup ? "Create the admin account" : "Sign in"}
             </h1>
             {needsSetup ? (

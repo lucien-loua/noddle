@@ -177,14 +177,14 @@ export const MetricRow = <T extends { sampledAt: string }>({
 }) => (
   <div className="flex h-full flex-col gap-2">
     <div className="flex items-baseline justify-between gap-3">
-      <span className="flex items-center gap-2 text-muted-foreground text-xs">
+      <span className="text-muted-foreground flex items-center gap-2 text-xs">
         <span
           aria-hidden="true"
           className={cn("size-2 shrink-0 rounded-full bg-current", shade)}
         />
         {label}
       </span>
-      <span className="font-medium text-sm tabular-nums">{reading}</span>
+      <span className="text-sm font-medium tabular-nums">{reading}</span>
     </div>
     <div className="min-h-0 flex-1">
       <Sparkline

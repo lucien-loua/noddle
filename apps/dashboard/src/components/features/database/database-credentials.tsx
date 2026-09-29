@@ -89,7 +89,7 @@ export const DatabaseCredentials = ({
             <Item className="sm:col-span-2" variant="muted">
               <ItemContent className="min-w-0">
                 <ItemTitle>Password</ItemTitle>
-                <ItemDescription className="break-all font-mono">
+                <ItemDescription className="font-mono break-all">
                   {revealed ? data.password : "••••••••••••••••"}
                 </ItemDescription>
               </ItemContent>
@@ -111,7 +111,7 @@ export const DatabaseCredentials = ({
             <Item className="sm:col-span-2" variant="muted">
               <ItemContent className="min-w-0">
                 <ItemTitle>Connection URL</ItemTitle>
-                <ItemDescription className="break-all font-mono">
+                <ItemDescription className="font-mono break-all">
                   {revealed ? data.connectionUrl : data.maskedConnectionUrl}
                 </ItemDescription>
               </ItemContent>
@@ -136,7 +136,7 @@ const CredentialItem = ({ label, value }: { label: string; value: string }) => (
   <Item variant="muted">
     <ItemContent className="min-w-0">
       <ItemTitle>{label}</ItemTitle>
-      <ItemDescription className="break-all font-mono">{value}</ItemDescription>
+      <ItemDescription className="font-mono break-all">{value}</ItemDescription>
     </ItemContent>
     <ItemActions>
       <CopyButton label={label.toLowerCase()} value={value} />

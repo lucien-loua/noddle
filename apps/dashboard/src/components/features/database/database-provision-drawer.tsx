@@ -67,7 +67,7 @@ export const DatabaseProvisionDrawer = ({
                   <LogStream.Copy />
                   <DrawerClose
                     aria-label="Close"
-                    className="-me-1 shrink-0 rounded-4xl p-1 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+                    className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 -me-1 shrink-0 rounded-4xl p-1 transition-colors outline-none focus-visible:ring-3"
                   >
                     <XIcon className="size-4" weight="regular" />
                   </DrawerClose>

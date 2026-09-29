@@ -17,7 +17,7 @@ import { ServiceRegistry } from "./service-registry";
 
 const Fact = ({ children, label }: { children: ReactNode; label: string }) => (
   <div className="min-w-0">
-    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dt className="text-muted-foreground mb-0.5 text-xs">{label}</dt>
     <dd className="truncate text-sm">{children}</dd>
   </div>
 );
@@ -48,7 +48,7 @@ export const ServiceFacts = ({
                 return (
                   <li key={d.id}>
                     <a
-                      className="flex items-center gap-1 underline underline-offset-4 hover:text-foreground"
+                      className="hover:text-foreground flex items-center gap-1 underline underline-offset-4"
                       href={`${scheme}://${d.host}`}
                       rel="noreferrer noopener"
                       target="_blank"

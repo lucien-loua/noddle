@@ -41,7 +41,7 @@ const TokenRow = ({
     <FramePanel className="flex flex-row items-start justify-between gap-3">
       <div className="min-w-0 space-y-0.5">
         <p className="truncate text-sm">{row.name}</p>
-        <p className="truncate font-mono text-muted-foreground text-xs">
+        <p className="text-muted-foreground truncate font-mono text-xs">
           {row.start ?? "noddle_pat_"}…
         </p>
         <p className="text-muted-foreground text-xs">

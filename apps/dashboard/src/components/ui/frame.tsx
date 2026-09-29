@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const frameVariants = cva(
   [
-    "relative flex flex-col gap-(--frame-gap) rounded-(--frame-radius) bg-muted/50 px-(--frame-px) py-(--frame-py)",
+    "bg-muted/50 relative flex flex-col gap-(--frame-gap) rounded-(--frame-radius) px-(--frame-px) py-(--frame-py)",
     "[--frame-radius:var(--radius-2xl)]",
     "[--frame-gap:--spacing(0.75)] [--frame-panel-footer-gap:--spacing(1)] [--frame-panel-header-gap:0rem] [--frame-px:--spacing(0.75)] [--frame-py:--spacing(0.75)]",
     "[--frame-panel-footer-px-adjust:0px] [--frame-panel-footer-py-adjust:0px] [--frame-panel-header-px-adjust:0px] [--frame-panel-header-py-adjust:0px] [--frame-panel-px-adjust:0px] [--frame-panel-py-adjust:0px]",
@@ -23,7 +23,7 @@ const frameVariants = cva(
     variants: {
       dense: {
         false: "",
-        true: "gap-0 border-[var(--frame-border-color)] p-0 [--frame-panel-radius:var(--frame-radius)] [&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:-mt-px [&_[data-slot=frame-panel]:last-child]:-mb-px [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden",
+        true: "gap-0 border-[var(--frame-border-color)] p-0 [--frame-panel-radius:var(--frame-radius)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px [&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:-mt-px",
       },
       spacing: {
         default:
@@ -50,7 +50,7 @@ const frameVariants = cva(
         ghost:
           "[--frame-panel-radius:max(0px,calc(var(--frame-radius)_-_var(--frame-px)))]",
         inverse:
-          "border border-[var(--frame-border-color)] bg-background bg-clip-padding [--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)]",
+          "bg-background border border-[var(--frame-border-color)] bg-clip-padding [--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)]",
       },
     },
   }
@@ -130,7 +130,7 @@ const FrameHeader = ({
 
 const FrameTitle = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
-    className={cn("font-semibold text-sm", className)}
+    className={cn("text-sm font-semibold", className)}
     data-slot="frame-panel-title"
     {...props}
   />

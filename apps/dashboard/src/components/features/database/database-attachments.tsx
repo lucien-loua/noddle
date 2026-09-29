@@ -129,8 +129,8 @@ const DependentRow = ({
     <FramePanel>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate font-semibold text-sm">{row.serviceName}</h2>
-          <p className="truncate font-mono text-muted-foreground text-xs">
+          <h2 className="truncate text-sm font-semibold">{row.serviceName}</h2>
+          <p className="text-muted-foreground truncate font-mono text-xs">
             {row.envVarKey ?? "variable removed"}
           </p>
         </div>

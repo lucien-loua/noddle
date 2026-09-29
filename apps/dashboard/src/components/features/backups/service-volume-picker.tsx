@@ -54,7 +54,7 @@ export const ServiceVolumePicker = (props: ServiceVolumePickerProps) => {
     <Field>
       <FieldLabel htmlFor="service-volume-picker">Volumes</FieldLabel>
       {isLoading ? (
-        <div className="flex items-center gap-2 py-2 text-muted-foreground text-sm">
+        <div className="text-muted-foreground flex items-center gap-2 py-2 text-sm">
           <Spinner />
           Loading service volumes…
         </div>

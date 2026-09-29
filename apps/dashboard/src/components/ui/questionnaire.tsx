@@ -24,7 +24,7 @@ const QuestionnaireProgress = ({
   <QuestionnairePrimitive.Progress
     data-slot="questionnaire-progress"
     className={cn(
-      "min-h-lh w-fit min-w-[14ch] text-xs font-medium text-muted-foreground tabular-nums",
+      "text-muted-foreground min-h-lh w-fit min-w-[14ch] text-xs font-medium tabular-nums",
       className
     )}
     {...props}
@@ -65,7 +65,7 @@ const QuestionnaireDescription = ({
 }: React.ComponentProps<typeof QuestionnairePrimitive.Description>) => (
   <QuestionnairePrimitive.Description
     data-slot="questionnaire-description"
-    className={cn("text-sm text-pretty text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-sm text-pretty", className)}
     {...props}
   />
 );
@@ -89,7 +89,7 @@ const QuestionnaireChoice = ({
   <QuestionnairePrimitive.Choice
     data-slot="questionnaire-choice"
     className={cn(
-      "group/questionnaire-choice relative flex min-h-11 cursor-pointer items-start gap-2.5 rounded-3xl border border-input bg-input/20 px-4 py-3 text-start text-sm transition-colors outline-none select-none hover:bg-input/40 has-[>input:focus-visible]:border-ring has-[>input:focus-visible]:ring-3 has-[>input:focus-visible]:ring-ring/50 data-invalid:border-destructive data-checked:border-primary/40 data-checked:bg-primary/10",
+      "group/questionnaire-choice border-input bg-input/20 hover:bg-input/40 has-[>input:focus-visible]:border-ring has-[>input:focus-visible]:ring-ring/50 data-invalid:border-destructive data-checked:border-primary/40 data-checked:bg-primary/10 relative flex min-h-11 cursor-pointer items-start gap-2.5 rounded-3xl border px-4 py-3 text-start text-sm transition-colors outline-none select-none has-[>input:focus-visible]:ring-3",
       "data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
       className
     )}
@@ -102,15 +102,15 @@ const QuestionnaireChoice = ({
     <span
       aria-hidden="true"
       data-slot="questionnaire-choice-indicator"
-      className="pointer-events-none relative flex size-4 shrink-0 translate-y-[--spacing(0.45)] items-center justify-center rounded-[5px] border border-transparent bg-input/90 group-has-data-[slot=questionnaire-choice-description]/questionnaire-choice:translate-y-0.5 group-data-[type=radio]/questionnaire-choice:rounded-full group-data-checked/questionnaire-choice:border-primary group-data-checked/questionnaire-choice:bg-primary group-data-checked/questionnaire-choice:text-primary-foreground dark:group-data-checked/questionnaire-choice:bg-primary"
+      className="bg-input/90 group-data-checked/questionnaire-choice:border-primary group-data-checked/questionnaire-choice:bg-primary group-data-checked/questionnaire-choice:text-primary-foreground dark:group-data-checked/questionnaire-choice:bg-primary pointer-events-none relative flex size-4 shrink-0 translate-y-[--spacing(0.45)] items-center justify-center rounded-[5px] border border-transparent group-has-data-[slot=questionnaire-choice-description]/questionnaire-choice:translate-y-0.5 group-data-[type=radio]/questionnaire-choice:rounded-full"
     >
       <span
         data-slot="questionnaire-choice-indicator-dot"
-        className="hidden size-2 rounded-full bg-primary-foreground group-data-[type=checkbox]/questionnaire-choice:hidden group-data-checked/questionnaire-choice:block dark:size-2.5"
+        className="bg-primary-foreground hidden size-2 rounded-full group-data-checked/questionnaire-choice:block group-data-[type=checkbox]/questionnaire-choice:hidden dark:size-2.5"
       />
       <CheckIcon
         data-slot="questionnaire-choice-indicator-check"
-        className="hidden size-3.5 group-data-[type=radio]/questionnaire-choice:hidden group-data-checked/questionnaire-choice:block"
+        className="hidden size-3.5 group-data-checked/questionnaire-choice:block group-data-[type=radio]/questionnaire-choice:hidden"
         weight="regular"
       />
     </span>
@@ -122,7 +122,7 @@ const QuestionnaireChoice = ({
     </QuestionnairePrimitive.ChoiceLabel>
     <QuestionnairePrimitive.ChoiceShortcut
       data-slot="questionnaire-choice-shortcut"
-      className="pointer-events-none ms-auto hidden size-5 shrink-0 translate-y-[--spacing(0.45)] items-center justify-center rounded-full border border-primary/10 bg-background/80 font-mono text-[0.625rem] leading-none font-medium text-muted-foreground group-has-data-[slot=questionnaire-choice-description]/questionnaire-choice:translate-y-0.5 group-data-shortcut/questionnaire-choice:inline-flex"
+      className="border-primary/10 bg-background/80 text-muted-foreground pointer-events-none ms-auto hidden size-5 shrink-0 translate-y-[--spacing(0.45)] items-center justify-center rounded-full border font-mono text-[0.625rem] leading-none font-medium group-has-data-[slot=questionnaire-choice-description]/questionnaire-choice:translate-y-0.5 group-data-shortcut/questionnaire-choice:inline-flex"
     />
   </QuestionnairePrimitive.Choice>
 );
@@ -149,7 +149,7 @@ const QuestionnaireInput = ({
     <QuestionnairePrimitive.Input
       data-slot="questionnaire-input"
       className={cn(
-        "h-9 min-h-11 w-full min-w-0 rounded-3xl border border-transparent bg-input/50 px-3 py-1 text-base transition-[color,box-shadow,background-color] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 sm:min-h-0 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        "bg-input/50 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-9 min-h-11 w-full min-w-0 rounded-3xl border border-transparent px-3 py-1 text-base transition-[color,box-shadow,background-color] outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 sm:min-h-0 md:text-sm",
         "selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground",
         className
       )}
@@ -164,7 +164,7 @@ const QuestionnaireError = ({
 }: React.ComponentProps<typeof QuestionnairePrimitive.Error>) => (
   <QuestionnairePrimitive.Error
     data-slot="questionnaire-error"
-    className={cn("mt-2 text-sm text-destructive", className)}
+    className={cn("text-destructive mt-2 text-sm", className)}
     {...props}
   />
 );

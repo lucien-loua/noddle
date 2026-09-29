@@ -158,7 +158,7 @@ export const ConnectRepoDialog = ({
                         renderItem={(server) => (
                           <span className="flex min-w-0 flex-col gap-0.5">
                             <span className="truncate">{server.name}</span>
-                            <span className="font-normal text-muted-foreground text-xs">
+                            <span className="text-muted-foreground text-xs font-normal">
                               {server.host}
                             </span>
                           </span>

@@ -681,7 +681,7 @@ export const ResourceGrid = (props: GridProps) => {
       </div>
 
       {hasSelection ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-muted/40 px-3 py-2">
+        <div className="bg-muted/40 flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-2">
           <span className="text-sm">{selected.size} selected</span>
           <div className="ms-auto flex flex-wrap items-center gap-2">
             {canBulkDeploy ? (
@@ -877,7 +877,7 @@ const ResourceGridCard = ({
       <Frame
         className={cn(
           "group transition-shadow hover:shadow-lg",
-          selected && "ring-2 ring-primary"
+          selected && "ring-primary ring-2"
         )}
       >
         <button
@@ -892,7 +892,7 @@ const ResourceGridCard = ({
             {item.engine ? (
               <DatabaseMark engine={item.engine} size="sm" />
             ) : (
-              <Icon className="size-5 shrink-0 text-muted-foreground" />
+              <Icon className="text-muted-foreground size-5 shrink-0" />
             )}
             <FrameTitle className="relative z-20 min-w-0 flex-1 truncate">
               <button
@@ -935,20 +935,20 @@ const ResourceGridCard = ({
           </div>
           <div className="flex items-center gap-1.5 text-sm">
             {item.engine ? (
-              <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
+              <DatabaseIcon className="text-muted-foreground size-4 shrink-0" />
             ) : (
-              <GlobeIcon className="size-4 shrink-0 text-muted-foreground" />
+              <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
             )}
             <ResourceAddress item={item} />
           </div>
           {item.lastError ? (
-            <output className="block line-clamp-2 text-destructive text-xs">
+            <output className="text-destructive line-clamp-2 block text-xs">
               {item.lastError}
             </output>
           ) : null}
         </FramePanel>
         <FrameFooter>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className="flex min-w-0 items-center gap-1.5">
               <HardDrivesIcon aria-hidden className="size-3.5 shrink-0" />
               <span className="truncate">{item.serverName}</span>

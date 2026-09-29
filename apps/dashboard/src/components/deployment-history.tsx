@@ -1,8 +1,8 @@
 import {
   createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
+  FlexRender,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import type { Row } from "@tanstack/react-table";
 import type { MouseEvent } from "react";
@@ -89,7 +89,7 @@ const HistoryRow = ({
   selected,
 }: {
   onSelect: (deploymentId: string) => void;
-  row: Row<DeploymentSummary>;
+  row: Row<typeof features, DeploymentSummary>;
   selected: boolean;
 }) => {
   const handleClick = useCallback(
@@ -102,16 +102,18 @@ const HistoryRow = ({
       className={cn("cursor-pointer", selected && "bg-muted")}
       onClick={handleClick}
     >
-      {row.getVisibleCells().map((cell) => (
+      {row.getAllCells().map((cell) => (
         <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <FlexRender cell={cell} />
         </TableCell>
       ))}
     </TableRow>
   );
 };
 
-const columnHelper = createColumnHelper<DeploymentSummary>();
+const features = tableFeatures({});
+
+const columnHelper = createColumnHelper<typeof features, DeploymentSummary>();
 
 export const DeploymentHistory = (props: Props) => {
   const {
@@ -125,75 +127,74 @@ export const DeploymentHistory = (props: Props) => {
   } = props;
 
   const columns = useMemo(
-    () => [
-      columnHelper.accessor("status", {
-        cell: (info) => {
-          const { label, tone } = deploymentLabel(info.getValue());
-          return (
-            <Status tone={tone}>
-              <StatusIndicator />
-              <StatusLabel>{label}</StatusLabel>
-            </Status>
-          );
-        },
-        header: "Status",
-      }),
-      columnHelper.accessor("commitSha", {
-        cell: (info) => (
-          <span className="font-mono text-xs">{shortSha(info.getValue())}</span>
-        ),
-        header: "Commit",
-      }),
-      columnHelper.accessor("trigger", {
-        cell: (info) => (
-          <span className="text-muted-foreground">
-            {triggerLabel(info.getValue())}
-          </span>
-        ),
-        header: "Trigger",
-      }),
-      columnHelper.accessor("createdAt", {
-        cell: (info) => (
-          <span className="whitespace-nowrap text-muted-foreground">
-            {relativeTime(info.getValue())}
-          </span>
-        ),
-        header: "When",
-      }),
-      columnHelper.display({
-        cell: (info) => (
-          <span className="whitespace-nowrap text-muted-foreground">
-            {duration(
-              info.row.original.createdAt,
-              info.row.original.finishedAt
-            )}
-          </span>
-        ),
-        header: "Duration",
-        id: "duration",
-      }),
-      columnHelper.display({
-        cell: (info) => (
-          <RollbackCell
-            canRollback={canRollback}
-            currentDeploymentId={currentDeploymentId}
-            deployment={info.row.original}
-            onRollback={onRollback}
-            pending={pending}
-          />
-        ),
-        header: "",
-        id: "actions",
-      }),
-    ],
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("status", {
+          cell: (info) => {
+            const { label, tone } = deploymentLabel(info.getValue());
+            return (
+              <Status tone={tone}>
+                <StatusIndicator />
+                <StatusLabel>{label}</StatusLabel>
+              </Status>
+            );
+          },
+          header: "Status",
+        }),
+        columnHelper.accessor("commitSha", {
+          cell: (info) => (
+            <span className="font-mono text-xs">
+              {shortSha(info.getValue())}
+            </span>
+          ),
+          header: "Commit",
+        }),
+        columnHelper.accessor("trigger", {
+          cell: (info) => (
+            <span className="text-muted-foreground">
+              {triggerLabel(info.getValue())}
+            </span>
+          ),
+          header: "Trigger",
+        }),
+        columnHelper.accessor("createdAt", {
+          cell: (info) => (
+            <span className="text-muted-foreground whitespace-nowrap">
+              {relativeTime(info.getValue())}
+            </span>
+          ),
+          header: "When",
+        }),
+        columnHelper.display({
+          cell: (info) => (
+            <span className="text-muted-foreground whitespace-nowrap">
+              {duration(
+                info.row.original.createdAt,
+                info.row.original.finishedAt
+              )}
+            </span>
+          ),
+          header: "Duration",
+          id: "duration",
+        }),
+        columnHelper.display({
+          cell: (info) => (
+            <RollbackCell
+              canRollback={canRollback}
+              currentDeploymentId={currentDeploymentId}
+              deployment={info.row.original}
+              onRollback={onRollback}
+              pending={pending}
+            />
+          ),
+          header: "",
+          id: "actions",
+        }),
+      ]),
     [canRollback, currentDeploymentId, onRollback, pending]
   );
 
-  const table = useReactTable({
-    columns,
-    data: deployments,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const table = useTable({ columns, data: deployments, features });
 
   if (deployments.length === 0) {
     return (
@@ -210,10 +211,7 @@ export const DeploymentHistory = (props: Props) => {
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
               <TableHead key={header.id}>
-                {flexRender(
-                  header.column.columnDef.header,
-                  header.getContext()
-                )}
+                <FlexRender header={header} />
               </TableHead>
             ))}
           </TableRow>

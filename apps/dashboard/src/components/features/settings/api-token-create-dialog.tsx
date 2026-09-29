@@ -283,7 +283,7 @@ export const ApiTokenCreateDialog = ({
                       className="mb-6 break-inside-avoid space-y-2.5"
                       key={resource}
                     >
-                      <h3 className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                      <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                         {resource}
                       </h3>
                       <div className="flex flex-col gap-1.5">

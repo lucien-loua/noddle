@@ -203,7 +203,7 @@ const TerminalLogsLine = ({ line }: { line: TerminalLogLine }) => {
           {style.label}
         </Badge>
       </div>
-      <span className="wrap-break-word whitespace-pre-wrap text-foreground">
+      <span className="text-foreground wrap-break-word whitespace-pre-wrap">
         {line.text}
       </span>
     </div>
@@ -222,7 +222,7 @@ const TerminalLogsViewport = ({
   return (
     <div
       className={cn(
-        "scroll-fade no-scrollbar max-h-[min(70vh,720px)] min-h-40 overflow-y-auto rounded-xl border bg-background p-3",
+        "no-scrollbar scroll-fade bg-background max-h-[min(70vh,720px)] min-h-40 overflow-y-auto rounded-xl border p-3",
         className
       )}
     >

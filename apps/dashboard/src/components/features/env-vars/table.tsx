@@ -10,9 +10,9 @@ import {
 import { Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
+  FlexRender,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import type { ChangeEvent, ClipboardEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -302,7 +302,7 @@ const LinkedCell = ({
 }) => {
   if (!attachment) {
     return (
-      <span className="inline-flex size-8 items-center justify-center text-muted-foreground">
+      <span className="text-muted-foreground inline-flex size-8 items-center justify-center">
         <KeyIcon aria-hidden className="size-4" weight="regular" />
         <span className="sr-only">Typed variable</span>
       </span>
@@ -315,7 +315,7 @@ const LinkedCell = ({
         render={
           <Link
             aria-label={`Open ${attachment.name}`}
-            className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+            className="text-muted-foreground hover:text-foreground focus-visible:text-foreground inline-flex size-8 items-center justify-center rounded-lg transition-colors outline-none"
             params={{
               databaseId: attachment.databaseId,
               environmentId: attachment.environmentId,
@@ -426,7 +426,9 @@ const RemoveCell = ({
   );
 };
 
-const columnHelper = createColumnHelper<DraftVar>();
+const features = tableFeatures({});
+
+const columnHelper = createColumnHelper<typeof features, DraftVar>();
 
 export const EnvVarTable = ({
   effect,
@@ -482,50 +484,47 @@ export const EnvVarTable = ({
   }, [confirming, draft, onSave]);
 
   const columns = useMemo(
-    () => [
-      columnHelper.display({
-        cell: (info) => (
-          <LinkedCell attachment={info.row.original.attachedFrom} />
-        ),
-        header: () => <span className="sr-only">Linked</span>,
-        id: "linked",
-      }),
-      columnHelper.accessor("key", {
-        cell: (info) => (
-          <KeyCell
-            onPasteEnv={pasteEnv}
-            onUpdate={update}
-            row={info.row.original}
-          />
-        ),
-        header: "Key",
-      }),
-      columnHelper.accessor("value", {
-        cell: (info) => (
-          <ValueCell
-            onPasteEnv={pasteEnv}
-            onUpdate={update}
-            row={info.row.original}
-          />
-        ),
-        header: "Value",
-      }),
-      columnHelper.display({
-        cell: (info) => (
-          <RemoveCell onRemove={remove} row={info.row.original} />
-        ),
-        header: "",
-        id: "actions",
-      }),
-    ],
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          cell: (info) => (
+            <LinkedCell attachment={info.row.original.attachedFrom} />
+          ),
+          header: () => <span className="sr-only">Linked</span>,
+          id: "linked",
+        }),
+        columnHelper.accessor("key", {
+          cell: (info) => (
+            <KeyCell
+              onPasteEnv={pasteEnv}
+              onUpdate={update}
+              row={info.row.original}
+            />
+          ),
+          header: "Key",
+        }),
+        columnHelper.accessor("value", {
+          cell: (info) => (
+            <ValueCell
+              onPasteEnv={pasteEnv}
+              onUpdate={update}
+              row={info.row.original}
+            />
+          ),
+          header: "Value",
+        }),
+        columnHelper.display({
+          cell: (info) => (
+            <RemoveCell onRemove={remove} row={info.row.original} />
+          ),
+          header: "",
+          id: "actions",
+        }),
+      ]),
     [pasteEnv, remove, update]
   );
 
-  const table = useReactTable({
-    columns,
-    data: draft,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const table = useTable({ columns, data: draft, features });
 
   return (
     <Frame variant="ghost">
@@ -551,10 +550,7 @@ export const EnvVarTable = ({
                     }
                     key={header.id}
                   >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                    <FlexRender header={header} />
                   </TableHead>
                 ))}
               </TableRow>
@@ -563,14 +559,14 @@ export const EnvVarTable = ({
           <TableBody>
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <TableCell
                     className={
                       cell.column.id === "linked" ? "w-0 pe-0" : undefined
                     }
                     key={cell.id}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <FlexRender cell={cell} />
                   </TableCell>
                 ))}
               </TableRow>
@@ -629,7 +625,7 @@ export const EnvVarTable = ({
                   <Badge variant="outline">
                     {changes.length} change{changes.length > 1 ? "s" : ""}
                   </Badge>
-                  <span className="truncate text-muted-foreground text-xs">
+                  <span className="text-muted-foreground truncate text-xs">
                     {effect}
                   </span>
                 </div>

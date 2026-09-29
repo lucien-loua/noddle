@@ -65,7 +65,7 @@ export const BuildLogsDialog = ({
                 <LogStream.Copy />
               </div>
             </FocusModalHeader>
-            <FocusModalBody className="mask-none flex min-h-0 flex-col overflow-hidden p-0">
+            <FocusModalBody className="flex min-h-0 flex-col overflow-hidden mask-none p-0">
               <LogStream.View plain />
             </FocusModalBody>
           </LogStream.Session>

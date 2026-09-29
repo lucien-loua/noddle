@@ -59,7 +59,7 @@ export const Route = createFileRoute("/ssh-keys")({
   },
   component: SshKeysPage,
   errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
+    <p className="text-muted-foreground p-6 text-sm">
       Your role does not allow reading SSH keys.
     </p>
   ),

@@ -51,7 +51,7 @@ const SheetContent = ({
       data-slot="sheet-content"
       data-side={side}
       className={cn(
-        "fixed z-50 flex flex-col bg-popover bg-clip-padding text-sm text-popover-foreground shadow-xl transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-10 data-[side=bottom]:data-starting-style:translate-y-10 data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-e data-[side=left]:data-ending-style:-translate-x-10 rtl:data-[side=left]:data-ending-style:translate-x-10 data-[side=left]:data-starting-style:-translate-x-10 rtl:data-[side=left]:data-starting-style:translate-x-10 data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-s data-[side=right]:data-ending-style:translate-x-10 rtl:data-[side=right]:data-ending-style:-translate-x-10 data-[side=right]:data-starting-style:translate-x-10 rtl:data-[side=right]:data-starting-style:-translate-x-10 data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:-translate-y-10 data-[side=top]:data-starting-style:-translate-y-10 data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+        "bg-popover text-popover-foreground fixed z-50 flex flex-col bg-clip-padding text-sm shadow-xl transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-10 data-[side=bottom]:data-starting-style:translate-y-10 data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-e data-[side=left]:data-ending-style:-translate-x-10 data-[side=left]:data-starting-style:-translate-x-10 data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-s data-[side=right]:data-ending-style:translate-x-10 data-[side=right]:data-starting-style:translate-x-10 data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:-translate-y-10 data-[side=top]:data-starting-style:-translate-y-10 data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm rtl:data-[side=left]:data-ending-style:translate-x-10 rtl:data-[side=left]:data-starting-style:translate-x-10 rtl:data-[side=right]:data-ending-style:-translate-x-10 rtl:data-[side=right]:data-starting-style:-translate-x-10",
         className
       )}
       {...props}
@@ -63,7 +63,7 @@ const SheetContent = ({
           render={
             <Button
               variant="ghost"
-              className="absolute top-4 inset-e-4 bg-secondary"
+              className="bg-secondary absolute inset-e-4 top-4"
               size="icon-sm"
             />
           }
@@ -96,7 +96,7 @@ const SheetTitle = ({ className, ...props }: SheetPrimitive.Title.Props) => (
   <SheetPrimitive.Title
     data-slot="sheet-title"
     className={cn(
-      "font-heading text-base font-medium text-foreground",
+      "font-heading text-foreground text-base font-medium",
       className
     )}
     {...props}
@@ -109,7 +109,7 @@ const SheetDescription = ({
 }: SheetPrimitive.Description.Props) => (
   <SheetPrimitive.Description
     data-slot="sheet-description"
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-sm", className)}
     {...props}
   />
 );

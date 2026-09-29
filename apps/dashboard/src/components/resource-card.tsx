@@ -74,6 +74,6 @@ export const ResourceCardFact = ({
 }) => (
   <div className="min-w-0">
     <dt className="text-muted-foreground text-xs">{label}</dt>
-    <dd className="truncate font-medium text-sm">{value}</dd>
+    <dd className="truncate text-sm font-medium">{value}</dd>
   </div>
 );

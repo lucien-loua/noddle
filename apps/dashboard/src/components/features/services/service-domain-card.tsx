@@ -84,7 +84,7 @@ export const ServiceDomainCard = ({
     <FramePanel>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm">
+          <h2 className="text-sm font-semibold">
             <a
               className="inline-flex items-center gap-1 hover:underline"
               href={`${scheme}://${domain.host}${publicPath}`}

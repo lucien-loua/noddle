@@ -107,7 +107,7 @@ const ServerRow = ({
               tone === "busy" && "bg-muted-foreground"
             )}
           />
-          <h2 className="truncate font-semibold text-sm">{server.name}</h2>
+          <h2 className="truncate text-sm font-semibold">{server.name}</h2>
           <Badge variant="outline">{STATUS_LABEL[server.status]}</Badge>
           {server.role === "manager" ? (
             <Badge variant="secondary">manager</Badge>
@@ -128,7 +128,7 @@ const ServerRow = ({
         />
       </ResourceCardMeta>
       {secondaryError ? (
-        <output className="mt-2 text-destructive text-xs">
+        <output className="text-destructive mt-2 text-xs">
           {secondaryError}
         </output>
       ) : null}
@@ -326,7 +326,7 @@ export const AddServerDialog = ({
                     renderItem={(key) => (
                       <span className="flex min-w-0 flex-col gap-0.5">
                         <span className="truncate">{key.name}</span>
-                        <span className="font-normal text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-xs font-normal">
                           {key.serverCount === 0
                             ? "not used yet"
                             : `opens ${key.serverCount} server${key.serverCount > 1 ? "s" : ""}`}

@@ -30,7 +30,7 @@ export const TeardownError = ({ message }: { message: string | null }) => {
       <Collapsible className="min-w-0" onOpenChange={setOpen} open={open}>
         <FrameHeader className="flex-row justify-between gap-3">
           <div className="min-w-0">
-            <FrameTitle className="wrap-anywhere text-destructive">
+            <FrameTitle className="text-destructive wrap-anywhere">
               {headline}
             </FrameTitle>
             {detail ? (
@@ -53,7 +53,7 @@ export const TeardownError = ({ message }: { message: string | null }) => {
         {detail ? (
           <CollapsibleContent className="min-w-0">
             <FramePanel className="min-w-0 p-0">
-              <pre className="no-scrollbar scroll-fade-x max-h-56 overflow-auto p-3 font-mono text-muted-foreground text-xs leading-relaxed">
+              <pre className="no-scrollbar scroll-fade-x text-muted-foreground max-h-56 overflow-auto p-3 font-mono text-xs leading-relaxed">
                 {detail}
               </pre>
             </FramePanel>

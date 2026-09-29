@@ -199,7 +199,7 @@ export const DatabaseSwarmSettingsDialog = ({
         </FocusModalHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
           <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
-            <nav className="scroll-fade-y no-scrollbar flex min-h-0 flex-col gap-1 overflow-y-auto">
+            <nav className="no-scrollbar scroll-fade-y flex min-h-0 flex-col gap-1 overflow-y-auto">
               {MENU.map((item) => (
                 <button
                   className={cn(
@@ -212,7 +212,7 @@ export const DatabaseSwarmSettingsDialog = ({
                   onClick={() => setSection(item.id)}
                   type="button"
                 >
-                  <div className="font-medium text-sm">{item.label}</div>
+                  <div className="text-sm font-medium">{item.label}</div>
                   <div className="text-muted-foreground text-xs">
                     {item.description}
                   </div>
@@ -321,7 +321,7 @@ const FormActions = ({
   saveLabel: string;
 }) => (
   <div
-    className="flex shrink-0 flex-col gap-2 border-t bg-secondary/25 p-3"
+    className="bg-secondary/25 flex shrink-0 flex-col gap-2 border-t p-3"
     data-slot="swarm-section-footer"
   >
     {onError ? (
@@ -363,10 +363,10 @@ const SectionShell = ({
   saveLabel: string;
 }) => (
   <form
-    className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background"
+    className="bg-background flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
     onSubmit={onSubmit}
   >
-    <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+    <div className="no-scrollbar scroll-fade-y min-h-0 flex-1 overflow-y-auto p-4">
       {children}
     </div>
     <FormActions
@@ -651,7 +651,7 @@ const PlacementForm = ({
       onSubmit={handleSubmit}
       saveLabel="Save Placement"
     >
-      <p className="mb-4 text-muted-foreground text-sm">
+      <p className="text-muted-foreground mb-4 text-sm">
         Overriding placement can move the task off the node that holds the named
         volume. The database may start empty with no error.
       </p>

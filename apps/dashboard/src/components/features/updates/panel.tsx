@@ -45,7 +45,7 @@ const Commit = ({
       ) : null}
       {sha ? (
         <a
-          className="font-mono text-muted-foreground text-xs underline decoration-dotted underline-offset-2"
+          className="text-muted-foreground font-mono text-xs underline decoration-dotted underline-offset-2"
           href={commitUrl(sha)}
           rel="noopener"
           target="_blank"
@@ -84,7 +84,7 @@ const RollbackRow = ({
   return (
     <>
       <div className="flex items-center gap-3">
-        <dt className="min-w-0 flex-1 text-muted-foreground">Previous</dt>
+        <dt className="text-muted-foreground min-w-0 flex-1">Previous</dt>
         <dd className="flex items-center gap-2">
           <a
             className="underline decoration-dotted underline-offset-2"
@@ -109,7 +109,7 @@ const RollbackRow = ({
         database keeps the newer schema.
       </FrameDescription>
       {failed ? (
-        <output className="block text-destructive text-xs">{failed}</output>
+        <output className="text-destructive block text-xs">{failed}</output>
       ) : null}
     </>
   );
@@ -145,7 +145,7 @@ const UpdateNotes = ({
     ) : null}
 
     {failed ? (
-      <output className="block text-destructive text-xs">{failed}</output>
+      <output className="text-destructive block text-xs">{failed}</output>
     ) : null}
 
     {inFlight ? (
@@ -210,13 +210,13 @@ export const UpdatePanel = ({ role }: { role: RoleName | null }) => {
       <FramePanel className="space-y-3">
         <dl className="space-y-1.5 text-xs">
           <div className="flex items-center gap-3">
-            <dt className="min-w-0 flex-1 text-muted-foreground">Running</dt>
+            <dt className="text-muted-foreground min-w-0 flex-1">Running</dt>
             <dd>
               <Commit sha={running} version={data?.runningVersion} />
             </dd>
           </div>
           <div className="flex items-center gap-3">
-            <dt className="min-w-0 flex-1 text-muted-foreground">Available</dt>
+            <dt className="text-muted-foreground min-w-0 flex-1">Available</dt>
             <dd>
               <Commit
                 sha={data?.remoteCommit ?? null}

@@ -226,7 +226,7 @@ export const RestoreFromS3Dialog = ({
             </>
           ) : null}
 
-          <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto">
+          <div className="no-scrollbar scroll-fade-y min-h-0 flex-1 overflow-y-auto">
             <ObjectsListBody
               destinationId={destinationId}
               emptyText={copy.s3Empty}

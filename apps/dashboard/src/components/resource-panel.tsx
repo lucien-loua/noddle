@@ -100,7 +100,7 @@ export const ResourcePanel = ({
           windowHours={windowHours}
         />
         {latest.memoryUsedRatio === null ? (
-          <p className="mt-2 text-muted-foreground text-xs">{unboundedNote}</p>
+          <p className="text-muted-foreground mt-2 text-xs">{unboundedNote}</p>
         ) : null}
       </FramePanel>
 

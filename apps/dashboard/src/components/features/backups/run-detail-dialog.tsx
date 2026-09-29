@@ -65,7 +65,7 @@ export const BackupRunDetailDialog = <T extends BackupRunRow>({
               </div>
             </FocusModalHeader>
             <FocusModalBody className="flex min-h-0 flex-col overflow-hidden p-0">
-              <div className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="no-scrollbar scroll-fade min-h-0 flex-1 overflow-y-auto p-4">
                 {lines.length === 0 ? (
                   <span className="text-muted-foreground text-sm">
                     No logs for this run.

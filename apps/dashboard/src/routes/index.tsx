@@ -117,9 +117,9 @@ const StatCard = ({
   label: string;
 }) => (
   <Frame spacing="sm" variant="ghost">
-    <FrameHeader className="flex-row items-center gap-1.5 text-muted-foreground">
+    <FrameHeader className="text-muted-foreground flex-row items-center gap-1.5">
       <Icon aria-hidden="true" className="size-3.5 shrink-0" weight="fill" />
-      <FrameTitle className="font-medium text-xs uppercase tracking-wide">
+      <FrameTitle className="text-xs font-medium tracking-wide uppercase">
         {label}
       </FrameTitle>
     </FrameHeader>
@@ -129,8 +129,8 @@ const StatCard = ({
 
 const StatNumber = ({ detail, value }: { detail: string; value: number }) => (
   <>
-    <p className="font-semibold text-3xl tabular-nums">{value}</p>
-    <p className="mt-1 truncate text-muted-foreground text-xs">{detail}</p>
+    <p className="text-3xl font-semibold tabular-nums">{value}</p>
+    <p className="text-muted-foreground mt-1 truncate text-xs">{detail}</p>
   </>
 );
 
@@ -146,7 +146,7 @@ const AttentionPanel = ({
       <FrameTitle>Needs attention</FrameTitle>
     </FrameHeader>
     {rows.length === 0 ? (
-      <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
+      <FramePanel className="text-muted-foreground flex items-center gap-2 text-sm">
         {idle ? (
           "Nothing to report."
         ) : (
@@ -168,14 +168,14 @@ const AttentionRow = ({ row }: { row: Overview["attention"][number] }) => {
   return (
     <FramePanel className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <p className="flex min-w-0 items-center gap-2 font-medium text-sm">
+        <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
           <AttentionLink row={row}>{row.name}</AttentionLink>
-          <span className="truncate font-normal text-muted-foreground text-xs">
+          <span className="text-muted-foreground truncate text-xs font-normal">
             {row.scope}
           </span>
         </p>
         {row.detail ? (
-          <p className="mt-1 text-destructive text-sm">{row.detail}</p>
+          <p className="text-destructive mt-1 text-sm">{row.detail}</p>
         ) : null}
       </div>
       <Status tone={status.tone}>

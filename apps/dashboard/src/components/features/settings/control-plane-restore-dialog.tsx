@@ -85,7 +85,7 @@ export const ControlPlaneRestoreDialog = ({
             <ul className="space-y-1.5">
               {rows.map((archive) => (
                 <li
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-muted p-3 text-xs"
+                  className="bg-muted flex items-center justify-between gap-3 rounded-2xl p-3 text-xs"
                   key={archive.key}
                 >
                   <span className="flex min-w-0 flex-col gap-0.5">
@@ -94,7 +94,7 @@ export const ControlPlaneRestoreDialog = ({
                         ? relativeTime(archive.takenAt)
                         : "unknown date"}
                     </span>
-                    <span className="truncate font-mono text-muted-foreground">
+                    <span className="text-muted-foreground truncate font-mono">
                       {archive.key} · {byteSize(archive.size)}
                     </span>
                   </span>

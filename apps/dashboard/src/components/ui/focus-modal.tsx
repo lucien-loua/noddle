@@ -46,7 +46,7 @@ const FocusModalOverlay = ({
 }: DialogPrimitive.Backdrop.Props) => (
   <DialogPrimitive.Backdrop
     className={cn(
-      "fixed inset-0 isolate z-50 bg-black/30 duration-100 supports-backdrop-filter:backdrop-blur-sm data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0",
+      "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/30 duration-100 supports-backdrop-filter:backdrop-blur-sm",
       className
     )}
     data-slot="focus-modal-overlay"
@@ -68,8 +68,8 @@ const FocusModalContent = ({
     <DialogPrimitive.Popup
       className={cn(
         FOCUS_MODAL_TOKENS,
-        "fixed inset-2 z-50 flex flex-col gap-(--focus-modal-gap) overflow-hidden rounded-(--focus-modal-radius) bg-muted p-(--focus-modal-p) text-foreground shadow-xl outline-none ring-1 ring-foreground/5 dark:ring-foreground/10",
-        "duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+        "bg-muted text-foreground ring-foreground/5 dark:ring-foreground/10 fixed inset-2 z-50 flex flex-col gap-(--focus-modal-gap) overflow-hidden rounded-(--focus-modal-radius) p-(--focus-modal-p) shadow-xl ring-1 outline-none",
+        "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 duration-100",
         "origin-top data-nested-dialog-open:translate-y-[calc(var(--nested-dialogs,0)*-0.25rem)] data-nested-dialog-open:scale-[calc(1-0.025*var(--nested-dialogs,0))] data-nested-dialog-open:transition-[scale,translate] data-nested-dialog-open:duration-200 data-nested-dialog-open:ease-out",
         "after:pointer-events-none after:absolute after:inset-0 after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100",
         className
@@ -125,7 +125,7 @@ const FocusModalTitle = ({
   ...props
 }: DialogPrimitive.Title.Props) => (
   <DialogPrimitive.Title
-    className={cn("block truncate font-semibold text-sm", className)}
+    className={cn("block truncate text-sm font-semibold", className)}
     data-slot="focus-modal-title"
     {...props}
   />
@@ -136,7 +136,7 @@ const FocusModalDescription = ({
   ...props
 }: DialogPrimitive.Description.Props) => (
   <DialogPrimitive.Description
-    className={cn("block truncate text-muted-foreground text-sm", className)}
+    className={cn("text-muted-foreground block truncate text-sm", className)}
     data-slot="focus-modal-description"
     {...props}
   />

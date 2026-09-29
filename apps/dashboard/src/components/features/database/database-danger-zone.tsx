@@ -59,7 +59,7 @@ export const DatabaseDangerZone = ({
       </FrameHeader>
 
       <FramePanel>
-        <h3 className="mb-1 font-semibold text-sm">Rebuild database</h3>
+        <h3 className="mb-1 text-sm font-semibold">Rebuild database</h3>
         <p className="text-muted-foreground text-sm">
           This action completely resets {databaseName} to its initial state. All
           data, tables and configuration are removed.

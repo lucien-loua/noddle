@@ -91,7 +91,7 @@ export const BackupConfigCard = ({
                 config.enabled ? "bg-success" : "bg-destructive"
               )}
             />
-            <h2 className="font-semibold text-sm">
+            <h2 className="text-sm font-semibold">
               {config.enabled ? "Active" : "Inactive"}
             </h2>
           </div>
@@ -168,7 +168,7 @@ export const BackupConfigCard = ({
 
 const Meta = ({ label, value }: { label: string; value: string }) => (
   <div className="min-w-0">
-    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
-    <dd className="truncate font-medium text-sm">{value}</dd>
+    <dt className="text-muted-foreground mb-0.5 text-xs">{label}</dt>
+    <dd className="truncate text-sm font-medium">{value}</dd>
   </div>
 );

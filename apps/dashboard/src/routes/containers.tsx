@@ -138,7 +138,7 @@ const ContainerTableRow = ({
   return (
     <TableRow
       aria-label={`Open ${row.serviceName ?? row.name}`}
-      className="cursor-pointer focus-visible:bg-muted focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
+      className="focus-visible:bg-muted focus-visible:outline-ring cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2"
       onClick={handleSelect}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -151,7 +151,7 @@ const ContainerTableRow = ({
           </span>
         </span>
         {row.serviceName ? (
-          <span className="block truncate pl-4 font-mono text-muted-foreground text-xs">
+          <span className="text-muted-foreground block truncate pl-4 font-mono text-xs">
             {row.name}
           </span>
         ) : null}
@@ -166,13 +166,13 @@ const ContainerTableRow = ({
       <TableCell className="hidden md:table-cell">
         <KindBadge kind={row.kind} />
       </TableCell>
-      <TableCell className="hidden max-w-0 truncate font-mono text-muted-foreground text-xs lg:table-cell">
+      <TableCell className="text-muted-foreground hidden max-w-0 truncate font-mono text-xs lg:table-cell">
         {row.image}
       </TableCell>
-      <TableCell className="hidden max-w-0 truncate font-mono text-muted-foreground text-xs xl:table-cell">
+      <TableCell className="text-muted-foreground hidden max-w-0 truncate font-mono text-xs xl:table-cell">
         {row.ports || "—"}
       </TableCell>
-      <TableCell className="hidden text-muted-foreground text-sm md:table-cell">
+      <TableCell className="text-muted-foreground hidden text-sm md:table-cell">
         {row.serverName}
       </TableCell>
       <TableCell onClick={stopRowActivation} onKeyDown={stopRowActivation}>
@@ -266,7 +266,7 @@ const ContainersPage = () => {
           <AlertDescription className="space-y-1">
             {view.unreachable.map((s) => (
               <div key={s.serverId}>
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {s.serverName}
                 </span>{" "}
                 did not answer: {s.reason}

@@ -149,10 +149,10 @@ const Mark = ({ data }: { data: TopologyNodeData }) => {
     return <DatabaseMark engine={data.engine} size="sm" />;
   }
   if (data.kind === "internet") {
-    return <GlobeIcon className="size-5 shrink-0 text-muted-foreground" />;
+    return <GlobeIcon className="text-muted-foreground size-5 shrink-0" />;
   }
   const Icon = data.kind === "stack" ? StackIcon : CodeIcon;
-  return <Icon className="size-5 shrink-0 text-muted-foreground" />;
+  return <Icon className="text-muted-foreground size-5 shrink-0" />;
 };
 
 const ProxyRow = ({
@@ -163,7 +163,7 @@ const ProxyRow = ({
   label: string;
 }) => (
   <div className="flex items-center justify-between gap-2 text-sm">
-    <span className="truncate text-muted-foreground">{label}</span>
+    <span className="text-muted-foreground truncate">{label}</span>
     <span className="flex shrink-0 items-center gap-1.5">{children}</span>
   </div>
 );
@@ -208,7 +208,7 @@ const AddressText = ({
 }) => {
   if (engine || !data.address) {
     return (
-      <span className="truncate text-muted-foreground">
+      <span className="text-muted-foreground truncate">
         {engine ?? "No domain"}
       </span>
     );
@@ -216,13 +216,13 @@ const AddressText = ({
 
   if (!data.addressUrl) {
     return (
-      <span className="truncate text-muted-foreground">{data.address}</span>
+      <span className="text-muted-foreground truncate">{data.address}</span>
     );
   }
 
   return (
     <a
-      className={`${INTERACTIVE} relative z-1 inline-flex min-w-0 items-center gap-1 text-muted-foreground hover:text-foreground hover:underline`}
+      className={`${INTERACTIVE} text-muted-foreground hover:text-foreground relative z-1 inline-flex min-w-0 items-center gap-1 hover:underline`}
       href={data.addressUrl}
       rel="noreferrer noopener"
       target="_blank"
@@ -251,9 +251,9 @@ const PanelRows = ({ data }: { data: TopologyNodeData }) => {
       ) : null}
       <div className="flex items-center gap-1.5 text-sm">
         {engine ? (
-          <DatabaseIcon className="size-4 shrink-0 text-muted-foreground" />
+          <DatabaseIcon className="text-muted-foreground size-4 shrink-0" />
         ) : (
-          <GlobeIcon className="size-4 shrink-0 text-muted-foreground" />
+          <GlobeIcon className="text-muted-foreground size-4 shrink-0" />
         )}
         <AddressText data={data} engine={engine} />
       </div>
@@ -466,7 +466,7 @@ const AttachNode = ({ data }: { data: TopologyNodeData }) => {
     <Frame style={NODE_STYLE} variant="ghost">
       <div className="relative flex grow">
         <FramePanel className="border-dashed bg-transparent shadow-none before:hidden">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <PlusIcon aria-hidden className="size-4 shrink-0" />
             <button className={LINK_CLASS} onClick={handleClick} type="button">
               {data.label}
@@ -547,7 +547,7 @@ const NodeFooter = ({ data }: { data: TopologyNodeData }) => {
 
   return (
     <FrameFooter>
-      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs">
+      <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
         <HardDrivesIcon aria-hidden className="size-3.5 shrink-0" />
         <span className="truncate">{data.serverName}</span>
       </span>

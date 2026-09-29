@@ -63,9 +63,9 @@ export const CopyableValue = ({
   value: string;
 }) => (
   <div
-    className={cn("flex items-start gap-2 rounded-2xl bg-muted p-2", className)}
+    className={cn("bg-muted flex items-start gap-2 rounded-2xl p-2", className)}
   >
-    <code className="min-w-0 flex-1 break-all px-1 font-mono text-xs">
+    <code className="min-w-0 flex-1 px-1 font-mono text-xs break-all">
       {value}
     </code>
     <CopyButton label={label} value={value} />

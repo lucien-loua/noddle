@@ -50,7 +50,7 @@ const Outcome = ({
 
   if (settings.backupLastError) {
     return (
-      <output className="block text-destructive text-xs">
+      <output className="text-destructive block text-xs">
         {relativeTime(settings.backupLastAt)}: {settings.backupLastError}
       </output>
     );
@@ -59,18 +59,18 @@ const Outcome = ({
   return (
     <dl className="space-y-1.5 text-xs">
       <div className="flex items-center gap-3">
-        <dt className="min-w-0 flex-1 text-muted-foreground">Last backup</dt>
+        <dt className="text-muted-foreground min-w-0 flex-1">Last backup</dt>
         <dd>{relativeTime(settings.backupLastAt)}</dd>
       </div>
       {settings.backupLastBytes ? (
         <div className="flex items-center gap-3">
-          <dt className="min-w-0 flex-1 text-muted-foreground">Size</dt>
+          <dt className="text-muted-foreground min-w-0 flex-1">Size</dt>
           <dd>{byteSize(settings.backupLastBytes)}</dd>
         </div>
       ) : null}
       {settings.backupLastKey ? (
         <div className="flex items-center gap-3">
-          <dt className="min-w-0 flex-1 text-muted-foreground">Object</dt>
+          <dt className="text-muted-foreground min-w-0 flex-1">Object</dt>
           <dd className="truncate font-mono">{settings.backupLastKey}</dd>
         </div>
       ) : null}
@@ -178,7 +178,7 @@ export const ControlPlaneBackup = ({ canRun }: { canRun: boolean }) => {
 
       {canRun ? (
         <FramePanel className="flex flex-row items-center justify-between gap-3">
-          <span className="min-w-0 flex-1 text-muted-foreground text-xs">
+          <span className="text-muted-foreground min-w-0 flex-1 text-xs">
             Destination
           </span>
           <Combobox

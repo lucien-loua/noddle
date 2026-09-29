@@ -47,7 +47,7 @@ const Feedback = ({
 }) => {
   if (applying) {
     return (
-      <p className="mt-3 text-muted-foreground text-sm">
+      <p className="text-muted-foreground mt-3 text-sm">
         Applying. The dashboard restarts behind the new address — this page may
         drop for a few seconds.
       </p>
@@ -55,7 +55,7 @@ const Feedback = ({
   }
   if (saveError) {
     return (
-      <p className="mt-3 text-destructive text-sm" role="alert">
+      <p className="text-destructive mt-3 text-sm" role="alert">
         {errorMessage(saveError, "could not save")}
       </p>
     );
@@ -196,7 +196,7 @@ export const DashboardDomain = ({ canEdit }: { canEdit: boolean }) => {
               <Field orientation="horizontal">
                 <FieldTitle>
                   HTTPS
-                  <span className="block font-normal text-muted-foreground text-xs">
+                  <span className="text-muted-foreground block text-xs font-normal">
                     Request a certificate and redirect plain HTTP to it.
                   </span>
                 </FieldTitle>

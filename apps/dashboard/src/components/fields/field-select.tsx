@@ -91,7 +91,7 @@ export const FieldSelect = ({
                 {option.description ? (
                   <span className="flex flex-col gap-0.5 whitespace-normal">
                     <span>{option.label}</span>
-                    <span className="font-normal text-muted-foreground text-xs">
+                    <span className="text-muted-foreground text-xs font-normal">
                       {option.description}
                     </span>
                   </span>

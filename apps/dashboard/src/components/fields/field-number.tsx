@@ -84,7 +84,7 @@ export const FieldNumber = ({
             placeholder={placeholder}
           />
           {unit ? (
-            <span className="select-none pe-2 text-muted-foreground text-sm">
+            <span className="text-muted-foreground pe-2 text-sm select-none">
               {unit}
             </span>
           ) : null}

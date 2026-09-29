@@ -216,7 +216,7 @@ const DestinationLine = ({
           </>
         ) : null
       }
-      title={<h2 className="truncate font-semibold text-sm">{row.name}</h2>}
+      title={<h2 className="truncate text-sm font-semibold">{row.name}</h2>}
     >
       <ResourceCardMeta>
         <ResourceCardFact label="Bucket" value={row.bucket} />
@@ -225,7 +225,7 @@ const DestinationLine = ({
         <ResourceCardFact label="Prefix" value={row.prefix || "—"} />
       </ResourceCardMeta>
       {error ? (
-        <output className="block mt-2 text-destructive text-xs">{error}</output>
+        <output className="text-destructive mt-2 block text-xs">{error}</output>
       ) : null}
     </ResourceCard>
   );

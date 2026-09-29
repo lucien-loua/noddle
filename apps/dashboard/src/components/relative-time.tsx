@@ -26,7 +26,7 @@ export const RelativeTime = ({
       render={
         // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- Base UI injects the <time> child as the name; the rule only reads literals
         <button
-          className="cursor-default rounded-sm text-start focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          className="focus-visible:outline-ring cursor-default rounded-sm text-start focus-visible:outline-2 focus-visible:outline-offset-2"
           type="button"
         />
       }

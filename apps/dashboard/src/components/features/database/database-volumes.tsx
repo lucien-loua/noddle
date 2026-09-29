@@ -128,7 +128,7 @@ export const DatabaseVolumes = ({
       </FrameHeader>
       <FramePanel>
         <ul className="flex flex-col gap-3">
-          <li className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3">
+          <li className="border-border flex items-start justify-between gap-3 rounded-xl border px-4 py-3">
             <div className="grid min-w-0 gap-2 sm:grid-cols-3 sm:gap-4">
               <MountFact label="Mount type" value="Volume" />
               <MountFact label="Volume name" value={swarmName} />
@@ -149,7 +149,7 @@ export const DatabaseVolumes = ({
 
           {extraMounts.map((mount) => (
             <li
-              className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3"
+              className="border-border flex items-start justify-between gap-3 rounded-xl border px-4 py-3"
               key={mount.id}
             >
               <div className="grid min-w-0 gap-2 sm:grid-cols-3 sm:gap-4">
@@ -191,7 +191,7 @@ export const DatabaseVolumes = ({
         </ul>
 
         {remove.isError ? (
-          <p className="mt-3 text-destructive text-sm" role="alert">
+          <p className="text-destructive mt-3 text-sm" role="alert">
             {errorMessage(remove.error, "could not delete mount")}
           </p>
         ) : null}
@@ -315,7 +315,7 @@ const PrimaryPathDialog = ({
               </form.AppField>
             </FieldGroup>
             {save.isError ? (
-              <p className="mt-3 text-destructive text-sm" role="alert">
+              <p className="text-destructive mt-3 text-sm" role="alert">
                 {errorMessage(save.error, "could not save")}
               </p>
             ) : null}
@@ -444,7 +444,7 @@ const MountDialog = ({
               </form.AppField>
             </FieldGroup>
             {save.isError ? (
-              <p className="mt-3 text-destructive text-sm" role="alert">
+              <p className="text-destructive mt-3 text-sm" role="alert">
                 {errorMessage(save.error, "could not save")}
               </p>
             ) : null}

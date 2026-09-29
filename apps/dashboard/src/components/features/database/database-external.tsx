@@ -132,7 +132,7 @@ export const DatabaseExternal = ({
           <Item className="mt-3" variant="muted">
             <ItemContent className="min-w-0">
               <ItemTitle>External connection URL</ItemTitle>
-              <ItemDescription className="break-all font-mono">
+              <ItemDescription className="font-mono break-all">
                 {revealed
                   ? credentials.data.externalConnectionUrl
                   : credentials.data.maskedExternalConnectionUrl}

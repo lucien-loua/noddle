@@ -334,7 +334,7 @@ const DeploymentLogLine = ({ row }: { row: DeploymentLogRow }) => {
       <TableCell className="text-muted-foreground">{row.project}</TableCell>
       <TableCell className="text-muted-foreground">{row.environment}</TableCell>
       <TableCell className="text-muted-foreground">{row.serverName}</TableCell>
-      <TableCell className="font-mono text-muted-foreground text-xs">
+      <TableCell className="text-muted-foreground font-mono text-xs">
         {shortSha(row.commitSha)}
       </TableCell>
       <TableCell>

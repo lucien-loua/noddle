@@ -44,7 +44,7 @@ const KIND_LABEL: Record<ContainerRow["kind"], string> = {
 
 const Fact = ({ children, label }: { children: ReactNode; label: string }) => (
   <div className="min-w-0">
-    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dt className="text-muted-foreground mb-0.5 text-xs">{label}</dt>
     <dd className="truncate text-sm">{children}</dd>
   </div>
 );
@@ -59,7 +59,7 @@ const Section = ({
   title: string;
 }) => (
   <section className="space-y-2">
-    <h3 className="flex items-center gap-2 font-medium text-sm">
+    <h3 className="flex items-center gap-2 text-sm font-medium">
       {title}
       {count === undefined ? null : <Badge variant="outline">{count}</Badge>}
     </h3>
@@ -89,7 +89,7 @@ const Ports = ({ ports }: { ports: ContainerDetail["ports"] }) => {
             <TableCell className="font-mono text-xs">
               {port.containerPort}
             </TableCell>
-            <TableCell className="font-mono text-muted-foreground text-xs">
+            <TableCell className="text-muted-foreground font-mono text-xs">
               {port.published ?? "not published"}
             </TableCell>
           </TableRow>
@@ -152,16 +152,16 @@ const Networks = ({ networks }: { networks: ContainerDetail["networks"] }) => {
       <TableBody>
         {networks.map((network) => (
           <TableRow key={network.name}>
-            <TableCell className="max-w-0 truncate font-medium text-sm">
+            <TableCell className="max-w-0 truncate text-sm font-medium">
               {network.name}
             </TableCell>
             <TableCell className="font-mono text-xs">
               {network.ipAddress || "—"}
             </TableCell>
-            <TableCell className="hidden font-mono text-muted-foreground text-xs sm:table-cell">
+            <TableCell className="text-muted-foreground hidden font-mono text-xs sm:table-cell">
               {network.gateway || "—"}
             </TableCell>
-            <TableCell className="hidden max-w-0 truncate font-mono text-muted-foreground text-xs sm:table-cell">
+            <TableCell className="text-muted-foreground hidden max-w-0 truncate font-mono text-xs sm:table-cell">
               {network.aliases.length > 0 ? network.aliases.join(", ") : "—"}
             </TableCell>
           </TableRow>
@@ -261,7 +261,7 @@ const Body = ({ row }: { row: ContainerRow }) => {
           </div>
           <DrawerClose
             aria-label="Close"
-            className="-me-1 shrink-0 rounded-4xl p-1 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 -me-1 shrink-0 rounded-4xl p-1 transition-colors outline-none focus-visible:ring-3"
           >
             <XIcon className="size-4" weight="regular" />
           </DrawerClose>

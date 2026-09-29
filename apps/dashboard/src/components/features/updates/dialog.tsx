@@ -71,7 +71,7 @@ export const UpdateDialog = ({
         </DialogHeader>
 
         <DialogBody className="space-y-3 text-sm">
-          <div className="space-y-1.5 rounded-2xl bg-muted p-3">
+          <div className="bg-muted space-y-1.5 rounded-2xl p-3">
             <Row label="Running" version={data?.runningVersion ?? null} />
             <Row label="Available" version={data?.remoteVersion ?? null} />
           </div>
@@ -82,7 +82,7 @@ export const UpdateDialog = ({
           </p>
 
           {failed ? (
-            <output className="block text-destructive text-xs">{failed}</output>
+            <output className="text-destructive block text-xs">{failed}</output>
           ) : null}
 
           {started ? (

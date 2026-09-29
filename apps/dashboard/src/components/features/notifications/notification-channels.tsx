@@ -235,7 +235,7 @@ const ChannelLine = ({
 const ChannelState = ({ channel }: { channel: ChannelRow }) => {
   if (channel.lastError) {
     return (
-      <span className="truncate text-destructive text-xs">
+      <span className="text-destructive truncate text-xs">
         Failing: {channel.lastError}
       </span>
     );
@@ -377,7 +377,7 @@ const AddChannelDialog = ({
                       }
                     />
                     <Label
-                      className="font-normal text-sm"
+                      className="text-sm font-normal"
                       htmlFor="notifySuccess"
                     >
                       Also notify on successful deploys

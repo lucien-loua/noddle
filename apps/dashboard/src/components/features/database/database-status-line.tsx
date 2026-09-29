@@ -15,7 +15,7 @@ export const DatabaseStatusLine = ({
   const engineLabel = DATABASE_ENGINE_LABEL[database.engine] ?? database.engine;
 
   return (
-    <p className="flex min-w-0 items-center gap-2 truncate text-muted-foreground text-sm">
+    <p className="text-muted-foreground flex min-w-0 items-center gap-2 truncate text-sm">
       <StatusIndicator tone={status.tone} />
       <span className="shrink-0">{status.label}</span>
       <span aria-hidden>·</span>

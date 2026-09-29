@@ -148,7 +148,7 @@ export const LogView = ({
 
   const stream = (
     <div
-      className="scroll-fade no-scrollbar min-h-0 flex-1 overflow-y-auto p-4"
+      className="no-scrollbar scroll-fade min-h-0 flex-1 overflow-y-auto p-4"
       onScroll={handleScroll}
       ref={viewRef}
     >

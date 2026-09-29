@@ -16,7 +16,7 @@ const NumberFieldContext = createContext<{
 } | null>(null);
 
 const numberFieldGroupVariants = cva(
-  "relative flex w-full items-center justify-between rounded-4xl border border-transparent bg-input/50 text-sm outline-none transition-[color,box-shadow,background-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 dark:aria-invalid:ring-destructive/40",
+  "bg-input/50 focus-within:border-ring focus-within:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 relative flex w-full items-center justify-between rounded-4xl border border-transparent text-sm transition-[color,box-shadow,background-color] outline-none focus-within:ring-3 aria-invalid:ring-3 data-disabled:pointer-events-none data-disabled:opacity-50",
   {
     defaultVariants: {
       size: "default",
@@ -32,7 +32,7 @@ const numberFieldGroupVariants = cva(
 );
 
 const numberFieldButtonVariants = cva(
-  "relative flex shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11",
+  "text-muted-foreground hover:bg-accent hover:text-accent-foreground relative flex shrink-0 cursor-pointer items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-50 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11",
   {
     defaultVariants: {
       size: "default",
@@ -48,7 +48,7 @@ const numberFieldButtonVariants = cva(
 );
 
 const numberFieldInputVariants = cva(
-  "w-full min-w-0 flex-1 bg-transparent text-center tabular-nums outline-none placeholder:text-muted-foreground",
+  "placeholder:text-muted-foreground w-full min-w-0 flex-1 bg-transparent text-center tabular-nums outline-none",
   {
     defaultVariants: {
       size: "default",

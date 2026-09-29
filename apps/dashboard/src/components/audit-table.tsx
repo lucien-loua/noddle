@@ -78,7 +78,7 @@ export const AuditTable = ({ entries }: { entries: AuditRow[] }) => {
                 <TableCell className="font-medium">
                   <span className="block">{e.actorEmail}</span>
                   {e.role ? (
-                    <span className="block text-muted-foreground text-xs">
+                    <span className="text-muted-foreground block text-xs">
                       {e.role}
                     </span>
                   ) : null}
@@ -93,7 +93,7 @@ export const AuditTable = ({ entries }: { entries: AuditRow[] }) => {
                     {e.outcome === "denied" ? "Denied" : "Allowed"}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden font-mono text-muted-foreground text-xs md:table-cell">
+                <TableCell className="text-muted-foreground hidden font-mono text-xs md:table-cell">
                   {e.ipAddress ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">

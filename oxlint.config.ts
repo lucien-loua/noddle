@@ -1,6 +1,6 @@
 import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
-import jsPlugins from "ultracite/oxlint/js-plugins";
+import jsPlugins, { jsPluginSettings } from "ultracite/oxlint/js-plugins";
 import react from "ultracite/oxlint/react";
 import tanstack from "ultracite/oxlint/tanstack";
 import vitest from "ultracite/oxlint/vitest";
@@ -32,6 +32,7 @@ export default defineConfig({
   plugins: ["react"],
   extends: [core, react, tanstack, vitest, selectedJsPlugins],
   ignorePatterns: core.ignorePatterns,
+  settings: jsPluginSettings,
   overrides: [
     {
       files: ["**/verify*.ts"],
@@ -163,7 +164,6 @@ export default defineConfig({
     "no-use-before-define": "off",
 
     "react-doctor/react-compiler-no-manual-memoization": "off",
-    "react/react-compiler": "off",
 
     "promise/avoid-new": "off",
     "promise/param-names": "off",

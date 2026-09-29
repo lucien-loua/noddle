@@ -27,7 +27,7 @@ export const StackHistoryPanel = ({
   selectedId: string | null;
 }) => (
   <>
-    <p className="mb-2 truncate text-muted-foreground text-xs">
+    <p className="text-muted-foreground mb-2 truncate text-xs">
       {gitRepoUrl}
       {gitBranch ? ` · ${gitBranch}` : ""}
     </p>
