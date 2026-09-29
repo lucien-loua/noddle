@@ -141,12 +141,8 @@
           "name": "audit_log_actor_user_id_user_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -373,12 +369,8 @@
           "name": "apikey_team_id_organization_id_fk",
           "tableFrom": "apikey",
           "tableTo": "organization",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -495,12 +487,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -599,12 +587,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -614,9 +598,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -705,9 +687,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -873,12 +853,8 @@
           "name": "backup_configs_database_id_databases_id_fk",
           "tableFrom": "backup_configs",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -886,12 +862,8 @@
           "name": "backup_configs_destination_id_s3_destinations_id_fk",
           "tableFrom": "backup_configs",
           "tableTo": "s3_destinations",
-          "columnsFrom": [
-            "destination_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["destination_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1035,12 +1007,8 @@
           "name": "backups_config_id_backup_configs_id_fk",
           "tableFrom": "backups",
           "tableTo": "backup_configs",
-          "columnsFrom": [
-            "config_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["config_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1048,12 +1016,8 @@
           "name": "backups_database_id_databases_id_fk",
           "tableFrom": "backups",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1061,12 +1025,8 @@
           "name": "backups_destination_id_s3_destinations_id_fk",
           "tableFrom": "backups",
           "tableTo": "s3_destinations",
-          "columnsFrom": [
-            "destination_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["destination_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1137,12 +1097,8 @@
           "name": "database_deployment_logs_database_deployment_id_database_deployments_id_fk",
           "tableFrom": "database_deployment_logs",
           "tableTo": "database_deployments",
-          "columnsFrom": [
-            "database_deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_deployment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1252,12 +1208,8 @@
           "name": "database_deployments_database_id_databases_id_fk",
           "tableFrom": "database_deployments",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1459,12 +1411,8 @@
           "name": "databases_environment_id_environments_id_fk",
           "tableFrom": "databases",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1472,12 +1420,8 @@
           "name": "databases_server_id_servers_id_fk",
           "tableFrom": "databases",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1548,12 +1492,8 @@
           "name": "deployment_logs_deployment_id_deployments_id_fk",
           "tableFrom": "deployment_logs",
           "tableTo": "deployments",
-          "columnsFrom": [
-            "deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deployment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1688,12 +1628,8 @@
           "name": "deployments_service_id_services_id_fk",
           "tableFrom": "deployments",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1812,12 +1748,8 @@
           "name": "env_vars_database_id_databases_id_fk",
           "tableFrom": "env_vars",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1825,12 +1757,8 @@
           "name": "env_vars_service_id_services_id_fk",
           "tableFrom": "env_vars",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1995,12 +1923,8 @@
           "name": "github_providers_git_provider_id_git_providers_id_fk",
           "tableFrom": "github_providers",
           "tableTo": "git_providers",
-          "columnsFrom": [
-            "git_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["git_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2097,12 +2021,8 @@
           "name": "gitlab_providers_git_provider_id_git_providers_id_fk",
           "tableFrom": "gitlab_providers",
           "tableTo": "git_providers",
-          "columnsFrom": [
-            "git_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["git_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2197,12 +2117,8 @@
           "name": "gitlab_repository_hooks_git_provider_id_git_providers_id_fk",
           "tableFrom": "gitlab_repository_hooks",
           "tableTo": "git_providers",
-          "columnsFrom": [
-            "git_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["git_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2338,12 +2254,8 @@
           "name": "server_disk_usage_server_id_servers_id_fk",
           "tableFrom": "server_disk_usage",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2467,12 +2379,8 @@
           "name": "server_metrics_server_id_servers_id_fk",
           "tableFrom": "server_metrics",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2611,12 +2519,8 @@
           "name": "service_metrics_database_id_databases_id_fk",
           "tableFrom": "service_metrics",
           "tableTo": "databases",
-          "columnsFrom": [
-            "database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2624,12 +2528,8 @@
           "name": "service_metrics_service_id_services_id_fk",
           "tableFrom": "service_metrics",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2819,12 +2719,8 @@
           "name": "environments_project_id_projects_id_fk",
           "tableFrom": "environments",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2923,12 +2819,8 @@
           "name": "projects_team_id_organization_id_fk",
           "tableFrom": "projects",
           "tableTo": "organization",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3216,12 +3108,8 @@
           "name": "control_plane_settings_backup_destination_id_s3_destinations_id_fk",
           "tableFrom": "control_plane_settings",
           "tableTo": "s3_destinations",
-          "columnsFrom": [
-            "backup_destination_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["backup_destination_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3389,12 +3277,8 @@
           "name": "servers_ssh_key_id_ssh_keys_id_fk",
           "tableFrom": "servers",
           "tableTo": "ssh_keys",
-          "columnsFrom": [
-            "ssh_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ssh_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3499,12 +3383,8 @@
           "name": "service_dependencies_depends_on_database_id_databases_id_fk",
           "tableFrom": "service_dependencies",
           "tableTo": "databases",
-          "columnsFrom": [
-            "depends_on_database_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["depends_on_database_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3512,12 +3392,8 @@
           "name": "service_dependencies_depends_on_service_id_services_id_fk",
           "tableFrom": "service_dependencies",
           "tableTo": "services",
-          "columnsFrom": [
-            "depends_on_service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["depends_on_service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3525,12 +3401,8 @@
           "name": "service_dependencies_env_var_id_env_vars_id_fk",
           "tableFrom": "service_dependencies",
           "tableTo": "env_vars",
-          "columnsFrom": [
-            "env_var_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["env_var_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3538,12 +3410,8 @@
           "name": "service_dependencies_service_id_services_id_fk",
           "tableFrom": "service_dependencies",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3694,12 +3562,8 @@
           "name": "service_domains_service_id_services_id_fk",
           "tableFrom": "service_domains",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3967,12 +3831,8 @@
           "name": "services_deploy_key_id_ssh_keys_id_fk",
           "tableFrom": "services",
           "tableTo": "ssh_keys",
-          "columnsFrom": [
-            "deploy_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deploy_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3980,12 +3840,8 @@
           "name": "services_environment_id_environments_id_fk",
           "tableFrom": "services",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3993,12 +3849,8 @@
           "name": "services_git_provider_id_git_providers_id_fk",
           "tableFrom": "services",
           "tableTo": "git_providers",
-          "columnsFrom": [
-            "git_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["git_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4006,12 +3858,8 @@
           "name": "services_preview_of_service_id_services_id_fk",
           "tableFrom": "services",
           "tableTo": "services",
-          "columnsFrom": [
-            "preview_of_service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["preview_of_service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4019,12 +3867,8 @@
           "name": "services_registry_id_registries_id_fk",
           "tableFrom": "services",
           "tableTo": "registries",
-          "columnsFrom": [
-            "registry_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registry_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4032,12 +3876,8 @@
           "name": "services_server_id_servers_id_fk",
           "tableFrom": "services",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4176,12 +4016,8 @@
           "name": "stack_deployment_logs_stack_deployment_id_stack_deployments_id_fk",
           "tableFrom": "stack_deployment_logs",
           "tableTo": "stack_deployments",
-          "columnsFrom": [
-            "stack_deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stack_deployment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4309,12 +4145,8 @@
           "name": "stack_deployments_stack_id_stacks_id_fk",
           "tableFrom": "stack_deployments",
           "tableTo": "stacks",
-          "columnsFrom": [
-            "stack_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stack_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4488,12 +4320,8 @@
           "name": "stacks_environment_id_environments_id_fk",
           "tableFrom": "stacks",
           "tableTo": "environments",
-          "columnsFrom": [
-            "environment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["environment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4501,12 +4329,8 @@
           "name": "stacks_server_id_servers_id_fk",
           "tableFrom": "stacks",
           "tableTo": "servers",
-          "columnsFrom": [
-            "server_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["server_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4600,12 +4424,8 @@
           "name": "invitation_inviter_id_user_id_fk",
           "tableFrom": "invitation",
           "tableTo": "user",
-          "columnsFrom": [
-            "inviter_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inviter_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4613,12 +4433,8 @@
           "name": "invitation_organization_id_organization_id_fk",
           "tableFrom": "invitation",
           "tableTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4687,12 +4503,8 @@
           "name": "member_organization_id_organization_id_fk",
           "tableFrom": "member",
           "tableTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4700,12 +4512,8 @@
           "name": "member_user_id_user_id_fk",
           "tableFrom": "member",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4715,10 +4523,7 @@
         "member_org_user_idx": {
           "name": "member_org_user_idx",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "user_id"
-          ]
+          "columns": ["organization_id", "user_id"]
         }
       },
       "policies": {},
@@ -4774,9 +4579,7 @@
         "organization_slug_unique": {
           "name": "organization_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -4881,12 +4684,8 @@
           "name": "volume_backup_configs_destination_id_s3_destinations_id_fk",
           "tableFrom": "volume_backup_configs",
           "tableTo": "s3_destinations",
-          "columnsFrom": [
-            "destination_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["destination_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4894,12 +4693,8 @@
           "name": "volume_backup_configs_service_id_services_id_fk",
           "tableFrom": "volume_backup_configs",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5049,12 +4844,8 @@
           "name": "volume_backups_config_id_volume_backup_configs_id_fk",
           "tableFrom": "volume_backups",
           "tableTo": "volume_backup_configs",
-          "columnsFrom": [
-            "config_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["config_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5062,12 +4853,8 @@
           "name": "volume_backups_destination_id_s3_destinations_id_fk",
           "tableFrom": "volume_backups",
           "tableTo": "s3_destinations",
-          "columnsFrom": [
-            "destination_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["destination_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -5075,12 +4862,8 @@
           "name": "volume_backups_service_id_services_id_fk",
           "tableFrom": "volume_backups",
           "tableTo": "services",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5096,48 +4879,27 @@
     "public.audit_actor_kind": {
       "name": "audit_actor_kind",
       "schema": "public",
-      "values": [
-        "session",
-        "token"
-      ]
+      "values": ["session", "token"]
     },
     "public.audit_outcome": {
       "name": "audit_outcome",
       "schema": "public",
-      "values": [
-        "allowed",
-        "denied"
-      ]
+      "values": ["allowed", "denied"]
     },
     "public.backup_kind": {
       "name": "backup_kind",
       "schema": "public",
-      "values": [
-        "manual",
-        "scheduled",
-        "pre_restore"
-      ]
+      "values": ["manual", "scheduled", "pre_restore"]
     },
     "public.backup_status": {
       "name": "backup_status",
       "schema": "public",
-      "values": [
-        "queued",
-        "running",
-        "completed",
-        "failed"
-      ]
+      "values": ["queued", "running", "completed", "failed"]
     },
     "public.database_engine": {
       "name": "database_engine",
       "schema": "public",
-      "values": [
-        "postgres",
-        "mysql",
-        "mariadb",
-        "mongo",
-        "redis"
-      ]
+      "values": ["postgres", "mysql", "mariadb", "mongo", "redis"]
     },
     "public.deployment_status": {
       "name": "deployment_status",
@@ -5155,72 +4917,42 @@
     "public.deployment_trigger": {
       "name": "deployment_trigger",
       "schema": "public",
-      "values": [
-        "manual",
-        "webhook",
-        "rollback",
-        "watch_revert"
-      ]
+      "values": ["manual", "webhook", "rollback", "watch_revert"]
     },
     "public.git_provider_type": {
       "name": "git_provider_type",
       "schema": "public",
-      "values": [
-        "github",
-        "gitlab"
-      ]
+      "values": ["github", "gitlab"]
     },
     "public.notification_kind": {
       "name": "notification_kind",
       "schema": "public",
-      "values": [
-        "webhook",
-        "discord",
-        "slack"
-      ]
+      "values": ["webhook", "discord", "slack"]
     },
     "public.control_plane_status": {
       "name": "control_plane_status",
       "schema": "public",
-      "values": [
-        "idle",
-        "applying",
-        "failed"
-      ]
+      "values": ["idle", "applying", "failed"]
     },
     "public.server_role": {
       "name": "server_role",
       "schema": "public",
-      "values": [
-        "manager",
-        "worker"
-      ]
+      "values": ["manager", "worker"]
     },
     "public.server_status": {
       "name": "server_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "connected",
-        "unreachable"
-      ]
+      "values": ["pending", "connected", "unreachable"]
     },
     "public.certificate_type": {
       "name": "certificate_type",
       "schema": "public",
-      "values": [
-        "none",
-        "letsencrypt"
-      ]
+      "values": ["none", "letsencrypt"]
     },
     "public.build_method": {
       "name": "build_method",
       "schema": "public",
-      "values": [
-        "railpack",
-        "dockerfile",
-        "image"
-      ]
+      "values": ["railpack", "dockerfile", "image"]
     },
     "public.service_status": {
       "name": "service_status",
@@ -5237,13 +4969,7 @@
     "public.source_type": {
       "name": "source_type",
       "schema": "public",
-      "values": [
-        "git",
-        "github",
-        "gitlab",
-        "docker_image",
-        "compose"
-      ]
+      "values": ["git", "github", "gitlab", "docker_image", "compose"]
     }
   },
   "schemas": {},
