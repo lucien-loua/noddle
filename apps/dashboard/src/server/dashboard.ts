@@ -1,6 +1,6 @@
 import type { deployments, stackDeployments } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import z from "zod";
+import { z } from "zod";
 
 import { loadDatabaseDashboardRows } from "@/lib/database-rows.server";
 import { db } from "@/lib/db.server";

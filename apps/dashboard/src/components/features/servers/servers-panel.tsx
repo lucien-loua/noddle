@@ -249,7 +249,7 @@ export const AddServerDialog = ({
     if (open) {
       form.reset();
     }
-  }, [open, form.reset]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

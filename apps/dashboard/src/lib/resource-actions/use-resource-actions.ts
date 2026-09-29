@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { RoleName } from "@/lib/permissions";
 import {
@@ -45,13 +45,15 @@ export function useResourceActions(rows: ResourceRow[], role: RoleName | null) {
     return lookup;
   }, [rows]);
 
-  useEffect(() => {
-    setPending((prev) => refine(rowLookup, prev));
-  }, [rowLookup]);
+  const livePending = useMemo(
+    () => refine(rowLookup, pending),
+    [rowLookup, pending]
+  );
 
   const statusOf = useCallback(
-    (row: ResourceRow) => coreStatusOf(row, pending.get(key(row.kind, row.id))),
-    [pending]
+    (row: ResourceRow) =>
+      coreStatusOf(row, livePending.get(key(row.kind, row.id))),
+    [livePending]
   );
 
   const actionsFor = useCallback(
@@ -86,8 +88,8 @@ export function useResourceActions(rows: ResourceRow[], role: RoleName | null) {
   );
 
   const pollInterval = useMemo(
-    () => corePollInterval(rows, pending, RESOURCE_POLL_MS),
-    [rows, pending]
+    () => corePollInterval(rows, livePending, RESOURCE_POLL_MS),
+    [rows, livePending]
   );
 
   return useMemo(

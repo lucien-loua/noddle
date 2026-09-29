@@ -90,7 +90,7 @@ export const ChangeDatabasePasswordDialog = ({
       form.reset();
       form.setFieldValue("password", generateDatabasePassword());
     }
-  }, [open, form.reset, form.setFieldValue]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

@@ -12,6 +12,7 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { toast } from "@/components/ui/toast";
+import { useNow } from "@/hooks/use-now";
 import { errorMessage, relativeTime } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import { getApiTokens, revokeApiToken } from "@/server/api-tokens";
@@ -32,8 +33,9 @@ const TokenRow = ({
   row: ApiTokenRow;
 }) => {
   const revoke = useCallback(() => onRevoke(row), [onRevoke, row]);
+  const now = useNow();
   const expired =
-    row.expiresAt !== null && Date.parse(row.expiresAt) < Date.now();
+    now !== null && row.expiresAt !== null && Date.parse(row.expiresAt) < now;
 
   return (
     <FramePanel className="flex flex-row items-start justify-between gap-3">

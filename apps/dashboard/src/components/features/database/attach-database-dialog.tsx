@@ -147,12 +147,19 @@ const AttachBody = ({
     validators: { onDynamic: attachFormSchema },
   });
 
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) {
+      setDone(null);
+    }
+  }
+
   useEffect(() => {
     if (!open) {
       form.reset();
-      setDone(null);
     }
-  }, [open, form.reset]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

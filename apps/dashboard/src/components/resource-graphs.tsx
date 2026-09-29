@@ -23,6 +23,7 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
+import { useNow } from "@/hooks/use-now";
 import { byteSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { MetricPoint, ServerSeries } from "@/server/metrics";
@@ -320,11 +321,11 @@ export const ResourceGraphs = ({
 };
 
 const ServerFreshness = ({ latest }: { latest: MetricPoint | null }) => {
+  const now = useNow();
   if (!latest) {
     return <Badge variant="destructive">no samples</Badge>;
   }
-  const age = Date.now() - Date.parse(latest.sampledAt);
-  if (age > GAP_MS) {
+  if (now !== null && now - Date.parse(latest.sampledAt) > GAP_MS) {
     return (
       <Badge variant="destructive">
         frozen <RelativeTime iso={latest.sampledAt} />

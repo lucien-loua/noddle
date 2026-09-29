@@ -73,8 +73,8 @@ export const DatabaseClusterSettings = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, replicas]);
+    form.reset({ replicas });
+  }, [form, replicas]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

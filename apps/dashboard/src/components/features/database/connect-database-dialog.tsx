@@ -142,15 +142,22 @@ function useConnectDatabase({
     [form]
   );
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
-      form.reset();
       setName("");
       setStep("engine");
       setSubmitError(null);
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      form.reset();
       form.setFieldValue("rootPassword", generateDatabasePassword());
     }
-  }, [open, form.reset, form.setFieldValue]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -202,9 +209,8 @@ function useConnectDatabase({
         });
       } catch (error) {
         setSubmitError(errorMessage(error, "could not create the database"));
-      } finally {
-        setPending(false);
       }
+      setPending(false);
     },
     [form, hasNamedDatabase, name, onOpenChange, queryClient, router]
   );

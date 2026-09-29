@@ -96,12 +96,12 @@ const ToastDescription = ({
 
 const ToastAction = ({
   className,
-  render = <Button variant="outline" size="sm" />,
+  render,
   ...props
 }: ToastPrimitive.Action.Props) => (
   <ToastPrimitive.Action
     data-slot="toast-action"
-    render={render}
+    render={render ?? <Button variant="outline" size="sm" />}
     className={cn("shrink-0", className)}
     {...props}
   />
@@ -110,13 +110,13 @@ const ToastAction = ({
 const ToastClose = ({
   className,
   children,
-  render = <Button variant="ghost" size="icon-sm" />,
+  render,
   ...props
 }: ToastPrimitive.Close.Props) => (
   <ToastPrimitive.Close
     data-slot="toast-close"
     aria-label="Close toast"
-    render={render}
+    render={render ?? <Button variant="ghost" size="icon-sm" />}
     className={cn(
       "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
       className

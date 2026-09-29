@@ -2,7 +2,7 @@ import { DATABASE_PORT } from "@noddle/shared/database-spec";
 import { isTerminalStatus } from "@noddle/shared/logs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { lazy, useCallback, useMemo, useRef, useState } from "react";
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { DetailBreadcrumb } from "@/components/detail-breadcrumb";
@@ -97,7 +97,9 @@ const DatabaseDetail = () => {
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
   const actions = useResourceActions([target], known);
-  pollIntervalRef.current = actions.pollInterval;
+  useEffect(() => {
+    pollIntervalRef.current = actions.pollInterval;
+  }, [actions.pollInterval]);
 
   const canCreateBackup = useCan(known, "backup", "create");
   const canRestoreBackup = useCan(known, "backup", "restore");

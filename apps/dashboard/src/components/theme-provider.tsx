@@ -4,7 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import type { ReactNode } from "react";
 
@@ -33,19 +33,35 @@ export function useTheme(): ThemeContextValue {
   return value;
 }
 
-export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolved, setResolved] = useState<"light" | "dark">("light");
+const themeListeners = new Set<() => void>();
 
-  useEffect(() => {
-    setThemeState(readTheme());
-    setResolved(readResolved());
-  }, []);
+const subscribeTheme = (onChange: () => void) => {
+  themeListeners.add(onChange);
+  return () => {
+    themeListeners.delete(onChange);
+  };
+};
+
+const notifyTheme = () => {
+  for (const listener of themeListeners) {
+    listener();
+  }
+};
+
+const serverTheme = (): Theme => "system";
+const serverResolved = (): "light" | "dark" => "light";
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, serverTheme);
+  const resolved = useSyncExternalStore(
+    subscribeTheme,
+    readResolved,
+    serverResolved
+  );
 
   const setTheme = useCallback((next: Theme) => {
     writeTheme(next);
-    setThemeState(next);
-    setResolved(readResolved());
+    notifyTheme();
   }, []);
 
   useEffect(() => {
@@ -55,7 +71,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       applyTheme("system");
-      setResolved(readResolved());
+      notifyTheme();
     };
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);

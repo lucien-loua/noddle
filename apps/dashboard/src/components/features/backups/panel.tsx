@@ -17,7 +17,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { backupSubjectScopeId } from "@/lib/backup-subject";
 import type {
   BackupSubject,
   DatabaseBackupSubject,
@@ -93,7 +92,7 @@ export const BackupPanel = (props: BackupPanelProps) => {
 
   const invalidate = useCallback(() => {
     cache.backupConfigsFor(queryClient, subject).catch(() => {});
-  }, [queryClient, subject.kind, backupSubjectScopeId(subject)]);
+  }, [queryClient, subject]);
 
   if (destinations.length === 0) {
     return <NoDestinationEmpty description={copy.noDestination} />;

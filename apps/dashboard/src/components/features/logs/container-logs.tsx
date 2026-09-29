@@ -110,13 +110,28 @@ export const ContainerLogs = ({
     pausedRef.current = paused;
   }, [paused]);
 
-  useEffect(() => {
+  const [streamFor, setStreamFor] = useState({
+    generation,
+    since,
+    streamUrl,
+    tail,
+  });
+  if (
+    streamFor.generation !== generation ||
+    streamFor.since !== since ||
+    streamFor.streamUrl !== streamUrl ||
+    streamFor.tail !== tail
+  ) {
+    setStreamFor({ generation, since, streamUrl, tail });
     setText("");
     setStatus("live");
     setPaused(false);
+    setPendingCount(0);
+  }
+
+  useEffect(() => {
     pausedRef.current = false;
     pendingRef.current = [];
-    setPendingCount(0);
 
     const params = new URLSearchParams({ since, tail });
     params.set("g", generation);

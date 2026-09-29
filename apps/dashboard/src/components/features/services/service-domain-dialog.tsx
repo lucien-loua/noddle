@@ -5,7 +5,7 @@ import { DiceFiveIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
@@ -103,15 +103,26 @@ export const ServiceDomainDialog = ({
     },
   });
 
-  const defaultValues: ServiceDomainsInput = {
-    certificateType: domain ? domain.certificateType : "none",
-    host: domain ? domain.host : "",
-    https: domain ? domain.https : false,
-    internalPath: domain?.internalPath ?? "",
-    path: domain && domain.path !== "/" ? domain.path : "",
-    port: service.port,
-    stripPath: domain ? domain.stripPath : false,
-  };
+  const defaultValues = useMemo<ServiceDomainsInput>(() => {
+    const path = domain?.path ?? "/";
+    return {
+      certificateType: domain?.certificateType ?? "none",
+      host: domain?.host ?? "",
+      https: domain?.https ?? false,
+      internalPath: domain?.internalPath ?? "",
+      path: path === "/" ? "" : path,
+      port: service.port,
+      stripPath: domain?.stripPath ?? false,
+    };
+  }, [
+    domain?.certificateType,
+    domain?.host,
+    domain?.https,
+    domain?.internalPath,
+    domain?.path,
+    domain?.stripPath,
+    service.port,
+  ]);
 
   const form = useAppForm({
     defaultValues,
@@ -121,20 +132,9 @@ export const ServiceDomainDialog = ({
 
   useEffect(() => {
     if (open) {
-      form.reset();
+      form.reset(defaultValues);
     }
-  }, [
-    domain?.certificateType,
-    domain?.host,
-    domain?.https,
-    domain?.id,
-    domain?.internalPath,
-    domain?.path,
-    domain?.stripPath,
-    form.reset,
-    open,
-    service.port,
-  ]);
+  }, [form, defaultValues, open]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

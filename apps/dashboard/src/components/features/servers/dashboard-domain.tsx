@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 
 import { useAppForm } from "@/components/fields/lib/form";
@@ -108,11 +108,14 @@ export const DashboardDomain = ({ canEdit }: { canEdit: boolean }) => {
     },
   });
 
-  const defaultValues: FormValues = {
-    acmeEmail: settings.data?.acmeEmail ?? "",
-    domain: settings.data?.domain ?? "",
-    httpsEnabled: settings.data?.httpsEnabled ?? false,
-  };
+  const defaultValues = useMemo<FormValues>(
+    () => ({
+      acmeEmail: settings.data?.acmeEmail ?? "",
+      domain: settings.data?.domain ?? "",
+      httpsEnabled: settings.data?.httpsEnabled ?? false,
+    }),
+    [settings.data]
+  );
 
   const form = useAppForm({
     defaultValues,
@@ -121,8 +124,8 @@ export const DashboardDomain = ({ canEdit }: { canEdit: boolean }) => {
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, settings.data]);
+    form.reset(defaultValues);
+  }, [form, defaultValues]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

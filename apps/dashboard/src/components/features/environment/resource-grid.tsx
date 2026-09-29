@@ -19,7 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { ChangeEvent, MouseEvent, ReactNode } from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ConfirmNameDialog } from "@/components/confirm-name-dialog";
 import { DatabaseMark } from "@/components/features/database/database-mark";
@@ -264,7 +264,9 @@ function useResourceGridState({
 
   const rows = useMemo(() => scopeRows(scope), [scope]);
   const actions = useResourceActions(rows, role);
-  pollIntervalRef.current = actions.pollInterval;
+  useEffect(() => {
+    pollIntervalRef.current = actions.pollInterval;
+  }, [actions.pollInterval]);
 
   const refreshScope = useCallback(
     () => cache.environmentScope(queryClient, projectId, environmentId),

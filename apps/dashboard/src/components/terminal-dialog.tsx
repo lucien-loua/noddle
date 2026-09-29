@@ -237,11 +237,13 @@ export const TerminalDialog = ({
     [onOpenChangeComplete]
   );
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setStatus("connecting");
     }
-  }, [open]);
+  }
 
   const handleStatus = useCallback((next: "connecting" | "open" | "closed") => {
     setStatus(next);

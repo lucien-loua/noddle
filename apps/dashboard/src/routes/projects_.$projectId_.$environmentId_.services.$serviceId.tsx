@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { lazy, useCallback, useMemo, useRef, useState } from "react";
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { BuildLogsDialog } from "@/components/build-logs-dialog";
@@ -114,7 +114,9 @@ function useServiceDetail() {
 
   const target = useMemo(() => serviceRow(service), [service]);
   const actions = useResourceActions([target], known);
-  pollIntervalRef.current = actions.pollInterval;
+  useEffect(() => {
+    pollIntervalRef.current = actions.pollInterval;
+  }, [actions.pollInterval]);
 
   const requestedTab = search.tab ?? "general";
   const tab =

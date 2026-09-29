@@ -68,8 +68,8 @@ export const DatabaseConfiguration = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, resolvedImage]);
+    form.reset({ image: resolvedImage });
+  }, [form, resolvedImage]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

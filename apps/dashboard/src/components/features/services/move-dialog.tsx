@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -45,8 +45,20 @@ export const MoveServiceDialog = ({
   serviceName: string;
 }) => {
   const [projectId, setProjectId] = useState(groups[0]?.projectId ?? "");
-  const [environmentId, setEnvironmentId] = useState("");
+  const [chosenEnvironmentId, setChosenEnvironmentId] = useState<string | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
+
+  const [seen, setSeen] = useState({ groups, open });
+  if (seen.groups !== groups || seen.open !== open) {
+    setSeen({ groups, open });
+    if (open) {
+      setProjectId(groups[0]?.projectId ?? "");
+    } else {
+      setError(null);
+    }
+  }
 
   const environmentsQuery = useQuery({
     ...queries.projectEnvironments(projectId),
@@ -60,19 +72,10 @@ export const MoveServiceDialog = ({
     [environmentsQuery.data, currentEnvironmentId]
   );
 
-  useEffect(() => {
-    if (!open) {
-      setError(null);
-      return;
-    }
-    const firstProject = groups[0]?.projectId ?? "";
-    setProjectId(firstProject);
-  }, [open, groups]);
-
-  useEffect(() => {
-    const [first] = targetEnvironments;
-    setEnvironmentId(first?.id ?? "");
-  }, [targetEnvironments]);
+  const environmentId =
+    targetEnvironments.find((env) => env.id === chosenEnvironmentId)?.id ??
+    targetEnvironments[0]?.id ??
+    "";
 
   const move = useMutation({
     mutationFn: () => moveService({ data: { environmentId, serviceId } }),
@@ -89,7 +92,7 @@ export const MoveServiceDialog = ({
     []
   );
   const handleEnvironmentChange = useCallback(
-    (next: unknown) => setEnvironmentId(next as string),
+    (next: unknown) => setChosenEnvironmentId(next as string),
     []
   );
 

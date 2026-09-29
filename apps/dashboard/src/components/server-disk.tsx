@@ -18,6 +18,7 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { Progress } from "@/components/ui/progress";
+import { useNow } from "@/hooks/use-now";
 import { byteSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DiskCategoryKey, ServerDisk } from "@/server/metrics";
@@ -46,7 +47,8 @@ function size(bytes: number): string {
 }
 
 const Freshness = ({ sampledAt }: { sampledAt: string }) => {
-  if (Date.now() - Date.parse(sampledAt) > STALE_MS) {
+  const now = useNow();
+  if (now !== null && now - Date.parse(sampledAt) > STALE_MS) {
     return (
       <Badge variant="destructive">
         stale <RelativeTime iso={sampledAt} />

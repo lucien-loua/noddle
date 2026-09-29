@@ -2,8 +2,8 @@ import {
   createContext,
   use,
   useEffect,
+  useEffectEvent,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -53,13 +53,18 @@ function useBuildLogSource(
   const [text, setText] = useState("");
   const [status, setStatus] = useState<StreamStatus>("live");
 
-  const onEndRef = useRef(onEnd);
-  onEndRef.current = onEnd;
-
-  useEffect(() => {
+  const [streamFor, setStreamFor] = useState(deploymentId);
+  if (streamFor !== deploymentId) {
+    setStreamFor(deploymentId);
     setText("");
     setStatus("live");
+  }
 
+  const handleEnd = useEffectEvent((endStatus: string) => {
+    onEnd?.(endStatus);
+  });
+
+  useEffect(() => {
     const source = new EventSource(`/api/logs/${deploymentId}`);
     let attempts = 0;
 
@@ -83,7 +88,7 @@ function useBuildLogSource(
       };
       setStatus("idle");
       source.close();
-      onEndRef.current?.(payload.status);
+      handleEnd(payload.status);
     });
 
     source.addEventListener("error", () => {

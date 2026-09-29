@@ -279,9 +279,9 @@ const PrimaryPathDialog = ({
 
   useEffect(() => {
     if (open) {
-      form.reset();
+      form.reset({ volumePath });
     }
-  }, [form.reset, open, volumePath]);
+  }, [form, open, volumePath]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -388,7 +388,7 @@ const MountDialog = ({
     if (open) {
       form.reset();
     }
-  }, [form.reset, open]);
+  }, [form, open]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

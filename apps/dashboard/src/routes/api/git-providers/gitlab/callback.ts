@@ -9,6 +9,15 @@ import { runGuarded } from "@/lib/permission.server";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
+const removePending = async (gitProviderId: string) => {
+  const row = await db.query.gitlabProviders.findFirst({
+    where: eq(gitlabProviders.gitProviderId, gitProviderId),
+  });
+  if (row && !row.accessTokenEncrypted) {
+    await db.delete(gitProviders).where(eq(gitProviders.id, gitProviderId));
+  }
+};
+
 export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
   server: {
     handlers: {
@@ -25,17 +34,8 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
         return await runGuarded({
           permission: { action: "create", resource: "gitProvider" },
           run: async () => {
-            const removePending = async () => {
-              const row = await db.query.gitlabProviders.findFirst({
-                where: eq(gitlabProviders.gitProviderId, state),
-              });
-              if (row && !row.accessTokenEncrypted) {
-                await db.delete(gitProviders).where(eq(gitProviders.id, state));
-              }
-            };
-
             if (denied) {
-              await removePending();
+              await removePending(state);
               return new Response(
                 `GitLab refused the authorisation (${denied}). The connection was removed. Start it again.`,
                 { headers: { "content-type": "text/plain" }, status: 400 }
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/git-providers/gitlab/callback")({
             } catch (error) {
               const detail =
                 error instanceof Error ? error.message : String(error);
-              await removePending();
+              await removePending(state);
               return new Response(
                 `Could not finish connecting GitLab, and the code cannot be reused. Start the connection again.\n\n${detail}`,
                 { headers: { "content-type": "text/plain" }, status: 400 }

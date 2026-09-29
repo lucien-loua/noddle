@@ -386,6 +386,16 @@ interface HealthCheckFormValues {
   timeout: number | null;
 }
 
+const healthCheckFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["healthCheck"]> | null
+): HealthCheckFormValues => ({
+  interval: value?.Interval ?? null,
+  retries: value?.Retries ?? null,
+  startPeriod: value?.StartPeriod ?? null,
+  test: (value?.Test ?? []).join("\n"),
+  timeout: value?.Timeout ?? null,
+});
+
 const HealthCheckForm = ({
   isPending,
   onClear,
@@ -400,13 +410,7 @@ const HealthCheckForm = ({
   value: NonNullable<DatabaseSwarmSettings["healthCheck"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: {
-      interval: value?.Interval ?? null,
-      retries: value?.Retries ?? null,
-      startPeriod: value?.StartPeriod ?? null,
-      test: (value?.Test ?? []).join("\n"),
-      timeout: value?.Timeout ?? null,
-    } satisfies HealthCheckFormValues,
+    defaultValues: healthCheckFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({
         healthCheck: {
@@ -432,8 +436,8 @@ const HealthCheckForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(healthCheckFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -492,6 +496,15 @@ interface RestartPolicyFormValues {
   window: number | null;
 }
 
+const restartPolicyFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["restartPolicy"]> | null
+): RestartPolicyFormValues => ({
+  condition: value?.Condition ?? "",
+  delay: value?.Delay ?? null,
+  maxAttempts: value?.MaxAttempts ?? null,
+  window: value?.Window ?? null,
+});
+
 const RestartPolicyForm = ({
   isPending,
   onClear,
@@ -506,12 +519,7 @@ const RestartPolicyForm = ({
   value: NonNullable<DatabaseSwarmSettings["restartPolicy"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: {
-      condition: value?.Condition ?? "",
-      delay: value?.Delay ?? null,
-      maxAttempts: value?.MaxAttempts ?? null,
-      window: value?.Window ?? null,
-    } satisfies RestartPolicyFormValues,
+    defaultValues: restartPolicyFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({
         restartPolicy: {
@@ -535,8 +543,8 @@ const RestartPolicyForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(restartPolicyFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -583,6 +591,13 @@ interface PlacementFormValues {
   maxReplicas: number | null;
 }
 
+const placementFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["placement"]> | null
+): PlacementFormValues => ({
+  constraints: (value?.Constraints ?? []).join("\n"),
+  maxReplicas: value?.MaxReplicas ?? null,
+});
+
 const PlacementForm = ({
   isPending,
   onClear,
@@ -597,10 +612,7 @@ const PlacementForm = ({
   value: NonNullable<DatabaseSwarmSettings["placement"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: {
-      constraints: (value?.Constraints ?? []).join("\n"),
-      maxReplicas: value?.MaxReplicas ?? null,
-    } satisfies PlacementFormValues,
+    defaultValues: placementFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({
         placement: {
@@ -620,8 +632,8 @@ const PlacementForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(placementFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -670,6 +682,19 @@ interface UpdateConfigFormValues {
   parallelism: number | null;
 }
 
+const updateConfigFormValues = (
+  value:
+    | NonNullable<DatabaseSwarmSettings["rollbackConfig"]>
+    | NonNullable<DatabaseSwarmSettings["updateConfig"]>
+    | null
+): UpdateConfigFormValues => ({
+  delay: value?.Delay ?? null,
+  failureAction: value?.FailureAction ?? "",
+  monitor: value?.Monitor ?? null,
+  order: value?.Order ?? "",
+  parallelism: value?.Parallelism ?? null,
+});
+
 const UpdateConfigForm = ({
   isPending,
   kind,
@@ -701,13 +726,7 @@ const UpdateConfigForm = ({
         ];
 
   const form = useAppForm({
-    defaultValues: {
-      delay: value?.Delay ?? null,
-      failureAction: value?.FailureAction ?? "",
-      monitor: value?.Monitor ?? null,
-      order: value?.Order ?? "",
-      parallelism: value?.Parallelism ?? null,
-    } satisfies UpdateConfigFormValues,
+    defaultValues: updateConfigFormValues(value),
     onSubmit: ({ value: v }) => {
       const config = {
         Delay: v.delay,
@@ -748,8 +767,8 @@ const UpdateConfigForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(updateConfigFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -813,6 +832,13 @@ function selectModeKind(state: { values: ModeFormValues }) {
   return state.values.kind;
 }
 
+const modeFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["mode"]> | null
+): ModeFormValues => ({
+  kind: value?.Global ? "global" : "replicated",
+  replicas: value?.Replicated?.Replicas ?? 1,
+});
+
 const ModeForm = ({
   isPending,
   onClear,
@@ -826,13 +852,8 @@ const ModeForm = ({
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["mode"]> | null;
 }) => {
-  const defaultValues: ModeFormValues = {
-    kind: value?.Global ? "global" : "replicated",
-    replicas: value?.Replicated?.Replicas ?? 1,
-  };
-
   const form = useAppForm({
-    defaultValues,
+    defaultValues: modeFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({
         mode:
@@ -853,8 +874,8 @@ const ModeForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(modeFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -894,6 +915,12 @@ interface NetworkFormValues {
   targets: string;
 }
 
+const networkFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["networks"]> | null
+): NetworkFormValues => ({
+  targets: (value ?? []).map((n) => n.Target).join("\n"),
+});
+
 const NetworkForm = ({
   isPending,
   onClear,
@@ -908,9 +935,7 @@ const NetworkForm = ({
   value: NonNullable<DatabaseSwarmSettings["networks"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: {
-      targets: (value ?? []).map((n) => n.Target).join("\n"),
-    } satisfies NetworkFormValues,
+    defaultValues: networkFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({
         networks: v.targets
@@ -925,8 +950,8 @@ const NetworkForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(networkFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -964,6 +989,10 @@ interface LabelsFormValues {
   raw: string;
 }
 
+const labelsFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["labels"]> | null
+): LabelsFormValues => ({ raw: formatLabels(value) });
+
 const LabelsForm = ({
   isPending,
   onClear,
@@ -978,7 +1007,7 @@ const LabelsForm = ({
   value: NonNullable<DatabaseSwarmSettings["labels"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: { raw: formatLabels(value) } satisfies LabelsFormValues,
+    defaultValues: labelsFormValues(value),
     onSubmit: ({ value: v }) => onSave({ labels: parseLabels(v.raw) }),
     validators: {
       onDynamic: z.object({ raw: z.string() }),
@@ -986,8 +1015,8 @@ const LabelsForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(labelsFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -1024,6 +1053,10 @@ interface StopGraceFormValues {
   stopGracePeriod: number | null;
 }
 
+const stopGraceFormValues = (value: number | null): StopGraceFormValues => ({
+  stopGracePeriod: value ?? null,
+});
+
 const StopGraceForm = ({
   isPending,
   onClear,
@@ -1038,9 +1071,7 @@ const StopGraceForm = ({
   value: number | null;
 }) => {
   const form = useAppForm({
-    defaultValues: {
-      stopGracePeriod: value ?? null,
-    } satisfies StopGraceFormValues,
+    defaultValues: stopGraceFormValues(value),
     onSubmit: ({ value: v }) => onSave({ stopGracePeriod: v.stopGracePeriod }),
     validators: {
       onDynamic: z.object({
@@ -1050,8 +1081,8 @@ const StopGraceForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(stopGraceFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -1087,6 +1118,10 @@ interface EndpointFormValues {
   mode: "" | "dnsrr" | "vip";
 }
 
+const endpointFormValues = (
+  value: NonNullable<DatabaseSwarmSettings["endpointSpec"]> | null
+): EndpointFormValues => ({ mode: value?.Mode ?? "" });
+
 const EndpointForm = ({
   isPending,
   onClear,
@@ -1101,7 +1136,7 @@ const EndpointForm = ({
   value: NonNullable<DatabaseSwarmSettings["endpointSpec"]> | null;
 }) => {
   const form = useAppForm({
-    defaultValues: { mode: value?.Mode ?? "" } satisfies EndpointFormValues,
+    defaultValues: endpointFormValues(value),
     onSubmit: ({ value: v }) =>
       onSave({ endpointSpec: v.mode ? { Mode: v.mode } : {} }),
     validators: {
@@ -1112,8 +1147,8 @@ const EndpointForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, value]);
+    form.reset(endpointFormValues(value));
+  }, [form, value]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

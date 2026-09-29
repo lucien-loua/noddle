@@ -3,7 +3,7 @@ import type { ServiceBuildInput } from "@noddle/shared/validation/service";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { useAppForm } from "@/components/fields/lib/form";
 import { Button } from "@/components/ui/button";
@@ -70,10 +70,13 @@ export const ServiceBuild = ({
     },
   });
 
-  const defaultValues: ServiceBuildInput = {
-    buildMethod: buildMethodValue(service.buildMethod),
-    publishDirectory: service.publishDirectory ?? "",
-  };
+  const defaultValues = useMemo<ServiceBuildInput>(
+    () => ({
+      buildMethod: buildMethodValue(service.buildMethod),
+      publishDirectory: service.publishDirectory ?? "",
+    }),
+    [service.buildMethod, service.publishDirectory]
+  );
 
   const form = useAppForm({
     defaultValues,
@@ -82,8 +85,8 @@ export const ServiceBuild = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, service.buildMethod, service.publishDirectory]);
+    form.reset(defaultValues);
+  }, [form, defaultValues]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

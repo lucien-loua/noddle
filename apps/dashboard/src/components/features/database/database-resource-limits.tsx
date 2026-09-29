@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 
 import { useAppForm } from "@/components/fields/lib/form";
@@ -104,12 +104,20 @@ export const DatabaseResourceLimits = ({
     },
   });
 
-  const defaultValues: ResourceFormValues = {
-    cpuLimit: nanosToCores(cpuLimitNanos),
-    cpuReservation: nanosToCores(cpuReservationNanos),
-    memLimit: bytesToMib(memoryLimitBytes),
-    memReservation: bytesToMib(memoryReservationBytes),
-  };
+  const defaultValues = useMemo<ResourceFormValues>(
+    () => ({
+      cpuLimit: nanosToCores(cpuLimitNanos),
+      cpuReservation: nanosToCores(cpuReservationNanos),
+      memLimit: bytesToMib(memoryLimitBytes),
+      memReservation: bytesToMib(memoryReservationBytes),
+    }),
+    [
+      cpuLimitNanos,
+      cpuReservationNanos,
+      memoryLimitBytes,
+      memoryReservationBytes,
+    ]
+  );
 
   const form = useAppForm({
     defaultValues,
@@ -118,14 +126,8 @@ export const DatabaseResourceLimits = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [
-    form.reset,
-    cpuLimitNanos,
-    cpuReservationNanos,
-    memoryLimitBytes,
-    memoryReservationBytes,
-  ]);
+    form.reset(defaultValues);
+  }, [form, defaultValues]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

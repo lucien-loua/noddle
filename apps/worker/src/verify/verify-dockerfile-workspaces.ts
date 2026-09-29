@@ -7,13 +7,13 @@ import { check, runVerify } from "@noddle/testing";
 const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..");
 const DOCKERFILES = ["apps/dashboard/Dockerfile", "apps/worker/Dockerfile"];
 
-function workspaceMembers(): string[] {
-  const dirs = (group: string) =>
-    readdirSync(join(REPO_ROOT, group), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `${group}/${entry.name}`)
-      .filter((member) => existsSync(join(REPO_ROOT, member, "package.json")));
+const dirs = (group: string) =>
+  readdirSync(join(REPO_ROOT, group), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `${group}/${entry.name}`)
+    .filter((member) => existsSync(join(REPO_ROOT, member, "package.json")));
 
+function workspaceMembers(): string[] {
   return [...dirs("apps"), ...dirs("packages")].toSorted();
 }
 

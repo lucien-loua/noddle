@@ -15,7 +15,7 @@ import { XIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import type { SubmitEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   DockerIcon,
@@ -526,16 +526,28 @@ const GitSourceForm = ({
     },
   });
 
-  const defaultValues: ServiceGitProviderInput = {
-    buildPath: service.buildPath ?? "",
-    deployKeyId: service.deployKeyId,
-    gitBranch: service.gitBranch ?? "main",
-    gitProviderId: service.gitProviderId,
-    gitRepoFullName: service.gitRepoFullName,
-    gitRepoUrl: service.gitRepoUrl ?? "",
-    gitSubmodules: service.gitSubmodules,
-    watchPaths: service.watchPaths,
-  };
+  const defaultValues = useMemo<ServiceGitProviderInput>(
+    () => ({
+      buildPath: service.buildPath ?? "",
+      deployKeyId: service.deployKeyId,
+      gitBranch: service.gitBranch ?? "main",
+      gitProviderId: service.gitProviderId,
+      gitRepoFullName: service.gitRepoFullName,
+      gitRepoUrl: service.gitRepoUrl ?? "",
+      gitSubmodules: service.gitSubmodules,
+      watchPaths: service.watchPaths,
+    }),
+    [
+      service.buildPath,
+      service.deployKeyId,
+      service.gitBranch,
+      service.gitProviderId,
+      service.gitRepoFullName,
+      service.gitRepoUrl,
+      service.gitSubmodules,
+      service.watchPaths,
+    ]
+  );
 
   const form = useAppForm({
     defaultValues,
@@ -544,18 +556,8 @@ const GitSourceForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [
-    form.reset,
-    service.buildPath,
-    service.deployKeyId,
-    service.gitBranch,
-    service.gitProviderId,
-    service.gitRepoFullName,
-    service.gitRepoUrl,
-    service.gitSubmodules,
-    service.watchPaths,
-  ]);
+    form.reset(defaultValues);
+  }, [form, defaultValues]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -748,14 +750,17 @@ const DockerSourceForm = ({
     },
   });
 
-  const defaultValues: ServiceDockerProviderInput = {
-    dockerImage: service.dockerImage ?? "",
-    registryChoice: service.registryId ?? BUILT_IN_REGISTRY,
-    registryName: "",
-    registryPassword: "",
-    registryUrl: "",
-    registryUsername: "",
-  };
+  const defaultValues = useMemo<ServiceDockerProviderInput>(
+    () => ({
+      dockerImage: service.dockerImage ?? "",
+      registryChoice: service.registryId ?? BUILT_IN_REGISTRY,
+      registryName: "",
+      registryPassword: "",
+      registryUrl: "",
+      registryUsername: "",
+    }),
+    [service.dockerImage, service.registryId]
+  );
 
   const form = useAppForm({
     defaultValues,
@@ -764,8 +769,8 @@ const DockerSourceForm = ({
   });
 
   useEffect(() => {
-    form.reset();
-  }, [form.reset, service.dockerImage]);
+    form.reset(defaultValues);
+  }, [form, defaultValues]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -946,9 +951,11 @@ export const ServiceProvider = ({
     providerTab(service.sourceType)
   );
 
-  useEffect(() => {
+  const [tabSource, setTabSource] = useState(service.sourceType);
+  if (tabSource !== service.sourceType) {
+    setTabSource(service.sourceType);
     setTab(providerTab(service.sourceType));
-  }, [service.sourceType]);
+  }
 
   const handleTabChange = useCallback((value: unknown) => {
     if (typeof value === "string" && isProviderTab(value)) {

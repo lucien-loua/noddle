@@ -1,7 +1,7 @@
 import { envVars, serviceDependencies } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
-import z from "zod";
+import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { guarded, identityTarget } from "@/lib/guarded.server";

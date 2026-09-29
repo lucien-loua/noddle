@@ -143,13 +143,19 @@ const DatabaseScheduleForm = ({
     },
   });
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setScheduleMode(scheduleModeFor(defaults.schedule));
     }
-    form.reset();
-    setScheduleMode(scheduleModeFor(defaults.schedule));
-  }, [open, form.reset, defaults.schedule]);
+  }
+
+  useEffect(() => {
+    if (open) {
+      form.reset();
+    }
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {
@@ -315,20 +321,26 @@ const VolumeScheduleForm = ({
     validators: { onDynamic: volumeBackupConfigFormSchema },
   });
 
-  useEffect(() => {
-    if (!open) {
-      return;
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setScheduleMode(scheduleModeFor(defaults.schedule));
     }
-    form.reset();
-    setScheduleMode(scheduleModeFor(defaults.schedule));
-  }, [open, form.reset, defaults.schedule]);
+  }
+
+  useEffect(() => {
+    if (open) {
+      form.reset();
+    }
+  }, [open, form]);
 
   const handleVolumePick = useCallback(
     (volume: ServiceVolumeRow) => {
       form.setFieldValue("volumeName", volume.volumeName);
       form.setFieldValue("mountPath", volume.mountPath);
     },
-    [form.setFieldValue]
+    [form]
   );
 
   const handleSubmit = useCallback(

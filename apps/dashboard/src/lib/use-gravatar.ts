@@ -13,23 +13,31 @@ async function sha256Hex(value: string): Promise<string | null> {
 }
 
 export function useGravatarUrl(email: string | null | undefined) {
-  const [url, setUrl] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<{
+    email: string;
+    url: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!email) {
-      setUrl(null);
       return;
     }
     let cancelled = false;
     sha256Hex(email.trim().toLowerCase())
       .then((hash) => {
-        if (!(cancelled || hash === null)) {
-          setUrl(`https://www.gravatar.com/avatar/${hash}?d=404`);
+        if (!cancelled) {
+          setResolved({
+            email,
+            url:
+              hash === null
+                ? null
+                : `https://www.gravatar.com/avatar/${hash}?d=404`,
+          });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setUrl(null);
+          setResolved({ email, url: null });
         }
       });
     return () => {
@@ -37,5 +45,5 @@ export function useGravatarUrl(email: string | null | undefined) {
     };
   }, [email]);
 
-  return url;
+  return email && resolved?.email === email ? resolved.url : null;
 }

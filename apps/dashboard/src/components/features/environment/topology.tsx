@@ -104,17 +104,17 @@ function useMeasuredHeights(): ReadonlyMap<string, number> {
   return useStore(collectHeights, sameHeights);
 }
 
-const FitViewButton = ({ moved }: { moved: RefObject<boolean> }) => {
+const FitViewButton = ({ movedRef }: { movedRef: RefObject<boolean> }) => {
   const { fitView } = useReactFlow();
   const reducedMotion = usePrefersReducedMotion();
 
   const handleClick = useCallback(() => {
-    moved.current = false;
+    movedRef.current = false;
     fitView({
       ...FIT_VIEW,
       duration: reducedMotion ? 0 : FIT_VIEW_DURATION_MS,
     });
-  }, [fitView, moved, reducedMotion]);
+  }, [fitView, movedRef, reducedMotion]);
 
   return (
     <Panel position="top-right">
@@ -194,7 +194,7 @@ const TopologyCanvas = ({
       nodeTypes={topologyNodeTypes}
       onMoveStart={handleMoveStart}
     >
-      <FitViewButton moved={moved} />
+      <FitViewButton movedRef={moved} />
     </FlowCanvas>
   );
 };
@@ -270,11 +270,14 @@ export const EnvironmentTopology = ({
     setAttachTo(null);
   }, [queryClient, scope.environmentId]);
 
-  const handleRemoveOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setRemoving(null);
-    }
-  }, []);
+  const handleRemoveOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        setRemoving(null);
+      }
+    },
+    [setRemoving]
+  );
 
   const handleRemoveConfirm = useCallback(
     (typed: string) => remove.mutate(typed),
@@ -332,7 +335,7 @@ export const EnvironmentTopology = ({
       }
       setPanel(action);
     },
-    [lifecycle, openTerminal, rowById]
+    [lifecycle, openTerminal, rowById, setRemoving]
   );
 
   const actions = useMemo<TopologyActions>(

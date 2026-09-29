@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { copyFor } from "@/components/features/backups/copy";
 import type { BackupRestoreTarget } from "@/components/features/backups/restore-types";
@@ -144,14 +144,13 @@ export const RestoreFromS3Dialog = ({
   );
   const [volumeName, setVolumeName] = useState(defaultVolumeName ?? "");
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    if (defaultVolumeName) {
+  const [seen, setSeen] = useState({ defaultVolumeName, open });
+  if (seen.defaultVolumeName !== defaultVolumeName || seen.open !== open) {
+    setSeen({ defaultVolumeName, open });
+    if (open && defaultVolumeName) {
       setVolumeName(defaultVolumeName);
     }
-  }, [open, defaultVolumeName]);
+  }
 
   const objects = useQuery({
     ...queries.backupObjects(destinationId),

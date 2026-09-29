@@ -266,12 +266,19 @@ export const AddSshKeyDialog = ({
     validators: { onDynamic: sshKeyFormSchema },
   });
 
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setCreated(null);
+    }
+  }
+
   useEffect(() => {
     if (open) {
       form.reset();
-      setCreated(null);
     }
-  }, [open, form.reset]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

@@ -82,7 +82,7 @@ export const RenameResourceDialog = ({
     if (open) {
       form.reset();
     }
-  }, [open, form.reset]);
+  }, [open, form]);
 
   const handleSubmit = useCallback(
     (event: SubmitEvent) => {

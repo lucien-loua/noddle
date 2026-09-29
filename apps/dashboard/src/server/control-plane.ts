@@ -1,7 +1,7 @@
 import { controlPlaneSettings, servers } from "@noddle/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
-import z from "zod";
+import { z } from "zod";
 
 import { db } from "@/lib/db.server";
 import { requirePermission } from "@/lib/permission.server";
