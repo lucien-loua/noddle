@@ -63,13 +63,13 @@ const numberFieldInputVariants = cva(
   }
 );
 
-function NumberField({
+const NumberField = ({
   id,
   className,
   size = "default",
   ...props
 }: NumberFieldPrimitive.Root.Props &
-  VariantProps<typeof numberFieldGroupVariants>) {
+  VariantProps<typeof numberFieldGroupVariants>) => {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const sizeValue = size ?? "default";
@@ -87,14 +87,14 @@ function NumberField({
       />
     </NumberFieldContext.Provider>
   );
-}
+};
 
-function NumberFieldGroup({
+const NumberFieldGroup = ({
   className,
   size: sizeProp,
   ...props
 }: NumberFieldPrimitive.Group.Props &
-  Partial<VariantProps<typeof numberFieldGroupVariants>>) {
+  Partial<VariantProps<typeof numberFieldGroupVariants>>) => {
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
@@ -110,9 +110,9 @@ function NumberFieldGroup({
       {...props}
     />
   );
-}
+};
 
-function NumberFieldDecrement({
+const NumberFieldDecrement = ({
   className,
   size: sizeProp,
   children,
@@ -120,7 +120,7 @@ function NumberFieldDecrement({
 }: NumberFieldPrimitive.Decrement.Props &
   Partial<VariantProps<typeof numberFieldButtonVariants>> & {
     children?: React.ReactNode;
-  }) {
+  }) => {
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
@@ -142,9 +142,9 @@ function NumberFieldDecrement({
       {children ?? <MinusIcon weight="regular" />}
     </NumberFieldPrimitive.Decrement>
   );
-}
+};
 
-function NumberFieldIncrement({
+const NumberFieldIncrement = ({
   className,
   size: sizeProp,
   children,
@@ -152,7 +152,7 @@ function NumberFieldIncrement({
 }: NumberFieldPrimitive.Increment.Props &
   Partial<VariantProps<typeof numberFieldButtonVariants>> & {
     children?: ReactNode;
-  }) {
+  }) => {
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
@@ -174,14 +174,14 @@ function NumberFieldIncrement({
       {children ?? <PlusIcon weight="regular" />}
     </NumberFieldPrimitive.Increment>
   );
-}
+};
 
-function NumberFieldInput({
+const NumberFieldInput = ({
   className,
   size: sizeProp,
   ...props
 }: NumberFieldPrimitive.Input.Props &
-  Partial<VariantProps<typeof numberFieldInputVariants>>) {
+  Partial<VariantProps<typeof numberFieldInputVariants>>) => {
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
@@ -197,15 +197,15 @@ function NumberFieldInput({
       {...props}
     />
   );
-}
+};
 
-function NumberFieldScrubArea({
+const NumberFieldScrubArea = ({
   className,
   label,
   ...props
 }: NumberFieldPrimitive.ScrubArea.Props & {
   label: string;
-}) {
+}) => {
   const context = useContext(NumberFieldContext);
   if (!context) {
     throw new Error(
@@ -227,24 +227,22 @@ function NumberFieldScrubArea({
       </NumberFieldPrimitive.ScrubAreaCursor>
     </NumberFieldPrimitive.ScrubArea>
   );
-}
+};
 
-function CursorGrowIcon(props: React.ComponentProps<"svg">) {
-  return (
-    <svg
-      fill="black"
-      height="14"
-      stroke="white"
-      viewBox="0 0 24 14"
-      width="26"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
-      aria-hidden="true"
-    >
-      <path d="M19.5 5.5L6.49737 5.51844V2L1 6.9999L6.5 12L6.49737 8.5L19.5 8.5V12L25 6.9999L19.5 2V5.5Z" />
-    </svg>
-  );
-}
+const CursorGrowIcon = (props: React.ComponentProps<"svg">) => (
+  <svg
+    fill="black"
+    height="14"
+    stroke="white"
+    viewBox="0 0 24 14"
+    width="26"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+    aria-hidden="true"
+  >
+    <path d="M19.5 5.5L6.49737 5.51844V2L1 6.9999L6.5 12L6.49737 8.5L19.5 8.5V12L25 6.9999L19.5 2V5.5Z" />
+  </svg>
+);
 
 export {
   NumberField,

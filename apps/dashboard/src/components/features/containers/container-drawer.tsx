@@ -42,16 +42,14 @@ const KIND_LABEL: Record<ContainerRow["kind"], string> = {
   unmanaged: "Unmanaged",
 };
 
-function Fact({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
-      <dd className="truncate text-sm">{children}</dd>
-    </div>
-  );
-}
+const Fact = ({ children, label }: { children: ReactNode; label: string }) => (
+  <div className="min-w-0">
+    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dd className="truncate text-sm">{children}</dd>
+  </div>
+);
 
-function Section({
+const Section = ({
   children,
   count,
   title,
@@ -59,23 +57,21 @@ function Section({
   children: ReactNode;
   count?: number;
   title: string;
-}) {
-  return (
-    <section className="space-y-2">
-      <h3 className="flex items-center gap-2 font-medium text-sm">
-        {title}
-        {count === undefined ? null : <Badge variant="outline">{count}</Badge>}
-      </h3>
-      {children}
-    </section>
-  );
-}
+}) => (
+  <section className="space-y-2">
+    <h3 className="flex items-center gap-2 font-medium text-sm">
+      {title}
+      {count === undefined ? null : <Badge variant="outline">{count}</Badge>}
+    </h3>
+    {children}
+  </section>
+);
 
-function Nothing({ children }: { children: ReactNode }) {
-  return <p className="text-muted-foreground text-sm">{children}</p>;
-}
+const Nothing = ({ children }: { children: ReactNode }) => (
+  <p className="text-muted-foreground text-sm">{children}</p>
+);
 
-function Ports({ ports }: { ports: ContainerDetail["ports"] }) {
+const Ports = ({ ports }: { ports: ContainerDetail["ports"] }) => {
   if (ports.length === 0) {
     return <Nothing>No port is exposed.</Nothing>;
   }
@@ -101,9 +97,9 @@ function Ports({ ports }: { ports: ContainerDetail["ports"] }) {
       </TableBody>
     </Table>
   );
-}
+};
 
-function Mounts({ mounts }: { mounts: ContainerDetail["mounts"] }) {
+const Mounts = ({ mounts }: { mounts: ContainerDetail["mounts"] }) => {
   if (mounts.length === 0) {
     return <Nothing>Nothing is mounted: this container keeps no data.</Nothing>;
   }
@@ -137,9 +133,9 @@ function Mounts({ mounts }: { mounts: ContainerDetail["mounts"] }) {
       </TableBody>
     </Table>
   );
-}
+};
 
-function Networks({ networks }: { networks: ContainerDetail["networks"] }) {
+const Networks = ({ networks }: { networks: ContainerDetail["networks"] }) => {
   if (networks.length === 0) {
     return <Nothing>Attached to no network.</Nothing>;
   }
@@ -173,9 +169,9 @@ function Networks({ networks }: { networks: ContainerDetail["networks"] }) {
       </TableBody>
     </Table>
   );
-}
+};
 
-function Environment({ names }: { names: string[] }) {
+const Environment = ({ names }: { names: string[] }) => {
   if (names.length === 0) {
     return <Nothing>No environment variable is set.</Nothing>;
   }
@@ -194,59 +190,57 @@ function Environment({ names }: { names: string[] }) {
       </p>
     </div>
   );
-}
+};
 
-function Details({
+const Details = ({
   detail,
   row,
 }: {
   detail: ContainerDetail;
   row: ContainerRow;
-}) {
-  return (
-    <div className="space-y-5 pb-4">
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-        <Fact label="Status">{row.status}</Fact>
-        <Fact label="Kind">{KIND_LABEL[detail.kind]}</Fact>
-        <Fact label="Server">{row.serverName}</Fact>
-        <Fact label="Image">
-          <span className="font-mono text-xs">{detail.image}</span>
-        </Fact>
-        <Fact label="Created">
-          {detail.createdAt ? relativeTimeLong(detail.createdAt) : "—"}
-        </Fact>
-        <Fact label="Restart policy">{detail.restartPolicy}</Fact>
-        {detail.health ? <Fact label="Health">{detail.health}</Fact> : null}
-        <Fact label="Command">
-          <span className="font-mono text-xs">{detail.command || "—"}</span>
-        </Fact>
-        <Fact label="Container ID">
-          <span className="flex min-w-0 items-center gap-1">
-            <span className="truncate font-mono text-xs">
-              {detail.id.slice(0, 12)}
-            </span>
-            <CopyButton label="container ID" value={detail.id} />
+}) => (
+  <div className="space-y-5 pb-4">
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+      <Fact label="Status">{row.status}</Fact>
+      <Fact label="Kind">{KIND_LABEL[detail.kind]}</Fact>
+      <Fact label="Server">{row.serverName}</Fact>
+      <Fact label="Image">
+        <span className="font-mono text-xs">{detail.image}</span>
+      </Fact>
+      <Fact label="Created">
+        {detail.createdAt ? relativeTimeLong(detail.createdAt) : "—"}
+      </Fact>
+      <Fact label="Restart policy">{detail.restartPolicy}</Fact>
+      {detail.health ? <Fact label="Health">{detail.health}</Fact> : null}
+      <Fact label="Command">
+        <span className="font-mono text-xs">{detail.command || "—"}</span>
+      </Fact>
+      <Fact label="Container ID">
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="truncate font-mono text-xs">
+            {detail.id.slice(0, 12)}
           </span>
-        </Fact>
-      </dl>
+          <CopyButton label="container ID" value={detail.id} />
+        </span>
+      </Fact>
+    </dl>
 
-      <Section count={detail.ports.length} title="Ports">
-        <Ports ports={detail.ports} />
-      </Section>
-      <Section count={detail.mounts.length} title="Mounts">
-        <Mounts mounts={detail.mounts} />
-      </Section>
-      <Section count={detail.networks.length} title="Networks">
-        <Networks networks={detail.networks} />
-      </Section>
-      <Section count={detail.envNames.length} title="Environment">
-        <Environment names={detail.envNames} />
-      </Section>
-    </div>
-  );
-}
+    <Section count={detail.ports.length} title="Ports">
+      <Ports ports={detail.ports} />
+    </Section>
+    <Section count={detail.mounts.length} title="Mounts">
+      <Mounts mounts={detail.mounts} />
+    </Section>
+    <Section count={detail.networks.length} title="Networks">
+      <Networks networks={detail.networks} />
+    </Section>
+    <Section count={detail.envNames.length} title="Environment">
+      <Environment names={detail.envNames} />
+    </Section>
+  </div>
+);
 
-function Body({ row }: { row: ContainerRow }) {
+const Body = ({ row }: { row: ContainerRow }) => {
   const detail = useQuery(queries.containerDetail(row.serverId, row.id));
   const [tab, setTab] = useState("details");
   const handleTab = useCallback((next: string | null) => {
@@ -302,9 +296,9 @@ function Body({ row }: { row: ContainerRow }) {
       </Tabs>
     </>
   );
-}
+};
 
-function DetailsPanel({
+const DetailsPanel = ({
   detail,
   error,
   row,
@@ -312,7 +306,7 @@ function DetailsPanel({
   detail: ContainerDetail | undefined;
   error: Error | null;
   row: ContainerRow;
-}) {
+}) => {
   if (error) {
     return (
       <Alert variant="destructive">
@@ -330,24 +324,22 @@ function DetailsPanel({
     );
   }
   return <Details detail={detail} row={row} />;
-}
+};
 
-export function ContainerDrawer({
+export const ContainerDrawer = ({
   onOpenChange,
   row,
 }: {
   onOpenChange: (open: boolean) => void;
   row: ContainerRow | null;
-}) {
-  return (
-    <Drawer
-      onOpenChange={onOpenChange}
-      open={row !== null}
-      swipeDirection="right"
-    >
-      <DrawerContent style={DRAWER_WIDTH}>
-        {row ? <Body row={row} /> : null}
-      </DrawerContent>
-    </Drawer>
-  );
-}
+}) => (
+  <Drawer
+    onOpenChange={onOpenChange}
+    open={row !== null}
+    swipeDirection="right"
+  >
+    <DrawerContent style={DRAWER_WIDTH}>
+      {row ? <Body row={row} /> : null}
+    </DrawerContent>
+  </Drawer>
+);

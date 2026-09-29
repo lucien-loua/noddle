@@ -31,7 +31,7 @@ function canMutate(
   return role.canOperate || role.canDelete;
 }
 
-export function ContainerActions({
+export const ContainerActions = ({
   onError,
   onTerminal,
   role,
@@ -41,7 +41,7 @@ export function ContainerActions({
   onTerminal: ((row: ContainerRow) => void) | null;
   role: RoleName | null;
   row: ContainerRow;
-}) {
+}) => {
   const router = useRouter();
   const canOperate = useCan(role, "container", "operate");
   const canDelete = useCan(role, "container", "delete");
@@ -131,4 +131,4 @@ export function ContainerActions({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};

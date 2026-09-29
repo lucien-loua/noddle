@@ -56,118 +56,110 @@ const frameVariants = cva(
   }
 );
 
-function Frame({
+const Frame = ({
   className,
   variant,
   spacing,
   stacked,
   dense,
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof frameVariants>) {
-  return (
-    <div
-      className={cn(
-        frameVariants({ dense, spacing, stacked, variant }),
-        className
-      )}
-      data-slot="frame"
-      data-spacing={spacing}
-      {...props}
-    />
-  );
-}
+}: React.ComponentProps<"div"> & VariantProps<typeof frameVariants>) => (
+  <div
+    className={cn(
+      frameVariants({ dense, spacing, stacked, variant }),
+      className
+    )}
+    data-slot="frame"
+    data-spacing={spacing}
+    {...props}
+  />
+);
 
-function FrameForm({
+const FrameForm = ({
   className,
   variant,
   spacing,
   stacked,
   dense,
   ...props
-}: React.ComponentProps<"form"> & VariantProps<typeof frameVariants>) {
-  return (
-    <form
-      className={cn(
-        frameVariants({ dense, spacing, stacked, variant }),
-        className
-      )}
-      data-slot="frame"
-      data-spacing={spacing}
-      noValidate
-      {...props}
-    />
-  );
-}
+}: React.ComponentProps<"form"> & VariantProps<typeof frameVariants>) => (
+  <form
+    className={cn(
+      frameVariants({ dense, spacing, stacked, variant }),
+      className
+    )}
+    data-slot="frame"
+    data-spacing={spacing}
+    noValidate
+    {...props}
+  />
+);
 
-function FramePanel({
+const FramePanel = ({
   className,
   fit,
   ...props
-}: React.ComponentProps<"div"> & { fit?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-(--frame-panel-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding shadow-xs",
-        !fit && "grow",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-panel-radius)-1px)] before:shadow-black/5",
-        "dark:bg-clip-border dark:before:shadow-white/5",
-        "px-(--frame-panel-px) py-(--frame-panel-py)",
-        className
-      )}
-      data-slot="frame-panel"
-      {...props}
-    />
-  );
-}
+}: React.ComponentProps<"div"> & { fit?: boolean }) => (
+  <div
+    className={cn(
+      "relative overflow-hidden rounded-(--frame-panel-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding shadow-xs",
+      !fit && "grow",
+      "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-panel-radius)-1px)] before:shadow-black/5",
+      "dark:bg-clip-border dark:before:shadow-white/5",
+      "px-(--frame-panel-px) py-(--frame-panel-py)",
+      className
+    )}
+    data-slot="frame-panel"
+    {...props}
+  />
+);
 
-function FrameHeader({ className, ...props }: React.ComponentProps<"header">) {
-  return (
-    <header
-      className={cn(
-        "flex flex-col gap-(--frame-panel-header-gap) px-(--frame-panel-header-px) py-(--frame-panel-header-py)",
-        className
-      )}
-      data-slot="frame-panel-header"
-      {...props}
-    />
-  );
-}
-
-function FrameTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("font-semibold text-sm", className)}
-      data-slot="frame-panel-title"
-      {...props}
-    />
-  );
-}
-
-function FrameDescription({
+const FrameHeader = ({
   className,
   ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("text-muted-foreground text-sm", className)}
-      data-slot="frame-panel-description"
-      {...props}
-    />
-  );
-}
+}: React.ComponentProps<"header">) => (
+  <header
+    className={cn(
+      "flex flex-col gap-(--frame-panel-header-gap) px-(--frame-panel-header-px) py-(--frame-panel-header-py)",
+      className
+    )}
+    data-slot="frame-panel-header"
+    {...props}
+  />
+);
 
-function FrameFooter({ className, ...props }: React.ComponentProps<"footer">) {
-  return (
-    <footer
-      className={cn(
-        "flex flex-col gap-(--frame-panel-footer-gap) px-(--frame-panel-footer-px) py-(--frame-panel-footer-py)",
-        className
-      )}
-      data-slot="frame-panel-footer"
-      {...props}
-    />
-  );
-}
+const FrameTitle = ({ className, ...props }: React.ComponentProps<"div">) => (
+  <div
+    className={cn("font-semibold text-sm", className)}
+    data-slot="frame-panel-title"
+    {...props}
+  />
+);
+
+const FrameDescription = ({
+  className,
+  ...props
+}: React.ComponentProps<"div">) => (
+  <div
+    className={cn("text-muted-foreground text-sm", className)}
+    data-slot="frame-panel-description"
+    {...props}
+  />
+);
+
+const FrameFooter = ({
+  className,
+  ...props
+}: React.ComponentProps<"footer">) => (
+  <footer
+    className={cn(
+      "flex flex-col gap-(--frame-panel-footer-gap) px-(--frame-panel-footer-px) py-(--frame-panel-footer-py)",
+      className
+    )}
+    data-slot="frame-panel-footer"
+    {...props}
+  />
+);
 
 export {
   Frame,

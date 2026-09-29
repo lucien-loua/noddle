@@ -44,11 +44,11 @@ const CONFIRM_COPY: Record<
   },
 };
 
-function DatabaseActionsToolbar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
-}
+const DatabaseActionsToolbar = ({ children }: { children: ReactNode }) => (
+  <div className="flex flex-wrap items-center gap-2">{children}</div>
+);
 
-export function DatabaseHeaderActions({
+export const DatabaseHeaderActions = ({
   actions,
   database,
   known,
@@ -64,7 +64,7 @@ export function DatabaseHeaderActions({
   onDone: () => Promise<void> | void;
   onError: (message: string) => void;
   onTerminal: (() => void) | null;
-}) {
+}) => {
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
 
   const target = useMemo(() => databaseRow(database), [database]);
@@ -188,4 +188,4 @@ export function DatabaseHeaderActions({
       {del.canDelete ? del.dialog : null}
     </>
   );
-}
+};

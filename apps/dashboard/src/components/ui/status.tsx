@@ -12,27 +12,25 @@ export type StatusProps = Omit<ComponentProps<typeof Badge>, "variant"> & {
   tone: Tone;
 };
 
-export function Status({ className, tone, ...props }: StatusProps) {
-  return (
-    <StatusToneContext value={tone}>
-      <Badge
-        className={cn("gap-1.5", className)}
-        variant={badgeVariant(tone)}
-        {...props}
-      />
-    </StatusToneContext>
-  );
-}
+export const Status = ({ className, tone, ...props }: StatusProps) => (
+  <StatusToneContext value={tone}>
+    <Badge
+      className={cn("gap-1.5", className)}
+      variant={badgeVariant(tone)}
+      {...props}
+    />
+  </StatusToneContext>
+);
 
 export type StatusIndicatorProps = HTMLAttributes<HTMLSpanElement> & {
   tone?: Tone;
 };
 
-export function StatusIndicator({
+export const StatusIndicator = ({
   className,
   tone,
   ...props
-}: StatusIndicatorProps) {
+}: StatusIndicatorProps) => {
   const inherited = use(StatusToneContext);
 
   return (
@@ -46,10 +44,10 @@ export function StatusIndicator({
       {...props}
     />
   );
-}
+};
 
 export type StatusLabelProps = HTMLAttributes<HTMLSpanElement>;
 
-export function StatusLabel({ className, ...props }: StatusLabelProps) {
-  return <span className={cn("truncate", className)} {...props} />;
-}
+export const StatusLabel = ({ className, ...props }: StatusLabelProps) => (
+  <span className={cn("truncate", className)} {...props} />
+);

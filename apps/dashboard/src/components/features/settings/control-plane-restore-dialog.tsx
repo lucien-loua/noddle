@@ -24,13 +24,13 @@ import {
 } from "@/server/control-plane";
 import type { ControlPlaneBackupObject } from "@/server/control-plane";
 
-export function ControlPlaneRestoreDialog({
+export const ControlPlaneRestoreDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const [chosen, setChosen] = useState<ControlPlaneBackupObject | null>(null);
 
   const archives = useQuery<ControlPlaneBackupObject[]>({
@@ -123,4 +123,4 @@ export function ControlPlaneRestoreDialog({
       />
     </FocusModal>
   );
-}
+};

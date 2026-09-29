@@ -19,32 +19,18 @@ import { TAGLINE } from "@/lib/brand";
 import { SOURCE_URL } from "@/lib/source";
 import { getAuthState } from "@/server/auth";
 
-export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (state.signedIn) {
-      throw redirect({ to: "/" });
-    }
-    return { needsSetup: state.needsSetup };
-  },
-  component: LoginPage,
-  loader: ({ context }) => ({ needsSetup: context.needsSetup }),
-});
-
 function selectSubmitting(state: { isSubmitting: boolean }) {
   return state.isSubmitting;
 }
 
-function Brand({ className }: { className?: string }) {
-  return (
-    <div className={className}>
-      <NoddleMark className="size-7 shrink-0" />
-      <span className="font-semibold text-xl">Noddle</span>
-    </div>
-  );
-}
+const Brand = ({ className }: { className?: string }) => (
+  <div className={className}>
+    <NoddleMark className="size-7 shrink-0" />
+    <span className="font-semibold text-xl">Noddle</span>
+  </div>
+);
 
-function LoginPage() {
+const LoginPage = () => {
   const { needsSetup } = Route.useLoaderData();
   const router = useRouter();
 
@@ -202,4 +188,16 @@ function LoginPage() {
       </div>
     </main>
   );
-}
+};
+
+export const Route = createFileRoute("/login")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (state.signedIn) {
+      throw redirect({ to: "/" });
+    }
+    return { needsSetup: state.needsSetup };
+  },
+  component: LoginPage,
+  loader: ({ context }) => ({ needsSetup: context.needsSetup }),
+});

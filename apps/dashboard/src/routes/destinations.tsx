@@ -14,23 +14,7 @@ import { getAuthState } from "@/server/auth";
 import { getDestinations } from "@/server/backups/destinations";
 import type { DestinationRow } from "@/server/backups/destinations";
 
-export const Route = createFileRoute("/destinations")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: DestinationsPage,
-  loader: async ({ context }) => ({
-    destinations: await getDestinations(),
-    email: context.email,
-    role: context.role,
-  }),
-});
-
-function DestinationsPage() {
+const DestinationsPage = () => {
   const { destinations: initial, email, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -72,4 +56,20 @@ function DestinationsPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/destinations")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: DestinationsPage,
+  loader: async ({ context }) => ({
+    destinations: await getDestinations(),
+    email: context.email,
+    role: context.role,
+  }),
+});

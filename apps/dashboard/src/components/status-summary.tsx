@@ -10,7 +10,11 @@ const STATUS_ORDER = [
   "created",
 ] as const;
 
-export function StatusSummary({ counts }: { counts: Record<string, number> }) {
+export const StatusSummary = ({
+  counts,
+}: {
+  counts: Record<string, number>;
+}) => {
   const shown = STATUS_ORDER.filter((status) => (counts[status] ?? 0) > 0);
   if (shown.length === 0) {
     return null;
@@ -30,4 +34,4 @@ export function StatusSummary({ counts }: { counts: Record<string, number> }) {
       })}
     </div>
   );
-}
+};

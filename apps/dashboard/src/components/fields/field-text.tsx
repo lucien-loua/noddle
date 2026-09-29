@@ -24,14 +24,14 @@ type TextFieldProps = Omit<
   required?: boolean;
 };
 
-export function FieldText({
+export const FieldText = ({
   addonEnd,
   addonStart,
   description,
   label,
   required,
   ...inputProps
-}: TextFieldProps) {
+}: TextFieldProps) => {
   const field = useFieldContext<string>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -80,4 +80,4 @@ export function FieldText({
       </InputGroup>
     </FieldShell>
   );
-}
+};

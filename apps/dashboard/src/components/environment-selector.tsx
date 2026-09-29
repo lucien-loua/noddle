@@ -72,7 +72,7 @@ type DialogState =
   | { kind: "create" }
   | null;
 
-export function EnvironmentSelector({
+export const EnvironmentSelector = ({
   counts,
   current,
   environments,
@@ -86,7 +86,7 @@ export function EnvironmentSelector({
   onNavigate: (environmentId: string) => void;
   projectId: string;
   role: RoleName | null;
-}) {
+}) => {
   const [dialog, setDialog] = useState<DialogState>(null);
   const canWrite = useCan(role, "service", "create");
   const canDelete = useCan(role, "service", "delete");
@@ -193,9 +193,9 @@ export function EnvironmentSelector({
       ) : null}
     </>
   );
-}
+};
 
-function EnvironmentRow({
+const EnvironmentRow = ({
   canDelete,
   canWrite,
   count,
@@ -215,7 +215,7 @@ function EnvironmentRow({
   onDuplicate: (env: EnvironmentView) => void;
   onNavigate: (environmentId: string) => void;
   onRename: (env: EnvironmentView) => void;
-}) {
+}) => {
   const handleSelect = useCallback(
     () => onNavigate(env.id),
     [env.id, onNavigate]
@@ -294,9 +294,9 @@ function EnvironmentRow({
       ) : null}
     </DropdownMenuItem>
   );
-}
+};
 
-function CreateEnvironmentDialog({
+const CreateEnvironmentDialog = ({
   onCreated,
   onOpenChange,
   open,
@@ -306,7 +306,7 @@ function CreateEnvironmentDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   projectId: string;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -392,9 +392,9 @@ function CreateEnvironmentDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function RenameEnvironmentDialog({
+const RenameEnvironmentDialog = ({
   env,
   onOpenChange,
   open,
@@ -402,7 +402,7 @@ function RenameEnvironmentDialog({
   env: EnvironmentView;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -475,9 +475,9 @@ function RenameEnvironmentDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function DeleteEnvironmentDialog({
+const DeleteEnvironmentDialog = ({
   env,
   onDeleted,
   onOpenChange,
@@ -487,7 +487,7 @@ function DeleteEnvironmentDialog({
   onDeleted: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -533,9 +533,9 @@ function DeleteEnvironmentDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function DuplicateEnvironmentDialog({
+const DuplicateEnvironmentDialog = ({
   env,
   onDuplicated,
   onOpenChange,
@@ -545,7 +545,7 @@ function DuplicateEnvironmentDialog({
   onDuplicated: (environmentId: string) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -629,4 +629,4 @@ function DuplicateEnvironmentDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

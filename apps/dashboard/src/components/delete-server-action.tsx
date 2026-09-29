@@ -8,7 +8,7 @@ import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { deleteServer } from "@/server/servers";
 
-export function DeleteServerAction({
+export const DeleteServerAction = ({
   onError,
   onRemoved,
   role,
@@ -20,7 +20,7 @@ export function DeleteServerAction({
   role: RoleName | null;
   serverId: string;
   serverName: string;
-}) {
+}) => {
   const canDelete = useCan(role, "server", "delete");
   const [open, setOpen] = useState(false);
 
@@ -68,4 +68,4 @@ export function DeleteServerAction({
       />
     </>
   );
-}
+};

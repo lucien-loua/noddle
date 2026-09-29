@@ -60,7 +60,7 @@ function selectHttps(state: { values: ServiceDomainsInput }) {
   return state.values.https;
 }
 
-export function ServiceDomainDialog({
+export const ServiceDomainDialog = ({
   domain,
   onOpenChange,
   open,
@@ -70,7 +70,7 @@ export function ServiceDomainDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const isEdit = domain !== null;
@@ -305,4 +305,4 @@ export function ServiceDomainDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

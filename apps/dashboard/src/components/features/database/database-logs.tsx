@@ -1,6 +1,6 @@
 import { ContainerLogs } from "@/components/features/logs/container-logs";
 
-export function DatabaseLogs({
+export const DatabaseLogs = ({
   databaseId,
   databaseName,
   generation,
@@ -8,12 +8,10 @@ export function DatabaseLogs({
   databaseId: string;
   databaseName: string;
   generation: string;
-}) {
-  return (
-    <ContainerLogs
-      generation={generation}
-      name={databaseName}
-      streamUrl={`/api/database-logs/${databaseId}`}
-    />
-  );
-}
+}) => (
+  <ContainerLogs
+    generation={generation}
+    name={databaseName}
+    streamUrl={`/api/database-logs/${databaseId}`}
+  />
+);

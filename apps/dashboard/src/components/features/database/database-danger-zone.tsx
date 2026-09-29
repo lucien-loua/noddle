@@ -16,7 +16,7 @@ import {
 import { errorMessage } from "@/lib/format";
 import { rebuildDatabase } from "@/server/databases";
 
-export function DatabaseDangerZone({
+export const DatabaseDangerZone = ({
   databaseId,
   databaseName,
   onRebuilt,
@@ -24,7 +24,7 @@ export function DatabaseDangerZone({
   databaseId: string;
   databaseName: string;
   onRebuilt?: (deploymentId: string) => void;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -98,4 +98,4 @@ export function DatabaseDangerZone({
       />
     </Frame>
   );
-}
+};

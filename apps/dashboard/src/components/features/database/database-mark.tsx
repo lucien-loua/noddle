@@ -31,7 +31,7 @@ const SIZE_CLASS = {
   xs: "size-5",
 } as const;
 
-export function DatabaseMark({
+export const DatabaseMark = ({
   className,
   engine,
   size = "xs",
@@ -39,7 +39,7 @@ export function DatabaseMark({
   className?: string;
   engine: DatabaseEngine;
   size?: "default" | "lg" | "sm" | "xs";
-}) {
+}) => {
   const Icon = ENGINE_ICON[engine];
   return (
     <span
@@ -54,4 +54,4 @@ export function DatabaseMark({
       <Icon className="size-full" />
     </span>
   );
-}
+};

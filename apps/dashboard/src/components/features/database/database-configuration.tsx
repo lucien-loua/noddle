@@ -30,13 +30,13 @@ interface ConfigurationFormValues {
   image: string;
 }
 
-export function DatabaseConfiguration({
+export const DatabaseConfiguration = ({
   canEdit,
   database,
 }: {
   canEdit: boolean;
   database: DatabaseRow;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -124,4 +124,4 @@ export function DatabaseConfiguration({
       ) : null}
     </FrameForm>
   );
-}
+};

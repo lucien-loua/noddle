@@ -69,7 +69,7 @@ function selectMountType(state: { values: { type: string } }) {
   return state.values.type;
 }
 
-export function DatabaseVolumes({
+export const DatabaseVolumes = ({
   canEdit,
   databaseId,
   engine,
@@ -83,7 +83,7 @@ export function DatabaseVolumes({
   extraMounts: DatabaseExtraMount[];
   swarmName: string;
   volumePath: string | null;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const defaultPath = DEFAULT_DATABASE_VOLUME_PATH[engine];
@@ -233,18 +233,16 @@ export function DatabaseVolumes({
       />
     </Frame>
   );
-}
+};
 
-function MountFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="truncate font-mono text-sm">{value}</p>
-    </div>
-  );
-}
+const MountFact = ({ label, value }: { label: string; value: string }) => (
+  <div className="min-w-0">
+    <p className="text-muted-foreground text-xs">{label}</p>
+    <p className="truncate font-mono text-sm">{value}</p>
+  </div>
+);
 
-function PrimaryPathDialog({
+const PrimaryPathDialog = ({
   databaseId,
   defaultPath,
   onOpenChange,
@@ -258,7 +256,7 @@ function PrimaryPathDialog({
   onSaved: () => Promise<void>;
   open: boolean;
   volumePath: string;
-}) {
+}) => {
   const save = useMutation({
     mutationFn: (path: string) =>
       setDatabaseVolumePath({
@@ -333,9 +331,9 @@ function PrimaryPathDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function MountDialog({
+const MountDialog = ({
   databaseId,
   mount,
   onOpenChange,
@@ -349,7 +347,7 @@ function MountDialog({
   onSaved: () => Promise<void>;
   open: boolean;
   title: string;
-}) {
+}) => {
   const save = useMutation({
     mutationFn: (value: z.infer<typeof mountFormSchema>) =>
       mount
@@ -462,4 +460,4 @@ function MountDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

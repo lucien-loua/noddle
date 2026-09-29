@@ -49,7 +49,7 @@ interface Props {
   showTrigger?: boolean;
 }
 
-export function AttachDatabaseDialog({
+export const AttachDatabaseDialog = ({
   databaseId,
   defaultKey,
   onAttached,
@@ -57,7 +57,7 @@ export function AttachDatabaseDialog({
   open: controlledOpen,
   services,
   showTrigger = true,
-}: Props) {
+}: Props) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
@@ -99,14 +99,14 @@ export function AttachDatabaseDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
 interface AttachFormValues {
   envVarKey: string;
   serviceId: string;
 }
 
-function AttachBody({
+const AttachBody = ({
   databaseId,
   defaultKey,
   onAttached,
@@ -118,7 +118,7 @@ function AttachBody({
   onAttached?: () => void;
   open: boolean;
   services: ServiceRow[];
-}) {
+}) => {
   const router = useRouter();
   const [done, setDone] = useState<string | null>(null);
 
@@ -229,4 +229,4 @@ function AttachBody({
       </DialogFooter>
     </DialogForm>
   );
-}
+};

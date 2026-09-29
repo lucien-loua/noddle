@@ -39,23 +39,7 @@ import { getAuthState } from "@/server/auth";
 import { getOverview } from "@/server/dashboard";
 import type { Overview } from "@/server/dashboard";
 
-export const Route = createFileRoute("/")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: OverviewPage,
-  loader: async ({ context }) => ({
-    email: context.email,
-    overview: await getOverview(),
-    role: context.role,
-  }),
-});
-
-function OverviewPage() {
+const OverviewPage = () => {
   const { email, overview, role } = Route.useLoaderData();
   const { activity, attention, statusCounts } = overview;
   const nothingAtAll = Object.keys(statusCounts).length === 0;
@@ -81,15 +65,15 @@ function OverviewPage() {
       </div>
     </AppShell>
   );
-}
+};
 
-function StatCards({
+const StatCards = ({
   counts,
   statusCounts,
 }: {
   counts: Overview["counts"];
   statusCounts: Record<string, number>;
-}) {
+}) => {
   const hasStatus = Object.values(statusCounts).some((n) => n > 0);
 
   return (
@@ -121,9 +105,9 @@ function StatCards({
       </StatCard>
     </div>
   );
-}
+};
 
-function StatCard({
+const StatCard = ({
   children,
   icon: Icon,
   label,
@@ -131,60 +115,54 @@ function StatCard({
   children: ReactNode;
   icon: typeof FolderIcon;
   label: string;
-}) {
-  return (
-    <Frame spacing="sm" variant="ghost">
-      <FrameHeader className="flex-row items-center gap-1.5 text-muted-foreground">
-        <Icon aria-hidden="true" className="size-3.5 shrink-0" weight="fill" />
-        <FrameTitle className="font-medium text-xs uppercase tracking-wide">
-          {label}
-        </FrameTitle>
-      </FrameHeader>
-      <FramePanel>{children}</FramePanel>
-    </Frame>
-  );
-}
+}) => (
+  <Frame spacing="sm" variant="ghost">
+    <FrameHeader className="flex-row items-center gap-1.5 text-muted-foreground">
+      <Icon aria-hidden="true" className="size-3.5 shrink-0" weight="fill" />
+      <FrameTitle className="font-medium text-xs uppercase tracking-wide">
+        {label}
+      </FrameTitle>
+    </FrameHeader>
+    <FramePanel>{children}</FramePanel>
+  </Frame>
+);
 
-function StatNumber({ detail, value }: { detail: string; value: number }) {
-  return (
-    <>
-      <p className="font-semibold text-3xl tabular-nums">{value}</p>
-      <p className="mt-1 truncate text-muted-foreground text-xs">{detail}</p>
-    </>
-  );
-}
+const StatNumber = ({ detail, value }: { detail: string; value: number }) => (
+  <>
+    <p className="font-semibold text-3xl tabular-nums">{value}</p>
+    <p className="mt-1 truncate text-muted-foreground text-xs">{detail}</p>
+  </>
+);
 
-function AttentionPanel({
+const AttentionPanel = ({
   idle,
   rows,
 }: {
   idle: boolean;
   rows: Overview["attention"];
-}) {
-  return (
-    <Frame className="min-w-0" variant="ghost">
-      <FrameHeader>
-        <FrameTitle>Needs attention</FrameTitle>
-      </FrameHeader>
-      {rows.length === 0 ? (
-        <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
-          {idle ? (
-            "Nothing to report."
-          ) : (
-            <>
-              <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
-              Everything is running.
-            </>
-          )}
-        </FramePanel>
-      ) : (
-        rows.map((row) => <AttentionRow key={row.id} row={row} />)
-      )}
-    </Frame>
-  );
-}
+}) => (
+  <Frame className="min-w-0" variant="ghost">
+    <FrameHeader>
+      <FrameTitle>Needs attention</FrameTitle>
+    </FrameHeader>
+    {rows.length === 0 ? (
+      <FramePanel className="flex items-center gap-2 text-muted-foreground text-sm">
+        {idle ? (
+          "Nothing to report."
+        ) : (
+          <>
+            <CheckCircleIcon className="size-4 shrink-0" weight="fill" />
+            Everything is running.
+          </>
+        )}
+      </FramePanel>
+    ) : (
+      rows.map((row) => <AttentionRow key={row.id} row={row} />)
+    )}
+  </Frame>
+);
 
-function AttentionRow({ row }: { row: Overview["attention"][number] }) {
+const AttentionRow = ({ row }: { row: Overview["attention"][number] }) => {
   const status = serviceLabel(row.status);
 
   return (
@@ -206,15 +184,15 @@ function AttentionRow({ row }: { row: Overview["attention"][number] }) {
       </Status>
     </FramePanel>
   );
-}
+};
 
-function AttentionLink({
+const AttentionLink = ({
   children,
   row,
 }: {
   children: ReactNode;
   row: Overview["attention"][number];
-}) {
+}) => {
   const className = "truncate after:absolute after:inset-0 after:z-10";
   const params = {
     environmentId: row.environmentId,
@@ -254,9 +232,9 @@ function AttentionLink({
       {children}
     </Link>
   );
-}
+};
 
-function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
+const ActivityPanel = ({ rows }: { rows: Overview["activity"] }) => {
   const empty = rows.length === 0;
 
   return (
@@ -337,4 +315,20 @@ function ActivityPanel({ rows }: { rows: Overview["activity"] }) {
       </FramePanel>
     </Frame>
   );
-}
+};
+
+export const Route = createFileRoute("/")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: OverviewPage,
+  loader: async ({ context }) => ({
+    email: context.email,
+    overview: await getOverview(),
+    role: context.role,
+  }),
+});

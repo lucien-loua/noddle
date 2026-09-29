@@ -66,13 +66,13 @@ const connectStackFormSchema = connectStackBaseSchema
 
 type ConnectStackFormValues = z.input<typeof connectStackFormSchema>;
 
-export function ConnectStackDialog({
+export const ConnectStackDialog = ({
   environmentName: lockedEnvironment,
   onOpenChange,
   open,
   projectName: lockedProject,
   servers,
-}: Props) {
+}: Props) => {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -280,4 +280,4 @@ export function ConnectStackDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

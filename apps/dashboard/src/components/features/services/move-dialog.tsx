@@ -27,7 +27,7 @@ import { queries } from "@/lib/queries";
 import type { ProjectGroup } from "@/server/dashboard";
 import { moveService } from "@/server/services";
 
-export function MoveServiceDialog({
+export const MoveServiceDialog = ({
   currentEnvironmentId,
   groups,
   onMoved,
@@ -43,7 +43,7 @@ export function MoveServiceDialog({
   open: boolean;
   serviceId: string;
   serviceName: string;
-}) {
+}) => {
   const [projectId, setProjectId] = useState(groups[0]?.projectId ?? "");
   const [environmentId, setEnvironmentId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -182,4 +182,4 @@ export function MoveServiceDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

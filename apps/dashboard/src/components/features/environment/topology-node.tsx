@@ -103,13 +103,13 @@ const INTERACTIVE = "nodrag nopan";
 
 const LINK_CLASS = `${INTERACTIVE} w-full truncate text-start outline-none after:absolute after:inset-0 hover:underline focus-visible:underline`;
 
-function TargetLink({
+const TargetLink = ({
   label,
   target,
 }: {
   label: string;
   target: TopologyTarget;
-}) {
+}) => {
   const { environmentId, id, projectId } = target;
   if (target.resource === "databases") {
     return (
@@ -142,9 +142,9 @@ function TargetLink({
       {label}
     </Link>
   );
-}
+};
 
-function Mark({ data }: { data: TopologyNodeData }) {
+const Mark = ({ data }: { data: TopologyNodeData }) => {
   if (data.kind === "database" && data.engine) {
     return <DatabaseMark engine={data.engine} size="sm" />;
   }
@@ -153,22 +153,20 @@ function Mark({ data }: { data: TopologyNodeData }) {
   }
   const Icon = data.kind === "stack" ? StackIcon : CodeIcon;
   return <Icon className="size-5 shrink-0 text-muted-foreground" />;
-}
+};
 
-function ProxyRow({
+const ProxyRow = ({
   children,
   label,
 }: {
   children: React.ReactNode;
   label: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <span className="truncate text-muted-foreground">{label}</span>
-      <span className="flex shrink-0 items-center gap-1.5">{children}</span>
-    </div>
-  );
-}
+}) => (
+  <div className="flex items-center justify-between gap-2 text-sm">
+    <span className="truncate text-muted-foreground">{label}</span>
+    <span className="flex shrink-0 items-center gap-1.5">{children}</span>
+  </div>
+);
 
 function tlsState(reaches: number, secure: number) {
   if (reaches === 0 || secure === 0) {
@@ -180,7 +178,7 @@ function tlsState(reaches: number, secure: number) {
   return { label: "Active", tone: "ok" as const };
 }
 
-function ProxyRows({ data }: { data: TopologyNodeData }) {
+const ProxyRows = ({ data }: { data: TopologyNodeData }) => {
   const reaches = data.reaches ?? 0;
   const tls = tlsState(reaches, data.secure ?? 0);
 
@@ -199,15 +197,15 @@ function ProxyRows({ data }: { data: TopologyNodeData }) {
       </ProxyRow>
     </>
   );
-}
+};
 
-function AddressText({
+const AddressText = ({
   data,
   engine,
 }: {
   data: TopologyNodeData;
   engine: string | null;
-}) {
+}) => {
   if (engine || !data.address) {
     return (
       <span className="truncate text-muted-foreground">
@@ -233,9 +231,9 @@ function AddressText({
       <ArrowSquareOutIcon className="size-3.5 shrink-0" weight="regular" />
     </a>
   );
-}
+};
 
-function PanelRows({ data }: { data: TopologyNodeData }) {
+const PanelRows = ({ data }: { data: TopologyNodeData }) => {
   if (data.kind === "internet") {
     return <ProxyRows data={data} />;
   }
@@ -261,7 +259,7 @@ function PanelRows({ data }: { data: TopologyNodeData }) {
       </div>
     </>
   );
-}
+};
 
 function menuFor(
   actions: TopologyActions | null,
@@ -281,7 +279,7 @@ function menuFor(
   };
 }
 
-function LifecycleMenu({ data }: { data: TopologyNodeData }) {
+const LifecycleMenu = ({ data }: { data: TopologyNodeData }) => {
   const actions = useContext(ActionsContext);
   const id = data.target?.id ?? "";
   const resource = data.kind as LifecycleKind;
@@ -374,9 +372,9 @@ function LifecycleMenu({ data }: { data: TopologyNodeData }) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
 
-function NodeActions({ data }: { data: TopologyNodeData }) {
+const NodeActions = ({ data }: { data: TopologyNodeData }) => {
   const actions = useContext(ActionsContext);
   const resource = data.kind === "database" ? "database" : "service";
   const { id, label, live } = { ...data, id: data.target?.id ?? "" };
@@ -425,9 +423,9 @@ function NodeActions({ data }: { data: TopologyNodeData }) {
       ) : null}
     </div>
   );
-}
+};
 
-function NodeAction({
+const NodeAction = ({
   icon,
   label,
   onClick,
@@ -435,28 +433,26 @@ function NodeAction({
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            aria-label={label}
-            className={INTERACTIVE}
-            onClick={onClick}
-            size="icon-xs"
-            variant="outline"
-          >
-            {icon}
-          </Button>
-        }
-      />
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
+}) => (
+  <Tooltip>
+    <TooltipTrigger
+      render={
+        <Button
+          aria-label={label}
+          className={INTERACTIVE}
+          onClick={onClick}
+          size="icon-xs"
+          variant="outline"
+        >
+          {icon}
+        </Button>
+      }
+    />
+    <TooltipContent>{label}</TooltipContent>
+  </Tooltip>
+);
 
-function AttachNode({ data }: { data: TopologyNodeData }) {
+const AttachNode = ({ data }: { data: TopologyNodeData }) => {
   const actions = useContext(ActionsContext);
   const { attachTo } = data;
 
@@ -489,9 +485,9 @@ function AttachNode({ data }: { data: TopologyNodeData }) {
       </div>
     </Frame>
   );
-}
+};
 
-function TopologyNodeBody({ data }: TopologyNodeProps) {
+const TopologyNodeBody = ({ data }: TopologyNodeProps) => {
   if (data.kind === "attach") {
     return <AttachNode data={data} />;
   }
@@ -542,9 +538,9 @@ function TopologyNodeBody({ data }: TopologyNodeProps) {
       <NodeFooter data={data} />
     </Frame>
   );
-}
+};
 
-function NodeFooter({ data }: { data: TopologyNodeData }) {
+const NodeFooter = ({ data }: { data: TopologyNodeData }) => {
   if (!data.serverName) {
     return null;
   }
@@ -557,7 +553,7 @@ function NodeFooter({ data }: { data: TopologyNodeData }) {
       </span>
     </FrameFooter>
   );
-}
+};
 
 function sameActions(a: ReadonlySet<Action>, b: ReadonlySet<Action>): boolean {
   if (a.size !== b.size) {

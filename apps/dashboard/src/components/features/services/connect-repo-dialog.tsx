@@ -40,13 +40,13 @@ interface ConnectRepoFormValues {
   serverId: string;
 }
 
-export function ConnectRepoDialog({
+export const ConnectRepoDialog = ({
   environmentName: lockedEnvironment,
   onOpenChange,
   open,
   projectName: lockedProject,
   servers,
-}: Props) {
+}: Props) => {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -191,4 +191,4 @@ export function ConnectRepoDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

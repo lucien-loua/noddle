@@ -17,13 +17,13 @@ export interface FieldRadioOption {
   value: string;
 }
 
-export function FieldRadio({
+export const FieldRadio = ({
   disabled,
   options,
 }: {
   disabled?: boolean;
   options: FieldRadioOption[];
-}) {
+}) => {
   const field = useFieldContext<string>();
   const id = useId();
 
@@ -60,4 +60,4 @@ export function FieldRadio({
       })}
     </RadioGroup>
   );
-}
+};

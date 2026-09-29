@@ -210,13 +210,13 @@ const serverFormSchema = serverInputSchema.extend({
 
 type ServerFormValues = z.input<typeof serverFormSchema>;
 
-export function AddServerDialog({
+export const AddServerDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
 
   const keys = useQuery(queries.sshKeys());
@@ -358,4 +358,4 @@ export function AddServerDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

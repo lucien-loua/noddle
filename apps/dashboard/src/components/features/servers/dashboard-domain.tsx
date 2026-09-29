@@ -36,7 +36,7 @@ interface FormValues {
   httpsEnabled: boolean;
 }
 
-function Feedback({
+const Feedback = ({
   applying,
   lastError,
   saveError,
@@ -44,7 +44,7 @@ function Feedback({
   applying: boolean;
   lastError: string | null;
   saveError: Error | null;
-}) {
+}) => {
   if (applying) {
     return (
       <p className="mt-3 text-muted-foreground text-sm">
@@ -68,7 +68,7 @@ function Feedback({
     );
   }
   return null;
-}
+};
 
 interface Access {
   applying: boolean;
@@ -88,7 +88,7 @@ function resolveAccess(
   return { applying, disabled, loaded, managed };
 }
 
-export function DashboardDomain({ canEdit }: { canEdit: boolean }) {
+export const DashboardDomain = ({ canEdit }: { canEdit: boolean }) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const settings = useQuery(queries.controlPlaneSettings());
@@ -229,4 +229,4 @@ export function DashboardDomain({ canEdit }: { canEdit: boolean }) {
       ) : null}
     </FrameForm>
   );
-}
+};

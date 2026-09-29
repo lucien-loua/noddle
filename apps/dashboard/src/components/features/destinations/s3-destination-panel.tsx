@@ -83,14 +83,14 @@ interface Props {
   role: string | null;
 }
 
-export function S3DestinationPanel({
+export const S3DestinationPanel = ({
   destinations: initial,
   editing,
   onEdit,
   onOpenChange,
   open,
   role,
-}: Props) {
+}: Props) => {
   const known = role && role in roles ? (role as RoleName) : null;
   const canEdit = useCan(known, "backup", "create");
   const {
@@ -172,9 +172,9 @@ export function S3DestinationPanel({
       )}
     </>
   );
-}
+};
 
-function DestinationLine({
+const DestinationLine = ({
   canEdit,
   onEdit,
   onRemoved,
@@ -184,7 +184,7 @@ function DestinationLine({
   onEdit: (row: DestinationRow) => void;
   onRemoved: () => void;
   row: DestinationRow;
-}) {
+}) => {
   const { error, handleRemove, isPending } = useRowRemove({
     errorFallback: "could not be removed",
     mutationFn: () => deleteDestination({ data: { id: row.id } }),
@@ -229,9 +229,9 @@ function DestinationLine({
       ) : null}
     </ResourceCard>
   );
-}
+};
 
-function DestinationDialog({
+const DestinationDialog = ({
   canEdit,
   initial,
   onOpenChange,
@@ -243,7 +243,7 @@ function DestinationDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void | Promise<void>;
   open: boolean;
-}) {
+}) => {
   const {
     defaultValues,
     endpointPlaceholder,
@@ -498,4 +498,4 @@ function DestinationDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

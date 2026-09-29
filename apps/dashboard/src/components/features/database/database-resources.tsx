@@ -19,7 +19,7 @@ const WINDOW_LABEL: Record<1 | 6 | 24, string> = {
   6: "6h",
 };
 
-export function DatabaseResources({ databaseId }: { databaseId: string }) {
+export const DatabaseResources = ({ databaseId }: { databaseId: string }) => {
   const [windowHours, setWindowHours] = useState<1 | 6 | 24>(6);
   const windowLabel = useMemo(() => WINDOW_LABEL[windowHours], [windowHours]);
 
@@ -65,4 +65,4 @@ export function DatabaseResources({ databaseId }: { databaseId: string }) {
       windowHours={windowHours}
     />
   );
-}
+};

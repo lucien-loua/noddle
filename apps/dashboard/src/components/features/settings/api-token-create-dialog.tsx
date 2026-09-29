@@ -59,7 +59,7 @@ function groupByResource(scopes: string[]): [string, string[]][] {
   return [...groups.entries()];
 }
 
-function Reveal({ onDone, token }: { onDone: () => void; token: string }) {
+const Reveal = ({ onDone, token }: { onDone: () => void; token: string }) => {
   const [copied, setCopied] = useState(false);
   const copy = useCallback(async () => {
     await copyText(token);
@@ -107,15 +107,15 @@ function Reveal({ onDone, token }: { onDone: () => void; token: string }) {
       </FocusModalFooter>
     </>
   );
-}
+};
 
-export function ApiTokenCreateDialog({
+export const ApiTokenCreateDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const client = useQueryClient();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("90");
@@ -330,4 +330,4 @@ export function ApiTokenCreateDialog({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};

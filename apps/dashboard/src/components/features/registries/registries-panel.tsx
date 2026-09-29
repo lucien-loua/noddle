@@ -62,7 +62,7 @@ import {
 } from "@/server/registries";
 import type { RegistryView } from "@/server/registries";
 
-function RegistryRow({
+const RegistryRow = ({
   canEdit,
   onEdit,
   onRemoved,
@@ -74,7 +74,7 @@ function RegistryRow({
   onRemoved: () => void;
   registry: RegistryView;
   role: RoleName | null;
-}) {
+}) => {
   const canDelete = useCan(role, "registry", "delete");
   const { error, handleRemove, isPending } = useRowRemove({
     mutationFn: () => deleteRegistry({ data: { id: registry.id } }),
@@ -124,9 +124,9 @@ function RegistryRow({
       ) : null}
     </ResourceCard>
   );
-}
+};
 
-export function RegistriesList({
+export const RegistriesList = ({
   initial,
   onAdd,
   onEdit,
@@ -136,7 +136,7 @@ export function RegistriesList({
   onAdd?: () => void;
   onEdit: (row: RegistryView) => void;
   role: RoleName | null;
-}) {
+}) => {
   const canEdit = useCan(role, "registry", "create");
   const {
     data: rows,
@@ -193,11 +193,11 @@ export function RegistriesList({
       ))}
     </Frame>
   );
-}
+};
 
 type RegistryFormValues = z.input<typeof registrySchema>;
 
-export function RegistryDialog({
+export const RegistryDialog = ({
   onOpenChange,
   open,
   target,
@@ -205,7 +205,7 @@ export function RegistryDialog({
   onOpenChange: (next: boolean) => void;
   open: boolean;
   target: RegistryView | null;
-}) {
+}) => {
   const queryClient = useQueryClient();
 
   const schema = useMemo(
@@ -383,4 +383,4 @@ export function RegistryDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

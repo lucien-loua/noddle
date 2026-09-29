@@ -26,7 +26,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { queries } from "@/lib/queries";
 
-export function DatabaseCredentials({
+export const DatabaseCredentials = ({
   canChangePassword,
   canRead,
   databaseId,
@@ -38,7 +38,7 @@ export function DatabaseCredentials({
   databaseId: string;
   databaseName: string;
   running: boolean;
-}) {
+}) => {
   const { revealed, toggle } = useReveal();
   const [changing, setChanging] = useState(false);
   const openChange = useCallback(() => setChanging(true), []);
@@ -130,20 +130,16 @@ export function DatabaseCredentials({
       />
     </Frame>
   );
-}
+};
 
-function CredentialItem({ label, value }: { label: string; value: string }) {
-  return (
-    <Item variant="muted">
-      <ItemContent className="min-w-0">
-        <ItemTitle>{label}</ItemTitle>
-        <ItemDescription className="break-all font-mono">
-          {value}
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions>
-        <CopyButton label={label.toLowerCase()} value={value} />
-      </ItemActions>
-    </Item>
-  );
-}
+const CredentialItem = ({ label, value }: { label: string; value: string }) => (
+  <Item variant="muted">
+    <ItemContent className="min-w-0">
+      <ItemTitle>{label}</ItemTitle>
+      <ItemDescription className="break-all font-mono">{value}</ItemDescription>
+    </ItemContent>
+    <ItemActions>
+      <CopyButton label={label.toLowerCase()} value={value} />
+    </ItemActions>
+  </Item>
+);

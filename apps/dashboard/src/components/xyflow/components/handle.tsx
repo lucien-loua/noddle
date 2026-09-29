@@ -5,18 +5,16 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function Handle({
+export const Handle = ({
   className,
   ...props
-}: ComponentProps<typeof HandlePrimitive>) {
-  return (
-    <HandlePrimitive
-      isConnectable={false}
-      className={cn(
-        "z-1 border! h-5! rounded-xs! border-border! bg-clip-border! bg-background!",
-        className
-      )}
-      {...props}
-    />
-  );
-}
+}: ComponentProps<typeof HandlePrimitive>) => (
+  <HandlePrimitive
+    isConnectable={false}
+    className={cn(
+      "z-1 border! h-5! rounded-xs! border-border! bg-clip-border! bg-background!",
+      className
+    )}
+    {...props}
+  />
+);

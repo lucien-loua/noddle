@@ -14,7 +14,7 @@ import { backupKindLabel, backupLabel, byteSize, duration } from "@/lib/format";
 
 import type { BackupRunRow } from "./run-types";
 
-export function BackupRunDetailDialog<T extends BackupRunRow>({
+export const BackupRunDetailDialog = <T extends BackupRunRow>({
   backup,
   logLines,
   onOpenChange,
@@ -26,7 +26,7 @@ export function BackupRunDetailDialog<T extends BackupRunRow>({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   title: string;
-}) {
+}) => {
   const lines = backup ? logLines(backup) : [];
   const status = backup ? backupLabel(backup.status) : null;
   const runMeta = backup
@@ -82,4 +82,4 @@ export function BackupRunDetailDialog<T extends BackupRunRow>({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};

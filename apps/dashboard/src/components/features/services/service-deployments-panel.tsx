@@ -11,7 +11,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import type { DeploymentSummary } from "@/server/dashboard";
 
-export function ServiceDeploymentsPanel({
+export const ServiceDeploymentsPanel = ({
   canManageWebhook,
   canRollback,
   currentDeploymentId,
@@ -37,7 +37,7 @@ export function ServiceDeploymentsPanel({
   rollbackError: string | null;
   serviceId: string;
   shown: string | null;
-}) {
+}) => {
   const recentDeployments = deployments?.slice(0, 10);
 
   return (
@@ -85,4 +85,4 @@ export function ServiceDeploymentsPanel({
       />
     </div>
   );
-}
+};

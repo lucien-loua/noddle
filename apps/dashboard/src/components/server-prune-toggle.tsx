@@ -15,7 +15,7 @@ import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { setServerPruneEnabled } from "@/server/servers";
 
-export function ServerPruneToggle({
+export const ServerPruneToggle = ({
   enabled,
   error,
   onError,
@@ -27,7 +27,7 @@ export function ServerPruneToggle({
   onError: (message: string) => void;
   role: RoleName | null;
   serverId: string;
-}) {
+}) => {
   const canUpdate = useCan(role, "server", "update");
   const [value, setValue] = useState(enabled);
   const id = useId();
@@ -92,4 +92,4 @@ export function ServerPruneToggle({
       </FieldLabel>
     </FramePanel>
   );
-}
+};

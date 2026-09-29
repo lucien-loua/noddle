@@ -45,7 +45,7 @@ function size(bytes: number): string {
   return bytes === 0 ? "0 B" : byteSize(bytes, 1000);
 }
 
-function Freshness({ sampledAt }: { sampledAt: string }) {
+const Freshness = ({ sampledAt }: { sampledAt: string }) => {
   if (Date.now() - Date.parse(sampledAt) > STALE_MS) {
     return (
       <Badge variant="destructive">
@@ -58,15 +58,15 @@ function Freshness({ sampledAt }: { sampledAt: string }) {
       read <RelativeTime iso={sampledAt} />
     </span>
   );
-}
+};
 
-export function ServerDiskUsage({
+export const ServerDiskUsage = ({
   children,
   disk,
 }: {
   children?: React.ReactNode;
   disk: ServerDisk | null;
-}) {
+}) => {
   if (!disk) {
     return (
       <Frame stacked variant="ghost">
@@ -163,4 +163,4 @@ export function ServerDiskUsage({
       {children}
     </Frame>
   );
-}
+};

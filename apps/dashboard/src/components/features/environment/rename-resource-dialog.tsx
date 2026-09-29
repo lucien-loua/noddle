@@ -44,7 +44,7 @@ const formSchema = renameServiceSchema.pick({ displayName: true });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function RenameResourceDialog({
+export const RenameResourceDialog = ({
   displayName,
   kind,
   name,
@@ -58,7 +58,7 @@ export function RenameResourceDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   resourceId: string;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -134,4 +134,4 @@ export function RenameResourceDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

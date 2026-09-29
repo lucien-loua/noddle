@@ -26,7 +26,7 @@ interface NumberFieldProps {
   unit?: ReactNode;
 }
 
-export function FieldNumber({
+export const FieldNumber = ({
   description,
   disabled,
   label,
@@ -35,7 +35,7 @@ export function FieldNumber({
   required,
   step,
   unit,
-}: NumberFieldProps) {
+}: NumberFieldProps) => {
   const field = useFieldContext<number | null>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -93,4 +93,4 @@ export function FieldNumber({
       </NumberField>
     </FieldShell>
   );
-}
+};

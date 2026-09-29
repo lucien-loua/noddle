@@ -33,7 +33,7 @@ export function useTheme(): ThemeContextValue {
   return value;
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolved, setResolved] = useState<"light" | "dark">("light");
 
@@ -84,4 +84,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   return <ThemeContext value={value}>{children}</ThemeContext>;
-}
+};

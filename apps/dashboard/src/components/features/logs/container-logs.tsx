@@ -89,11 +89,11 @@ function filterLines(
   return next;
 }
 
-export function ContainerLogs({
+export const ContainerLogs = ({
   generation,
   name,
   streamUrl,
-}: ContainerLogsProps) {
+}: ContainerLogsProps) => {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<StreamStatus>("live");
   const [paused, setPaused] = useState(false);
@@ -298,4 +298,4 @@ export function ContainerLogs({
       }
     />
   );
-}
+};

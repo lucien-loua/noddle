@@ -24,13 +24,13 @@ function scopeSummary(row: ApiTokenRow): string {
   return withheld > 0 ? `${base} · ${withheld} withheld by your role` : base;
 }
 
-function TokenRow({
+const TokenRow = ({
   onRevoke,
   row,
 }: {
   onRevoke: (row: ApiTokenRow) => void;
   row: ApiTokenRow;
-}) {
+}) => {
   const revoke = useCallback(() => onRevoke(row), [onRevoke, row]);
   const expired =
     row.expiresAt !== null && Date.parse(row.expiresAt) < Date.now();
@@ -58,9 +58,9 @@ function TokenRow({
       </Button>
     </FramePanel>
   );
-}
+};
 
-export function ApiTokensPanel() {
+export const ApiTokensPanel = () => {
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [chosen, setChosen] = useState<ApiTokenRow | null>(null);
@@ -137,4 +137,4 @@ export function ApiTokensPanel() {
       />
     </Frame>
   );
-}
+};

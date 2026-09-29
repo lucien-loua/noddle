@@ -21,13 +21,13 @@ const POLL_MS = 5000;
 
 const SHORT = 12;
 
-function Commit({
+const Commit = ({
   sha,
   version,
 }: {
   sha: string | null;
   version?: string | null;
-}) {
+}) => {
   if (!(sha || version)) {
     return <span className="text-muted-foreground">unknown</span>;
   }
@@ -55,9 +55,9 @@ function Commit({
       ) : null}
     </span>
   );
-}
+};
 
-function RollbackRow({
+const RollbackRow = ({
   canUpdate,
   data,
   disabled,
@@ -65,7 +65,7 @@ function RollbackRow({
   canUpdate: boolean;
   data: UpdateStatus | undefined;
   disabled: boolean;
-}) {
+}) => {
   const [failed, setFailed] = useState<string | null>(null);
   const previous = data?.previousVersion ?? null;
 
@@ -113,9 +113,9 @@ function RollbackRow({
       ) : null}
     </>
   );
-}
+};
 
-function UpdateNotes({
+const UpdateNotes = ({
   data,
   done,
   failed,
@@ -127,45 +127,43 @@ function UpdateNotes({
   failed: string | null;
   inFlight: boolean;
   running: string | null;
-}) {
-  return (
-    <>
-      {data?.unreachable ? (
-        <FrameDescription>
-          Could not reach the host that holds this installation:{" "}
-          {data.unreachable}
-        </FrameDescription>
-      ) : null}
+}) => (
+  <>
+    {data?.unreachable ? (
+      <FrameDescription>
+        Could not reach the host that holds this installation:{" "}
+        {data.unreachable}
+      </FrameDescription>
+    ) : null}
 
-      {running === null && !data?.unreachable ? (
-        <FrameDescription>
-          {data?.remoteCommit
-            ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way: the installer is idempotent."
-            : "This process was not built by the installer, so it carries no version. Updating from here is only meaningful on an installed machine."}
-        </FrameDescription>
-      ) : null}
+    {running === null && !data?.unreachable ? (
+      <FrameDescription>
+        {data?.remoteCommit
+          ? "This installation predates version stamping, so Noddle cannot tell how far behind it is. Updating is safe either way: the installer is idempotent."
+          : "This process was not built by the installer, so it carries no version. Updating from here is only meaningful on an installed machine."}
+      </FrameDescription>
+    ) : null}
 
-      {failed ? (
-        <output className="block text-destructive text-xs">{failed}</output>
-      ) : null}
+    {failed ? (
+      <output className="block text-destructive text-xs">{failed}</output>
+    ) : null}
 
-      {inFlight ? (
-        <FrameDescription role="status">
-          Updating. The dashboard restarts partway through, so this page will
-          stop responding for a moment. It comes back on its own.
-        </FrameDescription>
-      ) : null}
+    {inFlight ? (
+      <FrameDescription role="status">
+        Updating. The dashboard restarts partway through, so this page will stop
+        responding for a moment. It comes back on its own.
+      </FrameDescription>
+    ) : null}
 
-      {done ? (
-        <FrameDescription role="status">
-          Updated. Reload the page to pick up the new dashboard assets.
-        </FrameDescription>
-      ) : null}
-    </>
-  );
-}
+    {done ? (
+      <FrameDescription role="status">
+        Updated. Reload the page to pick up the new dashboard assets.
+      </FrameDescription>
+    ) : null}
+  </>
+);
 
-export function UpdatePanel({ role }: { role: RoleName | null }) {
+export const UpdatePanel = ({ role }: { role: RoleName | null }) => {
   const canUpdate = useCan(role, "installation", "update");
   const [started, setStarted] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -239,4 +237,4 @@ export function UpdatePanel({ role }: { role: RoleName | null }) {
       </FramePanel>
     </Frame>
   );
-}
+};

@@ -59,7 +59,7 @@ import {
 } from "@/server/accounts";
 import type { AccountRow } from "@/server/accounts";
 
-export function AccountsPanel({
+export const AccountsPanel = ({
   initial,
   onOpenChange,
   open,
@@ -69,7 +69,7 @@ export function AccountsPanel({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   role: string | null;
-}) {
+}) => {
   const known = role && role in roles ? (role as RoleName) : null;
   const canCreate = useCan(known, "user", "create");
   const { data: accounts, refresh } = useResourceList(
@@ -116,9 +116,9 @@ export function AccountsPanel({
       </SettingsList>
     </div>
   );
-}
+};
 
-function AccountLine({
+const AccountLine = ({
   account,
   canManage,
   onDone,
@@ -126,7 +126,7 @@ function AccountLine({
   account: AccountRow;
   canManage: boolean;
   onDone: () => void;
-}) {
+}) => {
   const setRole = useMutation({
     mutationFn: (role: RoleName) =>
       setAccountRole({ data: { role, userId: account.id } }),
@@ -182,9 +182,9 @@ function AccountLine({
       </TableCell>
     </TableRow>
   );
-}
+};
 
-function RemoveAccountAction({
+const RemoveAccountAction = ({
   account,
   onDone,
   onError,
@@ -192,7 +192,7 @@ function RemoveAccountAction({
   account: AccountRow;
   onDone: () => void;
   onError: (message: string | null) => void;
-}) {
+}) => {
   const [open, setOpen] = useState(false);
 
   const remove = useMutation({
@@ -238,13 +238,13 @@ function RemoveAccountAction({
       />
     </>
   );
-}
+};
 
 function roleLabel(role: string): string {
   return role in ROLE_LABELS ? ROLE_LABELS[role as RoleName] : role;
 }
 
-function RoleSelect({
+const RoleSelect = ({
   onChange,
   pending,
   value,
@@ -252,7 +252,7 @@ function RoleSelect({
   onChange: (role: RoleName) => void;
   pending: boolean;
   value: string;
-}) {
+}) => {
   const handleChange = useCallback(
     (next: unknown) => {
       if (typeof next === "string" && next in ROLE_LABELS) {
@@ -293,7 +293,7 @@ function RoleSelect({
       </SelectContent>
     </Select>
   );
-}
+};
 
 interface CreateAccountFormValues {
   email: string;
@@ -301,7 +301,7 @@ interface CreateAccountFormValues {
   role: RoleName;
 }
 
-function CreateAccountDialog({
+const CreateAccountDialog = ({
   onDone,
   onOpenChange,
   open,
@@ -309,7 +309,7 @@ function CreateAccountDialog({
   onDone: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const [password, setPassword] = useState<string | null>(null);
 
   const create = useMutation({
@@ -442,24 +442,22 @@ function CreateAccountDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function PasswordReveal({ password }: { password: string }) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Account created</DialogTitle>
-        <DialogDescription>
-          Here is its password. It is shown once and can never be read again.
-          Hand it over now.
-        </DialogDescription>
-      </DialogHeader>
+const PasswordReveal = ({ password }: { password: string }) => (
+  <>
+    <DialogHeader>
+      <DialogTitle>Account created</DialogTitle>
+      <DialogDescription>
+        Here is its password. It is shown once and can never be read again. Hand
+        it over now.
+      </DialogDescription>
+    </DialogHeader>
 
-      <RevealOnce label="password" value={password} />
+    <RevealOnce label="password" value={password} />
 
-      <DialogFooter>
-        <DialogClose render={<Button>Done</Button>} />
-      </DialogFooter>
-    </>
-  );
-}
+    <DialogFooter>
+      <DialogClose render={<Button>Done</Button>} />
+    </DialogFooter>
+  </>
+);

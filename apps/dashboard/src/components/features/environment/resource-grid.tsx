@@ -135,7 +135,7 @@ interface GridPermissions {
   rename: boolean;
 }
 
-function ResourceAddress({ item }: { item: GridItem }) {
+const ResourceAddress = ({ item }: { item: GridItem }) => {
   if (item.engine) {
     return (
       <span className="truncate">{DATABASE_ENGINE_LABEL[item.engine]}</span>
@@ -158,48 +158,46 @@ function ResourceAddress({ item }: { item: GridItem }) {
       <ArrowSquareOutIcon className="size-3.5 shrink-0" weight="regular" />
     </a>
   );
-}
+};
 
 function itemKey(item: { id: string; kind: ResourceKind }): string {
   return `${item.kind}:${item.id}`;
 }
 
-function GridEmpty({
+const GridEmpty = ({
   createAction,
   filtered,
 }: {
   createAction?: ReactNode;
   filtered: boolean;
-}) {
-  return (
-    <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
-      <FramePanel className="flex min-h-0 flex-1 flex-col">
-        <Empty className="min-h-0 flex-1 border-0">
-          <EmptyHeader>
-            <EmptyMedia>
-              <IconStack>
-                {filtered ? (
-                  <MagnifyingGlassIcon className="size-5" />
-                ) : (
-                  <StackIcon className="size-5" />
-                )}
-              </IconStack>
-            </EmptyMedia>
-            <EmptyTitle>
-              {filtered ? "Nothing matches" : "Nothing here yet"}
-            </EmptyTitle>
-            <EmptyDescription>
-              {filtered
-                ? "Try a different search or filter."
-                : "Create a service to get started."}
-            </EmptyDescription>
-          </EmptyHeader>
-          {createAction ? <EmptyContent>{createAction}</EmptyContent> : null}
-        </Empty>
-      </FramePanel>
-    </Frame>
-  );
-}
+}) => (
+  <Frame className="flex min-h-0 flex-1 flex-col" variant="ghost">
+    <FramePanel className="flex min-h-0 flex-1 flex-col">
+      <Empty className="min-h-0 flex-1 border-0">
+        <EmptyHeader>
+          <EmptyMedia>
+            <IconStack>
+              {filtered ? (
+                <MagnifyingGlassIcon className="size-5" />
+              ) : (
+                <StackIcon className="size-5" />
+              )}
+            </IconStack>
+          </EmptyMedia>
+          <EmptyTitle>
+            {filtered ? "Nothing matches" : "Nothing here yet"}
+          </EmptyTitle>
+          <EmptyDescription>
+            {filtered
+              ? "Try a different search or filter."
+              : "Create a service to get started."}
+          </EmptyDescription>
+        </EmptyHeader>
+        {createAction ? <EmptyContent>{createAction}</EmptyContent> : null}
+      </Empty>
+    </FramePanel>
+  </Frame>
+);
 
 interface GridProps {
   createAction?: ReactNode;
@@ -558,7 +556,7 @@ function useResourceGridState({
   };
 }
 
-export function ResourceGrid(props: GridProps) {
+export const ResourceGrid = (props: GridProps) => {
   const { createAction, groups } = props;
   const {
     actions,
@@ -813,7 +811,7 @@ export function ResourceGrid(props: GridProps) {
       </Dialog>
     </div>
   );
-}
+};
 
 const KIND_ICON: Record<ResourceKind, typeof CodeIcon> = {
   database: DatabaseIcon,
@@ -821,7 +819,7 @@ const KIND_ICON: Record<ResourceKind, typeof CodeIcon> = {
   stack: StackIcon,
 };
 
-function ResourceGridCard({
+const ResourceGridCard = ({
   actions,
   can,
   item,
@@ -843,7 +841,7 @@ function ResourceGridCard({
   refreshScope: () => Promise<unknown>;
   selected: boolean;
   selectionMode: boolean;
-}) {
+}) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const status = actions.statusOf(item);
   const Icon = KIND_ICON[item.kind];
@@ -972,9 +970,9 @@ function ResourceGridCard({
       />
     </>
   );
-}
+};
 
-function ResourceCardMenu({
+const ResourceCardMenu = ({
   actions,
   available,
   busy,
@@ -996,7 +994,7 @@ function ResourceCardMenu({
   onMove: (() => void) | undefined;
   refreshScope: () => Promise<unknown>;
   stopped: boolean;
-}) {
+}) => {
   const deploy = useMutation({
     mutationFn: () => actions.run(item, "deploy"),
     onError: (e: Error) =>
@@ -1089,9 +1087,9 @@ function ResourceCardMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
 
-function ResourceDeleteDialog({
+const ResourceDeleteDialog = ({
   actions,
   item,
   onOpenChange,
@@ -1103,7 +1101,7 @@ function ResourceDeleteDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   refreshScope: () => Promise<unknown>;
-}) {
+}) => {
   const remove = useMutation({
     mutationFn: (typed: string) =>
       actions.run(item, "delete", { confirmName: resourceName(typed) }),
@@ -1143,4 +1141,4 @@ function ResourceDeleteDialog({
       title={`Delete ${item.label}?`}
     />
   );
-}
+};

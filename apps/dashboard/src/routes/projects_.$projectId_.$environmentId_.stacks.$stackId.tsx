@@ -53,27 +53,7 @@ function isStackTab(value: unknown): value is StackTab {
   return isDetailTab(value, STACK_TABS);
 }
 
-export const Route = createFileRoute(
-  "/projects_/$projectId_/$environmentId_/stacks/$stackId"
-)({
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    tab: isStackTab(search.tab) ? search.tab : undefined,
-  }),
-  beforeLoad: resourceDetailBeforeLoad,
-  component: StackDetail,
-  loader: async ({ context, params }) => {
-    const stacks = await getStackDashboard();
-    const stack = stacks.find((s) => s.id === params.stackId);
-    if (!stack) {
-      throw notFound();
-    }
-    return { email: context.email, role: context.role, stack };
-  },
-});
-
-function StackDetail() {
+const StackDetail = () => {
   const { email, role, stack } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -272,4 +252,24 @@ function StackDetail() {
       </ResourceDetailFrame>
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute(
+  "/projects_/$projectId_/$environmentId_/stacks/$stackId"
+)({
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    deployment:
+      typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: isStackTab(search.tab) ? search.tab : undefined,
+  }),
+  beforeLoad: resourceDetailBeforeLoad,
+  component: StackDetail,
+  loader: async ({ context, params }) => {
+    const stacks = await getStackDashboard();
+    const stack = stacks.find((s) => s.id === params.stackId);
+    if (!stack) {
+      throw notFound();
+    }
+    return { email: context.email, role: context.role, stack };
+  },
+});

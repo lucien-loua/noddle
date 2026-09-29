@@ -35,7 +35,7 @@ type ServiceVolumePickerProps = {
     }
 );
 
-export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
+export const ServiceVolumePicker = (props: ServiceVolumePickerProps) => {
   const internalQuery = useQuery({
     ...queries.serviceVolumes(props.serviceId ?? ""),
     enabled: props.enabled && props.serviceId !== undefined,
@@ -106,4 +106,4 @@ export function ServiceVolumePicker(props: ServiceVolumePickerProps) {
       </FieldDescription>
     </Field>
   );
-}
+};

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function ScheduleActions({
+export const ScheduleActions = ({
   canRestore,
   createIcon: CreateIcon,
   createLabel,
@@ -24,7 +24,7 @@ export function ScheduleActions({
   onCreate: () => void;
   onRestoreS3: () => void;
   restoreLabel: string;
-}) {
+}) => {
   if (!canRestore) {
     return (
       <Button onClick={onCreate} size="sm" variant="outline">
@@ -61,4 +61,4 @@ export function ScheduleActions({
       </DropdownMenu>
     </ButtonGroup>
   );
-}
+};

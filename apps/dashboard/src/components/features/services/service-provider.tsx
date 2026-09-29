@@ -122,13 +122,13 @@ function isProviderTab(value: string): value is ProviderTab {
   return value === "docker" || isGitSourceType(value);
 }
 
-function WatchPathRow({
+const WatchPathRow = ({
   onRemove,
   path,
 }: {
   onRemove: (path: string) => void;
   path: string;
-}) {
+}) => {
   const handleRemove = useCallback(() => onRemove(path), [onRemove, path]);
 
   return (
@@ -148,9 +148,9 @@ function WatchPathRow({
       </ItemActions>
     </Item>
   );
-}
+};
 
-function WatchPathsField({
+const WatchPathsField = ({
   canEdit,
   onChange,
   value,
@@ -158,7 +158,7 @@ function WatchPathsField({
   canEdit: boolean;
   onChange: (next: string[]) => void;
   value: string[];
-}) {
+}) => {
   const [draft, setDraft] = useState("");
 
   const add = useCallback(() => {
@@ -224,11 +224,11 @@ function WatchPathsField({
       ) : null}
     </Field>
   );
-}
+};
 
 const NO_DEPLOY_KEY = "none";
 
-function DeployKeyField({
+const DeployKeyField = ({
   canEdit,
   onChange,
   value,
@@ -236,7 +236,7 @@ function DeployKeyField({
   canEdit: boolean;
   onChange: (next: string | null) => void;
   value: string | null;
-}) {
+}) => {
   const keys = useQuery({ ...queries.sshKeys(), enabled: canEdit });
 
   const handleChange = useCallback(
@@ -282,7 +282,7 @@ function DeployKeyField({
       </Select>
     </Field>
   );
-}
+};
 
 interface ProviderRepo {
   defaultBranch: string;
@@ -292,7 +292,7 @@ interface ProviderRepo {
 
 const repoLabel = (repo: ProviderRepo) => repo.fullName;
 
-function ProviderBranchField({
+const ProviderBranchField = ({
   branch,
   canEdit,
   fullName,
@@ -304,7 +304,7 @@ function ProviderBranchField({
   fullName: string;
   onChange: (next: string) => void;
   providerId: string;
-}) {
+}) => {
   const branches = useQuery({
     ...queries.providerBranches(providerId, fullName),
     enabled: canEdit,
@@ -351,9 +351,9 @@ function ProviderBranchField({
       </Combobox>
     </Field>
   );
-}
+};
 
-function ProviderRepositoryField({
+const ProviderRepositoryField = ({
   branch,
   canEdit,
   forge,
@@ -371,7 +371,7 @@ function ProviderRepositoryField({
   onProviderChange: (next: string) => void;
   providerId: string | null;
   repoUrl: string;
-}) {
+}) => {
   const providers = useQuery({ ...queries.gitProviders(), enabled: canEdit });
 
   const connected = (providers.data ?? []).filter(
@@ -490,19 +490,17 @@ function ProviderRepositoryField({
       ) : null}
     </>
   );
-}
+};
 
-function HookWarning({ error }: { error: string }) {
-  return (
-    <Field>
-      <FieldDescription className="text-destructive">
-        Autodeploy is not armed for this repository: {error}
-      </FieldDescription>
-    </Field>
-  );
-}
+const HookWarning = ({ error }: { error: string }) => (
+  <Field>
+    <FieldDescription className="text-destructive">
+      Autodeploy is not armed for this repository: {error}
+    </FieldDescription>
+  </Field>
+);
 
-function GitSourceForm({
+const GitSourceForm = ({
   canEdit,
   service,
   sourceType,
@@ -510,7 +508,7 @@ function GitSourceForm({
   canEdit: boolean;
   service: ServiceRow;
   sourceType: GitSourceType;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -698,15 +696,15 @@ function GitSourceForm({
       ) : null}
     </form>
   );
-}
+};
 
-function DockerSourceForm({
+const DockerSourceForm = ({
   canEdit,
   service,
 }: {
   canEdit: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -871,11 +869,11 @@ function DockerSourceForm({
       ) : null}
     </form>
   );
-}
+};
 
 const FORGE_LABEL = Object.freeze({ github: "GitHub", gitlab: "GitLab" });
 
-function ForgeTab({
+const ForgeTab = ({
   canEdit,
   forge,
   service,
@@ -883,7 +881,7 @@ function ForgeTab({
   canEdit: boolean;
   forge: "github" | "gitlab";
   service: ServiceRow;
-}) {
+}) => {
   const providers = useQuery(queries.gitProviders());
 
   const connected = (providers.data ?? []).filter(
@@ -935,15 +933,15 @@ function ForgeTab({
   return (
     <GitSourceForm canEdit={canEdit} service={service} sourceType={forge} />
   );
-}
+};
 
-export function ServiceProvider({
+export const ServiceProvider = ({
   canEdit,
   service,
 }: {
   canEdit: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const [tab, setTab] = useState<ProviderTab>(() =>
     providerTab(service.sourceType)
   );
@@ -1005,4 +1003,4 @@ export function ServiceProvider({
       </FramePanel>
     </Frame>
   );
-}
+};

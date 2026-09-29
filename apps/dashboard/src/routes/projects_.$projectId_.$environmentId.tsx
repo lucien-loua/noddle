@@ -38,66 +38,7 @@ import { getProjectEnvironments } from "@/server/environments";
 import { getProjects } from "@/server/projects";
 import { getServers } from "@/server/servers";
 
-export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
-  validateSearch: (search: Record<string, unknown>): { view?: "topology" } =>
-    search.view === "topology" ? { view: "topology" } : {},
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: ProjectEnvironmentPage,
-  loader: async ({ context, params }) => {
-    const [dashboard, allProjects, environments, servers, scope] =
-      await Promise.all([
-        getDashboardGroups(),
-        getProjects(),
-        getProjectEnvironments({ data: { projectId: params.projectId } }),
-        getServers(),
-        getEnvironmentScope({
-          data: {
-            environmentId: params.environmentId,
-            projectId: params.projectId,
-          },
-        }),
-      ]);
-
-    const project = allProjects.find((p) => p.id === params.projectId);
-    const current = environments.find((e) => e.id === params.environmentId);
-    if (!(project && current && scope)) {
-      throw notFound();
-    }
-
-    const group = dashboard.groups.find(
-      (g) => g.projectId === params.projectId
-    );
-
-    return {
-      counts: Object.fromEntries(
-        environments.map((e) => {
-          const s = group?.scopes.find((sc) => sc.environmentId === e.id);
-          return [
-            e.id,
-            (s?.services.length ?? 0) +
-              (s?.stacks.length ?? 0) +
-              (s?.databases.length ?? 0),
-          ];
-        })
-      ),
-      current,
-      dashboard,
-      email: context.email,
-      environments,
-      role: context.role,
-      scope,
-      servers,
-    };
-  },
-});
-
-function ProjectEnvironmentPage() {
+const ProjectEnvironmentPage = () => {
   const {
     counts,
     current,
@@ -247,4 +188,63 @@ function ProjectEnvironmentPage() {
       )}
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/projects_/$projectId_/$environmentId")({
+  validateSearch: (search: Record<string, unknown>): { view?: "topology" } =>
+    search.view === "topology" ? { view: "topology" } : {},
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ProjectEnvironmentPage,
+  loader: async ({ context, params }) => {
+    const [dashboard, allProjects, environments, servers, scope] =
+      await Promise.all([
+        getDashboardGroups(),
+        getProjects(),
+        getProjectEnvironments({ data: { projectId: params.projectId } }),
+        getServers(),
+        getEnvironmentScope({
+          data: {
+            environmentId: params.environmentId,
+            projectId: params.projectId,
+          },
+        }),
+      ]);
+
+    const project = allProjects.find((p) => p.id === params.projectId);
+    const current = environments.find((e) => e.id === params.environmentId);
+    if (!(project && current && scope)) {
+      throw notFound();
+    }
+
+    const group = dashboard.groups.find(
+      (g) => g.projectId === params.projectId
+    );
+
+    return {
+      counts: Object.fromEntries(
+        environments.map((e) => {
+          const s = group?.scopes.find((sc) => sc.environmentId === e.id);
+          return [
+            e.id,
+            (s?.services.length ?? 0) +
+              (s?.stacks.length ?? 0) +
+              (s?.databases.length ?? 0),
+          ];
+        })
+      ),
+      current,
+      dashboard,
+      email: context.email,
+      environments,
+      role: context.role,
+      scope,
+      servers,
+    };
+  },
+});

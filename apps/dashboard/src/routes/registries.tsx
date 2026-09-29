@@ -17,28 +17,7 @@ import { getAuthState } from "@/server/auth";
 import { getRegistries } from "@/server/registries";
 import type { RegistryView } from "@/server/registries";
 
-export const Route = createFileRoute("/registries")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: RegistriesPage,
-  errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
-      Your role does not allow reading registries.
-    </p>
-  ),
-  loader: async ({ context }) => ({
-    email: context.email,
-    registries: await getRegistries(),
-    role: context.role,
-  }),
-});
-
-function RegistriesPage() {
+const RegistriesPage = () => {
   const { email, registries, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -82,4 +61,25 @@ function RegistriesPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/registries")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: RegistriesPage,
+  errorComponent: () => (
+    <p className="p-6 text-muted-foreground text-sm">
+      Your role does not allow reading registries.
+    </p>
+  ),
+  loader: async ({ context }) => ({
+    email: context.email,
+    registries: await getRegistries(),
+    role: context.role,
+  }),
+});

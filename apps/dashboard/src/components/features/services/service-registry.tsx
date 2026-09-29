@@ -18,7 +18,7 @@ import { setServiceRegistry } from "@/server/registries";
 
 const BUILT_IN = "built-in";
 
-export function ServiceRegistry({
+export const ServiceRegistry = ({
   registryId,
   role,
   serviceId,
@@ -26,7 +26,7 @@ export function ServiceRegistry({
   registryId: string | null;
   role: RoleName | null;
   serviceId: string;
-}) {
+}) => {
   const canEdit = useCan(role, "service", "create");
   const queryClient = useQueryClient();
 
@@ -96,4 +96,4 @@ export function ServiceRegistry({
       </SelectContent>
     </Select>
   );
-}
+};

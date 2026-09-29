@@ -62,25 +62,7 @@ import type { DeploymentLogRow } from "@/server/dashboard";
 
 type TypeFilter = "all" | "service" | "stack";
 
-export const Route = createFileRoute("/deployments")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: DeploymentsPage,
-  loader: async ({ context }) => {
-    const [dashboard, log] = await Promise.all([
-      getDashboardGroups(),
-      getDeploymentLog(),
-    ]);
-    return { dashboard, email: context.email, log, role: context.role };
-  },
-});
-
-function DeploymentsPage() {
+const DeploymentsPage = () => {
   const { email, log, role } = Route.useLoaderData();
 
   const [search, setSearch] = useState("");
@@ -288,9 +270,9 @@ function DeploymentsPage() {
       )}
     </AppShell>
   );
-}
+};
 
-function DeploymentLogLine({ row }: { row: DeploymentLogRow }) {
+const DeploymentLogLine = ({ row }: { row: DeploymentLogRow }) => {
   const label = deploymentLabel(row.status);
   const navigate = useNavigate();
 
@@ -366,4 +348,22 @@ function DeploymentLogLine({ row }: { row: DeploymentLogRow }) {
       </TableCell>
     </TableRow>
   );
-}
+};
+
+export const Route = createFileRoute("/deployments")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: DeploymentsPage,
+  loader: async ({ context }) => {
+    const [dashboard, log] = await Promise.all([
+      getDashboardGroups(),
+      getDeploymentLog(),
+    ]);
+    return { dashboard, email: context.email, log, role: context.role };
+  },
+});

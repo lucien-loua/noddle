@@ -23,7 +23,7 @@ import { queries } from "@/lib/queries";
 import type { ServiceRow } from "@/server/dashboard";
 import { detachDatabase } from "@/server/dependencies";
 
-export function DatabaseAttachments({
+export const DatabaseAttachments = ({
   canAttach,
   databaseId,
   engine,
@@ -33,7 +33,7 @@ export function DatabaseAttachments({
   databaseId: string;
   engine: DatabaseEngine;
   services: ServiceRow[];
-}) {
+}) => {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const dependents = useQuery(queries.databaseDependents(databaseId));
@@ -107,9 +107,9 @@ export function DatabaseAttachments({
       ) : null}
     </Frame>
   );
-}
+};
 
-function DependentRow({
+const DependentRow = ({
   canDetach,
   detaching,
   onDetach,
@@ -119,7 +119,7 @@ function DependentRow({
   detaching: boolean;
   onDetach: (serviceId: string) => void;
   row: { envVarKey: string | null; serviceId: string; serviceName: string };
-}) {
+}) => {
   const handleDetach = useCallback(
     () => onDetach(row.serviceId),
     [onDetach, row.serviceId]
@@ -148,4 +148,4 @@ function DependentRow({
       </div>
     </FramePanel>
   );
-}
+};

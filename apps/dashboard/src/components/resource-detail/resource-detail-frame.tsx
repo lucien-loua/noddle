@@ -10,22 +10,20 @@ interface ResourceDetailFrameProps {
   teardownError?: string | null;
 }
 
-export function ResourceDetailFrame({
+export const ResourceDetailFrame = ({
   children,
   deleteError,
   subtitle,
   teardownError,
-}: ResourceDetailFrameProps) {
-  return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="mb-3 text-muted-foreground text-sm">{subtitle}</div>
-      <TeardownError message={teardownError ?? null} />
-      {deleteError ? (
-        <Alert className="mb-3" variant="destructive">
-          <AlertDescription>{deleteError}</AlertDescription>
-        </Alert>
-      ) : null}
-      {children}
-    </div>
-  );
-}
+}: ResourceDetailFrameProps) => (
+  <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div className="mb-3 text-muted-foreground text-sm">{subtitle}</div>
+    <TeardownError message={teardownError ?? null} />
+    {deleteError ? (
+      <Alert className="mb-3" variant="destructive">
+        <AlertDescription>{deleteError}</AlertDescription>
+      </Alert>
+    ) : null}
+    {children}
+  </div>
+);

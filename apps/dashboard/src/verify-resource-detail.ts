@@ -8,6 +8,10 @@ const WEB_SRC = join(import.meta.dirname);
 const ROUTES = join(WEB_SRC, "routes");
 const FEATURES = join(WEB_SRC, "components/features");
 
+const DECLARES_HEADER_ACTIONS = /\b(function|const) DatabaseHeaderActions\b/;
+const EXPORTS_HEADER_ACTIONS =
+  /\bexport (function|const) DatabaseHeaderActions\b/;
+
 const DETAIL_ROUTES = [
   "projects_.$projectId_.$environmentId_.services.$serviceId.tsx",
   "projects_.$projectId_.$environmentId_.databases.$databaseId.tsx",
@@ -53,11 +57,13 @@ await runVerify("resource detail module (C6)", () => {
   );
   check(
     "database header actions live in feature module",
-    !database.includes("function DatabaseHeaderActions") &&
-      readFileSync(
-        join(FEATURES, "database/database-header-actions.tsx"),
-        "utf-8"
-      ).includes("export function DatabaseHeaderActions")
+    !DECLARES_HEADER_ACTIONS.test(database) &&
+      EXPORTS_HEADER_ACTIONS.test(
+        readFileSync(
+          join(FEATURES, "database/database-header-actions.tsx"),
+          "utf-8"
+        )
+      )
   );
   check(
     "database actions compose flat toolbar (no dropdown menu)",

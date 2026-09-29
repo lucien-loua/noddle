@@ -106,7 +106,7 @@ function useBuildLogSource(
   return { status, text };
 }
 
-function LogStreamSession({
+const LogStreamSession = ({
   children,
   deploymentId,
   onEnd,
@@ -114,7 +114,7 @@ function LogStreamSession({
   children: ReactNode;
   deploymentId: string;
   onEnd?: (status: string) => void;
-}) {
+}) => {
   const { status, text } = useBuildLogSource(deploymentId, onEnd);
   const blocks = useMemo(() => parse(text, classifyBuild), [text]);
   const value = useMemo(
@@ -123,14 +123,14 @@ function LogStreamSession({
   );
 
   return <LogStreamContext value={value}>{children}</LogStreamContext>;
-}
+};
 
-function LogStreamCopy() {
+const LogStreamCopy = () => {
   const { text } = useLogStream();
   return <CopyButton label="logs" value={text} />;
-}
+};
 
-function LogStreamView({ plain }: { plain?: boolean }) {
+const LogStreamView = ({ plain }: { plain?: boolean }) => {
   const { blocks, status, text } = useLogStream();
 
   return (
@@ -144,15 +144,13 @@ function LogStreamView({ plain }: { plain?: boolean }) {
       title={plain ? undefined : "Build logs"}
     />
   );
-}
+};
 
-export function LogStream({ deploymentId, onEnd, plain }: LogStreamProps) {
-  return (
-    <LogStreamSession deploymentId={deploymentId} onEnd={onEnd}>
-      <LogStreamView plain={plain} />
-    </LogStreamSession>
-  );
-}
+export const LogStream = ({ deploymentId, onEnd, plain }: LogStreamProps) => (
+  <LogStreamSession deploymentId={deploymentId} onEnd={onEnd}>
+    <LogStreamView plain={plain} />
+  </LogStreamSession>
+);
 
 LogStream.Session = LogStreamSession;
 LogStream.Copy = LogStreamCopy;

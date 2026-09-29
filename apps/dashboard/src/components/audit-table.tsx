@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/table";
 import type { AuditRow } from "@/server/audit";
 
-export function AuditTable({ entries }: { entries: AuditRow[] }) {
+export const AuditTable = ({ entries }: { entries: AuditRow[] }) => {
   if (entries.length === 0) {
     return (
       <Frame className="flex h-full min-h-0 flex-col" variant="ghost">
@@ -106,4 +106,4 @@ export function AuditTable({ entries }: { entries: AuditRow[] }) {
       </FramePanel>
     </Frame>
   );
-}
+};

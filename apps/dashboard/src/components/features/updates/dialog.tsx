@@ -18,27 +18,25 @@ import { releaseUrl } from "@/lib/source";
 import { startUpdate } from "@/server/updates";
 import type { UpdateStatus } from "@/server/updates";
 
-function Row({ label, version }: { label: string; version: string | null }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-muted-foreground">{label}</span>
-      {version ? (
-        <a
-          className="underline decoration-dotted underline-offset-2"
-          href={releaseUrl(version)}
-          rel="noopener"
-          target="_blank"
-        >
-          {version}
-        </a>
-      ) : (
-        <span className="text-muted-foreground">unknown</span>
-      )}
-    </div>
-  );
-}
+const Row = ({ label, version }: { label: string; version: string | null }) => (
+  <div className="flex items-center justify-between gap-3">
+    <span className="text-muted-foreground">{label}</span>
+    {version ? (
+      <a
+        className="underline decoration-dotted underline-offset-2"
+        href={releaseUrl(version)}
+        rel="noopener"
+        target="_blank"
+      >
+        {version}
+      </a>
+    ) : (
+      <span className="text-muted-foreground">unknown</span>
+    )}
+  </div>
+);
 
-export function UpdateDialog({
+export const UpdateDialog = ({
   data,
   onOpenChange,
   open,
@@ -46,7 +44,7 @@ export function UpdateDialog({
   data: UpdateStatus | undefined;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const [failed, setFailed] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
 
@@ -107,4 +105,4 @@ export function UpdateDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

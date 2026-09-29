@@ -5,13 +5,13 @@ import { StatusIndicator } from "@/components/ui/status";
 import type { Tone } from "@/lib/format";
 import type { DatabaseRow } from "@/server/databases";
 
-export function DatabaseStatusLine({
+export const DatabaseStatusLine = ({
   database,
   status,
 }: {
   database: DatabaseRow;
   status: { label: string; tone: Tone };
-}) {
+}) => {
   const engineLabel = DATABASE_ENGINE_LABEL[database.engine] ?? database.engine;
 
   return (
@@ -27,4 +27,4 @@ export function DatabaseStatusLine({
       <span className="truncate">{database.serverName}</span>
     </p>
   );
-}
+};

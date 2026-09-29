@@ -74,39 +74,7 @@ function isDatabaseTab(value: unknown): value is DatabaseTab {
   return isDetailTab(value, DATABASE_TABS);
 }
 
-export const Route = createFileRoute(
-  "/projects_/$projectId_/$environmentId_/databases/$databaseId"
-)({
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    tab: isDatabaseTab(search.tab) ? search.tab : undefined,
-  }),
-  beforeLoad: resourceDetailBeforeLoad,
-  component: DatabaseDetail,
-  loader: async ({ context, params }) => {
-    const [database, scope] = await Promise.all([
-      getDatabase({ data: { databaseId: params.databaseId } }),
-      getEnvironmentScope({
-        data: {
-          environmentId: params.environmentId,
-          projectId: params.projectId,
-        },
-      }),
-    ]);
-    if (!(database && scope)) {
-      throw notFound();
-    }
-    return {
-      database,
-      email: context.email,
-      role: context.role,
-      services: scope.services,
-    };
-  },
-});
-
-function DatabaseDetail() {
+const DatabaseDetail = () => {
   const {
     database: initialDatabase,
     email,
@@ -338,4 +306,36 @@ function DatabaseDetail() {
       {terminal}
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute(
+  "/projects_/$projectId_/$environmentId_/databases/$databaseId"
+)({
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    deployment:
+      typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: isDatabaseTab(search.tab) ? search.tab : undefined,
+  }),
+  beforeLoad: resourceDetailBeforeLoad,
+  component: DatabaseDetail,
+  loader: async ({ context, params }) => {
+    const [database, scope] = await Promise.all([
+      getDatabase({ data: { databaseId: params.databaseId } }),
+      getEnvironmentScope({
+        data: {
+          environmentId: params.environmentId,
+          projectId: params.projectId,
+        },
+      }),
+    ]);
+    if (!(database && scope)) {
+      throw notFound();
+    }
+    return {
+      database,
+      email: context.email,
+      role: context.role,
+      services: scope.services,
+    };
+  },
+});

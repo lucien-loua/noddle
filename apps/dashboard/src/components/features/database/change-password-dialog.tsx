@@ -37,7 +37,7 @@ interface ChangePasswordFormValues {
   password: string;
 }
 
-export function ChangeDatabasePasswordDialog({
+export const ChangeDatabasePasswordDialog = ({
   databaseId,
   databaseName,
   onOpenChange,
@@ -47,7 +47,7 @@ export function ChangeDatabasePasswordDialog({
   databaseName: string;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -164,4 +164,4 @@ export function ChangeDatabasePasswordDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

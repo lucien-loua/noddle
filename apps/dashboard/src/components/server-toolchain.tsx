@@ -18,7 +18,7 @@ import { useCan } from "@/lib/use-permission";
 import type { ServerToolReport } from "@/server/servers";
 import { setupServer } from "@/server/servers";
 
-function ToolRow({
+const ToolRow = ({
   hint,
   name,
   version,
@@ -26,21 +26,19 @@ function ToolRow({
   hint?: string;
   name: string;
   version: string | null;
-}) {
-  return (
-    <FramePanel className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-medium">{name}</span>
-      {version ? (
-        <span className="flex items-center gap-2">
-          <span className="text-muted-foreground">{version}</span>
-          {hint ? <Badge variant="outline">{hint}</Badge> : null}
-        </span>
-      ) : (
-        <Badge variant="destructive">missing</Badge>
-      )}
-    </FramePanel>
-  );
-}
+}) => (
+  <FramePanel className="flex items-center justify-between gap-3 text-sm">
+    <span className="font-medium">{name}</span>
+    {version ? (
+      <span className="flex items-center gap-2">
+        <span className="text-muted-foreground">{version}</span>
+        {hint ? <Badge variant="outline">{hint}</Badge> : null}
+      </span>
+    ) : (
+      <Badge variant="destructive">missing</Badge>
+    )}
+  </FramePanel>
+);
 
 function railpackHint(report: ServerToolReport): string | undefined {
   if (!report.railpack || report.railpack.includes(report.railpackExpected)) {
@@ -79,7 +77,7 @@ function unreadable(
   return "No answer yet.";
 }
 
-export function ServerToolchain({
+export const ServerToolchain = ({
   reachable,
   role,
   serverId,
@@ -87,7 +85,7 @@ export function ServerToolchain({
   reachable: boolean;
   role: RoleName | null;
   serverId: string;
-}) {
+}) => {
   const canSetup = useCan(role, "server", "create");
 
   const check = useQuery({
@@ -166,4 +164,4 @@ export function ServerToolchain({
       )}
     </Frame>
   );
-}
+};

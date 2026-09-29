@@ -3,13 +3,13 @@ import type { ServiceRow } from "@/server/dashboard";
 import { ServiceBuild } from "./service-build";
 import { ServiceProvider } from "./service-provider";
 
-export function ServiceOverview({
+export const ServiceOverview = ({
   canEdit,
   service,
 }: {
   canEdit: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const fromImage = service.sourceType === "docker_image";
 
   return (
@@ -25,4 +25,4 @@ export function ServiceOverview({
       ) : null}
     </div>
   );
-}
+};

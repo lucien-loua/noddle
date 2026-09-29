@@ -22,7 +22,7 @@ export interface FieldSelectOption {
   value: string;
 }
 
-export function FieldSelect({
+export const FieldSelect = ({
   description,
   disabled,
   label,
@@ -36,7 +36,7 @@ export function FieldSelect({
   options: FieldSelectOption[];
   placeholder?: string;
   required?: boolean;
-}) {
+}) => {
   const field = useFieldContext<string>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -105,4 +105,4 @@ export function FieldSelect({
       </Select>
     </FieldShell>
   );
-}
+};

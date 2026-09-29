@@ -16,23 +16,7 @@ import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getServers } from "@/server/servers";
 
-export const Route = createFileRoute("/servers")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: ServersPage,
-  loader: async ({ context }) => ({
-    email: context.email,
-    role: context.role,
-    servers: await getServers(),
-  }),
-});
-
-function ServersPage() {
+const ServersPage = () => {
   const { email, role, servers } = Route.useLoaderData();
   const known = role && role in roles ? (role as RoleName) : null;
   const canAdd = useCan(known, "server", "create");
@@ -62,4 +46,20 @@ function ServersPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/servers")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ServersPage,
+  loader: async ({ context }) => ({
+    email: context.email,
+    role: context.role,
+    servers: await getServers(),
+  }),
+});

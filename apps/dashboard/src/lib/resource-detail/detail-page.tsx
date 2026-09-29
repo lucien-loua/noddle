@@ -88,7 +88,7 @@ export function useDetailPage<T extends string>({
   return { handleDeleted, handleTabChange };
 }
 
-export function DetailTabContent({
+export const DetailTabContent = ({
   active,
   children,
   className = DETAIL_TAB_PANEL_CLASS,
@@ -100,16 +100,14 @@ export function DetailTabContent({
   className?: string;
   lazy?: boolean;
   value: string;
-}) {
-  return (
-    <TabsContent className={className} value={value}>
-      {lazy ? (
-        <ActiveTabPanel active={active} value={value}>
-          {children}
-        </ActiveTabPanel>
-      ) : (
-        children
-      )}
-    </TabsContent>
-  );
-}
+}) => (
+  <TabsContent className={className} value={value}>
+    {lazy ? (
+      <ActiveTabPanel active={active} value={value}>
+        {children}
+      </ActiveTabPanel>
+    ) : (
+      children
+    )}
+  </TabsContent>
+);

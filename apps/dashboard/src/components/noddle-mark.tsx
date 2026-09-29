@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-export function NoddleMark({ className }: { className?: string }) {
+export const NoddleMark = ({ className }: { className?: string }) => {
   const maskId = useId();
 
   return (
@@ -41,4 +41,4 @@ export function NoddleMark({ className }: { className?: string }) {
       />
     </svg>
   );
-}
+};

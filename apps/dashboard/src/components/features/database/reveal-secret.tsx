@@ -12,7 +12,7 @@ export function useReveal(initial = false): {
   return { revealed, toggle };
 }
 
-export function RevealToggleButton({
+export const RevealToggleButton = ({
   noun,
   onClick,
   revealed,
@@ -20,15 +20,13 @@ export function RevealToggleButton({
   noun: string;
   onClick: () => void;
   revealed: boolean;
-}) {
-  return (
-    <Button
-      aria-label={revealed ? `Hide the ${noun}` : `Reveal the ${noun}`}
-      onClick={onClick}
-      size="icon-sm"
-      variant="outline"
-    >
-      {revealed ? <EyeSlashIcon /> : <EyeIcon />}
-    </Button>
-  );
-}
+}) => (
+  <Button
+    aria-label={revealed ? `Hide the ${noun}` : `Reveal the ${noun}`}
+    onClick={onClick}
+    size="icon-sm"
+    variant="outline"
+  >
+    {revealed ? <EyeSlashIcon /> : <EyeIcon />}
+  </Button>
+);

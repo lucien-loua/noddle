@@ -38,7 +38,7 @@ interface Props {
   selectedId: string | null;
 }
 
-function RollbackCell({
+const RollbackCell = ({
   canRollback,
   currentDeploymentId,
   deployment,
@@ -50,7 +50,7 @@ function RollbackCell({
   deployment: DeploymentSummary;
   onRollback: (deploymentId: string) => void;
   pending: boolean;
-}) {
+}) => {
   const handleClick = useCallback(
     (event: MouseEvent) => {
       event.stopPropagation();
@@ -81,9 +81,9 @@ function RollbackCell({
       Redeploy
     </Button>
   );
-}
+};
 
-function HistoryRow({
+const HistoryRow = ({
   onSelect,
   row,
   selected,
@@ -91,7 +91,7 @@ function HistoryRow({
   onSelect: (deploymentId: string) => void;
   row: Row<DeploymentSummary>;
   selected: boolean;
-}) {
+}) => {
   const handleClick = useCallback(
     () => onSelect(row.original.id),
     [onSelect, row.original.id]
@@ -109,11 +109,11 @@ function HistoryRow({
       ))}
     </TableRow>
   );
-}
+};
 
 const columnHelper = createColumnHelper<DeploymentSummary>();
 
-export function DeploymentHistory(props: Props) {
+export const DeploymentHistory = (props: Props) => {
   const {
     canRollback,
     currentDeploymentId,
@@ -231,4 +231,4 @@ export function DeploymentHistory(props: Props) {
       </TableBody>
     </Table>
   );
-}
+};

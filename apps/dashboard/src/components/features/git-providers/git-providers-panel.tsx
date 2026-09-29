@@ -73,16 +73,14 @@ function httpUrlOrNull(candidate: string): string | null {
   }
 }
 
-function Meta({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="truncate font-medium text-sm">{value}</dd>
-    </div>
-  );
-}
+const Meta = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="min-w-0">
+    <dt className="text-muted-foreground text-xs">{label}</dt>
+    <dd className="truncate font-medium text-sm">{value}</dd>
+  </div>
+);
 
-function ProviderRow({
+const ProviderRow = ({
   onRemoved,
   provider,
   role,
@@ -90,7 +88,7 @@ function ProviderRow({
   onRemoved: () => void;
   provider: GitProviderView;
   role: RoleName | null;
-}) {
+}) => {
   const canDelete = useCan(role, "gitProvider", "delete");
   const queryClient = useQueryClient();
 
@@ -202,15 +200,15 @@ function ProviderRow({
       </div>
     </FramePanel>
   );
-}
+};
 
-function ConnectGithubDialog({
+const ConnectGithubDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const [name, setName] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const [posting, setPosting] = useState<{
@@ -290,15 +288,15 @@ function ConnectGithubDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function ConnectGitlabDialog({
+const ConnectGitlabDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const [name, setName] = useState("");
   const [applicationId, setApplicationId] = useState("");
   const [secret, setSecret] = useState("");
@@ -439,9 +437,9 @@ function ConnectGitlabDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-export function GitProvidersList({
+export const GitProvidersList = ({
   initial,
   onAddGithub,
   onAddGitlab,
@@ -451,7 +449,7 @@ export function GitProvidersList({
   onAddGithub?: () => void;
   onAddGitlab?: () => void;
   role: RoleName | null;
-}) {
+}) => {
   const {
     data: rows,
     isEmpty,
@@ -512,6 +510,6 @@ export function GitProvidersList({
       ))}
     </Frame>
   );
-}
+};
 
 export { ConnectGithubDialog, ConnectGitlabDialog };

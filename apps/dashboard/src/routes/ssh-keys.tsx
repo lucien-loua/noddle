@@ -16,28 +16,7 @@ import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getSshKeys } from "@/server/ssh-keys";
 
-export const Route = createFileRoute("/ssh-keys")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: SshKeysPage,
-  errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
-      Your role does not allow reading SSH keys.
-    </p>
-  ),
-  loader: async ({ context }) => ({
-    email: context.email,
-    keys: await getSshKeys(),
-    role: context.role,
-  }),
-});
-
-function SshKeysPage() {
+const SshKeysPage = () => {
   const { email, keys, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -68,4 +47,25 @@ function SshKeysPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/ssh-keys")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: SshKeysPage,
+  errorComponent: () => (
+    <p className="p-6 text-muted-foreground text-sm">
+      Your role does not allow reading SSH keys.
+    </p>
+  ),
+  loader: async ({ context }) => ({
+    email: context.email,
+    keys: await getSshKeys(),
+    role: context.role,
+  }),
+});

@@ -104,7 +104,7 @@ function useMeasuredHeights(): ReadonlyMap<string, number> {
   return useStore(collectHeights, sameHeights);
 }
 
-function FitViewButton({ moved }: { moved: RefObject<boolean> }) {
+const FitViewButton = ({ moved }: { moved: RefObject<boolean> }) => {
   const { fitView } = useReactFlow();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -135,15 +135,15 @@ function FitViewButton({ moved }: { moved: RefObject<boolean> }) {
       </Tooltip>
     </Panel>
   );
-}
+};
 
-function TopologyCanvas({
+const TopologyCanvas = ({
   edges,
   nodes,
 }: {
   edges: Edge[];
   nodes: TopologyNode[];
-}) {
+}) => {
   const moved = useRef(false);
   const heights = useMeasuredHeights();
   const { fitView } = useReactFlow();
@@ -197,7 +197,7 @@ function TopologyCanvas({
       <FitViewButton moved={moved} />
     </FlowCanvas>
   );
-}
+};
 
 function identityOf(scope: Scope, resource: LifecycleKind, id: string) {
   if (resource === "database") {
@@ -209,13 +209,13 @@ function identityOf(scope: Scope, resource: LifecycleKind, id: string) {
   return scope.services.find((r) => r.id === id);
 }
 
-export function EnvironmentTopology({
+export const EnvironmentTopology = ({
   role,
   scope,
 }: {
   role: RoleName | null;
   scope: Scope;
-}) {
+}) => {
   const dependencies = useQuery(
     queries.environmentDependencies(scope.environmentId)
   );
@@ -449,4 +449,4 @@ export function EnvironmentTopology({
       ) : null}
     </Frame>
   );
-}
+};

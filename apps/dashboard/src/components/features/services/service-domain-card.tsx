@@ -60,7 +60,7 @@ function routingNeedsRedeploy(
   return domain.updatedAt > lastDeploymentFinishedAt;
 }
 
-export function ServiceDomainCard({
+export const ServiceDomainCard = ({
   canEdit,
   domain,
   lastDeploymentFinishedAt,
@@ -74,7 +74,7 @@ export function ServiceDomainCard({
   onEdit: () => void;
   onRemove: () => void;
   port: number;
-}) {
+}) => {
   const scheme = domain.https ? "https" : "http";
   const publicPath = domain.path === "/" ? "" : domain.path;
   const routing = routingLabel(domain, lastDeploymentFinishedAt);
@@ -156,21 +156,19 @@ export function ServiceDomainCard({
       </div>
     </FramePanel>
   );
-}
+};
 
-function DetailBadge({ label, tip }: { label: string; tip: string }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Badge className="font-normal" variant="secondary">
-            <InfoIcon aria-hidden className="mr-1 size-3" />
-            {label}
-            <span className="sr-only">. {tip}</span>
-          </Badge>
-        }
-      />
-      <TooltipContent>{tip}</TooltipContent>
-    </Tooltip>
-  );
-}
+const DetailBadge = ({ label, tip }: { label: string; tip: string }) => (
+  <Tooltip>
+    <TooltipTrigger
+      render={
+        <Badge className="font-normal" variant="secondary">
+          <InfoIcon aria-hidden className="mr-1 size-3" />
+          {label}
+          <span className="sr-only">. {tip}</span>
+        </Badge>
+      }
+    />
+    <TooltipContent>{tip}</TooltipContent>
+  </Tooltip>
+);

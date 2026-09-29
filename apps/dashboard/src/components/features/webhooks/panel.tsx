@@ -27,12 +27,12 @@ interface Props {
 
 const origin = typeof window === "undefined" ? "" : window.location.origin;
 
-export function WebhookPanel({
+export const WebhookPanel = ({
   canManage,
   generateWebhook,
   getWebhook,
   queryKey,
-}: Props) {
+}: Props) => {
   const queryClient = useQueryClient();
   const status = useQuery({ queryFn: getWebhook, queryKey });
 
@@ -81,9 +81,9 @@ export function WebhookPanel({
       </SettingsList.Frame>
     </SettingsList>
   );
-}
+};
 
-function WebhookManageButton({
+const WebhookManageButton = ({
   configured,
   generatePending,
   onGenerate,
@@ -91,7 +91,7 @@ function WebhookManageButton({
   configured: boolean;
   generatePending: boolean;
   onGenerate: () => void;
-}) {
+}) => {
   if (configured) {
     return (
       <InputGroupButton
@@ -121,9 +121,9 @@ function WebhookManageButton({
       Generate
     </InputGroupButton>
   );
-}
+};
 
-function WebhookUrlInput({
+const WebhookUrlInput = ({
   canManage,
   generatePending,
   onGenerate,
@@ -133,7 +133,7 @@ function WebhookUrlInput({
   generatePending: boolean;
   onGenerate: () => void;
   url: string;
-}) {
+}) => {
   const { copied, handleCopy } = useCopyFeedback(url);
   const configured = url.length > 0;
 
@@ -171,4 +171,4 @@ function WebhookUrlInput({
       </span>
     </>
   );
-}
+};

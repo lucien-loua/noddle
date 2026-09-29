@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 
-export function ConfigsListBody({
+export const ConfigsListBody = ({
   canCreate,
   canRestore,
   configsLoading,
@@ -37,7 +37,7 @@ export function ConfigsListBody({
   onRestoreS3: () => void;
   restoreLabel: string;
   rowCount: number;
-}) {
+}) => {
   if (configsLoading) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center py-10">
@@ -77,4 +77,4 @@ export function ConfigsListBody({
   }
 
   return null;
-}
+};

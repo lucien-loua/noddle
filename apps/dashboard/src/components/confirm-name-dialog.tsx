@@ -22,7 +22,7 @@ function selectConfirmName(state: { values: { confirmName: string } }) {
   return state.values.confirmName;
 }
 
-export function ConfirmNameDialog({
+export const ConfirmNameDialog = ({
   confirmLabel,
   description,
   onConfirm,
@@ -40,7 +40,7 @@ export function ConfirmNameDialog({
   pending: boolean;
   resourceName: string;
   title: ReactNode;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: { confirmName: "" },
     onSubmit: ({ value }) => onConfirm(value.confirmName),
@@ -127,4 +127,4 @@ export function ConfirmNameDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

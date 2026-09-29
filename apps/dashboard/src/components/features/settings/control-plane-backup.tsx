@@ -35,7 +35,11 @@ import type { ControlPlaneSettings } from "@/server/control-plane";
 
 const POLL_MS = 5000;
 
-function Outcome({ settings }: { settings: ControlPlaneSettings | undefined }) {
+const Outcome = ({
+  settings,
+}: {
+  settings: ControlPlaneSettings | undefined;
+}) => {
   if (!settings?.backupLastAt) {
     return (
       <FrameDescription>
@@ -72,9 +76,9 @@ function Outcome({ settings }: { settings: ControlPlaneSettings | undefined }) {
       ) : null}
     </dl>
   );
-}
+};
 
-export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
+export const ControlPlaneBackup = ({ canRun }: { canRun: boolean }) => {
   const client = useQueryClient();
   const [awaiting, setAwaiting] = useState<string | null | undefined>();
 
@@ -212,4 +216,4 @@ export function ControlPlaneBackup({ canRun }: { canRun: boolean }) {
       />
     </Frame>
   );
-}
+};

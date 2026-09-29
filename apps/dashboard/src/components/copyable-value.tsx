@@ -24,7 +24,7 @@ export function useCopyFeedback(value: string) {
   return { copied, handleCopy };
 }
 
-export function CopyButton({
+export const CopyButton = ({
   className,
   label,
   value,
@@ -32,7 +32,7 @@ export function CopyButton({
   className?: string;
   label: string;
   value: string;
-}) {
+}) => {
   const { copied, handleCopy } = useCopyFeedback(value);
 
   return (
@@ -51,9 +51,9 @@ export function CopyButton({
       </span>
     </>
   );
-}
+};
 
-export function CopyableValue({
+export const CopyableValue = ({
   className,
   label,
   value,
@@ -61,18 +61,13 @@ export function CopyableValue({
   className?: string;
   label: string;
   value: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-2 rounded-2xl bg-muted p-2",
-        className
-      )}
-    >
-      <code className="min-w-0 flex-1 break-all px-1 font-mono text-xs">
-        {value}
-      </code>
-      <CopyButton label={label} value={value} />
-    </div>
-  );
-}
+}) => (
+  <div
+    className={cn("flex items-start gap-2 rounded-2xl bg-muted p-2", className)}
+  >
+    <code className="min-w-0 flex-1 break-all px-1 font-mono text-xs">
+      {value}
+    </code>
+    <CopyButton label={label} value={value} />
+  </div>
+);

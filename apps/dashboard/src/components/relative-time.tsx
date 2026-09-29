@@ -12,7 +12,7 @@ function absoluteTime(iso: string): string {
   });
 }
 
-export function RelativeTime({
+export const RelativeTime = ({
   className,
   iso,
   long = false,
@@ -20,23 +20,21 @@ export function RelativeTime({
   className?: string;
   iso: string;
   long?: boolean;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- Base UI injects the <time> child as the name; the rule only reads literals
-          <button
-            className="cursor-default rounded-sm text-start focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-            type="button"
-          />
-        }
-      >
-        <time className={className} dateTime={iso} suppressHydrationWarning>
-          {long ? relativeTimeLong(iso) : relativeTime(iso)}
-        </time>
-      </TooltipTrigger>
-      <TooltipContent>{absoluteTime(iso)}</TooltipContent>
-    </Tooltip>
-  );
-}
+}) => (
+  <Tooltip>
+    <TooltipTrigger
+      render={
+        // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- Base UI injects the <time> child as the name; the rule only reads literals
+        <button
+          className="cursor-default rounded-sm text-start focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          type="button"
+        />
+      }
+    >
+      <time className={className} dateTime={iso} suppressHydrationWarning>
+        {long ? relativeTimeLong(iso) : relativeTime(iso)}
+      </time>
+    </TooltipTrigger>
+    <TooltipContent>{absoluteTime(iso)}</TooltipContent>
+  </Tooltip>
+);

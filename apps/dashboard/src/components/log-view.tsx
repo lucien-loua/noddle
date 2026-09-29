@@ -67,7 +67,7 @@ function renderLine(line: Line) {
   );
 }
 
-function LogViewHeader({
+const LogViewHeader = ({
   description,
   idleLabel,
   live,
@@ -77,7 +77,7 @@ function LogViewHeader({
 }: Pick<
   LogViewProps,
   "description" | "idleLabel" | "live" | "right" | "title" | "toolbar"
->) {
+>) => {
   const showTitleRow = title !== undefined || right !== undefined;
   if (!(showTitleRow || toolbar !== undefined)) {
     return null;
@@ -106,7 +106,7 @@ function LogViewHeader({
       {toolbar}
     </FrameHeader>
   );
-}
+};
 
 function renderBlocks(blocks: Line[], placeholder: string) {
   if (blocks.length === 0) {
@@ -116,7 +116,7 @@ function renderBlocks(blocks: Line[], placeholder: string) {
   return blocks.map(renderLine);
 }
 
-export function LogView({
+export const LogView = ({
   blocks,
   description,
   idleLabel,
@@ -126,7 +126,7 @@ export function LogView({
   right,
   title,
   toolbar,
-}: LogViewProps) {
+}: LogViewProps) => {
   const viewRef = useRef<HTMLDivElement | null>(null);
   const pinnedRef = useRef(true);
 
@@ -176,4 +176,4 @@ export function LogView({
       </FramePanel>
     </Frame>
   );
-}
+};

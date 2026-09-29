@@ -67,7 +67,7 @@ interface Props {
   title: string;
 }
 
-function NavItem({
+const NavItem = ({
   active,
   icon: Icon,
   label,
@@ -77,29 +77,27 @@ function NavItem({
   icon: typeof HouseIcon;
   label: string;
   to: LinkProps["to"];
-}) {
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        isActive={active}
-        render={<Link to={to} />}
-        tooltip={label}
-      >
-        <Icon weight={active ? "fill" : undefined} />
-        <span>{label}</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
+}) => (
+  <SidebarMenuItem>
+    <SidebarMenuButton
+      isActive={active}
+      render={<Link to={to} />}
+      tooltip={label}
+    >
+      <Icon weight={active ? "fill" : undefined} />
+      <span>{label}</span>
+    </SidebarMenuButton>
+  </SidebarMenuItem>
+);
 
-export function AppShell({
+export const AppShell = ({
   actions,
   breadcrumb,
   children,
   email,
   role,
   title,
-}: Props) {
+}: Props) => {
   const { sidebarOpen } = useRouteContext({ from: "__root__" });
   const knownRole = role && role in roles ? (role as RoleName) : null;
   const canReadAudit = useCan(knownRole, "audit", "read");
@@ -319,4 +317,4 @@ export function AppShell({
       </SidebarInset>
     </SidebarProvider>
   );
-}
+};

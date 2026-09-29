@@ -17,7 +17,7 @@ import type {
 } from "@/lib/resource-actions/use-resource-actions";
 import { resourceName } from "@/lib/scope-rows";
 
-export function ServiceDangerZone({
+export const ServiceDangerZone = ({
   actions,
   onDeleted,
   onError,
@@ -29,7 +29,7 @@ export function ServiceDangerZone({
   onError: (message: string) => void;
   role: RoleName | null;
   target: Target;
-}) {
+}) => {
   const runDelete = useCallback(
     (typed: string) =>
       actions.run(target, "delete", { confirmName: resourceName(typed) }),
@@ -79,4 +79,4 @@ export function ServiceDangerZone({
       {del.dialog}
     </>
   );
-}
+};

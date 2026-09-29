@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function ScheduleCadence({
+export const ScheduleCadence = ({
   children,
   onModeChange,
   scheduleMode,
@@ -20,33 +20,30 @@ export function ScheduleCadence({
   children: ReactNode;
   onModeChange: (mode: ScheduleMode) => void;
   scheduleMode: ScheduleMode;
-}) {
-  return (
-    <Field>
-      <FieldLabel htmlFor="schedule-cadence">Schedule</FieldLabel>
-      <Select
-        onValueChange={(v) => onModeChange(v as ScheduleMode)}
-        value={scheduleMode}
-      >
-        <SelectTrigger className="w-full" id="schedule-cadence">
-          <SelectValue placeholder="Choose a cadence" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {BACKUP_CRON_PRESETS.map((p) => (
-              <SelectItem key={p.cron} value={p.cron}>
-                {p.label} ({p.cron})
-              </SelectItem>
-            ))}
-            <SelectItem value="custom">Custom cron</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {scheduleMode === "custom" ? children : null}
-      <FieldDescription>
-        Five-field cron in UTC. The worker checks due schedules every few
-        minutes.
-      </FieldDescription>
-    </Field>
-  );
-}
+}) => (
+  <Field>
+    <FieldLabel htmlFor="schedule-cadence">Schedule</FieldLabel>
+    <Select
+      onValueChange={(v) => onModeChange(v as ScheduleMode)}
+      value={scheduleMode}
+    >
+      <SelectTrigger className="w-full" id="schedule-cadence">
+        <SelectValue placeholder="Choose a cadence" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {BACKUP_CRON_PRESETS.map((p) => (
+            <SelectItem key={p.cron} value={p.cron}>
+              {p.label} ({p.cron})
+            </SelectItem>
+          ))}
+          <SelectItem value="custom">Custom cron</SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+    {scheduleMode === "custom" ? children : null}
+    <FieldDescription>
+      Five-field cron in UTC. The worker checks due schedules every few minutes.
+    </FieldDescription>
+  </Field>
+);

@@ -25,7 +25,7 @@ interface ReplicasFormValues {
   replicas: number | null;
 }
 
-export function DatabaseClusterSettings({
+export const DatabaseClusterSettings = ({
   canEdit,
   databaseId,
   replicas,
@@ -37,7 +37,7 @@ export function DatabaseClusterSettings({
   swarmSettings: Parameters<
     typeof DatabaseSwarmSettingsDialog
   >[0]["swarmSettings"];
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [swarmOpen, setSwarmOpen] = useState(false);
@@ -153,4 +153,4 @@ export function DatabaseClusterSettings({
       />
     </>
   );
-}
+};

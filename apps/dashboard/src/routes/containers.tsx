@@ -60,22 +60,6 @@ import { getAuthState } from "@/server/auth";
 import type { ContainerKind, ContainerRow } from "@/server/containers";
 import { getContainers } from "@/server/containers";
 
-export const Route = createFileRoute("/containers")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: ContainersPage,
-  loader: async ({ context }) => ({
-    email: context.email,
-    role: context.role,
-    view: await getContainers(),
-  }),
-});
-
 const KIND_LABEL: Record<ContainerKind, string> = {
   "control-plane": "Noddle",
   swarm: "Swarm task",
@@ -88,7 +72,7 @@ const KIND_ICON: Record<ContainerKind, typeof CubeIcon> = {
   unmanaged: CubeIcon,
 };
 
-function KindBadge({ kind }: { kind: ContainerKind }) {
+const KindBadge = ({ kind }: { kind: ContainerKind }) => {
   const Icon = KIND_ICON[kind];
   return (
     <Badge variant={kind === "control-plane" ? "secondary" : "outline"}>
@@ -96,7 +80,7 @@ function KindBadge({ kind }: { kind: ContainerKind }) {
       {KIND_LABEL[kind]}
     </Badge>
   );
-}
+};
 
 function containerTone(row: ContainerRow): Tone {
   if (row.state === "running") {
@@ -121,7 +105,7 @@ function matches(row: ContainerRow, needle: string): boolean {
   );
 }
 
-function ContainerTableRow({
+const ContainerTableRow = ({
   onError,
   onSelect,
   onTerminal,
@@ -133,7 +117,7 @@ function ContainerTableRow({
   onTerminal: ((row: ContainerRow) => void) | null;
   role: RoleName | null;
   row: ContainerRow;
-}) {
+}) => {
   const handleSelect = useCallback(() => onSelect(row), [onSelect, row]);
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTableRowElement>) => {
@@ -201,9 +185,9 @@ function ContainerTableRow({
       </TableCell>
     </TableRow>
   );
-}
+};
 
-function ContainersPage() {
+const ContainersPage = () => {
   const { email, role, view } = Route.useLoaderData();
   const known = role && role in roles ? (role as RoleName) : null;
   const [failed, setFailed] = useState<string | null>(null);
@@ -463,4 +447,20 @@ function ContainersPage() {
       {terminal}
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/containers")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ContainersPage,
+  loader: async ({ context }) => ({
+    email: context.email,
+    role: context.role,
+    view: await getContainers(),
+  }),
+});

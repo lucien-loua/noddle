@@ -11,19 +11,7 @@ import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 
-export const Route = createFileRoute("/settings")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: SettingsPage,
-  loader: ({ context }) => ({ email: context.email, role: context.role }),
-});
-
-function SettingsPage() {
+const SettingsPage = () => {
   const { email, role } = Route.useLoaderData();
   const known = role && role in roles ? (role as RoleName) : null;
   const canAdmin = useCan(known, "server", "create");
@@ -44,4 +32,16 @@ function SettingsPage() {
       </div>
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/settings")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: SettingsPage,
+  loader: ({ context }) => ({ email: context.email, role: context.role }),
+});

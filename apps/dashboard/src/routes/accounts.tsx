@@ -11,23 +11,7 @@ import { useCan } from "@/lib/use-permission";
 import { getAccounts } from "@/server/accounts";
 import { getAuthState } from "@/server/auth";
 
-export const Route = createFileRoute("/accounts")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: AccountsPage,
-  loader: async ({ context }) => ({
-    accounts: await getAccounts(),
-    email: context.email,
-    role: context.role,
-  }),
-});
-
-function AccountsPage() {
+const AccountsPage = () => {
   const { accounts, email, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -58,4 +42,20 @@ function AccountsPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/accounts")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: AccountsPage,
+  loader: async ({ context }) => ({
+    accounts: await getAccounts(),
+    email: context.email,
+    role: context.role,
+  }),
+});

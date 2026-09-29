@@ -68,7 +68,7 @@ const KIND_LABEL: Record<ChannelRow["kind"], string> = {
   webhook: "Webhook",
 };
 
-export function NotificationChannels({
+export const NotificationChannels = ({
   initial,
   onOpenChange,
   open,
@@ -78,7 +78,7 @@ export function NotificationChannels({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   role: string | null;
-}) {
+}) => {
   const known = role && role in roles ? (role as RoleName) : null;
   const canManage = useCan(known, "notification", "manage");
   const {
@@ -146,9 +146,9 @@ export function NotificationChannels({
       )}
     </div>
   );
-}
+};
 
-function ChannelLine({
+const ChannelLine = ({
   canManage,
   channel,
   onDone,
@@ -156,7 +156,7 @@ function ChannelLine({
   canManage: boolean;
   channel: ChannelRow;
   onDone: () => void;
-}) {
+}) => {
   const test = useMutation({
     mutationFn: () => testChannel({ data: { channelId: channel.id } }),
     onSuccess: onDone,
@@ -230,9 +230,9 @@ function ChannelLine({
       ) : null}
     </Item>
   );
-}
+};
 
-function ChannelState({ channel }: { channel: ChannelRow }) {
+const ChannelState = ({ channel }: { channel: ChannelRow }) => {
   if (channel.lastError) {
     return (
       <span className="truncate text-destructive text-xs">
@@ -252,11 +252,11 @@ function ChannelState({ channel }: { channel: ChannelRow }) {
       Never used. Test it to find out whether it works
     </span>
   );
-}
+};
 
 type ChannelFormValues = z.input<typeof notificationChannelSchema>;
 
-function AddChannelDialog({
+const AddChannelDialog = ({
   onDone,
   onOpenChange,
   open,
@@ -264,7 +264,7 @@ function AddChannelDialog({
   onDone: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const add = useMutation({
     mutationFn: (value: ChannelFormValues) =>
       addChannel({
@@ -406,9 +406,9 @@ function AddChannelDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function KindButton({
+const KindButton = ({
   active,
   label,
   onSelect,
@@ -418,7 +418,7 @@ function KindButton({
   label: string;
   onSelect: (value: ChannelRow["kind"]) => void;
   value: ChannelRow["kind"];
-}) {
+}) => {
   const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
   return (
     <Button
@@ -432,4 +432,4 @@ function KindButton({
       {label}
     </Button>
   );
-}
+};

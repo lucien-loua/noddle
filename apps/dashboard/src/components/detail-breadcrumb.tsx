@@ -22,7 +22,7 @@ type Parent =
 
 const PROJECTS: Parent = { label: "Projects", to: "/projects" };
 
-function ParentLink({
+const ParentLink = ({
   children,
   className,
   parent,
@@ -30,7 +30,7 @@ function ParentLink({
   children?: React.ReactNode;
   className?: string;
   parent: Parent;
-}) {
+}) => {
   if (parent.to === "/projects/$projectId/$environmentId") {
     return (
       <Link
@@ -50,9 +50,9 @@ function ParentLink({
       {children}
     </Link>
   );
-}
+};
 
-export function DetailBreadcrumb({
+export const DetailBreadcrumb = ({
   environment,
   name,
   parent = PROJECTS,
@@ -62,47 +62,45 @@ export function DetailBreadcrumb({
   name: string;
   parent?: Parent;
   project?: string;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <Button
-        aria-label={`Back to ${parent.label.toLowerCase()}`}
-        className="-ms-1 shrink-0"
-        nativeButton={false}
-        render={<ParentLink parent={parent} />}
-        size="icon"
-        variant="ghost"
-      >
-        <ArrowLeftIcon weight="regular" />
-      </Button>
+}) => (
+  <div className="flex min-w-0 items-center gap-2">
+    <Button
+      aria-label={`Back to ${parent.label.toLowerCase()}`}
+      className="-ms-1 shrink-0"
+      nativeButton={false}
+      render={<ParentLink parent={parent} />}
+      size="icon"
+      variant="ghost"
+    >
+      <ArrowLeftIcon weight="regular" />
+    </Button>
 
-      <Breadcrumb className="min-w-0">
-        <BreadcrumbList className="flex-nowrap">
-          <BreadcrumbItem className="hidden sm:inline-flex">
-            <BreadcrumbLink
-              render={<ParentLink parent={parent}>{parent.label}</ParentLink>}
-            />
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden sm:block" />
-          {project && environment ? (
-            <>
-              <BreadcrumbItem className="hidden min-w-0 sm:inline-flex">
-                <span className="truncate">
-                  {project}
-                  <span className="text-muted-foreground/50"> / </span>
-                  {environment}
-                </span>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden sm:block" />
-            </>
-          ) : null}
-          <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="truncate font-medium">
-              {name}
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    </div>
-  );
-}
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
+        <BreadcrumbItem className="hidden sm:inline-flex">
+          <BreadcrumbLink
+            render={<ParentLink parent={parent}>{parent.label}</ParentLink>}
+          />
+        </BreadcrumbItem>
+        <BreadcrumbSeparator className="hidden sm:block" />
+        {project && environment ? (
+          <>
+            <BreadcrumbItem className="hidden min-w-0 sm:inline-flex">
+              <span className="truncate">
+                {project}
+                <span className="text-muted-foreground/50"> / </span>
+                {environment}
+              </span>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden sm:block" />
+          </>
+        ) : null}
+        <BreadcrumbItem className="min-w-0">
+          <BreadcrumbPage className="truncate font-medium">
+            {name}
+          </BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  </div>
+);

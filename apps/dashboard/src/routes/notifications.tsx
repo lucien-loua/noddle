@@ -13,23 +13,7 @@ import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getChannels } from "@/server/notifications";
 
-export const Route = createFileRoute("/notifications")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: NotificationsPage,
-  loader: async ({ context }) => ({
-    channels: await getChannels(),
-    email: context.email,
-    role: context.role,
-  }),
-});
-
-function NotificationsPage() {
+const NotificationsPage = () => {
   const { channels, email, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -61,4 +45,20 @@ function NotificationsPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/notifications")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: NotificationsPage,
+  loader: async ({ context }) => ({
+    channels: await getChannels(),
+    email: context.email,
+    role: context.role,
+  }),
+});

@@ -40,30 +40,7 @@ import type { ProjectGroup } from "@/server/dashboard";
 import { getProjects } from "@/server/projects";
 import type { ProjectView } from "@/server/projects";
 
-export const Route = createFileRoute("/projects")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: ProjectsPage,
-  loader: async ({ context }) => {
-    const [dashboard, allProjects] = await Promise.all([
-      getDashboardGroups(),
-      getProjects(),
-    ]);
-    return {
-      allProjects,
-      dashboard,
-      email: context.email,
-      role: context.role,
-    };
-  },
-});
-
-function ProjectsPage() {
+const ProjectsPage = () => {
   const { allProjects, dashboard, email, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -118,9 +95,9 @@ function ProjectsPage() {
       )}
     </AppShell>
   );
-}
+};
 
-function ProjectCount({
+const ProjectCount = ({
   icon: Icon,
   label,
   value,
@@ -128,7 +105,7 @@ function ProjectCount({
   icon: typeof CodeIcon;
   label: string;
   value: number;
-}) {
+}) => {
   if (value === 0) {
     return null;
   }
@@ -139,9 +116,9 @@ function ProjectCount({
       <span className="text-muted-foreground">{label}</span>
     </span>
   );
-}
+};
 
-function ProjectCard({
+const ProjectCard = ({
   group,
   project,
   role,
@@ -149,7 +126,7 @@ function ProjectCard({
   group: ProjectGroup | undefined;
   project: ProjectView;
   role: RoleName | null;
-}) {
+}) => {
   const scopes = group?.scopes ?? [];
   const services = scopes.reduce((n, s) => n + s.services.length, 0);
   const stacks = scopes.reduce((n, s) => n + s.stacks.length, 0);
@@ -230,4 +207,27 @@ function ProjectCard({
       </FrameFooter>
     </Frame>
   );
-}
+};
+
+export const Route = createFileRoute("/projects")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ProjectsPage,
+  loader: async ({ context }) => {
+    const [dashboard, allProjects] = await Promise.all([
+      getDashboardGroups(),
+      getProjects(),
+    ]);
+    return {
+      allProjects,
+      dashboard,
+      email: context.email,
+      role: context.role,
+    };
+  },
+});

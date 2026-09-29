@@ -68,7 +68,7 @@ function useBackupRestore(subject: BackupTabProps["subject"]) {
   };
 }
 
-export function BackupTab(props: BackupTabProps) {
+export const BackupTab = (props: BackupTabProps) => {
   const destinationsQuery = useQuery(queries.destinations());
   const destinations: DestinationRow[] = destinationsQuery.data ?? [];
   const restore = useBackupRestore(props.subject);
@@ -112,4 +112,4 @@ export function BackupTab(props: BackupTabProps) {
       />
     </>
   );
-}
+};

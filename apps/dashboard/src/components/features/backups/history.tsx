@@ -23,7 +23,7 @@ import { queries } from "@/lib/queries";
 const POLL_MS = 3000;
 const HISTORY_LIMIT = 10;
 
-export function BackupHistoryDialog({
+export const BackupHistoryDialog = ({
   canCreate,
   canRestore,
   configId,
@@ -39,7 +39,7 @@ export function BackupHistoryDialog({
   onRestore?: (backup: BackupRunRow) => void;
   open: boolean;
   subject: BackupSubject;
-}) {
+}) => {
   const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
   const [viewing, setViewing] = useState<BackupRunRow | null>(null);
@@ -95,4 +95,4 @@ export function BackupHistoryDialog({
       />
     </FocusModal>
   );
-}
+};

@@ -3,7 +3,7 @@ import { useCallback } from "react";
 
 import { TabsList } from "@/components/ui/tabs";
 
-export function TabRail({ children }: { children: ReactNode }) {
+export const TabRail = ({ children }: { children: ReactNode }) => {
   const keepInView = useCallback((event: FocusEvent<HTMLDivElement>) => {
     event.target.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, []);
@@ -20,4 +20,4 @@ export function TabRail({ children }: { children: ReactNode }) {
       </div>
     </div>
   );
-}
+};

@@ -31,13 +31,13 @@ import { deleteServiceDomain } from "@/server/service-domains";
 
 const DOMAIN_REDEPLOY_HINT = "Domain changes take effect on the next deploy.";
 
-export function ServiceDomains({
+export const ServiceDomains = ({
   canEdit,
   service,
 }: {
   canEdit: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [editor, setEditor] = useState<ServiceDomainRow | "new" | null>(null);
@@ -163,4 +163,4 @@ export function ServiceDomains({
       />
     </>
   );
-}
+};

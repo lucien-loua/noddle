@@ -146,39 +146,39 @@ function toPlaintext(lines: TerminalLogLine[]): string {
   return lines.map((line) => line.text).join("\n");
 }
 
-function TerminalLogsRoot({
+const TerminalLogsRoot = ({
   children,
   lines,
 }: {
   children: ReactNode;
   lines: TerminalLogLine[];
-}) {
+}) => {
   const value = useMemo(
     () => ({ lines, plaintext: toPlaintext(lines) }),
     [lines]
   );
 
   return <TerminalLogsContext value={value}>{children}</TerminalLogsContext>;
-}
+};
 
-function TerminalLogsCount() {
+const TerminalLogsCount = () => {
   const { lines } = useTerminalLogs();
   const label = lines.length === 1 ? "1 line" : `${lines.length} lines`;
   return <Badge variant="outline">{label}</Badge>;
-}
+};
 
-function TerminalLogsCopy({
+const TerminalLogsCopy = ({
   className,
   label,
 }: {
   className?: string;
   label: string;
-}) {
+}) => {
   const { plaintext } = useTerminalLogs();
   return <CopyButton className={className} label={label} value={plaintext} />;
-}
+};
 
-function TerminalLogsLine({ line }: { line: TerminalLogLine }) {
+const TerminalLogsLine = ({ line }: { line: TerminalLogLine }) => {
   const level = line.level ?? classifyLogLevel(line.text);
   const style = LEVEL_STYLE[level];
 
@@ -208,15 +208,15 @@ function TerminalLogsLine({ line }: { line: TerminalLogLine }) {
       </span>
     </div>
   );
-}
+};
 
-function TerminalLogsViewport({
+const TerminalLogsViewport = ({
   className,
   placeholder = "No logs yet",
 }: {
   className?: string;
   placeholder?: string;
-}) {
+}) => {
   const { lines } = useTerminalLogs();
 
   return (
@@ -233,7 +233,7 @@ function TerminalLogsViewport({
       )}
     </div>
   );
-}
+};
 
 export const TerminalLogs = Object.assign(TerminalLogsRoot, {
   Copy: TerminalLogsCopy,

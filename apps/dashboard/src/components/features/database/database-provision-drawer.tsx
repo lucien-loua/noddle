@@ -18,7 +18,7 @@ const DRAWER_WIDTH = {
   "--drawer-content-width": "min(52rem, calc(100vw - 1rem))",
 } as CSSProperties;
 
-export function DatabaseProvisionDrawer({
+export const DatabaseProvisionDrawer = ({
   deployment,
   deploymentId,
   onEnd,
@@ -28,7 +28,7 @@ export function DatabaseProvisionDrawer({
   deploymentId: string | null;
   onEnd: () => void;
   onOpenChange: (open: boolean) => void;
-}) {
+}) => {
   const status = deployment ? deploymentLabel(deployment.status) : null;
   const meta = deployment
     ? [
@@ -83,4 +83,4 @@ export function DatabaseProvisionDrawer({
       </DrawerContent>
     </Drawer>
   );
-}
+};

@@ -230,7 +230,7 @@ function useConnectDatabase({
   };
 }
 
-export function ConnectDatabaseDialog(props: Props) {
+export const ConnectDatabaseDialog = (props: Props) => {
   const { onOpenChange, open, servers } = props;
   const {
     engine,
@@ -418,4 +418,4 @@ export function ConnectDatabaseDialog(props: Props) {
       </DialogContent>
     </Dialog>
   );
-}
+};

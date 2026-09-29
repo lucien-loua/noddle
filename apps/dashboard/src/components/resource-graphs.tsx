@@ -83,7 +83,7 @@ function useMeasuredHeight<T extends HTMLElement>(fallback: number) {
   return { measured, ref };
 }
 
-export function Sparkline<T extends { sampledAt: string }>({
+export const Sparkline = <T extends { sampledAt: string }>({
   formatValue,
   label,
   max,
@@ -99,7 +99,7 @@ export function Sparkline<T extends { sampledAt: string }>({
   shade: string;
   windowHours?: 1 | 6 | 24;
   value: (p: T) => number;
-}) {
+}) => {
   const { measured, ref } = useMeasuredHeight<HTMLDivElement>(HEIGHT);
   const data = withGaps(points, value);
 
@@ -153,9 +153,9 @@ export function Sparkline<T extends { sampledAt: string }>({
       />
     </div>
   );
-}
+};
 
-export function MetricRow<T extends { sampledAt: string }>({
+export const MetricRow = <T extends { sampledAt: string }>({
   formatValue,
   label,
   max,
@@ -173,33 +173,31 @@ export function MetricRow<T extends { sampledAt: string }>({
   shade: string;
   windowHours?: 1 | 6 | 24;
   value: (p: T) => number;
-}) {
-  return (
-    <div className="flex h-full flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="flex items-center gap-2 text-muted-foreground text-xs">
-          <span
-            aria-hidden="true"
-            className={cn("size-2 shrink-0 rounded-full bg-current", shade)}
-          />
-          {label}
-        </span>
-        <span className="font-medium text-sm tabular-nums">{reading}</span>
-      </div>
-      <div className="min-h-0 flex-1">
-        <Sparkline
-          formatValue={formatValue}
-          label={label}
-          max={max}
-          points={points}
-          shade={shade}
-          value={value}
-          windowHours={windowHours}
+}) => (
+  <div className="flex h-full flex-col gap-2">
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="flex items-center gap-2 text-muted-foreground text-xs">
+        <span
+          aria-hidden="true"
+          className={cn("size-2 shrink-0 rounded-full bg-current", shade)}
         />
-      </div>
+        {label}
+      </span>
+      <span className="font-medium text-sm tabular-nums">{reading}</span>
     </div>
-  );
-}
+    <div className="min-h-0 flex-1">
+      <Sparkline
+        formatValue={formatValue}
+        label={label}
+        max={max}
+        points={points}
+        shade={shade}
+        value={value}
+        windowHours={windowHours}
+      />
+    </div>
+  </div>
+);
 
 const pct = (ratio: number) => `${Math.round(ratio * 100)} %`;
 const formatLoad = (v: number) => v.toFixed(2);
@@ -211,13 +209,13 @@ const readDisk = (p: MetricPoint) => p.diskUsedRatio;
 const readBlockIo = (p: MetricPoint) => p.blockReadBytes + p.blockWriteBytes;
 const readNetworkIo = (p: MetricPoint) => p.networkInBytes + p.networkOutBytes;
 
-export function ResourceGraphs({
+export const ResourceGraphs = ({
   series,
   windowHours = 6,
 }: {
   series: ServerSeries | null;
   windowHours?: 1 | 6 | 24;
-}) {
+}) => {
   if (!series) {
     return (
       <Empty className="border">
@@ -319,9 +317,9 @@ export function ResourceGraphs({
       )}
     </Frame>
   );
-}
+};
 
-function ServerFreshness({ latest }: { latest: MetricPoint | null }) {
+const ServerFreshness = ({ latest }: { latest: MetricPoint | null }) => {
   if (!latest) {
     return <Badge variant="destructive">no samples</Badge>;
   }
@@ -338,4 +336,4 @@ function ServerFreshness({ latest }: { latest: MetricPoint | null }) {
       sampled <RelativeTime iso={latest.sampledAt} />
     </span>
   );
-}
+};

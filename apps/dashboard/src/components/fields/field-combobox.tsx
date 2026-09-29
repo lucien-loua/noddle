@@ -36,7 +36,7 @@ function isComboboxGroup<T>(
   );
 }
 
-export function FieldCombobox<T>({
+export const FieldCombobox = <T,>({
   description,
   emptyText,
   itemToId,
@@ -58,7 +58,7 @@ export function FieldCombobox<T>({
   placeholder?: string;
   renderItem: (item: T) => ReactNode;
   required?: boolean;
-}) {
+}) => {
   const field = useFieldContext<string>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -148,4 +148,4 @@ export function FieldCombobox<T>({
       </Combobox>
     </FieldShell>
   );
-}
+};

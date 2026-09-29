@@ -57,31 +57,29 @@ import {
 } from "./config-form";
 import type { VolumeBackupConfigFormValues } from "./config-form";
 
-function EnabledField({
+const EnabledField = ({
   checked,
   onCheckedChange,
 }: {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <Field>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={checked}
-          onCheckedChange={(value) => onCheckedChange(value === true)}
-        />
-        <FieldLabel className="font-normal">Run on schedule</FieldLabel>
-      </div>
-      <FieldDescription>
-        When off, Noddle ignores this cadence until you turn it back on. Manual
-        runs still work.
-      </FieldDescription>
-    </Field>
-  );
-}
+}) => (
+  <Field>
+    <div className="flex items-center gap-2">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+      />
+      <FieldLabel className="font-normal">Run on schedule</FieldLabel>
+    </div>
+    <FieldDescription>
+      When off, Noddle ignores this cadence until you turn it back on. Manual
+      runs still work.
+    </FieldDescription>
+  </Field>
+);
 
-function DatabaseScheduleForm({
+const DatabaseScheduleForm = ({
   databaseId,
   defaultDatabaseName,
   destinations,
@@ -97,7 +95,7 @@ function DatabaseScheduleForm({
   fallbackDestinationId: string;
   onSaved: () => void;
   open: boolean;
-}) {
+}) => {
   const copy = copyFor("database");
   const defaults = configFormDefaults(
     editing,
@@ -261,9 +259,9 @@ function DatabaseScheduleForm({
       </DialogForm>
     </>
   );
-}
+};
 
-function VolumeScheduleForm({
+const VolumeScheduleForm = ({
   destinations,
   editing,
   fallbackDestinationId,
@@ -277,7 +275,7 @@ function VolumeScheduleForm({
   onSaved: () => void;
   open: boolean;
   serviceId: string;
-}) {
+}) => {
   const copy = copyFor("volume");
   const defaults = volumeConfigFormDefaults(editing, fallbackDestinationId);
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() =>
@@ -469,7 +467,7 @@ function VolumeScheduleForm({
       </DialogForm>
     </>
   );
-}
+};
 
 interface DatabaseConfigDialogProps {
   defaultDatabaseName: string;
@@ -500,7 +498,7 @@ function isDatabaseConfig(
   return props.subject.kind === "database";
 }
 
-export function BackupConfigDialog(props: BackupConfigDialogProps) {
+export const BackupConfigDialog = (props: BackupConfigDialogProps) => {
   const [firstDestination] = props.destinations;
   const fallbackDestinationId = firstDestination ? firstDestination.id : "";
 
@@ -540,4 +538,4 @@ export function BackupConfigDialog(props: BackupConfigDialogProps) {
       </DialogContent>
     </Dialog>
   );
-}
+};

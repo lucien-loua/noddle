@@ -36,51 +36,20 @@ const STATUS_LABEL: Record<ServerView["status"], string> = {
   unreachable: "Unreachable",
 };
 
-export const Route = createFileRoute("/servers_/$serverId")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: ServerDetail,
-  loader: async ({ context, params }) => {
-    const [machines, metrics, disks] = await Promise.all([
-      getServers(),
-      getServerMetrics(),
-      getServerDiskUsage(),
-    ]);
-    const server = machines.find((s) => s.id === params.serverId);
-    if (!server) {
-      throw notFound();
-    }
-    return {
-      disk: disks.find((d) => d.serverId === server.id) ?? null,
-      email: context.email,
-      role: context.role,
-      series: metrics.find((m) => m.serverId === server.id) ?? null,
-      server,
-    };
-  },
-});
-
-function Fact({
+const Fact = ({
   children,
   label,
 }: {
   children: React.ReactNode;
   label: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
-      <dd className="truncate text-sm">{children}</dd>
-    </div>
-  );
-}
+}) => (
+  <div className="min-w-0">
+    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dd className="truncate text-sm">{children}</dd>
+  </div>
+);
 
-function ServerDetail() {
+const ServerDetail = () => {
   const { disk, email, role, series, server } = Route.useLoaderData();
   const known = role && role in roles ? (role as RoleName) : null;
   const canShell = useCan(known, "server", "shell");
@@ -188,4 +157,33 @@ function ServerDetail() {
       {terminal}
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/servers_/$serverId")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: ServerDetail,
+  loader: async ({ context, params }) => {
+    const [machines, metrics, disks] = await Promise.all([
+      getServers(),
+      getServerMetrics(),
+      getServerDiskUsage(),
+    ]);
+    const server = machines.find((s) => s.id === params.serverId);
+    if (!server) {
+      throw notFound();
+    }
+    return {
+      disk: disks.find((d) => d.serverId === server.id) ?? null,
+      email: context.email,
+      role: context.role,
+      series: metrics.find((m) => m.serverId === server.id) ?? null,
+      server,
+    };
+  },
+});

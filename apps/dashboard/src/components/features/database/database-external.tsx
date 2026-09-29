@@ -35,7 +35,7 @@ import { errorMessage } from "@/lib/format";
 import { queries } from "@/lib/queries";
 import { setDatabaseExternalPort } from "@/server/databases";
 
-export function DatabaseExternal({
+export const DatabaseExternal = ({
   canEdit,
   canReadSecrets,
   databaseId,
@@ -47,7 +47,7 @@ export function DatabaseExternal({
   databaseId: string;
   defaultPort: number;
   externalPort: number | null;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [value, setValue] = useState(
@@ -160,4 +160,4 @@ export function DatabaseExternal({
       </FramePanel>
     </Frame>
   );
-}
+};

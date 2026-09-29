@@ -17,7 +17,7 @@ const OPTIONS: { label: string; value: Theme }[] = [
   { label: "System", value: "system" },
 ];
 
-export function ThemeToggle() {
+export const ThemeToggle = () => {
   const { setTheme, theme } = useTheme();
 
   const choose = useCallback(
@@ -42,4 +42,4 @@ export function ThemeToggle() {
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );
-}
+};

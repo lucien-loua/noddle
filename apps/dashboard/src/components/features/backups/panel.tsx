@@ -74,7 +74,7 @@ function defaultVolumeNameFor(subject: BackupSubject, rows: ScheduleRow[]) {
   return first && "volumeName" in first ? first.volumeName : undefined;
 }
 
-export function BackupPanel(props: BackupPanelProps) {
+export const BackupPanel = (props: BackupPanelProps) => {
   const {
     canCreate,
     canRestore,
@@ -234,4 +234,4 @@ export function BackupPanel(props: BackupPanelProps) {
       ) : null}
     </>
   );
-}
+};

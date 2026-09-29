@@ -141,7 +141,7 @@ function formatLabels(
     .join("\n");
 }
 
-export function DatabaseSwarmSettingsDialog({
+export const DatabaseSwarmSettingsDialog = ({
   databaseId,
   onOpenChange,
   open,
@@ -151,7 +151,7 @@ export function DatabaseSwarmSettingsDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   swarmSettings: DatabaseSwarmSettings | null;
-}) {
+}) => {
   const [section, setSection] = useState<MenuId>("health-check");
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -234,7 +234,7 @@ export function DatabaseSwarmSettingsDialog({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};
 
 interface SectionFormProps {
   isPending: boolean;
@@ -309,7 +309,7 @@ function SectionForm(props: SectionFormProps) {
   return SECTION_FORMS[props.section](props);
 }
 
-function FormActions({
+const FormActions = ({
   isPending,
   onClear,
   onError,
@@ -319,37 +319,35 @@ function FormActions({
   onClear: () => Promise<void>;
   onError: Error | null;
   saveLabel: string;
-}) {
-  return (
-    <div
-      className="flex shrink-0 flex-col gap-2 border-t bg-secondary/25 p-3"
-      data-slot="swarm-section-footer"
-    >
-      {onError ? (
-        <p className="text-destructive text-sm" role="alert">
-          {errorMessage(onError, "could not save")}
-        </p>
-      ) : null}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          disabled={isPending}
-          onClick={onClear}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          Clear
-        </Button>
-        <Button disabled={isPending} size="sm" type="submit">
-          {isPending ? <Spinner data-icon="inline-start" /> : null}
-          {saveLabel}
-        </Button>
-      </div>
+}) => (
+  <div
+    className="flex shrink-0 flex-col gap-2 border-t bg-secondary/25 p-3"
+    data-slot="swarm-section-footer"
+  >
+    {onError ? (
+      <p className="text-destructive text-sm" role="alert">
+        {errorMessage(onError, "could not save")}
+      </p>
+    ) : null}
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        disabled={isPending}
+        onClick={onClear}
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
+        Clear
+      </Button>
+      <Button disabled={isPending} size="sm" type="submit">
+        {isPending ? <Spinner data-icon="inline-start" /> : null}
+        {saveLabel}
+      </Button>
     </div>
-  );
-}
+  </div>
+);
 
-function SectionShell({
+const SectionShell = ({
   children,
   isPending,
   onClear,
@@ -363,24 +361,22 @@ function SectionShell({
   onError: Error | null;
   onSubmit: (event: SubmitEvent) => void;
   saveLabel: string;
-}) {
-  return (
-    <form
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background"
-      onSubmit={onSubmit}
-    >
-      <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
-        {children}
-      </div>
-      <FormActions
-        isPending={isPending}
-        onClear={onClear}
-        onError={onError}
-        saveLabel={saveLabel}
-      />
-    </form>
-  );
-}
+}) => (
+  <form
+    className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background"
+    onSubmit={onSubmit}
+  >
+    <div className="scroll-fade-y no-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+      {children}
+    </div>
+    <FormActions
+      isPending={isPending}
+      onClear={onClear}
+      onError={onError}
+      saveLabel={saveLabel}
+    />
+  </form>
+);
 
 interface HealthCheckFormValues {
   interval: number | null;
@@ -390,7 +386,7 @@ interface HealthCheckFormValues {
   timeout: number | null;
 }
 
-function HealthCheckForm({
+const HealthCheckForm = ({
   isPending,
   onClear,
   onError,
@@ -402,7 +398,7 @@ function HealthCheckForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["healthCheck"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: {
       interval: value?.Interval ?? null,
@@ -487,7 +483,7 @@ function HealthCheckForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface RestartPolicyFormValues {
   condition: "" | "any" | "none" | "on-failure";
@@ -496,7 +492,7 @@ interface RestartPolicyFormValues {
   window: number | null;
 }
 
-function RestartPolicyForm({
+const RestartPolicyForm = ({
   isPending,
   onClear,
   onError,
@@ -508,7 +504,7 @@ function RestartPolicyForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["restartPolicy"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: {
       condition: value?.Condition ?? "",
@@ -580,14 +576,14 @@ function RestartPolicyForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface PlacementFormValues {
   constraints: string;
   maxReplicas: number | null;
 }
 
-function PlacementForm({
+const PlacementForm = ({
   isPending,
   onClear,
   onError,
@@ -599,7 +595,7 @@ function PlacementForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["placement"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: {
       constraints: (value?.Constraints ?? []).join("\n"),
@@ -664,7 +660,7 @@ function PlacementForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface UpdateConfigFormValues {
   delay: number | null;
@@ -674,7 +670,7 @@ interface UpdateConfigFormValues {
   parallelism: number | null;
 }
 
-function UpdateConfigForm({
+const UpdateConfigForm = ({
   isPending,
   kind,
   onClear,
@@ -691,7 +687,7 @@ function UpdateConfigForm({
     | NonNullable<DatabaseSwarmSettings["rollbackConfig"]>
     | NonNullable<DatabaseSwarmSettings["updateConfig"]>
     | null;
-}) {
+}) => {
   const failureActions: FieldSelectOption[] =
     kind === "update"
       ? [
@@ -806,7 +802,7 @@ function UpdateConfigForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface ModeFormValues {
   kind: "global" | "replicated";
@@ -817,7 +813,7 @@ function selectModeKind(state: { values: ModeFormValues }) {
   return state.values.kind;
 }
 
-function ModeForm({
+const ModeForm = ({
   isPending,
   onClear,
   onError,
@@ -829,7 +825,7 @@ function ModeForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["mode"]> | null;
-}) {
+}) => {
   const defaultValues: ModeFormValues = {
     kind: value?.Global ? "global" : "replicated",
     replicas: value?.Replicated?.Replicas ?? 1,
@@ -892,13 +888,13 @@ function ModeForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface NetworkFormValues {
   targets: string;
 }
 
-function NetworkForm({
+const NetworkForm = ({
   isPending,
   onClear,
   onError,
@@ -910,7 +906,7 @@ function NetworkForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["networks"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: {
       targets: (value ?? []).map((n) => n.Target).join("\n"),
@@ -962,13 +958,13 @@ function NetworkForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface LabelsFormValues {
   raw: string;
 }
 
-function LabelsForm({
+const LabelsForm = ({
   isPending,
   onClear,
   onError,
@@ -980,7 +976,7 @@ function LabelsForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["labels"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: { raw: formatLabels(value) } satisfies LabelsFormValues,
     onSubmit: ({ value: v }) => onSave({ labels: parseLabels(v.raw) }),
@@ -1022,13 +1018,13 @@ function LabelsForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface StopGraceFormValues {
   stopGracePeriod: number | null;
 }
 
-function StopGraceForm({
+const StopGraceForm = ({
   isPending,
   onClear,
   onError,
@@ -1040,7 +1036,7 @@ function StopGraceForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: number | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: {
       stopGracePeriod: value ?? null,
@@ -1085,13 +1081,13 @@ function StopGraceForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};
 
 interface EndpointFormValues {
   mode: "" | "dnsrr" | "vip";
 }
 
-function EndpointForm({
+const EndpointForm = ({
   isPending,
   onClear,
   onError,
@@ -1103,7 +1099,7 @@ function EndpointForm({
   onError: Error | null;
   onSave: (slice: DatabaseSwarmSettings) => Promise<unknown>;
   value: NonNullable<DatabaseSwarmSettings["endpointSpec"]> | null;
-}) {
+}) => {
   const form = useAppForm({
     defaultValues: { mode: value?.Mode ?? "" } satisfies EndpointFormValues,
     onSubmit: ({ value: v }) =>
@@ -1148,4 +1144,4 @@ function EndpointForm({
       </FieldGroup>
     </SectionShell>
   );
-}
+};

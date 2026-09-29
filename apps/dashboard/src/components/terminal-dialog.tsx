@@ -92,7 +92,7 @@ const Terminal = lazy(async () => ({
   default: (await import("@wterm/react")).Terminal,
 }));
 
-function TerminalSession({
+const TerminalSession = ({
   onStatus,
   target,
   termRef,
@@ -100,7 +100,7 @@ function TerminalSession({
   onStatus: (status: "connecting" | "open" | "closed") => void;
   target: TerminalTarget;
   termRef: RefObject<HTMLDivElement | null>;
-}) {
+}) => {
   const { resolvedTheme } = useTheme();
   const handleRef = useRef<TerminalHandle>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -210,9 +210,9 @@ function TerminalSession({
       </Suspense>
     </div>
   );
-}
+};
 
-export function TerminalDialog({
+export const TerminalDialog = ({
   onOpenChange,
   onOpenChangeComplete,
   open,
@@ -222,7 +222,7 @@ export function TerminalDialog({
   onOpenChangeComplete?: (open: boolean) => void;
   open: boolean;
   target: TerminalTarget | null;
-}) {
+}) => {
   const [status, setStatus] = useState<"connecting" | "open" | "closed">(
     "connecting"
   );
@@ -299,7 +299,7 @@ export function TerminalDialog({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};
 
 export function useTerminalDialog() {
   const [target, setTarget] = useState<TerminalTarget | null>(null);

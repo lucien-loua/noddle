@@ -16,7 +16,7 @@ import {
 } from "@/lib/format";
 import type { DeploymentSummary } from "@/server/dashboard";
 
-export function BuildLogsDialog({
+export const BuildLogsDialog = ({
   deployment,
   deploymentId,
   onEnd,
@@ -28,7 +28,7 @@ export function BuildLogsDialog({
   onEnd: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const status = deployment ? deploymentLabel(deployment.status) : null;
   const meta = deployment
     ? [
@@ -73,4 +73,4 @@ export function BuildLogsDialog({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};

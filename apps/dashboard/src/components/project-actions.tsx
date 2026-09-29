@@ -39,7 +39,7 @@ import type { RoleName } from "@/lib/permissions";
 import { useCan } from "@/lib/use-permission";
 import { createProject, deleteProject, renameProject } from "@/server/projects";
 
-export function CreateProjectButton({ role }: { role: RoleName | null }) {
+export const CreateProjectButton = ({ role }: { role: RoleName | null }) => {
   const [open, setOpen] = useState(false);
   const canCreate = useCan(role, "service", "create");
   const handleOpen = useCallback(() => setOpen(true), []);
@@ -57,9 +57,9 @@ export function CreateProjectButton({ role }: { role: RoleName | null }) {
       <ProjectFormDialog onOpenChange={setOpen} open={open} />
     </>
   );
-}
+};
 
-export function ProjectRowActions({
+export const ProjectRowActions = ({
   description,
   name,
   projectId,
@@ -69,7 +69,7 @@ export function ProjectRowActions({
   name: string;
   projectId: string;
   role: RoleName | null;
-}) {
+}) => {
   const [dialog, setDialog] = useState<"delete" | "rename" | null>(null);
   const canWrite = useCan(role, "service", "create");
   const canDelete = useCan(role, "service", "delete");
@@ -136,7 +136,7 @@ export function ProjectRowActions({
       ) : null}
     </>
   );
-}
+};
 
 const projectFormSchema = z.object({
   description: z
@@ -150,7 +150,7 @@ interface ProjectFormValues {
   name: string;
 }
 
-function ProjectFormDialog({
+const ProjectFormDialog = ({
   existing,
   onOpenChange,
   open,
@@ -158,7 +158,7 @@ function ProjectFormDialog({
   existing?: { description: string | null; name: string; projectId: string };
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const navigate = useNavigate();
@@ -264,9 +264,9 @@ function ProjectFormDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function DeleteProjectDialog({
+const DeleteProjectDialog = ({
   name,
   onOpenChange,
   open,
@@ -276,7 +276,7 @@ function DeleteProjectDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   projectId: string;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -321,4 +321,4 @@ function DeleteProjectDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

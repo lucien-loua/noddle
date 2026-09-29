@@ -13,7 +13,7 @@ import type { UpdateStatus } from "@/server/updates";
 
 const STALE_MS = 30 * 60 * 1000;
 
-export function UpdateAvailable({ role }: { role?: string | null }) {
+export const UpdateAvailable = ({ role }: { role?: string | null }) => {
   const known = role && role in roles ? (role as RoleName) : null;
   const canUpdate = useCan(known, "installation", "update");
   const [open, setOpen] = useState(false);
@@ -48,4 +48,4 @@ export function UpdateAvailable({ role }: { role?: string | null }) {
       <UpdateDialog data={data} onOpenChange={setOpen} open={open} />
     </SidebarMenuItem>
   );
-}
+};

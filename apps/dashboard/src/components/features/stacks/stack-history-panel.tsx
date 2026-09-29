@@ -3,7 +3,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import type { DeploymentSummary } from "@/server/dashboard";
 
-export function StackHistoryPanel({
+export const StackHistoryPanel = ({
   canRollback,
   currentDeploymentId,
   deployments,
@@ -25,31 +25,29 @@ export function StackHistoryPanel({
   pending: boolean;
   rollbackError: string | null;
   selectedId: string | null;
-}) {
-  return (
-    <>
-      <p className="mb-2 truncate text-muted-foreground text-xs">
-        {gitRepoUrl}
-        {gitBranch ? ` · ${gitBranch}` : ""}
-      </p>
-      {deployments ? (
-        <DeploymentHistory
-          canRollback={canRollback}
-          currentDeploymentId={currentDeploymentId}
-          deployments={deployments}
-          onRollback={onRollback}
-          onSelect={onSelect}
-          pending={pending}
-          selectedId={selectedId}
-        />
-      ) : (
-        <Spinner />
-      )}
-      {rollbackError ? (
-        <Alert className="mt-3" variant="destructive">
-          <AlertDescription>{rollbackError}</AlertDescription>
-        </Alert>
-      ) : null}
-    </>
-  );
-}
+}) => (
+  <>
+    <p className="mb-2 truncate text-muted-foreground text-xs">
+      {gitRepoUrl}
+      {gitBranch ? ` · ${gitBranch}` : ""}
+    </p>
+    {deployments ? (
+      <DeploymentHistory
+        canRollback={canRollback}
+        currentDeploymentId={currentDeploymentId}
+        deployments={deployments}
+        onRollback={onRollback}
+        onSelect={onSelect}
+        pending={pending}
+        selectedId={selectedId}
+      />
+    ) : (
+      <Spinner />
+    )}
+    {rollbackError ? (
+      <Alert className="mt-3" variant="destructive">
+        <AlertDescription>{rollbackError}</AlertDescription>
+      </Alert>
+    ) : null}
+  </>
+);

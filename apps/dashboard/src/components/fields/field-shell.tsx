@@ -45,7 +45,7 @@ export interface FieldShellProps {
   required?: boolean;
 }
 
-export function FieldShell({
+export const FieldShell = ({
   children,
   controlId,
   description,
@@ -55,25 +55,23 @@ export function FieldShell({
   invalid,
   label,
   required,
-}: FieldShellProps) {
-  return (
-    <Field data-invalid={invalid}>
-      <FieldLabel htmlFor={controlId}>
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        ) : null}
-      </FieldLabel>
-      {children}
-      {description ? (
-        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+}: FieldShellProps) => (
+  <Field data-invalid={invalid}>
+    <FieldLabel htmlFor={controlId}>
+      {label}
+      {required ? (
+        <span aria-hidden="true" className="text-destructive">
+          *
+        </span>
       ) : null}
-      {invalid ? <FieldError errors={errors} id={errorId} /> : null}
-    </Field>
-  );
-}
+    </FieldLabel>
+    {children}
+    {description ? (
+      <FieldDescription id={descriptionId}>{description}</FieldDescription>
+    ) : null}
+    {invalid ? <FieldError errors={errors} id={errorId} /> : null}
+  </Field>
+);
 
 export function fieldDisplayState(meta: {
   errors: unknown[];

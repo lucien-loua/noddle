@@ -102,7 +102,7 @@ function selectMode(state: { values: { mode: string } }) {
   return state.values.mode;
 }
 
-function KeyRow({
+const KeyRow = ({
   onRemoved,
   role,
   sshKey,
@@ -110,7 +110,7 @@ function KeyRow({
   onRemoved: () => void;
   role: RoleName | null;
   sshKey: SshKeyView;
-}) {
+}) => {
   const canDelete = useCan(role, "sshKey", "delete");
   const { error, handleRemove, isPending } = useRowRemove({
     mutationFn: () => deleteSshKey({ data: { sshKeyId: sshKey.id } }),
@@ -163,9 +163,9 @@ function KeyRow({
       ) : null}
     </ResourceCard>
   );
-}
+};
 
-export function SshKeysList({
+export const SshKeysList = ({
   initial,
   onAdd,
   role,
@@ -173,7 +173,7 @@ export function SshKeysList({
   initial: SshKeyView[];
   onAdd?: () => void;
   role: RoleName | null;
-}) {
+}) => {
   const {
     data: rows,
     isEmpty,
@@ -221,26 +221,24 @@ export function SshKeysList({
       ))}
     </Frame>
   );
-}
+};
 
-function PublicKeyResult({ publicKey }: { publicKey: string }) {
-  return (
-    <RevealOnceAlert label="public key" value={publicKey}>
-      <p className="mb-2">
-        Add this to <code>~/.ssh/authorized_keys</code> on the machines this key
-        should open. Noddle keeps the private half encrypted and never shows it.
-      </p>
-    </RevealOnceAlert>
-  );
-}
+const PublicKeyResult = ({ publicKey }: { publicKey: string }) => (
+  <RevealOnceAlert label="public key" value={publicKey}>
+    <p className="mb-2">
+      Add this to <code>~/.ssh/authorized_keys</code> on the machines this key
+      should open. Noddle keeps the private half encrypted and never shows it.
+    </p>
+  </RevealOnceAlert>
+);
 
-export function AddSshKeyDialog({
+export const AddSshKeyDialog = ({
   onOpenChange,
   open,
 }: {
   onOpenChange: (open: boolean) => void;
   open: boolean;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const [created, setCreated] = useState<string | null>(null);
 
@@ -413,4 +411,4 @@ export function AddSshKeyDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

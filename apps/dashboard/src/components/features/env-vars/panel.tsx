@@ -9,7 +9,7 @@ import { errorMessage } from "@/lib/format";
 import { mutations } from "@/lib/mutations";
 import { queries } from "@/lib/queries";
 
-export function EnvVarPanel({
+export const EnvVarPanel = ({
   databaseId,
   effect,
   note,
@@ -21,7 +21,7 @@ export function EnvVarPanel({
   note?: string;
   onSaved?: () => void;
   serviceId?: string;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const target = serviceId ? { serviceId } : { databaseId };
@@ -62,4 +62,4 @@ export function EnvVarPanel({
       ) : null}
     </>
   );
-}
+};

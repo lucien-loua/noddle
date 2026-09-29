@@ -10,11 +10,11 @@ import type { EnvPair } from "./parse-env-paste";
 
 const MAX_BYTES = 512 * 1024;
 
-export function EnvImportButton({
+export const EnvImportButton = ({
   onImport,
 }: {
   onImport: (pairs: EnvPair[]) => void;
-}) {
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handlePick = useCallback(() => inputRef.current?.click(), []);
@@ -63,4 +63,4 @@ export function EnvImportButton({
       />
     </>
   );
-}
+};

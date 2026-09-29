@@ -14,7 +14,7 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 
-export function TeardownError({ message }: { message: string | null }) {
+export const TeardownError = ({ message }: { message: string | null }) => {
   const [open, setOpen] = useState(false);
 
   if (!message) {
@@ -62,4 +62,4 @@ export function TeardownError({ message }: { message: string | null }) {
       </Collapsible>
     </Frame>
   );
-}
+};

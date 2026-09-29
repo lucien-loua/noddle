@@ -34,24 +34,24 @@ function useSettingsList(): SettingsListContextValue {
   return value;
 }
 
-function SettingsListRoot({
+const SettingsListRoot = ({
   children,
   isEmpty,
 }: {
   children: ReactNode;
   isEmpty: boolean;
-}) {
+}) => {
   const value = useMemo(() => ({ isEmpty }), [isEmpty]);
   return <SettingsListContext value={value}>{children}</SettingsListContext>;
-}
+};
 
-function SettingsListEmpty({
+const SettingsListEmpty = ({
   children,
   className,
 }: {
   children: ReactNode;
   className?: string;
-}) {
+}) => {
   const { isEmpty } = useSettingsList();
   if (!isEmpty) {
     return null;
@@ -65,17 +65,17 @@ function SettingsListEmpty({
       </FramePanel>
     </Frame>
   );
-}
+};
 
-function SettingsListBody({ children }: { children: ReactNode }) {
+const SettingsListBody = ({ children }: { children: ReactNode }) => {
   const { isEmpty } = useSettingsList();
   if (isEmpty) {
     return null;
   }
   return children;
-}
+};
 
-function SettingsListFrame({
+const SettingsListFrame = ({
   children,
   description,
   panel = true,
@@ -87,7 +87,7 @@ function SettingsListFrame({
   panel?: boolean;
   panelClassName?: string;
   title: ReactNode;
-}) {
+}) => {
   const { isEmpty } = useSettingsList();
   if (isEmpty) {
     return null;
@@ -107,7 +107,7 @@ function SettingsListFrame({
       )}
     </Frame>
   );
-}
+};
 
 export const SettingsList = Object.assign(SettingsListRoot, {
   Body: SettingsListBody,

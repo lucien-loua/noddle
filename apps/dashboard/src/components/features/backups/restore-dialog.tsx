@@ -69,7 +69,7 @@ function volumeRestoreDescription(target: BackupRestoreTarget | null) {
   );
 }
 
-export function RestoreDialog({
+export const RestoreDialog = ({
   onConfirm,
   onOpenChange,
   pending,
@@ -83,7 +83,7 @@ export function RestoreDialog({
   resourceName: string;
   subject: BackupSubject;
   target: BackupRestoreTarget | null;
-}) {
+}) => {
   const copy = copyFor(subject.kind);
   const description: ReactNode =
     subject.kind === "database"
@@ -102,4 +102,4 @@ export function RestoreDialog({
       title={`Restore ${resourceName}?`}
     />
   );
-}
+};

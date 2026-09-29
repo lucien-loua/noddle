@@ -25,7 +25,7 @@ import { backupKindLabel, backupLabel, byteSize, duration } from "@/lib/format";
 
 import type { BackupRunRow } from "./run-types";
 
-export function BackupHistoryTable<T extends BackupRunRow>({
+export const BackupHistoryTable = <T extends BackupRunRow>({
   backups,
   canCreate,
   canRestore,
@@ -48,7 +48,7 @@ export function BackupHistoryTable<T extends BackupRunRow>({
     isPending: boolean;
     mutate: (backupId: string) => void;
   };
-}) {
+}) => {
   if (!backups) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center py-10">
@@ -154,4 +154,4 @@ export function BackupHistoryTable<T extends BackupRunRow>({
       </Table>
     </div>
   );
-}
+};

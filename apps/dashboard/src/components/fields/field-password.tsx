@@ -32,14 +32,14 @@ type PasswordFieldProps = Omit<
   required?: boolean;
 };
 
-export function FieldPassword({
+export const FieldPassword = ({
   addonEnd,
   addonStart,
   description,
   label,
   required,
   ...inputProps
-}: PasswordFieldProps) {
+}: PasswordFieldProps) => {
   const field = useFieldContext<string>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -99,4 +99,4 @@ export function FieldPassword({
       </InputGroup>
     </FieldShell>
   );
-}
+};

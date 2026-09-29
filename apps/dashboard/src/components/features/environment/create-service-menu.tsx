@@ -17,7 +17,7 @@ import type { ServerView } from "@/server/servers";
 
 type Kind = "database" | "repo" | "stack";
 
-export function CreateServiceMenu({
+export const CreateServiceMenu = ({
   align = "end",
   environmentName,
   projectName,
@@ -29,7 +29,7 @@ export function CreateServiceMenu({
   projectName?: string;
   role: RoleName | null;
   servers: ServerView[];
-}) {
+}) => {
   const [dialog, setDialog] = useState<Kind | null>(null);
   const canCreateService = useCan(role, "service", "create");
   const canCreateDatabase = useCan(role, "database", "create");
@@ -91,4 +91,4 @@ export function CreateServiceMenu({
       />
     </>
   );
-}
+};

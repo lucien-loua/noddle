@@ -31,78 +31,78 @@ function styleFor(dashed: boolean, selected: boolean) {
   return selected ? EDGE_STYLE_SELECTED : EDGE_STYLE;
 }
 
-const FlowEdge = memo(
-  ({
-    data,
-    id,
-    markerEnd,
+const FlowEdgeView = ({
+  data,
+  id,
+  markerEnd,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  selected,
+}: EdgeProps) => {
+  const reducedMotion = usePrefersReducedMotion();
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
+    sourcePosition,
     targetX,
     targetY,
-    sourcePosition,
     targetPosition,
-    selected,
-  }: EdgeProps) => {
-    const reducedMotion = usePrefersReducedMotion();
-    const [edgePath, labelX, labelY] = getSmoothStepPath({
-      sourceX,
-      sourceY,
-      sourcePosition,
-      targetX,
-      targetY,
-      targetPosition,
-      borderRadius: 16,
-    });
+    borderRadius: 16,
+  });
 
-    const dashed = data?.dashed === true;
-    const flowing = dashed && data?.flowing === true && !reducedMotion;
+  const dashed = data?.dashed === true;
+  const flowing = dashed && data?.flowing === true && !reducedMotion;
 
-    return (
-      <>
-        <path
-          className="react-flow__edge-path"
-          d={edgePath}
-          fill="none"
-          id={id}
-          markerEnd={markerEnd}
-          style={styleFor(dashed, selected === true)}
-        >
-          {flowing ? (
-            <animate
-              attributeName="stroke-dashoffset"
-              dur="0.7s"
-              from="0"
-              repeatCount="indefinite"
-              to={-(DASH + GAP)}
-            />
-          ) : null}
-        </path>
-        <path
-          className="react-flow__edge-interaction"
-          d={edgePath}
-          fill="none"
-          strokeOpacity={0}
-          strokeWidth={INTERACTION_WIDTH}
-        />
-        {data?.label ? (
-          <EdgeLabelRenderer>
-            <div
-              className="pointer-events-none absolute"
-              style={{
-                transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-              }}
-            >
-              <Badge className="bg-card tabular-nums" variant="outline">
-                {String(data.label)}
-              </Badge>
-            </div>
-          </EdgeLabelRenderer>
+  return (
+    <>
+      <path
+        className="react-flow__edge-path"
+        d={edgePath}
+        fill="none"
+        id={id}
+        markerEnd={markerEnd}
+        style={styleFor(dashed, selected === true)}
+      >
+        {flowing ? (
+          <animate
+            attributeName="stroke-dashoffset"
+            dur="0.7s"
+            from="0"
+            repeatCount="indefinite"
+            to={-(DASH + GAP)}
+          />
         ) : null}
-      </>
-    );
-  }
-);
+      </path>
+      <path
+        className="react-flow__edge-interaction"
+        d={edgePath}
+        fill="none"
+        strokeOpacity={0}
+        strokeWidth={INTERACTION_WIDTH}
+      />
+      {data?.label ? (
+        <EdgeLabelRenderer>
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            }}
+          >
+            <Badge className="bg-card tabular-nums" variant="outline">
+              {String(data.label)}
+            </Badge>
+          </div>
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
+  );
+};
+
+const FlowEdge = memo(FlowEdgeView);
 
 FlowEdge.displayName = "FlowEdge";
 

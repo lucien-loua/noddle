@@ -27,28 +27,7 @@ import { useCan } from "@/lib/use-permission";
 import { getAuthState } from "@/server/auth";
 import { getGitProviders } from "@/server/git-providers";
 
-export const Route = createFileRoute("/git-providers")({
-  beforeLoad: async () => {
-    const state = await getAuthState();
-    if (!state.signedIn) {
-      throw redirect({ to: "/login" });
-    }
-    return { email: state.email, role: state.role };
-  },
-  component: GitProvidersPage,
-  errorComponent: () => (
-    <p className="p-6 text-muted-foreground text-sm">
-      Your role does not allow reading git providers.
-    </p>
-  ),
-  loader: async ({ context }) => ({
-    email: context.email,
-    providers: await getGitProviders(),
-    role: context.role,
-  }),
-});
-
-function GitProvidersPage() {
+const GitProvidersPage = () => {
   const { email, providers, role } = Route.useLoaderData();
   const known: RoleName | null =
     role && role in roles ? (role as RoleName) : null;
@@ -104,4 +83,25 @@ function GitProvidersPage() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute("/git-providers")({
+  beforeLoad: async () => {
+    const state = await getAuthState();
+    if (!state.signedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return { email: state.email, role: state.role };
+  },
+  component: GitProvidersPage,
+  errorComponent: () => (
+    <p className="p-6 text-muted-foreground text-sm">
+      Your role does not allow reading git providers.
+    </p>
+  ),
+  loader: async ({ context }) => ({
+    email: context.email,
+    providers: await getGitProviders(),
+    role: context.role,
+  }),
+});

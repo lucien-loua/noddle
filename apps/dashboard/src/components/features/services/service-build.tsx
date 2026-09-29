@@ -45,13 +45,13 @@ function buildMethodValue(
   return method === "dockerfile" ? "dockerfile" : "railpack";
 }
 
-export function ServiceBuild({
+export const ServiceBuild = ({
   canEdit,
   service,
 }: {
   canEdit: boolean;
   service: ServiceRow;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -155,4 +155,4 @@ export function ServiceBuild({
       ) : null}
     </FrameForm>
   );
-}
+};

@@ -6,7 +6,7 @@ import {
 } from "@/components/resource-panel";
 import { queries } from "@/lib/queries";
 
-export function ServiceResources({ serviceId }: { serviceId: string }) {
+export const ServiceResources = ({ serviceId }: { serviceId: string }) => {
   const metrics = useQuery(queries.serviceMetrics(serviceId));
 
   return (
@@ -16,4 +16,4 @@ export function ServiceResources({ serviceId }: { serviceId: string }) {
       unboundedNote="No memory limit declared. This service is bounded by the machine."
     />
   );
-}
+};

@@ -63,14 +63,14 @@ const CONFIRM_COPY: Record<
   },
 };
 
-function DeploySettingsToolbar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
-}
+const DeploySettingsToolbar = ({ children }: { children: ReactNode }) => (
+  <div className="flex flex-wrap items-center gap-2">{children}</div>
+);
 
 const autoDeployPatch = (next: boolean) => ({ autoDeploy: next });
 const cleanCachePatch = (next: boolean) => ({ cleanCache: next });
 
-function DeployToggle({
+const DeployToggle = ({
   checked,
   disabled,
   label,
@@ -84,7 +84,7 @@ function DeployToggle({
   onSaved: () => Promise<void>;
   patch: (next: boolean) => { autoDeploy?: boolean; cleanCache?: boolean };
   serviceId: string;
-}) {
+}) => {
   const id = useId();
   const save = useMutation({
     mutationFn: (next: boolean) =>
@@ -126,9 +126,9 @@ function DeployToggle({
       </Field>
     </FieldLabel>
   );
-}
+};
 
-function StartStopButton({
+const StartStopButton = ({
   busy,
   onClick,
   stopped,
@@ -136,24 +136,22 @@ function StartStopButton({
   busy: boolean;
   onClick: () => void;
   stopped: boolean;
-}) {
-  return (
-    <Button
-      disabled={busy}
-      onClick={onClick}
-      variant={stopped ? "outline" : "destructive"}
-    >
-      {stopped ? (
-        <PlayIcon data-icon="inline-start" weight="fill" />
-      ) : (
-        <StopIcon data-icon="inline-start" weight="fill" />
-      )}
-      {stopped ? "Start" : "Stop"}
-    </Button>
-  );
-}
+}) => (
+  <Button
+    disabled={busy}
+    onClick={onClick}
+    variant={stopped ? "outline" : "destructive"}
+  >
+    {stopped ? (
+      <PlayIcon data-icon="inline-start" weight="fill" />
+    ) : (
+      <StopIcon data-icon="inline-start" weight="fill" />
+    )}
+    {stopped ? "Start" : "Stop"}
+  </Button>
+);
 
-function DeployToggles({
+const DeployToggles = ({
   busy,
   onSaved,
   service,
@@ -161,30 +159,28 @@ function DeployToggles({
   busy: boolean;
   onSaved: () => Promise<void>;
   service: ServiceRow;
-}) {
-  return (
-    <>
+}) => (
+  <>
+    <DeployToggle
+      checked={service.autoDeploy}
+      disabled={busy}
+      label="Autodeploy"
+      onSaved={onSaved}
+      patch={autoDeployPatch}
+      serviceId={service.id}
+    />
+    {service.sourceType === "docker_image" ? null : (
       <DeployToggle
-        checked={service.autoDeploy}
+        checked={service.cleanCache}
         disabled={busy}
-        label="Autodeploy"
+        label="Clean cache"
         onSaved={onSaved}
-        patch={autoDeployPatch}
+        patch={cleanCachePatch}
         serviceId={service.id}
       />
-      {service.sourceType === "docker_image" ? null : (
-        <DeployToggle
-          checked={service.cleanCache}
-          disabled={busy}
-          label="Clean cache"
-          onSaved={onSaved}
-          patch={cleanCachePatch}
-          serviceId={service.id}
-        />
-      )}
-    </>
-  );
-}
+    )}
+  </>
+);
 
 interface ActionBarFlags {
   actionsBusy: boolean;
@@ -207,7 +203,7 @@ interface ActionBarHandlers {
   onTerminal: (() => void) | null;
 }
 
-function DeployActionBar({
+const DeployActionBar = ({
   flags,
   handlers,
   onSaved,
@@ -217,7 +213,7 @@ function DeployActionBar({
   handlers: ActionBarHandlers;
   onSaved: () => Promise<void>;
   service: ServiceRow;
-}) {
+}) => {
   const {
     actionsBusy,
     canDeploy,
@@ -296,9 +292,9 @@ function DeployActionBar({
       ) : null}
     </DeploySettingsToolbar>
   );
-}
+};
 
-export function ServiceDeploySettings({
+export const ServiceDeploySettings = ({
   actions,
   deployPending,
   known,
@@ -316,7 +312,7 @@ export function ServiceDeploySettings({
   onError: (message: string) => void;
   onTerminal: (() => void) | null;
   service: ServiceRow;
-}) {
+}) => {
   const canDeploy = useCan(known, "service", "deploy");
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
 
@@ -426,4 +422,4 @@ export function ServiceDeploySettings({
       ) : null}
     </>
   );
-}
+};

@@ -69,7 +69,7 @@ const resourceFormSchema = z
     }
   );
 
-export function DatabaseResourceLimits({
+export const DatabaseResourceLimits = ({
   canEdit,
   cpuLimitNanos,
   cpuReservationNanos,
@@ -83,7 +83,7 @@ export function DatabaseResourceLimits({
   databaseId: string;
   memoryLimitBytes: number | null;
   memoryReservationBytes: number | null;
-}) {
+}) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -223,4 +223,4 @@ export function DatabaseResourceLimits({
       ) : null}
     </FrameForm>
   );
-}
+};

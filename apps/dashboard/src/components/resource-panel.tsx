@@ -32,13 +32,13 @@ interface ResourcePanelProps {
   windowHours?: 1 | 6 | 24;
 }
 
-export function ResourcePanel({
+export const ResourcePanel = ({
   emptyNote,
   series,
   unboundedNote,
   windowHours = DEFAULT_WINDOW_HOURS,
   headerControls,
-}: ResourcePanelProps) {
+}: ResourcePanelProps) => {
   if (!series || series.points.length === 0) {
     return <p className="text-muted-foreground text-xs">{emptyNote}</p>;
   }
@@ -131,4 +131,4 @@ export function ResourcePanel({
       </FramePanel>
     </Frame>
   );
-}
+};

@@ -86,25 +86,6 @@ function parseServiceTab(value: unknown): ServiceTab | undefined {
   return parseDetailTab(value, SERVICE_TABS, LEGACY_TABS);
 }
 
-export const Route = createFileRoute(
-  "/projects_/$projectId_/$environmentId_/services/$serviceId"
-)({
-  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
-    deployment:
-      typeof search.deployment === "string" ? search.deployment : undefined,
-    tab: parseServiceTab(search.tab),
-  }),
-  beforeLoad: resourceDetailBeforeLoad,
-  component: ServiceDetail,
-  loader: async ({ context, params }) => {
-    const service = await getService({ data: { serviceId: params.serviceId } });
-    if (!service) {
-      throw notFound();
-    }
-    return { email: context.email, role: context.role, service };
-  },
-});
-
 function useServiceDetail() {
   const { email, role, service: initialService } = Route.useLoaderData();
   const search = Route.useSearch();
@@ -307,7 +288,7 @@ function useServiceDetail() {
   };
 }
 
-function ServiceDetail() {
+const ServiceDetail = () => {
   const {
     actionError,
     actions,
@@ -489,4 +470,23 @@ function ServiceDetail() {
       />
     </AppShell>
   );
-}
+};
+
+export const Route = createFileRoute(
+  "/projects_/$projectId_/$environmentId_/services/$serviceId"
+)({
+  validateSearch: (search: Record<string, unknown>): DetailSearch => ({
+    deployment:
+      typeof search.deployment === "string" ? search.deployment : undefined,
+    tab: parseServiceTab(search.tab),
+  }),
+  beforeLoad: resourceDetailBeforeLoad,
+  component: ServiceDetail,
+  loader: async ({ context, params }) => {
+    const service = await getService({ data: { serviceId: params.serviceId } });
+    if (!service) {
+      throw notFound();
+    }
+    return { email: context.email, role: context.role, service };
+  },
+});

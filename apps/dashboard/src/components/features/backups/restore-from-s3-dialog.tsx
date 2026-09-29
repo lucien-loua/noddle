@@ -39,7 +39,7 @@ import { queries } from "@/lib/queries";
 import type { DestinationRow } from "@/server/backups/destinations";
 import type { BackupObjectRow } from "@/server/backups/runs";
 
-function ObjectsListBody({
+const ObjectsListBody = ({
   destinationId,
   emptyText,
   error,
@@ -57,7 +57,7 @@ function ObjectsListBody({
   objects: BackupObjectRow[] | undefined;
   onPick: (destinationId: string, objectKey: string) => void;
   restoreDisabled: boolean;
-}) {
+}) => {
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-10">
@@ -120,9 +120,9 @@ function ObjectsListBody({
       </Table>
     </div>
   );
-}
+};
 
-export function RestoreFromS3Dialog({
+export const RestoreFromS3Dialog = ({
   defaultVolumeName,
   destinations,
   onOpenChange,
@@ -136,7 +136,7 @@ export function RestoreFromS3Dialog({
   onPick: (target: Extract<BackupRestoreTarget, { kind: "object" }>) => void;
   open: boolean;
   subject: BackupSubject;
-}) {
+}) => {
   const copy = copyFor(subject.kind);
   const [firstDestination] = destinations;
   const [destinationId, setDestinationId] = useState(
@@ -258,4 +258,4 @@ export function RestoreFromS3Dialog({
       </FocusModalContent>
     </FocusModal>
   );
-}
+};

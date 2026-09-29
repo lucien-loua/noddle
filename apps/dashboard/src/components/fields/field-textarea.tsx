@@ -23,13 +23,13 @@ type TextareaFieldProps = Omit<
   required?: boolean;
 };
 
-export function FieldTextarea({
+export const FieldTextarea = ({
   addonEnd,
   description,
   label,
   required,
   ...textareaProps
-}: TextareaFieldProps) {
+}: TextareaFieldProps) => {
   const field = useFieldContext<string>();
   const id = useId();
   const descriptionId = `${id}-description`;
@@ -75,4 +75,4 @@ export function FieldTextarea({
       </InputGroup>
     </FieldShell>
   );
-}
+};

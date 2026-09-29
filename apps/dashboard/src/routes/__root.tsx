@@ -15,25 +15,7 @@ const ICON_DEFAULTS = Object.freeze({ weight: "duotone" });
 
 const THEME_SCRIPT = `try{var t=localStorage.getItem('noddle-theme');document.documentElement.classList.toggle('dark',t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))}catch(e){}`;
 
-export const Route = createRootRoute({
-  beforeLoad: () => ({ sidebarOpen: readSidebarOpen() }),
-  head: () => ({
-    links: [
-      { href: appCss, rel: "stylesheet" },
-      { href: "/favicon.svg", rel: "icon", type: "image/svg+xml" },
-    ],
-    meta: [
-      { charSet: "utf-8" },
-      { content: "width=device-width, initial-scale=1", name: "viewport" },
-      { title: "Noddle" },
-      { content: TAGLINE, name: "description" },
-      { content: "noindex, nofollow", name: "robots" },
-    ],
-  }),
-  shellComponent: RootDocument,
-});
-
-function RootDocument({ children }: { children: ReactNode }) {
+const RootDocument = ({ children }: { children: ReactNode }) => {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -66,4 +48,22 @@ function RootDocument({ children }: { children: ReactNode }) {
       </body>
     </html>
   );
-}
+};
+
+export const Route = createRootRoute({
+  beforeLoad: () => ({ sidebarOpen: readSidebarOpen() }),
+  head: () => ({
+    links: [
+      { href: appCss, rel: "stylesheet" },
+      { href: "/favicon.svg", rel: "icon", type: "image/svg+xml" },
+    ],
+    meta: [
+      { charSet: "utf-8" },
+      { content: "width=device-width, initial-scale=1", name: "viewport" },
+      { title: "Noddle" },
+      { content: TAGLINE, name: "description" },
+      { content: "noindex, nofollow", name: "robots" },
+    ],
+  }),
+  shellComponent: RootDocument,
+});

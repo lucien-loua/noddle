@@ -255,7 +255,7 @@ function display(value: string | null): string {
   return value === null || value === "" ? "(empty)" : value;
 }
 
-function KeyCell({
+const KeyCell = ({
   onPasteEnv,
   onUpdate,
   row,
@@ -263,7 +263,7 @@ function KeyCell({
   onPasteEnv: PasteFn;
   onUpdate: UpdateFn;
   row: DraftVar;
-}) {
+}) => {
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) =>
       onUpdate(row.uid, { key: e.target.value }),
@@ -293,9 +293,13 @@ function KeyCell({
       value={row.key}
     />
   );
-}
+};
 
-function LinkedCell({ attachment }: { attachment: EnvVarAttachment | null }) {
+const LinkedCell = ({
+  attachment,
+}: {
+  attachment: EnvVarAttachment | null;
+}) => {
   if (!attachment) {
     return (
       <span className="inline-flex size-8 items-center justify-center text-muted-foreground">
@@ -328,9 +332,9 @@ function LinkedCell({ attachment }: { attachment: EnvVarAttachment | null }) {
       </TooltipContent>
     </Tooltip>
   );
-}
+};
 
-function ValueCell({
+const ValueCell = ({
   onPasteEnv,
   onUpdate,
   row,
@@ -338,7 +342,7 @@ function ValueCell({
   onPasteEnv: PasteFn;
   onUpdate: UpdateFn;
   row: DraftVar;
-}) {
+}) => {
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) =>
       onUpdate(row.uid, { value: e.target.value }),
@@ -399,9 +403,15 @@ function ValueCell({
       </InputGroupAddon>
     </InputGroup>
   );
-}
+};
 
-function RemoveCell({ onRemove, row }: { onRemove: RemoveFn; row: DraftVar }) {
+const RemoveCell = ({
+  onRemove,
+  row,
+}: {
+  onRemove: RemoveFn;
+  row: DraftVar;
+}) => {
   const handleClick = useCallback(() => onRemove(row.uid), [onRemove, row.uid]);
 
   return (
@@ -414,11 +424,17 @@ function RemoveCell({ onRemove, row }: { onRemove: RemoveFn; row: DraftVar }) {
       <TrashIcon />
     </Button>
   );
-}
+};
 
 const columnHelper = createColumnHelper<DraftVar>();
 
-export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
+export const EnvVarTable = ({
+  effect,
+  note,
+  onSave,
+  pending,
+  saved,
+}: Props) => {
   const [draft, setDraft] = useState<DraftVar[]>(() => toDraft(saved));
   const [confirming, setConfirming] = useState(false);
 
@@ -633,4 +649,4 @@ export function EnvVarTable({ effect, note, onSave, pending, saved }: Props) {
       ) : null}
     </Frame>
   );
-}
+};

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 
-export function ConfirmActionDialog({
+export const ConfirmActionDialog = ({
   confirmLabel = "Confirm",
   description,
   onConfirm,
@@ -26,22 +26,20 @@ export function ConfirmActionDialog({
   open: boolean;
   pending: boolean;
   title: string;
-}) {
-  return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline">Cancel</Button>} />
-          <Button disabled={pending} onClick={onConfirm}>
-            {pending ? <Spinner data-icon="inline-start" /> : null}
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+}) => (
+  <Dialog onOpenChange={onOpenChange} open={open}>
+    <DialogContent showCloseButton={false}>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <DialogClose render={<Button variant="outline">Cancel</Button>} />
+        <Button disabled={pending} onClick={onConfirm}>
+          {pending ? <Spinner data-icon="inline-start" /> : null}
+          {confirmLabel}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);

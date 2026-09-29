@@ -29,7 +29,7 @@ export interface BackupScheduleCard {
   schedule: string;
 }
 
-export function BackupConfigCard({
+export const BackupConfigCard = ({
   canCreate,
   config,
   onDeleted,
@@ -43,7 +43,7 @@ export function BackupConfigCard({
   onEdit: () => void;
   onHistory: () => void;
   subject: BackupSubject;
-}) {
+}) => {
   const copy = copyFor(subject.kind);
   const queryClient = useQueryClient();
   const run = useMutation(
@@ -164,13 +164,11 @@ export function BackupConfigCard({
       </div>
     </FramePanel>
   );
-}
+};
 
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
-      <dd className="truncate font-medium text-sm">{value}</dd>
-    </div>
-  );
-}
+const Meta = ({ label, value }: { label: string; value: string }) => (
+  <div className="min-w-0">
+    <dt className="mb-0.5 text-muted-foreground text-xs">{label}</dt>
+    <dd className="truncate font-medium text-sm">{value}</dd>
+  </div>
+);

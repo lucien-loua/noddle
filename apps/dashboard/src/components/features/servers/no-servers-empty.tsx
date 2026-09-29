@@ -11,26 +11,24 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-export function NoServersEmpty({ description }: { description: string }) {
-  return (
-    <Empty className="p-8">
-      <EmptyMedia variant="icon">
-        <HardDrivesIcon />
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>No servers yet</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button
-          nativeButton={false}
-          render={<Link to="/servers" />}
-          variant="outline"
-        >
-          <HardDrivesIcon data-icon="inline-start" weight="regular" />
-          Add a server
-        </Button>
-      </EmptyContent>
-    </Empty>
-  );
-}
+export const NoServersEmpty = ({ description }: { description: string }) => (
+  <Empty className="p-8">
+    <EmptyMedia variant="icon">
+      <HardDrivesIcon />
+    </EmptyMedia>
+    <EmptyHeader>
+      <EmptyTitle>No servers yet</EmptyTitle>
+      <EmptyDescription>{description}</EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent>
+      <Button
+        nativeButton={false}
+        render={<Link to="/servers" />}
+        variant="outline"
+      >
+        <HardDrivesIcon data-icon="inline-start" weight="regular" />
+        Add a server
+      </Button>
+    </EmptyContent>
+  </Empty>
+);
