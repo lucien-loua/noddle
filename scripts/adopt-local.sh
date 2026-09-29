@@ -8,6 +8,7 @@ HOST_USER="${HOST_USER:-ubuntu}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT/apps/worker/.env"
 ADOPT="$ROOT/apps/worker/src/target/adopt-host.ts"
+DESTINATION="$ROOT/apps/worker/src/target/adopt-destination.ts"
 
 log() { printf '\n\033[1m▸ %s\033[0m\n' "$1"; }
 fail() {
@@ -19,6 +20,7 @@ command -v multipass >/dev/null 2>&1 || fail "multipass is missing"
 [ -f "$SSH_KEY" ] || fail "private key missing: $SSH_KEY"
 [ -f "$ENV_FILE" ] || fail "apps/worker/.env missing (DATABASE_URL and APP_KEY required)"
 [ -f "$ADOPT" ] || fail "adopt-host.ts not found: $ADOPT"
+[ -f "$DESTINATION" ] || fail "adopt-destination.ts not found: $DESTINATION"
 
 command -v node >/dev/null 2>&1 ||
   fail "node is missing — adopt-host does NOT run on Bun"
@@ -64,5 +66,9 @@ HOST_IP="$VM_IP" \
   HOST_NAME="$VM_NAME" \
   node --env-file="$ENV_FILE" "$ADOPT"
 
-printf '\n\033[32m✓ %s is server #1.\033[0m\n' "$VM_NAME"
+log "Backup destination on the dev stack's S3"
+node --env-file="$ENV_FILE" "$DESTINATION" ||
+  fail "could not register the dev S3 destination — is the dev stack up? (bun run dev:stack)"
+
+printf '\n\033[32m✓ %s is server #1, and backups have a destination.\033[0m\n' "$VM_NAME"
 printf '  Reload the dashboard: the machine should show as connected.\n\n'
